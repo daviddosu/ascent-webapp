@@ -1,0 +1,17 @@
+{
+  "name": "Ascent — Make today count",
+  "short_name": "Ascent",
+  "description": "Choose what matters, finish the next step, and learn from the week.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffd439",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
