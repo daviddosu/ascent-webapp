@@ -1,0 +1,27 @@
+{
+  "name": "ascent",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm test && pnpm build",
+    "check:cloud": "node scripts/verify-cloud.mjs",
+    "check:cloud:auth": "node scripts/verify-cloud-auth.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "axe-core": "^4.12.1",
+    "jsdom": "^29.1.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0"
+  }
+}
