@@ -313,12 +313,20 @@ const app = appNode
 hydrateStateForToday()
 queueMicrotask(render)
 
+function isWorkspaceRoute() {
+  return window.location.pathname === '/workspace'
+}
+
 window.addEventListener('storage', (event) => {
   if (event.key === STORAGE_KEY) {
     state = loadState()
     hydrateStateForToday()
     render()
   }
+})
+
+window.addEventListener('popstate', () => {
+  render()
 })
 
 setInterval(() => {
@@ -354,6 +362,9 @@ app.addEventListener('click', (event) => {
     state.signedIn = true
     state.view = 'today'
     state.notificationPanelOpen = false
+    if (!isWorkspaceRoute()) {
+      window.history.pushState({}, '', '/workspace')
+    }
     persistAndRender()
     return
   }
@@ -647,7 +658,9 @@ function render() {
   document.body.dataset.view = state.view
   document.body.dataset.signedIn = String(state.signedIn)
 
-  if (!state.signedIn) {
+  const showWorkspace = state.signedIn && isWorkspaceRoute()
+
+  if (!showWorkspace) {
     app.innerHTML = renderAuth()
     scheduleFocusMotionUpdate()
     return
