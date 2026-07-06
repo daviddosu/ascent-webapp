@@ -1,1203 +1,1465 @@
 import './style.css'
-import communityPortraits from './assets/community-portraits.png'
 
-type View = 'today' | 'upcoming' | 'calendar' | 'sticky'
-type CountKey = 'today' | 'upcoming'
-type Subtask = { id: string; title: string; completed: boolean }
-type UpcomingGroup = 'tomorrow' | 'week'
-type ActivityMode = 'daily' | 'weekly' | 'cumulative'
-type Goal = { id: string; name: string; color: string }
-type CalendarMode = 'day' | 'week' | 'month'
-type CalendarEvent = {
-  id: string
-  title: string
-  date: string
-  hour: string
-  period: 'AM' | 'PM'
-  color: 'aqua' | 'pink'
-  tall?: boolean
-}
+type View = 'today' | 'feed' | 'profile' | 'review'
+
 type Task = {
   id: string
   title: string
-  description?: string
-  goalId?: string
-  due?: string
-  subtasks?: number
-  subtaskItems?: Subtask[]
-  tags?: string[]
-  completedAt?: string
+  createdAt: string
+  plannedFor: string
+  completedAt: string | null
+  archivedAt: string | null
+  carryPending: boolean
+  carryHistory: Array<{ date: string; reason: string }>
 }
-type CommunityProfile = {
+
+type FeedItem = {
   id: string
+  author: string
+  action: string
+  timestamp: string
+  reacted: boolean
+  kind: 'execution' | 'lesson' | 'review'
+}
+
+type NotificationItem = {
+  id: string
+  text: string
+  timestamp: string
+  read: boolean
+}
+
+type ReviewAnswers = {
+  whatWentWell: string
+  blockers: string
+  stopDoing: string
+  doubleDownOn: string
+}
+
+type ReviewState = {
+  submittedFor: string | null
+  submittedAt: string | null
+  answers: ReviewAnswers
+}
+
+type Session = {
   name: string
-  role: string
-  category: string
-  members: string
-  tasksToday: number
-  latest: string
-  portraitColumn: number
-  portraitRow: number
-  bioLines: string[]
+  email: string
 }
 
-const app = document.querySelector<HTMLDivElement>('#app')!
-const viewStorageKey = 'ascent-active-view'
-const plannerStorageKey = 'ascent-planner-v1'
-const goalsStorageKey = 'ascent-goals-v1'
-
-function dateKey(date = new Date()) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+type AppState = {
+  signedIn: boolean
+  session: Session | null
+  view: View
+  tasks: Task[]
+  feed: FeedItem[]
+  notifications: NotificationItem[]
+  review: ReviewState
+  draftOpen: boolean
+  draftValue: string
+  notificationPanelOpen: boolean
+  carryPromptTaskIds: string[]
+  lastCheckedDate: string
 }
 
-function addDays(date: Date, amount: number) {
-  const next = new Date(date)
-  next.setHours(12, 0, 0, 0)
-  next.setDate(next.getDate() + amount)
-  return next
+const STORAGE_KEY = 'ascent-state-v3'
+const DAY_MS = 24 * 60 * 60 * 1000
+let fallbackId = 0
+let focusMotionFrame = 0
+
+function createId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  fallbackId += 1
+  return `ascent-${Date.now().toString(36)}-${fallbackId.toString(36)}`
 }
 
-function formatTaskDate(value: string) {
-  const date = new Date(`${value}T12:00:00`)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
-}
+const todayDate = () => toDateKey(new Date())
 
-function readStoredView(): View {
-  try {
-    const stored = window.sessionStorage.getItem(viewStorageKey)
-    return stored === 'today' || stored === 'upcoming' || stored === 'calendar' || stored === 'sticky' ? stored : 'today'
-  } catch {
-    return 'today'
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+const emptyAnswers = (): ReviewAnswers => ({
+  whatWentWell: '',
+  blockers: '',
+  stopDoing: '',
+  doubleDownOn: '',
+})
+
+const seedState = (): AppState => {
+  const today = todayDate()
+  const yesterday = shiftDate(today, -1)
+  const twoDaysAgo = shiftDate(today, -2)
+
+  return {
+    signedIn: false,
+    session: null,
+    view: 'today',
+    tasks: [
+      {
+        id: createId(),
+        title: 'Finish grant proposal',
+        createdAt: `${today}T08:20:00.000Z`,
+        plannedFor: today,
+        completedAt: null,
+        archivedAt: null,
+        carryPending: false,
+        carryHistory: [],
+      },
+      {
+        id: createId(),
+        title: 'Email Professor Müller',
+        createdAt: `${today}T08:35:00.000Z`,
+        plannedFor: today,
+        completedAt: null,
+        archivedAt: null,
+        carryPending: false,
+        carryHistory: [],
+      },
+      {
+        id: createId(),
+        title: 'Gym',
+        createdAt: `${today}T07:00:00.000Z`,
+        plannedFor: today,
+        completedAt: `${today}T10:10:00.000Z`,
+        archivedAt: null,
+        carryPending: false,
+        carryHistory: [],
+      },
+      {
+        id: createId(),
+        title: 'Record YouTube video',
+        createdAt: `${today}T09:15:00.000Z`,
+        plannedFor: today,
+        completedAt: null,
+        archivedAt: null,
+        carryPending: false,
+        carryHistory: [],
+      },
+      {
+        id: createId(),
+        title: 'Read reinforcement learning paper',
+        createdAt: `${yesterday}T12:20:00.000Z`,
+        plannedFor: yesterday,
+        completedAt: `${yesterday}T18:00:00.000Z`,
+        archivedAt: null,
+        carryPending: false,
+        carryHistory: [],
+      },
+      {
+        id: createId(),
+        title: 'Call collaborator',
+        createdAt: `${twoDaysAgo}T11:10:00.000Z`,
+        plannedFor: twoDaysAgo,
+        completedAt: `${twoDaysAgo}T16:40:00.000Z`,
+        archivedAt: null,
+        carryPending: false,
+        carryHistory: [],
+      },
+    ],
+    feed: [
+      {
+        id: createId(),
+        author: 'Sarah',
+        action: '✓ Submitted scholarship application',
+        timestamp: shiftDateTime(today, 'T12:02:00.000Z'),
+        reacted: false,
+        kind: 'execution',
+      },
+      {
+        id: createId(),
+        author: 'Michael',
+        action: '✓ Published first article',
+        timestamp: shiftDateTime(today, 'T11:52:00.000Z'),
+        reacted: false,
+        kind: 'execution',
+      },
+      {
+        id: createId(),
+        author: 'David',
+        action: '✓ Finished CERN proposal',
+        timestamp: shiftDateTime(today, 'T11:42:00.000Z'),
+        reacted: true,
+        kind: 'execution',
+      },
+      {
+        id: createId(),
+        author: 'Coach',
+        action: 'Weekly lesson is ready',
+        timestamp: shiftDateTime(today, 'T08:15:00.000Z'),
+        reacted: false,
+        kind: 'lesson',
+      },
+    ],
+    notifications: [
+      {
+        id: createId(),
+        text: 'Sarah completed "Submit application".',
+        timestamp: shiftDateTime(today, 'T12:02:00.000Z'),
+        read: false,
+      },
+      {
+        id: createId(),
+        text: 'Weekly review is ready for Sunday.',
+        timestamp: shiftDateTime(today, 'T08:15:00.000Z'),
+        read: false,
+      },
+    ],
+    review: {
+      submittedFor: null,
+      submittedAt: null,
+      answers: emptyAnswers(),
+    },
+    draftOpen: false,
+    draftValue: '',
+    notificationPanelOpen: false,
+    carryPromptTaskIds: [],
+    lastCheckedDate: today,
   }
 }
 
-function rememberView(nextView: View) {
-  view = nextView
-  try {
-    window.sessionStorage.setItem(viewStorageKey, nextView)
-  } catch {
-    // Some browser contexts block storage, so we quietly keep going.
+function shiftDate(dateKey: string, deltaDays: number) {
+  const date = new Date(`${dateKey}T12:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + deltaDays)
+  return toDateKey(date)
+}
+
+function shiftDateTime(dateKey: string, timeSuffix: string) {
+  return `${dateKey}${timeSuffix}`
+}
+
+function toDateKey(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function formatShortDate(dateKey: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(`${dateKey}T12:00:00Z`))
+}
+
+function formatClock(timestamp: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp))
+}
+
+function formatRelativeTime(timestamp: string) {
+  const diff = Date.now() - new Date(timestamp).getTime()
+  const minutes = Math.max(1, Math.floor(diff / 60000))
+  if (minutes < 60) {
+    return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
   }
-}
-
-const now = new Date()
-const todayKey = dateKey(now)
-const tomorrowKey = dateKey(addDays(now, 1))
-const weekEndKey = dateKey(addDays(now, 7))
-
-const seedGoals: Goal[] = [
-  { id: 'personal', name: 'Personal', color: '#ff666d' },
-  { id: 'job-search', name: 'Find a new job', color: '#60d4dd' },
-  { id: 'paper', name: 'Write a paper', color: '#ffd331' },
-]
-
-function readGoals() {
-  try {
-    const stored = window.localStorage.getItem(goalsStorageKey)
-    if (!stored) return seedGoals
-    const parsed = JSON.parse(stored) as Goal[]
-    return Array.isArray(parsed) && parsed.length ? parsed : seedGoals
-  } catch {
-    return seedGoals
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `${hours} hour${hours === 1 ? '' : 's'} ago`
   }
-}
-
-const goals: Goal[] = readGoals()
-
-const seedTasks: Task[] = [
-  { id: 'research', title: 'Research content ideas', due: dateKey(addDays(now, -1)), tags: [] },
-  { id: 'database', title: 'Create a database of guest authors', due: todayKey, tags: [] },
-  {
-    id: 'license',
-    title: "Renew driver's license",
-    goalId: 'personal',
-    due: todayKey,
-    subtasks: 1,
-    subtaskItems: [{ id: 'license-subtask', title: 'Subtask', completed: false }],
-    tags: ['Tag 1'],
-  },
-  { id: 'accountant', title: 'Consult accountant', goalId: 'paper', due: todayKey, subtasks: 3 },
-  { id: 'business-card', title: 'Print business card', due: todayKey },
-  { id: 'job-posting', title: 'Create job posting for SEO specialist', due: tomorrowKey, goalId: 'job-search' },
-  { id: 'assets', title: 'Request design assets for landing page', due: tomorrowKey, goalId: 'job-search' },
-  { id: 'outline', title: 'Outline the next newsletter', due: dateKey(addDays(now, 2)), goalId: 'personal' },
-  { id: 'analytics', title: 'Review launch analytics', due: dateKey(addDays(now, 4)), goalId: 'job-search' },
-  { id: 'invoices', title: 'Send monthly invoices', due: dateKey(addDays(now, 6)), goalId: 'paper' },
-]
-
-function readPlannerTasks() {
-  try {
-    const stored = window.localStorage.getItem(plannerStorageKey)
-    if (!stored) return seedTasks
-    const parsed = JSON.parse(stored) as Array<{ goalId?: string; list?: string } & Task>
-    if (!Array.isArray(parsed) || !parsed.length) return seedTasks
-    return parsed.map(task => {
-      const legacyList = (task as { list?: string }).list
-      const goalId =
-        task.goalId ??
-        (legacyList === 'Work' ? 'job-search' : legacyList === 'List 1' ? 'paper' : legacyList ? 'personal' : undefined)
-      return {
-        ...task,
-        goalId,
-      }
-    })
-  } catch {
-    return seedTasks
-  }
-}
-
-const tasks: Task[] = readPlannerTasks()
-let view: View = readStoredView()
-let selectedTaskId = 'license'
-const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
-const countAnimations: Partial<Record<CountKey, { from: number; to: number; token: number }>> = {}
-let countAnimationSequence = 0
-const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
-let activityMode: ActivityMode = 'daily'
-let plannerDraftGroup: UpcomingGroup | null = null
-let todayComposerOpen = false
-let goalComposerOpen = false
-let activeGoalId: string | null = null
-let toast = ''
-let calendarMode: CalendarMode = 'day'
-let calendarDate = new Date(2022, 1, 16)
-const calendarEvents: CalendarEvent[] = [
-  { id: 'marketing-sprint', title: 'Session 1: Marketing Sprint', date: '2022-02-16', hour: '09:00', period: 'AM', color: 'aqua', tall: true },
-  { id: 'sales-catchup', title: 'Sales Catchup', date: '2022-02-16', hour: '10:00', period: 'AM', color: 'aqua' },
-  { id: 'license-event', title: "Renew driver's license", date: '2022-02-16', hour: '11:00', period: 'AM', color: 'pink', tall: true },
-]
-const communityProfiles: CommunityProfile[] = [
-  {
-    id: 'amara',
-    name: 'Amara Okafor',
-    role: 'Product founder',
-    category: 'Building & creating',
-    members: '12.8k',
-    tasksToday: 6,
-    latest: 'Reviewed the launch brief',
-    portraitColumn: 0,
-    portraitRow: 0,
-    bioLines: ['CTO, Bumpa', 'Research intern, EPFL', 'Content creator with 18k followers'],
-  },
-  {
-    id: 'kenji',
-    name: 'Kenji Watanabe',
-    role: 'Creative director',
-    category: 'Building & creating',
-    members: '9.4k',
-    tasksToday: 4,
-    latest: 'Approved the campaign concept',
-    portraitColumn: 1,
-    portraitRow: 0,
-    bioLines: ['Creative director, independent brands', 'Systems thinker', 'Designing in public'],
-  },
-  {
-    id: 'maya',
-    name: 'Maya Raman',
-    role: 'Research scientist',
-    category: 'Building & creating',
-    members: '7.2k',
-    tasksToday: 5,
-    latest: 'Finished the weekly lab review',
-    portraitColumn: 2,
-    portraitRow: 0,
-    bioLines: ['Research scientist, EPFL', 'Writes about deep work', '6k newsletter subscribers'],
-  },
-  {
-    id: 'malik',
-    name: 'Malik Thompson',
-    role: 'Endurance athlete',
-    category: 'Research & performance',
-    members: '18.1k',
-    tasksToday: 7,
-    latest: 'Completed morning recovery',
-    portraitColumn: 0,
-    portraitRow: 1,
-    bioLines: ['Endurance athlete', 'Coach and builder', '18.1k followers'],
-  },
-  {
-    id: 'sofia',
-    name: 'Sofía Reyes',
-    role: 'Independent filmmaker',
-    category: 'Research & performance',
-    members: '11.6k',
-    tasksToday: 3,
-    latest: 'Locked the final shot list',
-    portraitColumn: 1,
-    portraitRow: 1,
-    bioLines: ['Independent filmmaker', 'Storytelling coach', '11.6k members'],
-  },
-  {
-    id: 'theo',
-    name: 'Theo Bennett',
-    role: 'Bestselling author',
-    category: 'Research & performance',
-    members: '15.3k',
-    tasksToday: 4,
-    latest: 'Wrote 1,200 words',
-    portraitColumn: 2,
-    portraitRow: 1,
-    bioLines: ['Bestselling author', 'Writes daily in public', '15.3k readers'],
-  },
-]
-const followedCommunityIds = new Set<string>(['amara'])
-
-const icons: Record<string, string> = {
-  menu: '<path d="M5 7h14M5 12h14M5 17h14"/>',
-  search: '<circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4 4"/>',
-  upcoming: '<path d="m7 7 5 5-5 5M13 7l5 5-5 5"/>',
-  today: '<path d="M7 6h12M7 12h12M7 18h12"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
-  calendar: '<rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 9h16M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/>',
-  sticky: '<path d="M5 4h14v12l-4 4H5z"/><path d="M15 20v-4h4"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>',
-  settings: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/>',
-  logout: '<path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"/>',
-  chevron: '<path d="m9 6 6 6-6 6"/>',
-  down: '<path d="m8 10 4 4 4-4"/>',
-}
-
-function icon(name: string) {
-  return `<svg aria-hidden="true" viewBox="0 0 24 24">${icons[name]}</svg>`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'} ago`
 }
 
 function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
 }
 
-function persistPlanner() {
+function loadState(): AppState {
+  const seeded = seedState()
+  const raw = localStorage.getItem(STORAGE_KEY)
+
+  if (!raw) {
+    return seeded
+  }
+
   try {
-    window.localStorage.setItem(plannerStorageKey, JSON.stringify(tasks))
-  } catch {
-    // The planner still works for this visit when storage is unavailable.
-  }
-}
-
-function persistGoals() {
-  try {
-    window.localStorage.setItem(goalsStorageKey, JSON.stringify(goals))
-  } catch {
-    // Goals still work for this visit when storage is unavailable.
-  }
-}
-
-function taskMatchesGoal(task: Task) {
-  return !activeGoalId || task.goalId === activeGoalId
-}
-
-function tasksForToday() {
-  return tasks.filter(task => task.due && task.due <= todayKey && taskMatchesGoal(task))
-}
-
-function tasksForUpcoming(group: UpcomingGroup) {
-  return tasks.filter(task => {
-    if (!task.due || !taskMatchesGoal(task)) return false
-    if (group === 'tomorrow') return task.due === tomorrowKey
-    return task.due > tomorrowKey && task.due <= weekEndKey
-  })
-}
-
-function sortTasks(items: Task[]) {
-  return [...items].sort((first, second) => {
-    const completionDifference = Number(completedTaskIds.has(first.id)) - Number(completedTaskIds.has(second.id))
-    if (completionDifference) return completionDifference
-    return (first.due ?? '').localeCompare(second.due ?? '')
-  })
-}
-
-function refreshCounts() {
-  screenCounts.today = tasksForToday().length
-  screenCounts.upcoming = tasksForUpcoming('tomorrow').length + tasksForUpcoming('week').length
-}
-
-function render() {
-  refreshCounts()
-  const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[2]!
-  const showInspector = view === 'today' && !todayComposerOpen
-  app.innerHTML = `
-    <div class="reference-app ${showInspector ? 'with-inspector' : ''}">
-      ${renderSidebar()}
-      <main class="workspace">
-        ${view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
-      </main>
-      ${showInspector ? renderInspector(selected) : ''}
-    </div>
-    <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
-  `
-}
-
-function renderWithMotion(update: () => void) {
-  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-  const transitionDocument = document as Document & {
-    startViewTransition?: (callback: () => void) => unknown
-  }
-  if (reducedMotion || !transitionDocument.startViewTransition) {
-    update()
-    return
-  }
-  transitionDocument.startViewTransition(update)
-}
-
-function triggerHaptic(pattern: number | number[]) {
-  try {
-    navigator.vibrate?.(pattern)
-  } catch {
-    // Haptics are an enhancement; unsupported devices continue normally.
-  }
-}
-
-function renderSidebar() {
-  return `
-    <aside class="sidebar">
-      <div class="menu-heading"><h1>Menu</h1><button aria-label="Menu">${icon('menu')}</button></div>
-      <label class="search">${icon('search')}<input aria-label="Search" placeholder="Search" /></label>
-
-      <nav aria-label="Tasks">
-        <h2>Tasks</h2>
-        ${navButton('today', 'Today', 'today', String(screenCounts.today))}
-        ${navButton('upcoming', 'Upcoming', 'upcoming', String(screenCounts.upcoming))}
-        ${navButton('calendar', 'Calendar', 'calendar')}
-        ${navButton('sticky', 'Community', 'sticky')}
-      </nav>
-
-      <section class="side-section">
-        <h2>Goals</h2>
-        ${goals.map(renderGoalRow).join('')}
-        ${goalComposerOpen ? renderGoalComposer() : `<button class="side-row add-side" data-action="open-goal-composer">${icon('plus')}<span>Add New Goal</span></button>`}
-      </section>
-
-      <section class="side-section tags-section">
-        <h2>Tags</h2>
-        <div class="tags"><button class="tag aqua">Tag 1</button><button class="tag pink">Tag 2</button><button class="tag neutral">+ Add Tag</button></div>
-      </section>
-
-      <div class="sidebar-bottom">
-        <button class="side-row" data-action="settings">${icon('settings')}<span>Settings</span></button>
-        <button class="side-row" data-action="signout">${icon('logout')}<span>Sign out</span></button>
-      </div>
-    </aside>
-  `
-}
-
-function navButton(target: View, label: string, iconName: string, count = '') {
-  return `<button class="nav-row ${view === target ? 'active' : ''}" data-view="${target}" ${view === target ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span>${count ? `<b>${count}</b>` : ''}</button>`
-}
-
-function renderGoalRow(goal: Goal) {
-  const count = tasks.filter(task => task.goalId === goal.id && !completedTaskIds.has(task.id)).length
-  const active = activeGoalId === goal.id
-  return `<button class="side-row goal-row ${active ? 'active' : ''}" data-goal-filter="${goal.id}" aria-pressed="${active}"><i class="list-color" style="--list-color:${goal.color}"></i><span>${escapeHtml(goal.name)}</span><b>${count}</b></button>`
-}
-
-function renderGoalComposer() {
-  return `
-    <form class="goal-composer" data-goal-form>
-      <input name="name" aria-label="Goal name" placeholder="Goal name" autocomplete="off" required />
-      <input name="color" aria-label="Goal color" type="color" value="#78a7ff" />
-      <button type="submit">Add</button>
-      <button type="button" data-action="close-goal-composer" aria-label="Cancel">×</button>
-    </form>
-  `
-}
-
-function triggerCountAnimation(key: CountKey, from: number, to: number) {
-  const token = ++countAnimationSequence
-  countAnimations[key] = { from, to, token }
-  window.setTimeout(() => {
-    if (countAnimations[key]?.token === token) delete countAnimations[key]
-  }, 580)
-}
-
-function renderCountWheel(key: CountKey) {
-  const value = screenCounts[key]
-  const animation = countAnimations[key]
-  const fromValue = animation?.from ?? value
-  const toValue = animation?.to ?? value
-  const digits = String(value).split('')
-  const previousDigits = String(fromValue).padStart(digits.length, '0')
-
-  return `
-    <span class="screen-count" data-count="${value}" aria-label="${value} tasks">
-      ${digits.map((digit, index) => {
-        const fromDigit = previousDigits[index] ?? digit
-        const animate = Boolean(animation) && fromDigit !== digit && toValue === value
-        return `
-          <span class="screen-count__digit ${animate ? 'is-animating' : ''}" style="--from-digit:${fromDigit};--to-digit:${digit};--digit:${animate ? fromDigit : digit};">
-            <span class="screen-count__track" aria-hidden="true">
-              ${Array.from({ length: 10 }, (_, number) => `<span>${number}</span>`).join('')}
-            </span>
-          </span>
-        `
-      }).join('')}
-    </span>
-  `
-}
-
-function renderToday() {
-  const todayTasks = sortTasks(tasksForToday())
-  return `
-    <section class="today-screen">
-      <header class="screen-title"><h1>Today</h1>${renderCountWheel('today')}</header>
-      ${todayComposerOpen ? renderTodayComposer() : `<button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>`}
-      <div class="task-list">
-        ${todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')}
-      </div>
-    </section>
-  `
-}
-
-function renderTodayComposer() {
-  return `
-    <form class="today-composer" data-today-form>
-      <div class="today-composer-heading">
-        <div><strong>New task</strong><span>Add the details now, then get moving.</span></div>
-        <button type="button" class="planner-cancel" data-action="close-today-composer" aria-label="Cancel">×</button>
-      </div>
-      <div class="today-composer-fields">
-        <label class="today-field today-field-title">
-          <span>Task name</span>
-          <input name="title" placeholder="What needs doing?" autocomplete="off" required />
-        </label>
-        <label class="today-field today-field-description">
-          <span>Description</span>
-          <textarea name="description" placeholder="Add a short note or useful context"></textarea>
-        </label>
-        <label class="today-field">
-          <span>Goal</span>
-          <select name="goalId" aria-label="Goal" required>${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
-        </label>
-        <label class="today-field">
-          <span>Due date</span>
-          <input name="due" type="date" value="${todayKey}" min="${todayKey}" max="${weekEndKey}" required />
-        </label>
-        <label class="today-field">
-          <span>Tags</span>
-          <input name="tags" placeholder="Tag 1, Tag 2" />
-        </label>
-      </div>
-      <div class="today-composer-actions">
-        <button type="button" data-action="close-today-composer">Cancel</button>
-        <button type="submit">Add task</button>
-      </div>
-    </form>
-  `
-}
-
-function renderGoalOptions(selectedId?: string) {
-  return goals.map(goal => `<option value="${goal.id}" ${goal.id === selectedId ? 'selected' : ''}>${escapeHtml(goal.name)}</option>`).join('')
-}
-
-function renderTaskRow(task: Task, selected = false) {
-  const goal = goals.find(item => item.id === task.goalId)
-  const completed = completedTaskIds.has(task.id)
-  const subtaskCount = task.subtaskItems?.length ?? task.subtasks ?? 0
-  return `
-    <div class="task-row ${selected ? 'selected' : ''} ${completed ? 'completed' : ''}">
-      <button class="checkbox" data-complete="${task.id}" aria-label="${completed ? 'Mark as not done' : 'Mark as done'}: ${escapeHtml(task.title)}" aria-pressed="${completed}"></button>
-      <button class="task-text" data-task="${task.id}">
-        <strong>${escapeHtml(task.title)}</strong>
-        ${task.due || goal || subtaskCount ? `<small>
-          ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}</span>` : ''}
-          ${task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
-          ${goal ? `<span><i class="list-color" style="--list-color:${goal.color}"></i>${escapeHtml(goal.name)}</span>` : ''}
-          ${!task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
-        </small>` : ''}
-      </button>
-      <button class="task-chevron" data-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
-    </div>
-  `
-}
-
-function renderInspector(task: Task) {
-  const subtasks = task.subtaskItems ?? Array.from({ length: task.subtasks ?? 0 }, (_, index) => ({
-    id: `${task.id}-subtask-${index}`,
-    title: index === 0 ? 'Subtask' : `Subtask ${index + 1}`,
-    completed: false,
-  }))
-  task.subtaskItems = subtasks
-  const tags = task.tags ?? (task.id === 'license' ? ['Tag 1'] : [])
-  task.tags = tags
-  const goal = goals.find(item => item.id === task.goalId)
-  return `
-    <aside class="inspector">
-      <div class="inspector-content">
-        <h2>Task:</h2>
-        <input class="inspector-title" value="${escapeHtml(task.title)}" aria-label="Task title" />
-        <textarea aria-label="Description" placeholder="Description">${escapeHtml(task.description ?? '')}</textarea>
-
-        <div class="inspector-fields">
-          <label><span>Goal</span><button data-action="cycle-goal">${escapeHtml(goal?.name ?? goals[0]?.name ?? 'No goal')} ${icon('down')}</button></label>
-          <label><span>Due date</span><input class="inspector-date" type="date" value="${task.due ?? ''}" aria-label="Due date" /></label>
-          <label><span>Tags</span><span>${tags.map(tag => `<button class="tag aqua" data-remove-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join('')}<button class="tag neutral" data-action="add-tag">+ Add Tag</button></span></label>
-        </div>
-
-        <h3>Subtasks:</h3>
-        <button class="add-subtask" data-action="add-subtask">${icon('plus')}<span>Add New Subtask</span></button>
-        ${subtasks.map(subtask => `<label class="subtask"><input type="checkbox" data-subtask="${subtask.id}" ${subtask.completed ? 'checked' : ''}/><span class="${subtask.completed ? 'completed' : ''}">${escapeHtml(subtask.title)}</span></label>`).join('')}
-      </div>
-      <div class="inspector-actions">
-        <button data-action="delete-task">Delete Task</button>
-        <button class="save" data-action="save-task">Save changes</button>
-      </div>
-    </aside>
-  `
-}
-
-function renderUpcoming() {
-  const renderGroup = (group: UpcomingGroup) => sortTasks(tasksForUpcoming(group))
-    .map(task => renderTaskRow(task))
-    .join('')
-  return `
-    <section class="upcoming-screen">
-      <header class="screen-title"><h1>Upcoming</h1>${renderCountWheel('upcoming')}</header>
-      <div class="upcoming-columns">
-        <section data-upcoming-section="tomorrow">
-          <h2>Tomorrow</h2>
-          ${renderUpcomingComposer('tomorrow')}
-          ${renderGroup('tomorrow')}
-        </section>
-        <section data-upcoming-section="week">
-          <h2>This Week</h2>
-          ${renderUpcomingComposer('week')}
-          ${renderGroup('week')}
-        </section>
-      </div>
-      ${renderActivityGraph()}
-    </section>
-  `
-}
-
-function renderUpcomingComposer(group: UpcomingGroup) {
-  if (plannerDraftGroup !== group) {
-    return `<button class="add-task-row" data-action="open-planner" data-task-group="${group}">${icon('plus')}<span>Add New Task</span></button>`
-  }
-  const isWeek = group === 'week'
-  return `
-    <form class="planner-composer" data-planner-form="${group}">
-      <input name="title" aria-label="Task name" placeholder="What needs doing?" autocomplete="off" required />
-      ${isWeek ? `<input name="due" aria-label="Task date" type="date" min="${dateKey(addDays(now, 2))}" max="${weekEndKey}" value="${dateKey(addDays(now, 2))}" required />` : `<span class="planner-date">${formatTaskDate(tomorrowKey)}</span>`}
-      <select name="goalId" aria-label="Goal" required>${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
-      <button type="submit">Add</button>
-      <button type="button" class="planner-cancel" data-action="close-planner" aria-label="Cancel">×</button>
-    </form>
-  `
-}
-
-function demoCompletionCount(day: Date) {
-  const daysAgo = Math.floor((new Date(`${todayKey}T12:00:00`).getTime() - day.getTime()) / 86_400_000)
-  if (daysAgo < 0 || daysAgo > 190) return 0
-  const wave = Math.sin(daysAgo * 0.43) + Math.cos(daysAgo * 0.17)
-  if ((daysAgo * 7 + day.getDate()) % 11 < 3) return 0
-  return Math.max(0, Math.min(6, Math.round(2.2 + wave + (190 - daysAgo) / 120)))
-}
-
-function activityDates() {
-  const end = addDays(now, 6 - now.getDay())
-  return Array.from({ length: 371 }, (_, index) => addDays(end, index - 370))
-}
-
-function completionCountForDate(day: Date) {
-  const key = dateKey(day)
-  const saved = tasks.filter(task => task.completedAt && dateKey(new Date(task.completedAt)) === key).length
-  return demoCompletionCount(day) + saved
-}
-
-function activityLevel(value: number, max: number) {
-  if (!value || !max) return 0
-  return Math.max(1, Math.min(4, Math.ceil(value / max * 4)))
-}
-
-function renderActivityGraph() {
-  const dates = activityDates()
-  const dailyCounts = dates.map(completionCountForDate)
-  const weeklyCounts = Array.from({ length: 53 }, (_, column) =>
-    dailyCounts.slice(column * 7, column * 7 + 7).reduce((total, count) => total + count, 0))
-  const cumulativeCounts: number[] = []
-  dailyCounts.reduce((total, count) => {
-    const next = total + count
-    cumulativeCounts.push(next)
-    return next
-  }, 0)
-  const maxDaily = Math.max(...dailyCounts, 1)
-  const maxWeekly = Math.max(...weeklyCounts, 1)
-  const maxCumulative = Math.max(...cumulativeCounts, 1)
-  const monthLabels = dates.filter((_, index) => index % 7 === 0).map((date, column, columns) => {
-    const previous = columns[column - 1]
-    return !previous || previous.getMonth() !== date.getMonth()
-      ? `<span style="grid-column:${column + 1}">${date.toLocaleDateString('en-GB', { month: 'short' })}</span>`
-      : ''
-  }).join('')
-  const cells = dates.map((day, index) => {
-    const column = Math.floor(index / 7)
-    const row = index % 7
-    const isFuture = day > new Date(`${todayKey}T23:59:59`)
-    let value = dailyCounts[index] ?? 0
-    let level = activityLevel(value, maxDaily)
-    let label = `${value} task${value === 1 ? '' : 's'} completed on ${day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-    if (activityMode === 'weekly') {
-      value = weeklyCounts[column] ?? 0
-      const filledRows = Math.ceil(value / maxWeekly * 7)
-      level = row >= 7 - filledRows ? activityLevel(value, maxWeekly) : 0
-      label = `${value} task${value === 1 ? '' : 's'} completed in the week of ${dates[column * 7]?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-    } else if (activityMode === 'cumulative') {
-      value = cumulativeCounts[index] ?? 0
-      const filledRows = Math.ceil(value / maxCumulative * 7)
-      level = row >= 7 - filledRows ? 3 : 0
-      label = `${value} tasks completed by ${day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    const parsed = JSON.parse(raw) as Partial<AppState>
+    return {
+      ...seeded,
+      ...parsed,
+      session: parsed.session ?? null,
+      tasks: parsed.tasks ?? seeded.tasks,
+      feed: parsed.feed ?? seeded.feed,
+      notifications: parsed.notifications ?? seeded.notifications,
+      review: parsed.review ?? seeded.review,
+      carryPromptTaskIds: parsed.carryPromptTaskIds ?? [],
+      draftOpen: parsed.draftOpen ?? false,
+      draftValue: parsed.draftValue ?? '',
+      notificationPanelOpen: false,
+      lastCheckedDate: parsed.lastCheckedDate ?? todayDate(),
+      view: parsed.view ?? 'today',
+      signedIn: parsed.signedIn ?? false,
     }
-    return `<button class="activity-cell level-${isFuture ? 0 : level} ${isFuture ? 'is-future' : ''}" style="--column:${column + 1};--row:${row + 1}" title="${label}" aria-label="${label}"></button>`
-  }).join('')
-
-  return `
-    <section class="activity-panel" aria-labelledby="activity-title">
-      <div class="activity-header">
-        <div><h2 id="activity-title">Task activity</h2><p>Your completed work, one square at a time.</p></div>
-        <div class="activity-tabs" aria-label="Activity view">
-          ${(['daily', 'weekly', 'cumulative'] as ActivityMode[]).map(mode =>
-            `<button class="${activityMode === mode ? 'active' : ''}" data-activity-mode="${mode}" aria-pressed="${activityMode === mode}">${mode[0]!.toUpperCase()}${mode.slice(1)}</button>`).join('')}
-        </div>
-      </div>
-      <div class="activity-scroll">
-        <div class="activity-grid">${cells}</div>
-        <div class="activity-months">${monthLabels}</div>
-      </div>
-      <div class="activity-legend"><span>Less</span>${[0, 1, 2, 3, 4].map(level => `<i class="level-${level}"></i>`).join('')}<span>More</span></div>
-    </section>
-  `
-}
-
-function renderCalendar() {
-  const dateTitle = formatCalendarTitle()
-  const dayLabel = calendarMode === 'day'
-    ? calendarDate.toLocaleDateString('en-GB', { weekday: 'long' })
-    : calendarMode === 'week' ? 'This week' : 'This month'
-  return `
-    <section class="calendar-screen">
-      <header class="calendar-header">
-        <div><h1>${dateTitle}</h1><div class="calendar-tabs"><button class="${calendarMode === 'day' ? 'active' : ''}" data-calendar-mode="day">Day</button><button class="${calendarMode === 'week' ? 'active' : ''}" data-calendar-mode="week">Week</button><button class="${calendarMode === 'month' ? 'active' : ''}" data-calendar-mode="month">Month</button></div></div>
-        <button class="add-event" data-action="add-event">Add Event</button>
-      </header>
-      <div class="calendar-nav"><button aria-label="Previous ${calendarMode}" data-action="previous-date">‹</button><button aria-label="Next ${calendarMode}" data-action="next-date">›</button></div>
-      <div class="day-label">${dayLabel}</div>
-      <div class="timeline">
-        ${renderCalendarTimeline()}
-      </div>
-    </section>
-  `
-}
-
-function calendarDateKey(date = calendarDate) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function formatCalendarTitle() {
-  if (calendarMode === 'month') return calendarDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-  if (calendarMode === 'week') {
-    const monday = new Date(calendarDate)
-    const weekday = (monday.getDay() + 6) % 7
-    monday.setDate(monday.getDate() - weekday)
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 6)
-    return `${monday.getDate()} – ${sunday.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+  } catch {
+    return seeded
   }
-  return calendarDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function renderCalendarTimeline() {
-  const hours: Array<[string, 'AM' | 'PM']> = [
-    ['09:00', 'AM'],
-    ['10:00', 'AM'],
-    ['11:00', 'AM'],
-    ['12:00', 'PM'],
-    ['01:00', 'PM'],
-    ['02:00', 'PM'],
-  ]
-  const eventsForDate = calendarEvents.filter(event => {
-    const eventDate = new Date(`${event.date}T12:00:00`)
-    if (calendarMode === 'day') return event.date === calendarDateKey()
-    if (calendarMode === 'month') {
-      return eventDate.getFullYear() === calendarDate.getFullYear() && eventDate.getMonth() === calendarDate.getMonth()
-    }
-    const monday = new Date(calendarDate)
-    monday.setHours(0, 0, 0, 0)
-    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 7)
-    return eventDate >= monday && eventDate < sunday
-  })
-  return hours.map(([hour, period]) => {
-    const matchingEvents = eventsForDate.filter(event => event.hour === hour && event.period === period)
-    const content = matchingEvents.map(event => `
-      <article class="calendar-event ${event.color}-event ${event.tall ? 'tall' : ''}" data-event="${event.id}"><strong>${escapeHtml(event.title)}</strong></article>
-    `).join('')
-    const currentTime = hour === '09:00' && calendarDateKey() === '2022-02-16' ? '<div class="current-time"><i></i></div>' : ''
-    return timelineHour(hour, period, `${content}${currentTime}`)
-  }).join('')
+let state = loadState()
+const appNode = document.querySelector<HTMLDivElement>('#app')
+
+if (!appNode) {
+  throw new Error('App root not found')
 }
 
-function timelineHour(time: string, period: string, content: string) {
-  return `<div class="timeline-row"><time>${time}<br/>${period}</time><div class="timeline-slot">${content}</div></div>`
-}
+const app = appNode
 
-function renderStickyWall() {
-  const spotlight = communityProfiles[0]!
-  return `
-    <section class="sticky-screen community-screen">
-      <header class="sticky-title community-title">
-        <div>
-          <h1>Community</h1>
-          <p>Follow remarkable people and watch how their best work gets done.</p>
-        </div>
-        <button class="community-discover" data-action="discover-people">Discover people</button>
-      </header>
-      <div class="community-content">
-        <section class="spotlight-section" aria-labelledby="spotlight-title">
-          <div class="community-section-heading">
-            <div><h2 id="spotlight-title">This week’s spotlight</h2><p>Step inside the working rhythm of someone exceptional.</p></div>
-            <span>Updated live</span>
-          </div>
-          ${renderSpotlight(spotlight)}
-        </section>
+hydrateStateForToday()
+queueMicrotask(render)
 
-        <section class="explore-section" aria-labelledby="explore-title">
-          <div class="community-section-heading">
-            <div><h2 id="explore-title">Explore communities</h2><p>Find a person whose way of working helps you move.</p></div>
-            <button data-action="discover-people">View all</button>
-          </div>
-          <div class="community-grid explore-grid">
-            ${communityProfiles.slice(1).map(renderCommunityCard).join('')}
-          </div>
-        </section>
-      </div>
-    </section>
-  `
-}
-
-function renderSpotlight(profile: CommunityProfile) {
-  const followed = followedCommunityIds.has(profile.id)
-  return `
-    <article class="spotlight-card">
-      <div class="community-launch-popover spotlight-launch-popover" aria-hidden="true">
-        <p class="community-launch-label">Public launch page</p>
-        <h4>${escapeHtml(profile.name)}</h4>
-        <ul>
-          ${profile.bioLines.map(line => `<li>${escapeHtml(line)}</li>`).join('')}
-        </ul>
-        <button class="community-launch-subscribe">Subscribe with Plus</button>
-      </div>
-      <div class="spotlight-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
-        <div class="community-portrait-art" aria-hidden="true"></div>
-        <span class="spotlight-members">${profile.members} people learning alongside her</span>
-      </div>
-      <div class="spotlight-body">
-        <p class="spotlight-role">${escapeHtml(profile.role)} · Lagos</p>
-        <h3>${escapeHtml(profile.name)}</h3>
-        <p class="spotlight-intro">Building useful products without losing the quiet routines that make ambitious work possible.</p>
-        <div class="spotlight-tasks">
-          <div class="spotlight-tasks-heading"><strong>Today’s focus</strong><span>${profile.tasksToday} tasks · 3 complete</span></div>
-          <div><i class="done">✓</i><span>Review the launch brief</span><time>8:40</time></div>
-          <div><i class="done">✓</i><span>Approve the onboarding flow</span><time>10:15</time></div>
-          <div><i></i><span>Founder interviews</span><time>14:00</time></div>
-        </div>
-        <div class="spotlight-actions">
-          <button class="spotlight-open" data-community="${profile.id}">Enter Amara’s community ${icon('chevron')}</button>
-          <button class="spotlight-follow ${followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${followed}">
-            ${followed ? 'Following' : 'Follow'}
-          </button>
-        </div>
-      </div>
-    </article>
-  `
-}
-
-function renderCommunityCard(profile: CommunityProfile) {
-  const followed = followedCommunityIds.has(profile.id)
-  return `
-    <article class="community-card">
-      ${renderLaunchPopover(profile)}
-      <div class="community-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
-        <div class="community-portrait-art" aria-hidden="true"></div>
-        <span>${profile.members} members</span>
-        <button class="community-follow ${followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-label="${followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${followed}">
-          ${followed ? '✓' : icon('plus')}
-        </button>
-      </div>
-      <div class="community-card-body">
-        <p class="community-role">${escapeHtml(profile.role)}</p>
-        <h3>${escapeHtml(profile.name)}</h3>
-        <div class="community-activity">
-          <span><b>${profile.tasksToday}</b> tasks today</span>
-          <span class="activity-dot"></span>
-          <span>Active now</span>
-        </div>
-        <p class="community-latest"><span>✓</span>${escapeHtml(profile.latest)}</p>
-        <button class="community-open" data-community="${profile.id}">View community ${icon('chevron')}</button>
-      </div>
-    </article>
-  `
-}
-
-function renderLaunchPopover(profile: CommunityProfile) {
-  return `
-    <div class="community-launch-popover" aria-hidden="true">
-      <p class="community-launch-label">Public launch page</p>
-      <h4>${escapeHtml(profile.name)}</h4>
-      <ul>
-        ${profile.bioLines.map(line => `<li>${escapeHtml(line)}</li>`).join('')}
-      </ul>
-      <button class="community-launch-subscribe">Subscribe with Plus</button>
-    </div>
-  `
-}
-
-function selectedTask() {
-  return tasks.find(task => task.id === selectedTaskId)
-}
-
-function persistInspectorDraft() {
-  const task = selectedTask()
-  if (!task) return
-  const title = document.querySelector<HTMLInputElement>('.inspector-title')?.value.trim()
-  const description = document.querySelector<HTMLTextAreaElement>('.inspector textarea')?.value
-  const due = document.querySelector<HTMLInputElement>('.inspector-date')?.value
-  if (title) task.title = title
-  if (description !== undefined) task.description = description
-  if (due !== undefined) task.due = due || undefined
-  persistPlanner()
-}
-
-app.addEventListener('submit', event => {
-  const target = event.target as HTMLElement
-  const goalForm = target.closest<HTMLFormElement>('[data-goal-form]')
-  if (goalForm) {
-    event.preventDefault()
-    const data = new FormData(goalForm)
-    const name = String(data.get('name') ?? '').trim()
-    const color = String(data.get('color') ?? '#78a7ff')
-    if (!name) return
-    goals.push({ id: crypto.randomUUID(), name, color })
-    goalComposerOpen = false
-    persistGoals()
-    triggerHaptic([35, 30, 60])
-    toast = 'Goal added'
+window.addEventListener('storage', (event) => {
+  if (event.key === STORAGE_KEY) {
+    state = loadState()
+    hydrateStateForToday()
     render()
-    window.setTimeout(() => {
-      toast = ''
-      render()
-    }, 1400)
-    return
   }
-
-  const todayForm = target.closest<HTMLFormElement>('[data-today-form]')
-  if (todayForm) {
-    event.preventDefault()
-    const data = new FormData(todayForm)
-    const title = String(data.get('title') ?? '').trim()
-    const due = String(data.get('due') ?? todayKey)
-    const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
-    if (!title || !due) return
-    const todayCountBefore = screenCounts.today
-    const upcomingCountBefore = screenCounts.upcoming
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      title,
-      description: String(data.get('description') ?? '').trim(),
-      goalId: goalId || undefined,
-      due,
-      tags: String(data.get('tags') ?? '')
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(Boolean)
-        .slice(0, 8),
-      subtaskItems: [],
-    }
-    tasks.unshift(newTask)
-    selectedTaskId = newTask.id
-    todayComposerOpen = false
-    persistPlanner()
-    refreshCounts()
-    if (due === todayKey) triggerCountAnimation('today', todayCountBefore, screenCounts.today)
-    else triggerCountAnimation('upcoming', upcomingCountBefore, screenCounts.upcoming)
-    triggerHaptic([35, 30, 60])
-    toast = due === todayKey
-      ? 'Task added to today'
-      : due === tomorrowKey
-        ? 'Task scheduled for tomorrow'
-        : `Task scheduled for ${formatTaskDate(due)}`
-    render()
-    window.setTimeout(() => {
-      toast = ''
-      render()
-    }, 1400)
-    return
-  }
-
-  const form = target.closest<HTMLFormElement>('[data-planner-form]')
-  if (!form) return
-  event.preventDefault()
-  const group = form.dataset.plannerForm as UpcomingGroup
-  const data = new FormData(form)
-  const title = String(data.get('title') ?? '').trim()
-  const due = group === 'tomorrow' ? tomorrowKey : String(data.get('due') ?? '')
-  const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
-  if (!title || !due) return
-  const from = screenCounts.upcoming
-  tasks.unshift({
-    id: crypto.randomUUID(),
-    title,
-    due,
-    goalId: goalId || undefined,
-    tags: [],
-    subtaskItems: [],
-  })
-  persistPlanner()
-  triggerHaptic([35, 30, 60])
-  plannerDraftGroup = null
-  refreshCounts()
-  triggerCountAnimation('upcoming', from, screenCounts.upcoming)
-  toast = group === 'tomorrow' ? 'Added to tomorrow' : `Added for ${formatTaskDate(due)}`
-  render()
-  window.setTimeout(() => {
-    toast = ''
-    render()
-  }, 1400)
 })
 
-app.addEventListener('click', event => {
-  const target = event.target as HTMLElement
-  const subtaskId = target.closest<HTMLInputElement>('[data-subtask]')?.dataset.subtask
-  if (subtaskId) {
-    const task = selectedTask()
-    const subtask = task?.subtaskItems?.find(item => item.id === subtaskId)
-    if (subtask) subtask.completed = !subtask.completed
+setInterval(() => {
+  const before = state.lastCheckedDate
+  hydrateStateForToday()
+  if (before !== state.lastCheckedDate) {
     render()
-    return
   }
+}, 60_000)
 
-  const completedTaskId = target.closest<HTMLElement>('[data-complete]')?.dataset.complete
-  if (completedTaskId) {
-    const task = tasks.find(item => item.id === completedTaskId)
-    const wasCompleted = completedTaskIds.has(completedTaskId)
-    if (wasCompleted) {
-      completedTaskIds.delete(completedTaskId)
-      if (task) task.completedAt = undefined
-    } else {
-      completedTaskIds.add(completedTaskId)
-      if (task) task.completedAt = new Date().toISOString()
-      triggerHaptic(65)
-    }
-    persistPlanner()
-    render()
-    return
-  }
-
-  const removeTag = target.closest<HTMLElement>('[data-remove-tag]')?.dataset.removeTag
-  if (removeTag) {
-    persistInspectorDraft()
-    const task = selectedTask()
-    if (task) task.tags = (task.tags ?? []).filter(tag => tag !== removeTag)
-    render()
-    return
-  }
-
-  const nextView = target.closest<HTMLElement>('[data-view]')?.dataset.view as View | undefined
-  if (nextView) {
-    if (nextView !== 'today') todayComposerOpen = false
-    rememberView(nextView)
-    render()
-    return
-  }
-
-  const goalFilterId = target.closest<HTMLElement>('[data-goal-filter]')?.dataset.goalFilter
-  if (goalFilterId) {
-    activeGoalId = activeGoalId === goalFilterId ? null : goalFilterId
-    if (view !== 'today' && view !== 'upcoming') rememberView('today')
-    render()
-    return
-  }
-
-  const followId = target.closest<HTMLElement>('[data-follow]')?.dataset.follow
-  if (followId) {
-    if (followedCommunityIds.has(followId)) followedCommunityIds.delete(followId)
-    else followedCommunityIds.add(followId)
-    render()
-    return
-  }
-
-  const communityId = target.closest<HTMLElement>('[data-community]')?.dataset.community
-  if (communityId) {
-    const profile = communityProfiles.find(item => item.id === communityId)
-    toast = profile ? `Opening ${profile.name}'s community` : ''
-    render()
-    window.setTimeout(() => {
-      toast = ''
-      render()
-    }, 1400)
-    return
-  }
-
-  const taskId = target.closest<HTMLElement>('[data-task]')?.dataset.task
-  if (taskId) {
-    selectedTaskId = taskId
-    if (view === 'upcoming') {
-      toast = 'This task is planned for a future day'
-      render()
-      window.setTimeout(() => {
-        toast = ''
-        render()
-      }, 1400)
-      return
-    }
-    render()
-    return
-  }
-
-  const nextActivityMode = target.closest<HTMLElement>('[data-activity-mode]')?.dataset.activityMode as ActivityMode | undefined
-  if (nextActivityMode) {
-    if (nextActivityMode === activityMode) return
-    renderWithMotion(() => {
-      activityMode = nextActivityMode
-      render()
-    })
-    return
-  }
-
-  const nextCalendarMode = target.closest<HTMLElement>('[data-calendar-mode]')?.dataset.calendarMode as CalendarMode | undefined
-  if (nextCalendarMode) {
-    calendarMode = nextCalendarMode
-    render()
-    return
-  }
+app.addEventListener('click', (event) => {
+  const target = event.target as HTMLElement | null
+  if (!target) return
 
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
   if (!action) return
-  if (action === 'open-planner') {
-    plannerDraftGroup = target.closest<HTMLElement>('[data-task-group]')?.dataset.taskGroup as UpcomingGroup
-    render()
-    document.querySelector<HTMLInputElement>('[data-planner-form] input[name="title"]')?.focus()
+
+  if (action === 'switch-view') {
+    state.view = target.closest<HTMLElement>('[data-view]')?.dataset.view as View
+    state.notificationPanelOpen = false
+    persistAndRender()
     return
   }
-  if (action === 'close-planner') {
-    plannerDraftGroup = null
-    render()
+
+  if (action === 'signin') {
+    const variant = target.dataset.variant ?? 'email'
+    const emailInput = app.querySelector<HTMLInputElement>('#email-input')
+    const email = variant === 'email' ? emailInput?.value.trim() || 'david@ascent.app' : `${variant.toLowerCase()}@ascent.app`
+    state.session = {
+      email,
+      name: deriveName(email, variant),
+    }
+    state.signedIn = true
+    state.view = 'today'
+    state.notificationPanelOpen = false
+    persistAndRender()
     return
   }
-  if (action === 'open-goal-composer') {
-    goalComposerOpen = true
-    render()
-    document.querySelector<HTMLInputElement>('[data-goal-form] input[name="name"]')?.focus()
+
+  if (action === 'toggle-notifications') {
+    state.notificationPanelOpen = !state.notificationPanelOpen
+    persistAndRender()
     return
   }
-  if (action === 'close-goal-composer') {
-    goalComposerOpen = false
-    render()
-    return
-  }
-  if (action === 'close-today-composer') {
-    renderWithMotion(() => {
-      todayComposerOpen = false
-      render()
+
+  if (action === 'open-draft') {
+    state.draftOpen = true
+    state.draftValue = ''
+    persistAndRender()
+    queueMicrotask(() => {
+      app.querySelector<HTMLInputElement>('#task-draft')?.focus()
     })
     return
   }
+
+  if (action === 'cancel-draft') {
+    state.draftOpen = false
+    state.draftValue = ''
+    persistAndRender()
+    return
+  }
+
   if (action === 'add-task') {
-    renderWithMotion(() => {
-      todayComposerOpen = true
-      render()
-      document.querySelector<HTMLInputElement>('[data-today-form] input[name="title"]')?.focus()
-    })
+    const input = app.querySelector<HTMLInputElement>('#task-draft')
+    const value = input?.value.trim() ?? state.draftValue.trim()
+    if (!value) {
+      return
+    }
+    addTask(value)
     return
   }
-  if (action === 'save-task') {
-    persistInspectorDraft()
-    toast = 'Changes saved'
-  } else if (action === 'delete-task') {
-    const taskIndex = tasks.findIndex(task => task.id === selectedTaskId)
-    if (taskIndex >= 0) tasks.splice(taskIndex, 1)
-    const from = screenCounts.today
-    completedTaskIds.delete(selectedTaskId)
-    selectedTaskId = tasksForToday()[0]?.id ?? tasks[0]?.id ?? ''
-    refreshCounts()
-    triggerCountAnimation('today', from, screenCounts.today)
-    persistPlanner()
-    toast = 'Task deleted'
-  } else if (action === 'cycle-goal') {
-    persistInspectorDraft()
-    const task = selectedTask()
-    if (task && goals.length) {
-      const currentIndex = goals.findIndex(goal => goal.id === task.goalId)
-      task.goalId = goals[(currentIndex + 1 + goals.length) % goals.length]?.id
-      persistPlanner()
-    }
-  } else if (action === 'add-tag') {
-    persistInspectorDraft()
-    const task = selectedTask()
-    if (task) {
-      const tags = task.tags ?? []
-      const tagToAdd = !tags.includes('Tag 1') ? 'Tag 1' : !tags.includes('Tag 2') ? 'Tag 2' : null
-      if (tagToAdd) task.tags = [...tags, tagToAdd]
-    }
-  } else if (action === 'add-subtask') {
-    persistInspectorDraft()
-    const task = selectedTask()
-    if (task) {
-      const subtaskNumber = (task.subtaskItems?.length ?? 0) + 1
-      task.subtaskItems = [
-        ...(task.subtaskItems ?? []),
-        { id: crypto.randomUUID(), title: subtaskNumber === 1 ? 'Subtask' : `Subtask ${subtaskNumber}`, completed: false },
-      ]
-      task.subtasks = task.subtaskItems.length
-    }
-    toast = 'New subtask ready'
-  } else if (action === 'add-event') {
-    const eventsOnDate = calendarEvents.filter(event => event.date === calendarDateKey()).length
-    const slots: Array<[string, 'AM' | 'PM']> = [['12:00', 'PM'], ['01:00', 'PM'], ['02:00', 'PM']]
-    const [hour, period] = slots[Math.min(eventsOnDate > 2 ? eventsOnDate - 3 : 0, slots.length - 1)]
-    calendarEvents.push({
-      id: crypto.randomUUID(),
-      title: `New event ${calendarEvents.length + 1}`,
-      date: calendarDateKey(),
-      hour,
-      period,
-      color: eventsOnDate % 2 === 0 ? 'aqua' : 'pink',
-    })
-    toast = 'New event ready'
-  } else if (action === 'previous-date' || action === 'next-date') {
-    const direction = action === 'previous-date' ? -1 : 1
-    const nextDate = new Date(calendarDate)
-    if (calendarMode === 'month') nextDate.setMonth(nextDate.getMonth() + direction)
-    else nextDate.setDate(nextDate.getDate() + direction * (calendarMode === 'week' ? 7 : 1))
-    calendarDate = nextDate
-  } else {
-    const messages: Record<string, string> = {
-      'discover-people': 'More communities coming soon',
-      settings: 'Settings',
-      signout: 'Signed out',
-    }
-    toast = messages[action] ?? ''
-    if (action === 'signout') {
-      rememberView('today')
-      try {
-        window.sessionStorage.removeItem(viewStorageKey)
-      } catch {
-        // If storage is blocked, the app still resets the view.
-      }
-    }
+
+  if (action === 'complete-task') {
+    const id = target.dataset.taskId
+    if (id) completeTask(id)
+    return
   }
-  persistPlanner()
-  if (action === 'open-goal-composer' || action === 'close-goal-composer') persistGoals()
-  render()
-  window.setTimeout(() => {
-    toast = ''
-    render()
-  }, 1400)
+
+  if (action === 'carry-reason') {
+    const taskId = target.dataset.taskId
+    const reason = target.dataset.reason
+    if (taskId && reason) resolveCarryForward(taskId, reason)
+    return
+  }
+
+  if (action === 'toggle-reaction') {
+    const feedId = target.dataset.feedId
+    if (feedId) toggleReaction(feedId)
+    return
+  }
+
+  if (action === 'mark-notification-read') {
+    const notificationId = target.dataset.notificationId
+    if (notificationId) markNotificationRead(notificationId)
+    return
+  }
 })
 
-render()
+app.addEventListener('submit', (event) => {
+  const form = event.target as HTMLFormElement
+  if (form.id === 'review-form') {
+    event.preventDefault()
+    submitReview(form)
+    return
+  }
+
+  if (form.id === 'draft-form') {
+    event.preventDefault()
+    const input = form.querySelector<HTMLInputElement>('#task-draft')
+    const value = input?.value.trim() ?? ''
+    if (value) addTask(value)
+  }
+})
+
+app.addEventListener('input', (event) => {
+  const target = event.target as HTMLInputElement | HTMLTextAreaElement | null
+  if (!target) return
+
+  if (target.id === 'task-draft') {
+    state.draftValue = target.value
+    persist()
+  }
+})
+
+app.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && state.draftOpen) {
+    state.draftOpen = false
+    state.draftValue = ''
+    persistAndRender()
+  }
+})
+
+window.addEventListener('scroll', scheduleFocusMotionUpdate, { passive: true })
+window.addEventListener('resize', scheduleFocusMotionUpdate)
+
+function hydrateStateForToday() {
+  const today = todayDate()
+  if (state.lastCheckedDate === today) {
+    ensureSundayReviewState(today)
+    return
+  }
+
+  const daysBetween = Math.max(1, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${state.lastCheckedDate}T00:00:00`).getTime()) / DAY_MS))
+  let cursor = state.lastCheckedDate
+
+  for (let i = 0; i < daysBetween; i += 1) {
+    const nextDay = shiftDate(cursor, 1)
+    carryForwardOpenTasks(nextDay)
+    cursor = nextDay
+  }
+
+  state.lastCheckedDate = today
+  archiveOldTasks(today)
+  ensureSundayReviewState(today)
+  persist()
+}
+
+function carryForwardOpenTasks(today: string) {
+  const carryReason = 'This task was carried forward.'
+  const openTasks = state.tasks.filter(
+    (task) => !task.completedAt && !task.archivedAt && task.plannedFor < today && !task.carryPending,
+  )
+
+  for (const task of openTasks) {
+    task.plannedFor = today
+    task.carryPending = true
+    task.carryHistory.push({ date: today, reason: carryReason })
+    if (!state.carryPromptTaskIds.includes(task.id)) {
+      state.carryPromptTaskIds.push(task.id)
+    }
+  }
+}
+
+function archiveOldTasks(today: string) {
+  const cutoff = new Date(`${today}T00:00:00`).getTime() - 30 * DAY_MS
+  for (const task of state.tasks) {
+    if (!task.completedAt || task.archivedAt) continue
+    const completedAt = new Date(task.completedAt).getTime()
+    if (completedAt < cutoff) {
+      task.archivedAt = new Date().toISOString()
+    }
+  }
+}
+
+function ensureSundayReviewState(today: string) {
+  if (new Date(`${today}T12:00:00Z`).getUTCDay() !== 0) {
+    return
+  }
+
+  if (state.review.submittedFor === today) {
+    return
+  }
+
+  const hasNotice = state.notifications.some((item) => item.text === 'Weekly review is ready for Sunday.')
+  if (!hasNotice) {
+    state.notifications.unshift({
+      id: createId(),
+      text: 'Weekly review is ready for Sunday.',
+      timestamp: `${today}T08:00:00.000Z`,
+      read: false,
+    })
+  }
+}
+
+function deriveName(email: string, variant: string) {
+  if (variant === 'google') return 'David'
+  if (variant === 'apple') return 'David'
+  const localPart = email.split('@')[0] || 'David'
+  return localPart
+    .split(/[._-]/)
+    .map((chunk) => chunk ? chunk[0]!.toUpperCase() + chunk.slice(1) : '')
+    .join(' ')
+}
+
+function addTask(title: string) {
+  const today = todayDate()
+  state.tasks.unshift({
+    id: createId(),
+    title,
+    createdAt: `${today}T${new Date().toISOString().slice(11)}`,
+    plannedFor: today,
+    completedAt: null,
+    archivedAt: null,
+    carryPending: false,
+    carryHistory: [],
+  })
+  state.draftOpen = false
+  state.draftValue = ''
+  state.notifications.unshift({
+    id: createId(),
+    text: `Task added: "${title}".`,
+    timestamp: new Date().toISOString(),
+    read: false,
+  })
+  persistAndRender()
+}
+
+function completeTask(taskId: string) {
+  const task = state.tasks.find((item) => item.id === taskId)
+  if (!task || task.completedAt) return
+  const now = new Date().toISOString()
+  task.completedAt = now
+  task.carryPending = false
+  state.carryPromptTaskIds = state.carryPromptTaskIds.filter((id) => id !== taskId)
+
+  const actor = state.session?.name ?? 'David'
+  state.feed.unshift({
+    id: createId(),
+    author: actor,
+    action: `✓ Completed "${task.title}"`,
+    timestamp: now,
+    reacted: false,
+    kind: 'execution',
+  })
+  state.notifications.unshift({
+    id: createId(),
+    text: `${actor} completed "${task.title}".`,
+    timestamp: now,
+    read: false,
+  })
+
+  persistAndRender()
+}
+
+function resolveCarryForward(taskId: string, reason: string) {
+  const task = state.tasks.find((item) => item.id === taskId)
+  if (!task) return
+  task.carryPending = false
+  task.carryHistory.push({ date: todayDate(), reason })
+  state.carryPromptTaskIds = state.carryPromptTaskIds.filter((id) => id !== taskId)
+  state.notifications.unshift({
+    id: createId(),
+    text: `Carry-forward noted: "${task.title}" - ${reason}.`,
+    timestamp: new Date().toISOString(),
+    read: false,
+  })
+  persistAndRender()
+}
+
+function toggleReaction(feedId: string) {
+  const item = state.feed.find((entry) => entry.id === feedId)
+  if (!item) return
+  item.reacted = !item.reacted
+  persistAndRender()
+}
+
+function markNotificationRead(notificationId: string) {
+  const item = state.notifications.find((entry) => entry.id === notificationId)
+  if (!item) return
+  item.read = true
+  persistAndRender()
+}
+
+function submitReview(form: HTMLFormElement) {
+  const today = todayDate()
+  const data = new FormData(form)
+  state.review = {
+    submittedFor: today,
+    submittedAt: new Date().toISOString(),
+    answers: {
+      whatWentWell: String(data.get('whatWentWell') ?? '').trim(),
+      blockers: String(data.get('blockers') ?? '').trim(),
+      stopDoing: String(data.get('stopDoing') ?? '').trim(),
+      doubleDownOn: String(data.get('doubleDownOn') ?? '').trim(),
+    },
+  }
+  state.notifications.unshift({
+    id: createId(),
+    text: 'Weekly review completed.',
+    timestamp: new Date().toISOString(),
+    read: false,
+  })
+  persistAndRender()
+}
+
+function persistAndRender() {
+  persist()
+  render()
+}
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+}
+
+function render() {
+  document.body.dataset.view = state.view
+  document.body.dataset.signedIn = String(state.signedIn)
+
+  if (!state.signedIn) {
+    app.innerHTML = renderAuth()
+    scheduleFocusMotionUpdate()
+    return
+  }
+
+  const unread = state.notifications.filter((item) => !item.read).length
+  const carryPromptTasks = state.tasks.filter((task) => task.carryPending && !task.archivedAt && !task.completedAt)
+
+  const content =
+    state.view === 'today'
+      ? renderTodayView(carryPromptTasks)
+      : state.view === 'feed'
+        ? renderFeedView()
+        : state.view === 'profile'
+          ? renderProfileView()
+          : renderReviewView()
+
+  app.innerHTML = `
+    <div class="workspace-shell">
+      ${renderSidebar(unread)}
+      <main class="workspace-main">
+        ${renderHeader(unread)}
+        <section class="workspace-canvas">
+          ${content}
+        </section>
+      </main>
+      ${renderNotificationPanel()}
+      ${renderReviewOverlay()}
+    </div>
+  `
+
+  scheduleFocusMotionUpdate()
+}
+
+function scheduleFocusMotionUpdate() {
+  if (focusMotionFrame) return
+
+  focusMotionFrame = window.requestAnimationFrame(() => {
+    focusMotionFrame = 0
+    updateFocusMotion()
+  })
+}
+
+function updateFocusMotion() {
+  const panels = app.querySelectorAll<HTMLElement>('.focus-demo, .orbit-demo')
+  if (!panels.length) return
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    panels.forEach((panel) => {
+      panel.style.setProperty('--focus-scale', '1')
+      panel.style.setProperty('--focus-tilt-x', '0deg')
+      panel.style.setProperty('--focus-tilt-y', '0deg')
+      panel.style.setProperty('--focus-lift', '0px')
+      panel.querySelectorAll<HTMLElement>('.orbit-center, .orbit-person, :scope > span').forEach((node) => {
+        node.style.setProperty('--node-scale', '1')
+        node.style.setProperty('--node-opacity', '1')
+        node.style.setProperty('--node-blur', '0px')
+        node.style.setProperty('--node-rotate', '0deg')
+        node.style.setProperty('--node-y', '0px')
+      })
+    })
+    return
+  }
+
+  panels.forEach((panel) => {
+    const section = panel.closest<HTMLElement>('.ascent-feature')
+    if (!section) return
+
+    const rect = section.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const viewportCenter = viewportHeight / 2
+    const sectionCenter = rect.top + rect.height / 2
+    const offset = clamp((sectionCenter - viewportCenter) / viewportCenter, -1, 1)
+    const visibleTop = Math.max(rect.top, 0)
+    const visibleBottom = Math.min(rect.bottom, viewportHeight)
+    const focus = clamp((visibleBottom - visibleTop) / Math.max(rect.height, 1), 0, 1)
+
+    const scale = 0.82 + focus * 0.26
+    const tiltX = -offset * (8 + focus * 10)
+    const tiltY = offset * (6 + focus * 8)
+    const lift = focus * -24
+
+    panel.style.setProperty('--focus-scale', scale.toFixed(3))
+    panel.style.setProperty('--focus-tilt-x', `${tiltX.toFixed(2)}deg`)
+    panel.style.setProperty('--focus-tilt-y', `${tiltY.toFixed(2)}deg`)
+    panel.style.setProperty('--focus-lift', `${lift.toFixed(2)}px`)
+
+    if (panel.classList.contains('orbit-demo')) {
+      panel.querySelectorAll<HTMLElement>('.orbit-center, .orbit-person').forEach((node, index) => {
+        const start = index * 0.045
+        const progress = clamp((focus - start) / (0.82 - start), 0, 1)
+        const eased = 1 - Math.pow(1 - progress, 3)
+        const pop = Math.sin(progress * Math.PI) * 0.22
+        const nodeScale = 0.16 + eased * 0.84 + pop
+
+        node.style.setProperty('--node-scale', nodeScale.toFixed(3))
+        node.style.setProperty('--node-opacity', clamp(progress * 2.2, 0, 1).toFixed(3))
+        node.style.setProperty('--node-blur', `${((1 - progress) * 9).toFixed(2)}px`)
+        node.style.setProperty('--node-rotate', `${(offset * (index % 2 ? -10 : 10) * (1 - progress)).toFixed(2)}deg`)
+      })
+
+      panel.querySelectorAll<HTMLElement>(':scope > span').forEach((badge, index) => {
+        const start = 0.12 + index * 0.1
+        const progress = clamp((focus - start) / (0.78 - start), 0, 1)
+        const eased = 1 - Math.pow(1 - progress, 4)
+        const pop = Math.sin(progress * Math.PI) * 0.38
+        const nodeScale = 0.06 + eased * 0.94 + pop
+
+        badge.style.setProperty('--node-scale', nodeScale.toFixed(3))
+        badge.style.setProperty('--node-opacity', clamp(progress * 2.6, 0, 1).toFixed(3))
+        badge.style.setProperty('--node-blur', `${((1 - progress) * 12).toFixed(2)}px`)
+        badge.style.setProperty('--node-y', `${((1 - progress) * 28).toFixed(2)}px`)
+      })
+    }
+  })
+}
+
+function renderAuth() {
+  return `
+    <main class="craft-landing">
+      <section class="craft-hero">
+        <header class="craft-nav">
+          <a class="craft-logo" href="#" aria-label="Ascent home">ASCENT</a>
+          <nav class="craft-links" aria-label="Main navigation">
+            <a class="craft-nav-item" href="#product">Product</a>
+            <a class="craft-nav-item" href="#community">Community</a>
+            <a class="craft-nav-item" href="#pricing">Pricing</a>
+            <a class="craft-nav-item" href="#download">Download</a>
+          </nav>
+          <div class="craft-account">
+            <button type="button" class="craft-login craft-nav-item" data-action="signin" data-variant="email">Log in</button>
+            <button type="button" class="craft-try" data-action="signin" data-variant="email">Try Ascent Free</button>
+          </div>
+        </header>
+
+        <div class="craft-copy" id="product">
+          <h1>Your space for goals,<br />focus, and real progress</h1>
+          <button type="button" class="craft-cta" data-action="signin" data-variant="email">Try Ascent Free</button>
+        </div>
+
+        <section class="craft-app-window" aria-label="Ascent app preview">
+          <aside class="craft-app-sidebar">
+            <div class="craft-window-controls" aria-hidden="true"><i></i><i></i><i></i></div>
+            <button type="button" class="craft-new">⌘ &nbsp; New goal</button>
+            <p class="craft-space"><span>🌱</span> David's Space <b>⌄</b></p>
+            <nav aria-label="App preview pages">
+              <a class="is-active" href="#">▣ <span>Today</span></a>
+              <a href="#">✓ <span>Tasks</span></a>
+              <a href="#">□ <span>Calendar</span></a>
+            </nav>
+            <small>STARRED</small>
+            <nav>
+              <a href="#">◌ <span>Journal</span></a>
+              <a href="#">◇ <span>Ideas</span></a>
+            </nav>
+            <small>FOCUS</small>
+          </aside>
+          <div class="craft-app-main">
+            <div class="craft-app-toolbar">
+              <span>‹</span><span>›</span>
+              <button>◉ &nbsp; All goals</button>
+              <span>＋</span>
+              <div class="craft-tools">⌕ &nbsp; ♟ &nbsp; ●</div>
+            </div>
+            <div class="craft-app-title">
+              <h2><span>＋</span> All goals</h2>
+              <div>▦ &nbsp; ▦ &nbsp; ≡ &nbsp; ⇅</div>
+            </div>
+            <div class="craft-goal-grid">
+              <article class="goal-card goal-pink">
+                <h3>Launch the project</h3>
+                <p>Build a clear plan and ship the first useful version.</p>
+                <strong>■ Draft roadmap</strong>
+              </article>
+              <article class="goal-card goal-white">
+                <h3>Workout routine</h3>
+                <p>Monday</p><small>□ Yoga</small><p>Tuesday</p><small>□ Run 5 km</small>
+              </article>
+              <article class="goal-card goal-yellow">
+                <h3>Deep work week</h3>
+                <p>Protect time for the work that moves everything forward.</p>
+                <strong>Today's focus</strong>
+              </article>
+              <article class="goal-card goal-green">
+                <h3>Learning notes</h3>
+                <ol><li>Decision making</li><li>Systems thinking</li><li>Review</li></ol>
+                <strong>Tasks</strong>
+              </article>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="ascent-purpose">
+        <h2>Ascent isn’t just for one goal,<br />it’s for your whole climb.</h2>
+        <div class="purpose-tabs" role="list">
+          <button class="is-active">Daily focus</button><button>Tasks</button><button>Reviews</button><button>Community</button><button>Streaks</button>
+        </div>
+        <div class="purpose-canvas">
+          <div class="purpose-note note-a"><small>TODAY</small><h3>What matters now</h3><p>Finish grant proposal</p><p>Email Professor Müller</p><p>Record YouTube video</p></div>
+          <div class="purpose-note note-b"><small>WEEKLY REVIEW</small><h3>Keep tomorrow honest</h3><p>What worked?</p><p>What got in the way?</p></div>
+          <div class="purpose-note note-c"><small>STREAK</small><strong>12</strong><p>days of showing up</p></div>
+        </div>
+      </section>
+
+      <section class="ascent-people" id="community">
+        <h2>How people use Ascent</h2>
+        <div class="people-rail">
+          <article><div class="person-art portrait portrait-1" role="img" aria-label="David, researcher"></div><h3>David, researcher</h3><p>Proposals, papers, training, and the next brave step</p></article>
+          <article><div class="person-art portrait portrait-2" role="img" aria-label="Amara, founder"></div><h3>Amara, founder</h3><p>Company priorities, launches, hiring, and hard decisions</p></article>
+          <article><div class="person-art portrait portrait-3" role="img" aria-label="Michael, creator"></div><h3>Michael, creator</h3><p>Scripts, publishing plans, ideas, and daily practice</p></article>
+          <article><div class="person-art portrait portrait-4" role="img" aria-label="Sarah, student"></div><h3>Sarah, student</h3><p>Applications, study plans, projects, and small wins</p></article>
+          <article><div class="person-art portrait portrait-5" role="img" aria-label="Leila, product designer"></div><h3>Leila, product designer</h3><p>Design practice, team rituals, learning, and long-term craft</p></article>
+          <article><div class="person-art portrait portrait-6" role="img" aria-label="James, writer"></div><h3>James, writer</h3><p>Book chapters, reading, health, and a life beyond deadlines</p></article>
+          <article aria-hidden="true"><div class="person-art portrait portrait-1"></div><h3>David, researcher</h3><p>Proposals, papers, training, and the next brave step</p></article>
+          <article aria-hidden="true"><div class="person-art portrait portrait-2"></div><h3>Amara, founder</h3><p>Company priorities, launches, hiring, and hard decisions</p></article>
+          <article aria-hidden="true"><div class="person-art portrait portrait-3"></div><h3>Michael, creator</h3><p>Scripts, publishing plans, ideas, and daily practice</p></article>
+          <article aria-hidden="true"><div class="person-art portrait portrait-4"></div><h3>Sarah, student</h3><p>Applications, study plans, projects, and small wins</p></article>
+          <article aria-hidden="true"><div class="person-art portrait portrait-5"></div><h3>Leila, product designer</h3><p>Design practice, team rituals, learning, and long-term craft</p></article>
+          <article aria-hidden="true"><div class="person-art portrait portrait-6"></div><h3>James, writer</h3><p>Book chapters, reading, health, and a life beyond deadlines</p></article>
+        </div>
+      </section>
+
+      <section class="ascent-feature feature-write">
+        <div class="feature-copy"><span>Focus</span><h2>From a big ambition<br />to today’s next move</h2><p>Ascent turns distant goals into clear daily actions. Capture what matters, choose the next step, and keep moving without losing the larger story.</p><a href="#product">Learn more →</a></div>
+        <div class="feature-demo focus-demo">
+          <div class="demo-top">Today <b>July 2</b></div>
+          <h3>What matters now</h3>
+          <label><i></i> Finish fellowship proposal</label>
+          <label><i></i> Prepare the experiment</label>
+          <label><i class="done"></i> Morning run</label>
+          <button>＋ Add task</button>
+        </div>
+      </section>
+
+      <section class="ascent-quote"><p>“Ascent gives my ambition somewhere to land every morning.”</p><span>— Amina, founder</span></section>
+
+      <section class="ascent-feature feature-connect">
+        <div class="feature-copy"><span>Connect</span><h2>Progress feels stronger<br />when it isn’t lonely</h2><p>See the people you care about do the work. Celebrate completed tasks, share momentum, and build a circle that makes follow-through normal.</p><a href="#community">Learn more →</a></div>
+        <div class="orbit-demo">
+          <div class="orbit-center portrait portrait-2" role="img" aria-label="Amara"></div>
+          <div class="orbit-person op-1 portrait portrait-5" role="img" aria-label="Leila"></div><div class="orbit-person op-2 portrait portrait-4" role="img" aria-label="Sarah"></div><div class="orbit-person op-3 portrait portrait-1" role="img" aria-label="David"></div><div class="orbit-person op-4 portrait portrait-6" role="img" aria-label="James"></div>
+          <span>✓ Submitted application</span><span>✓ Published first article</span>
+        </div>
+      </section>
+
+      <section class="ascent-awards">
+        <article><strong>01</strong><h3>Designed for clarity</h3><p>A calm place for important work.</p></article>
+        <article><strong>02</strong><h3>Built for momentum</h3><p>Small actions stay visible.</p></article>
+        <article><strong>03</strong><h3>Made for reflection</h3><p>Weekly reviews turn effort into learning.</p></article>
+        <article><strong>04</strong><h3>Better together</h3><p>Accountability without the noise.</p></article>
+      </section>
+
+      <section class="ascent-feature feature-plan">
+        <div class="feature-copy"><span>Watch</span><h2>Ideas for building<br />a life that moves</h2><p>Join David on YouTube for honest lessons on ambition, thoughtful work, and turning the big things you want into small steps you can take today.</p><a href="https://www.youtube.com/@thedaviddosu">Visit the YouTube channel →</a></div>
+        <div class="youtube-board">
+          <a class="youtube-featured" href="https://www.youtube.com/@thedaviddosu" aria-label="Watch David Dosu on YouTube">
+            <span class="youtube-kicker">THE DAVID DOSU</span>
+            <strong>Ambition is good.<br />A life is better.</strong>
+            <i class="youtube-play" aria-hidden="true">▶</i>
+          </a>
+          <div class="youtube-meta">
+            <span><b>New ideas</b><small>Work, growth, and the life around them</small></span>
+            <span class="youtube-mark" aria-hidden="true">YouTube</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="ascent-organize">
+        <div class="organize-head"><span>Organize</span><h2>Structure that adapts<br />to your ambition</h2><p>Keep personal goals, work, learning, and health separate—without losing sight of how they support the same life.</p></div>
+        <div class="organize-cards">
+          <article><small>SPACES</small><h3>Switch between the parts of your life</h3><div class="space-list"><b>Personal</b><p>Health</p><p>Learning</p><p>Family</p><b>Work</b><p>Research</p><p>Projects</p></div></article>
+          <article><small>GOALS & TAGS</small><h3>Clear homes for every commitment</h3><div class="tag-cloud"><span>#deep-work</span><span>#health</span><span>#writing</span><span>#money</span></div></article>
+          <article><small>PROGRESS</small><h3>See the pattern, not just the list</h3><div class="mini-table"><b>Goal</b><b>Week</b><p>Research paper</p><p>82%</p><p>Fitness</p><p>67%</p><p>Writing</p><p>91%</p></div></article>
+        </div>
+      </section>
+
+      <section class="ascent-community">
+        <h2>Stay in the loop</h2><p>Learn how thoughtful people turn intention into action.</p>
+        <div class="community-links"><a href="#">Community <span>Discuss and share →</span></a><a href="#">Newsletter <span>Get the weekly note →</span></a><a href="#">YouTube <span>Watch practical guides →</span></a></div>
+      </section>
+
+      <section class="ascent-pricing" id="pricing">
+        <span>Pricing</span><h2>Your pace, your plan</h2><p>Use it now and then, or integrate it<br />into your daily flow.</p>
+        <div class="pricing-grid">
+          <article class="pricing-card">
+            <div class="pricing-card-head"><h3>Free</h3></div>
+            <p>Full access, great if you use it<br />occasionally each week.</p>
+            <div class="pricing-card-action">
+              <s aria-hidden="true">$8.0</s>
+              <strong>$0 <em>/month</em></strong>
+              <button data-action="signin" data-variant="email">Get Started</button>
+            </div>
+          </article>
+          <article class="pricing-card price-plus">
+            <div class="pricing-card-head"><b class="pricing-brand">ASCENT</b><small>PLUS</small></div>
+            <p>Designed to effortlessly fit into<br />your everyday flow.</p>
+            <div class="pricing-card-action">
+              <s>$8.0</s>
+              <strong>$3.7 <em>/month</em></strong>
+              <button data-action="signin" data-variant="email">Upgrade to Plus</button>
+            </div>
+          </article>
+        </div>
+        <a class="pricing-note" href="#">Learn more about group discounts →</a>
+      </section>
+
+      <section class="ascent-final" id="download">
+        <h2>Let’s get started</h2><p>Start for free. No credit card required.</p><button data-action="signin" data-variant="email">Continue on web</button>
+      </section>
+
+      <footer class="ascent-footer">
+        <div class="footer-brand"><b>ASCENT</b><p>Gain mileage</p></div>
+        <div><h3>Product</h3><a href="#product">Features</a><a href="#pricing">Pricing</a><a href="#">Releases</a></div>
+        <div><h3>Community</h3><a href="#community">Stories</a><a href="#">Newsletter</a><a href="#">Guides</a></div>
+        <div><h3>Support</h3><a href="#">Help center</a><a href="#">Contact</a><a href="#">Privacy</a></div>
+        <div><h3>Company</h3><a href="#">About us</a><a href="#">Careers</a><a href="#">Terms</a></div>
+        <p class="footer-copy">© 2026 Ascent. All rights reserved.</p>
+      </footer>
+    </main>
+  `
+}
+
+function renderHeader(unread: number) {
+  return `
+    <header class="doc-bar">
+      <div class="doc-breadcrumbs">
+        <span>${escapeHtml(pageMeta[state.view].label)}</span>
+      </div>
+      <div class="doc-actions">
+        <button type="button" class="ghost" data-action="toggle-notifications">
+          Inbox${unread ? ` <strong>${unread}</strong>` : ''}
+        </button>
+      </div>
+    </header>
+  `
+}
+
+function renderSidebar(unread: number) {
+  return `
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="topbar-mark" aria-hidden="true">A</div>
+        <div>
+          <p class="topbar-title">Ascent</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Pages">
+        ${Object.entries(pageMeta)
+          .map(
+            ([key, page]) => `
+              <button type="button" class="side-link ${state.view === key ? 'is-active' : ''}" data-action="switch-view" data-view="${key}">
+                <span>${page.icon}</span>
+                <em>${page.label}</em>
+                ${key === 'review' && unread ? `<strong>${unread}</strong>` : ''}
+              </button>
+            `,
+          )
+          .join('')}
+      </nav>
+    </aside>
+  `
+}
+
+function renderTodayView(carryPromptTasks: Task[]) {
+  const today = todayDate()
+  const visibleTasks = state.tasks.filter(
+    (task) => !task.archivedAt && task.plannedFor === today && !task.completedAt && !task.carryPending,
+  )
+  const completedTasks = state.tasks.filter(
+    (task) => !task.archivedAt && Boolean(task.completedAt) && task.plannedFor <= today,
+  )
+
+  return `
+    <section class="panel today-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Today</p>
+          <h2>What matters now</h2>
+        </div>
+      </div>
+
+      ${renderCarryForwardPrompt(carryPromptTasks)}
+
+      <div class="task-list">
+        ${visibleTasks.length ? visibleTasks.map(renderTaskRow).join('') : renderEmptyState()}
+      </div>
+
+      <div class="divider"></div>
+
+      <section class="completed-section">
+        <div class="section-label">
+          <h3>Completed</h3>
+          <span>${completedTasks.length}</span>
+        </div>
+        <div class="task-list compact">
+          ${completedTasks.length ? completedTasks.map(renderCompletedRow).join('') : '<p class="empty-line">Nothing completed yet today.</p>'}
+        </div>
+      </section>
+
+      <div class="composer ${state.draftOpen ? 'is-open' : ''}">
+        ${state.draftOpen
+          ? `
+            <form id="draft-form" class="draft-form">
+              <input
+                id="task-draft"
+                name="task"
+                type="text"
+                placeholder="Add a task"
+                value="${escapeHtml(state.draftValue)}"
+                autocomplete="off"
+                autofocus
+              />
+              <div class="draft-actions">
+                <button type="button" class="ghost" data-action="cancel-draft">Cancel</button>
+                <button type="submit" class="primary" data-action="add-task">Enter</button>
+              </div>
+            </form>
+          `
+          : `
+            <button type="button" class="add-task-button" data-action="open-draft">
+              <span>+</span>
+              Add Task
+            </button>
+          `}
+      </div>
+    </section>
+  `
+}
+
+function renderCarryForwardPrompt(tasks: Task[]) {
+  if (!tasks.length) {
+    return ''
+  }
+
+  return `
+    <section class="carry-card">
+      <div class="section-label">
+        <h3>Carried forward</h3>
+        <span>${tasks.length}</span>
+      </div>
+      <p class="muted">This task was carried forward. What stopped you?</p>
+      <div class="carry-stack">
+        ${tasks
+          .map(
+            (task) => `
+              <article class="carry-item">
+                <p class="carry-title">${escapeHtml(task.title)}</p>
+                <div class="reason-grid">
+                  ${carryReasons
+                    .map(
+                      (reason) => `
+                        <button
+                          type="button"
+                          class="reason-chip"
+                          data-action="carry-reason"
+                          data-task-id="${task.id}"
+                          data-reason="${escapeHtml(reason)}"
+                        >
+                          ${escapeHtml(reason)}
+                        </button>
+                      `,
+                    )
+                    .join('')}
+                </div>
+              </article>
+            `,
+          )
+          .join('')}
+      </div>
+    </section>
+  `
+}
+
+function renderTaskRow(task: Task) {
+  return `
+    <article class="task-row">
+      <button
+        type="button"
+        class="checkbox"
+        data-action="complete-task"
+        data-task-id="${task.id}"
+        aria-label="Complete ${escapeHtml(task.title)}"
+      >
+        <span></span>
+      </button>
+      <div class="task-copy">
+        <p>${escapeHtml(task.title)}</p>
+      </div>
+    </article>
+  `
+}
+
+function renderCompletedRow(task: Task) {
+  return `
+    <article class="task-row completed">
+      <div class="checkbox checked" aria-hidden="true">
+        <span></span>
+      </div>
+      <div class="task-copy">
+        <p>${escapeHtml(task.title)}</p>
+        <span>${formatClock(task.completedAt ?? task.createdAt)}</span>
+      </div>
+    </article>
+  `
+}
+
+function renderEmptyState() {
+  return `
+    <div class="empty-state">
+      <p>No open tasks yet.</p>
+      <span>Tap plus and start with one real thing.</span>
+    </div>
+  `
+}
+
+function renderFeedView() {
+  return `
+    <section class="panel feed-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Feed</p>
+          <h2>Movement from other people</h2>
+        </div>
+      </div>
+
+      <div class="feed-list">
+        ${state.feed
+          .map(
+            (item) => `
+              <article class="feed-item">
+                <div class="feed-meta">
+                  <p class="feed-author">${escapeHtml(item.author)}</p>
+                  <p class="feed-time">${formatRelativeTime(item.timestamp)}</p>
+                </div>
+                <p class="feed-action">${escapeHtml(item.action)}</p>
+                <div class="feed-footer">
+                  <span class="feed-clock">${formatClock(item.timestamp)}</span>
+                  <button
+                    type="button"
+                    class="reaction-pill ${item.reacted ? 'is-on' : ''}"
+                    data-action="toggle-reaction"
+                    data-feed-id="${item.id}"
+                  >
+                    ${item.reacted ? 'Cheered' : 'Cheer'}
+                  </button>
+                </div>
+              </article>
+            `,
+          )
+          .join('')}
+      </div>
+    </section>
+  `
+}
+
+function renderProfileView() {
+  const name = state.session?.name ?? 'David'
+  const mission = 'Reduce the gap between intention and execution.'
+  const recentCompleted = state.tasks
+    .filter((task) => task.completedAt && !task.archivedAt)
+    .sort((a, b) => new Date(b.completedAt ?? 0).getTime() - new Date(a.completedAt ?? 0).getTime())
+    .slice(0, 5)
+  const streak = calculateStreak()
+  const graph = buildContributionGraph()
+
+  return `
+    <section class="panel profile-panel">
+      <div class="profile-hero">
+        <div class="profile-photo" aria-hidden="true">
+          <span>${name.slice(0, 1).toUpperCase()}</span>
+        </div>
+        <div>
+          <p class="eyebrow">Profile</p>
+          <h2>${escapeHtml(name)}</h2>
+        </div>
+      </div>
+
+      <p class="profile-mission">${escapeHtml(mission)}</p>
+
+      <div class="profile-stats">
+        <article class="stat-card">
+          <span>Execution streak</span>
+          <strong>${streak} day${streak === 1 ? '' : 's'}</strong>
+        </article>
+        <article class="stat-card">
+          <span>Recent completions</span>
+          <strong>${recentCompleted.length}</strong>
+        </article>
+      </div>
+
+      <section class="graph-card">
+        <div class="section-label">
+          <h3>Contribution graph</h3>
+          <span>Hover for details</span>
+        </div>
+        <div class="graph-grid">
+          ${graph}
+        </div>
+      </section>
+
+      <section class="recent-card">
+        <div class="section-label">
+          <h3>Recent completed tasks</h3>
+          <span>${recentCompleted.length}</span>
+        </div>
+        <div class="recent-list">
+          ${
+            recentCompleted.length
+              ? recentCompleted
+                  .map(
+                    (task) => `
+                      <article class="recent-item">
+                        <p>${escapeHtml(task.title)}</p>
+                        <span>${formatClock(task.completedAt ?? task.createdAt)}</span>
+                      </article>
+                    `,
+                  )
+                  .join('')
+              : '<p class="empty-line">No completions yet.</p>'
+          }
+        </div>
+      </section>
+    </section>
+  `
+}
+
+function renderReviewView() {
+  const today = todayDate()
+  const isSunday = new Date(`${today}T12:00:00Z`).getUTCDay() === 0
+  const due = isSunday && state.review.submittedFor !== today
+
+  return `
+    <section class="panel review-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Weekly review</p>
+          <h2>${due ? 'Ready now' : 'Quiet check-in'}</h2>
+        </div>
+      </div>
+
+      <div class="review-summary">
+        <article class="summary-card">
+          <span>Status</span>
+          <strong>${due ? 'Due today' : state.review.submittedFor === today ? 'Done' : 'Waiting for Sunday'}</strong>
+        </article>
+        <article class="summary-card">
+          <span>Five minute cap</span>
+          <strong>Keep it short</strong>
+        </article>
+      </div>
+      ${
+        due
+          ? '<p class="muted">The review form is locked into place until you finish it on Sunday.</p>'
+          : renderReviewHistory()
+      }
+    </section>
+  `
+}
+
+function renderReviewField(label: string, name: keyof ReviewAnswers, value: string) {
+  return `
+    <label class="review-field">
+      <span>${escapeHtml(label)}</span>
+      <textarea name="${name}" rows="3" placeholder="Type your answer here">${escapeHtml(value)}</textarea>
+    </label>
+  `
+}
+
+function renderReviewHistory() {
+  if (!state.review.submittedAt) {
+    return '<p class="muted">Your Sunday review will show up here after you submit it.</p>'
+  }
+
+  return `
+    <div class="review-history">
+      ${renderReviewSummary('What went well?', state.review.answers.whatWentWell)}
+      ${renderReviewSummary('What repeatedly stopped you?', state.review.answers.blockers)}
+      ${renderReviewSummary('What should you stop doing?', state.review.answers.stopDoing)}
+      ${renderReviewSummary('What should you double down on next week?', state.review.answers.doubleDownOn)}
+      <p class="muted">Submitted ${formatRelativeTime(state.review.submittedAt)}</p>
+    </div>
+  `
+}
+
+function renderReviewSummary(label: string, value: string) {
+  return `
+    <article class="review-summary-card">
+      <span>${escapeHtml(label)}</span>
+      <p>${escapeHtml(value || 'No answer yet.')}</p>
+    </article>
+  `
+}
+
+function renderNotificationPanel() {
+  const open = state.notificationPanelOpen
+  return `
+    <aside class="notification-panel ${open ? 'is-open' : ''}">
+      <div class="notification-head">
+        <h3>Notifications</h3>
+        <button type="button" class="ghost" data-action="toggle-notifications">Close</button>
+      </div>
+      <div class="notification-list">
+        ${state.notifications
+          .slice(0, 6)
+          .map(
+            (item) => `
+              <button
+                type="button"
+                class="notification-item ${item.read ? 'is-read' : ''}"
+                data-action="mark-notification-read"
+                data-notification-id="${item.id}"
+              >
+                <p>${escapeHtml(item.text)}</p>
+                <span>${formatRelativeTime(item.timestamp)}</span>
+              </button>
+            `,
+          )
+          .join('')}
+      </div>
+    </aside>
+  `
+}
+
+function renderReviewOverlay() {
+  const today = todayDate()
+  const isSunday = new Date(`${today}T12:00:00Z`).getUTCDay() === 0
+  const due = isSunday && state.review.submittedFor !== today
+  if (!due) return ''
+
+  return `
+    <div class="review-overlay" role="dialog" aria-modal="true" aria-label="Weekly review">
+      <div class="review-card">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Weekly review</p>
+            <h2>Sunday check-in</h2>
+          </div>
+          <p class="muted">This closes the week and opens the next one.</p>
+        </div>
+        ${renderReviewForm()}
+      </div>
+    </div>
+  `
+}
+
+function renderReviewForm() {
+  return `
+    <form id="review-form" class="review-form">
+      ${renderReviewField('What went well?', 'whatWentWell', state.review.answers.whatWentWell)}
+      ${renderReviewField('What repeatedly stopped you?', 'blockers', state.review.answers.blockers)}
+      ${renderReviewField('What should you stop doing?', 'stopDoing', state.review.answers.stopDoing)}
+      ${renderReviewField('What should you double down on next week?', 'doubleDownOn', state.review.answers.doubleDownOn)}
+      <button type="submit" class="primary review-submit">Save review</button>
+    </form>
+  `
+}
+
+function calculateStreak() {
+  const counts = new Map<string, number>()
+  for (const task of state.tasks) {
+    if (!task.completedAt || task.archivedAt) continue
+    const day = toDateKey(new Date(task.completedAt))
+    counts.set(day, (counts.get(day) ?? 0) + 1)
+  }
+
+  let streak = 0
+  let cursor = todayDate()
+  while (counts.get(cursor)) {
+    streak += 1
+    cursor = shiftDate(cursor, -1)
+  }
+  return streak
+}
+
+function buildContributionGraph() {
+  const counts = new Map<string, number>()
+  for (const task of state.tasks) {
+    if (!task.completedAt || task.archivedAt) continue
+    const day = toDateKey(new Date(task.completedAt))
+    counts.set(day, (counts.get(day) ?? 0) + 1)
+  }
+
+  const cells: string[] = []
+  const end = new Date(`${todayDate()}T12:00:00Z`)
+  end.setUTCDate(end.getUTCDate() - (end.getUTCDay() || 7))
+
+  for (let week = 0; week < 12; week += 1) {
+    for (let day = 0; day < 7; day += 1) {
+      const cellDate = new Date(end)
+      cellDate.setUTCDate(end.getUTCDate() - ((11 - week) * 7 + (6 - day)))
+      const key = toDateKey(cellDate)
+      const count = counts.get(key) ?? 0
+      const intensity = Math.min(4, count)
+      cells.push(`
+        <div
+          class="graph-cell level-${intensity}"
+          title="${formatShortDate(key)} · ${count} completed task${count === 1 ? '' : 's'}"
+        ></div>
+      `)
+    }
+  }
+
+  return cells.join('')
+}
+
+const pageMeta: Record<View, { label: string; icon: string }> = {
+  today: { label: 'Today', icon: '□' },
+  feed: { label: 'Feed', icon: '↗' },
+  profile: { label: 'Profile', icon: '◌' },
+  review: { label: 'Weekly Review', icon: '☰' },
+}
+
+const carryReasons = ['Avoided it', "Didn't know how", 'Too tired', 'Waiting on someone', 'Changed priorities', 'Other']
