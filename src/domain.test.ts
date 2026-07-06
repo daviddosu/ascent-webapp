@@ -33,6 +33,16 @@ describe('nextRecurringDate', () => {
     expect(nextRecurringDate('2026-02-28', 'monthly', 30)).toBe('2026-03-30')
   })
 
+  it('handles leap-year month-end monthly repeats cleanly', () => {
+    expect(nextRecurringDate('2024-01-31', 'monthly', 31)).toBe('2024-02-29')
+    expect(nextRecurringDate('2024-02-29', 'monthly', 31)).toBe('2024-03-31')
+  })
+
+  it('keeps monthly repeats stable across the year boundary', () => {
+    expect(nextRecurringDate('2026-12-31', 'monthly', 31)).toBe('2027-01-31')
+    expect(nextRecurringDate('2026-12-30', 'monthly', 30)).toBe('2027-01-30')
+  })
+
   it('does not create another date for non-recurring work', () => {
     expect(nextRecurringDate('2026-07-03', 'none')).toBeNull()
   })
