@@ -1,4 +1,4 @@
-export type Recurrence = 'none' | 'daily' | 'weekly'
+export type Recurrence = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly'
 
 export function parseTags(value: string, limit = 8) {
   const seen = new Set<string>()
@@ -14,11 +14,32 @@ export function parseTags(value: string, limit = 8) {
     .slice(0, limit)
 }
 
-export function nextRecurringDate(dateKey: string, recurrence: Recurrence) {
+export function nextRecurringDate(dateKey: string, recurrence: Recurrence, monthlyAnchorDay?: number) {
   if (recurrence === 'none') return null
   const date = new Date(`${dateKey}T12:00:00Z`)
   if (Number.isNaN(date.getTime())) return null
-  date.setUTCDate(date.getUTCDate() + (recurrence === 'daily' ? 1 : 7))
+  if (recurrence === 'daily') {
+    date.setUTCDate(date.getUTCDate() + 1)
+    return date.toISOString().slice(0, 10)
+  }
+  if (recurrence === 'weekdays') {
+    do {
+      date.setUTCDate(date.getUTCDate() + 1)
+    } while (date.getUTCDay() === 0 || date.getUTCDay() === 6)
+    return date.toISOString().slice(0, 10)
+  }
+  if (recurrence === 'weekly') {
+    date.setUTCDate(date.getUTCDate() + 7)
+    return date.toISOString().slice(0, 10)
+  }
+
+  const currentDay = date.getUTCDate()
+  const anchorDay = monthlyAnchorDay ?? currentDay
+  const targetMonth = date.getUTCMonth() + 1
+  const targetYear = date.getUTCFullYear()
+  const endOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 12))
+  const targetDay = Math.min(anchorDay, endOfTargetMonth.getUTCDate())
+  date.setUTCMonth(targetMonth, targetDay)
   return date.toISOString().slice(0, 10)
 }
 

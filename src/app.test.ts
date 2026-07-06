@@ -5,6 +5,20 @@ import axe from 'axe-core'
 
 const vibrate = vi.fn()
 
+function testDateKey(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function addTestDays(date: Date, amount: number) {
+  const next = new Date(date)
+  next.setHours(12, 0, 0, 0)
+  next.setDate(next.getDate() + amount)
+  return next
+}
+
 beforeAll(async () => {
   window.localStorage.clear()
   window.sessionStorage.clear()
@@ -59,6 +73,35 @@ describe('reference screens', () => {
     expect([...document.querySelectorAll('.today-screen .task-row strong')].some(node => node.textContent === 'Plan launch review')).toBe(true)
     expect([...document.querySelectorAll('.today-screen .task-row strong')].some(node => node.textContent === "Renew driver's license")).toBe(false)
     document.querySelector<HTMLButtonElement>('[data-goal-filter="job-search"]')!.click()
+  })
+
+  it('creates and selects a new goal inside the Today task form without losing its words', () => {
+    document.querySelector<HTMLButtonElement>('[data-action="add-task"]')!.click()
+    let form = document.querySelector<HTMLFormElement>('[data-today-form]')!
+    form.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Record the first episode'
+    form.querySelector<HTMLTextAreaElement>('[name="description"]')!.value = 'Keep this little note safe.'
+    document.querySelector<HTMLButtonElement>('[data-action="open-inline-goal"]')!.click()
+
+    form = document.querySelector<HTMLFormElement>('[data-today-form]')!
+    expect(form.querySelector<HTMLInputElement>('[name="title"]')!.value).toBe('Record the first episode')
+    expect(form.querySelector<HTMLTextAreaElement>('[name="description"]')!.value).toBe('Keep this little note safe.')
+    const suggestedColor = form.querySelector<HTMLInputElement>('[name="newGoalColor"]')!.value
+    expect(['#ff666d', '#60d4dd', '#ffd331', '#2878ff']).not.toContain(suggestedColor)
+    form.querySelector<HTMLInputElement>('[name="newGoalName"]')!.value = 'Launch a podcast'
+    form.querySelector<HTMLInputElement>('[name="newGoalColor"]')!.value = '#2878ff'
+    document.querySelector<HTMLButtonElement>('[data-action="create-inline-goal"]')!.click()
+
+    form = document.querySelector<HTMLFormElement>('[data-today-form]')!
+    const goalSelect = form.querySelector<HTMLSelectElement>('[name="goalId"]')!
+    expect(goalSelect.options[goalSelect.selectedIndex]?.textContent).toBe('Launch a podcast')
+    expect(form.querySelector<HTMLInputElement>('[name="title"]')!.value).toBe('Record the first episode')
+    expect([...document.querySelectorAll('.goal-row')].some(row => row.textContent?.includes('Launch a podcast'))).toBe(true)
+    expect(window.localStorage.getItem('ascent-goals-v1')).toContain('Launch a podcast')
+    const savedGoals = JSON.parse(window.localStorage.getItem('ascent-goals-v1')!) as Array<{ name: string; color: string }>
+    const goalColors = savedGoals.map(goal => goal.color.toLowerCase())
+    expect(new Set(goalColors).size).toBe(goalColors.length)
+    expect(savedGoals.find(goal => goal.name === 'Launch a podcast')?.color).not.toBe('#2878ff')
+    form.querySelector<HTMLButtonElement>('[data-action="close-today-composer"]')!.click()
   })
 
   it('marks a task done from its checkbox', () => {
@@ -142,11 +185,13 @@ describe('reference screens', () => {
     document.querySelector<HTMLButtonElement>('[data-task-group="tomorrow"]')!.click()
     const form = document.querySelector<HTMLFormElement>('[data-planner-form="tomorrow"]')!
     form.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Prepare tomorrow brief'
+    form.querySelector<HTMLInputElement>('[name="time"]')!.value = '09:15'
     form.requestSubmit()
 
     expect(Number(document.querySelector('.screen-count')?.getAttribute('data-count'))).toBe(countBefore + 1)
     const tomorrowSection = document.querySelector('[data-upcoming-section="tomorrow"]')!
     expect([...tomorrowSection.querySelectorAll('.task-row strong')].some(node => node.textContent === 'Prepare tomorrow brief')).toBe(true)
+    expect(window.localStorage.getItem('ascent-planner-v1')).toContain('"time":"09:15"')
   })
 
   it('requires and saves a date for a This Week task', () => {
@@ -180,32 +225,189 @@ describe('reference screens', () => {
     expect(window.sessionStorage.getItem('ascent-active-view')).toBe('today')
   })
 
-  it('opens the Calendar day view', () => {
-    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
-    expect(document.querySelector('.calendar-header h1')?.textContent).toBe('16 February 2022')
-    expect(document.querySelectorAll('.calendar-event')).toHaveLength(3)
+  it('refreshes Today defaults when the date changes', () => {
+    const hook = window as Window & { __ascentRefreshDateState?: (reference?: Date) => void }
+    const nextDay = addTestDays(new Date(), 1)
+    hook.__ascentRefreshDateState?.(nextDay)
+
+    document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="add-task"]')!.click()
+
+    const form = document.querySelector<HTMLFormElement>('[data-today-form]')!
+    const due = form.querySelector<HTMLInputElement>('[name="due"]')!
+    expect(due.value).toBe(testDateKey(nextDay))
+    expect(due.min).toBe(testDateKey(nextDay))
+    expect(due.max).toBe(testDateKey(addTestDays(nextDay, 7)))
+
+    hook.__ascentRefreshDateState?.(new Date())
   })
 
-  it('adds calendar events, navigates dates, and switches calendar modes', () => {
-    document.querySelector<HTMLButtonElement>('[data-action="add-event"]')!.click()
-    expect(document.querySelectorAll('.calendar-event')).toHaveLength(4)
-    expect(document.querySelector('.calendar-event[data-event] strong')?.textContent).toBe('Session 1: Marketing Sprint')
-    expect([...document.querySelectorAll('.calendar-event strong')].some(node => node.textContent === 'New event 4')).toBe(true)
+  it('opens the Calendar as a week planner with an unscheduled tray', () => {
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    expect(document.querySelector('[data-calendar-mode="week"]')?.classList.contains('active')).toBe(true)
+    expect(document.querySelector('.calendar-header h1')?.textContent).toContain(String(new Date().getFullYear()))
+    expect(document.querySelectorAll('.calendar-day-head:not(.spacer)')).toHaveLength(7)
+    expect(document.querySelector('.unscheduled-tray')?.textContent).toContain('To schedule')
+    expect(document.querySelectorAll('.calendar-event')).toHaveLength(1)
+    expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(1)
+    document.querySelector<HTMLButtonElement>('[data-calendar-mode="day"]')!.click()
+    expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(1)
+    document.querySelector<HTMLButtonElement>('[data-action="next-date"]')!.click()
+    expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(0)
+    document.querySelector<HTMLButtonElement>('[data-action="calendar-today"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-calendar-mode="week"]')!.click()
+  })
 
+  it('uses the visible calendar date when scheduling an unscheduled task from the tray', () => {
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="calendar-today"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-calendar-mode="week"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="next-date"]')!.click()
+    document.querySelector<HTMLButtonElement>('.unscheduled-task[data-task-id="research"]')!.click()
+
+    const form = document.querySelector<HTMLFormElement>('[data-calendar-form]')!
+    expect(form.querySelector<HTMLInputElement>('[name="title"]')!.value).toBe('Research content ideas')
+    expect(form.querySelector<HTMLInputElement>('[name="due"]')!.value).toBe(testDateKey(addTestDays(new Date(), 7)))
+    form.querySelector<HTMLButtonElement>('[data-action="close-calendar-composer"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="calendar-today"]')!.click()
+  })
+
+  it('closes the calendar composer when leaving Calendar', () => {
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="add-event"]')!.click()
+    expect(document.querySelector('[data-calendar-form]')).not.toBeNull()
+
+    document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    expect(document.querySelector('[data-calendar-form]')).toBeNull()
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    expect(document.querySelector('[data-calendar-form]')).toBeNull()
+  })
+
+  it('creates, filters, searches, and detects conflicts for calendar items', () => {
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="add-event"]')!.click()
+    let calendarForm = document.querySelector<HTMLFormElement>('[data-calendar-form]')!
+    calendarForm.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Calendar deep work'
+    calendarForm.querySelector<HTMLSelectElement>('[name="goalId"]')!.value = 'personal'
+    calendarForm.querySelector<HTMLInputElement>('[name="time"]')!.value = '10:00'
+    calendarForm.querySelector<HTMLSelectElement>('[name="duration"]')!.value = '60'
+    calendarForm.querySelector<HTMLSelectElement>('[name="recurrence"]')!.value = 'weekly'
+    calendarForm.querySelector<HTMLSelectElement>('[name="reminder"]')!.value = '30'
+    calendarForm.querySelector<HTMLInputElement>('[name="location"]')!.value = 'Studio'
+    calendarForm.querySelector<HTMLInputElement>('[name="attendees"]')!.value = 'Ada'
+    calendarForm.requestSubmit()
+
+    expect([...document.querySelectorAll('.calendar-event strong')].some(node => node.textContent === 'Calendar deep work')).toBe(true)
+    expect(document.querySelector('.calendar-event')?.getAttribute('style')).toContain('#ff666d')
+    expect(document.querySelector('.calendar-stats')?.textContent).toContain('1h 30m planned')
+    const createdEvent = [...document.querySelectorAll<HTMLElement>('.calendar-event')]
+      .find(node => node.textContent?.includes('Calendar deep work'))!
+    expect(createdEvent.textContent).toContain('Weekly')
+    expect(createdEvent.textContent).toContain('30m')
+    expect(createdEvent.textContent).toContain('Ada')
+
+    createdEvent.querySelector<HTMLButtonElement>('button')!.click()
+    calendarForm = document.querySelector<HTMLFormElement>('[data-calendar-form]')!
+    expect(calendarForm.querySelector<HTMLSelectElement>('[name="recurrence"]')!.value).toBe('weekly')
+    expect(calendarForm.querySelector<HTMLSelectElement>('[name="reminder"]')!.value).toBe('30')
+    expect(calendarForm.querySelector<HTMLInputElement>('[name="attendees"]')!.value).toBe('Ada')
+    calendarForm.querySelector<HTMLButtonElement>('[data-action="close-calendar-composer"]')!.click()
+
+    document.querySelector<HTMLButtonElement>('[data-action="add-event"]')!.click()
+    calendarForm = document.querySelector<HTMLFormElement>('[data-calendar-form]')!
+    calendarForm.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Overlapping review'
+    calendarForm.querySelector<HTMLSelectElement>('[name="goalId"]')!.value = 'personal'
+    calendarForm.querySelector<HTMLInputElement>('[name="time"]')!.value = '10:30'
+    calendarForm.querySelector<HTMLSelectElement>('[name="duration"]')!.value = '30'
+    calendarForm.requestSubmit()
+    expect(document.querySelector('.calendar-stats .has-conflict')?.textContent).toContain('1')
+
+    const search = document.querySelector<HTMLInputElement>('[data-calendar-search]')!
+    search.focus()
+    for (const value of ['d', 'de', 'dee', 'deep']) {
+      const activeSearch = document.querySelector<HTMLInputElement>('[data-calendar-search]')!
+      activeSearch.value = value
+      activeSearch.setSelectionRange(value.length, value.length)
+      activeSearch.dispatchEvent(new Event('input', { bubbles: true }))
+      expect(document.activeElement).toBe(document.querySelector('[data-calendar-search]'))
+      expect(document.querySelector<HTMLInputElement>('[data-calendar-search]')!.value).toBe(value)
+    }
+    expect([...document.querySelectorAll('.calendar-event strong')].map(node => node.textContent)).toEqual(['Calendar deep work'])
+    document.querySelector<HTMLButtonElement>('[data-calendar-goal="personal"]')!.click()
+    expect(document.querySelectorAll('.calendar-event')).toHaveLength(0)
+    document.querySelector<HTMLButtonElement>('[data-calendar-goal="personal"]')!.click()
+    expect(document.querySelectorAll('.calendar-event')).toHaveLength(1)
+
+    const todayTitle = document.querySelector('.calendar-header h1')?.textContent
     document.querySelector<HTMLButtonElement>('[data-action="previous-date"]')!.click()
-    expect(document.querySelector('.calendar-header h1')?.textContent).toBe('15 February 2022')
+    expect(document.querySelector('.calendar-header h1')?.textContent).not.toBe(todayTitle)
     expect(document.querySelectorAll('.calendar-event')).toHaveLength(0)
     document.querySelector<HTMLButtonElement>('[data-action="next-date"]')!.click()
-    expect(document.querySelectorAll('.calendar-event')).toHaveLength(4)
+    expect(document.querySelectorAll('.calendar-event')).toHaveLength(1)
 
-    document.querySelector<HTMLButtonElement>('[data-calendar-mode="week"]')!.click()
-    expect(document.querySelector('[data-calendar-mode="week"]')?.classList.contains('active')).toBe(true)
-    expect(document.querySelector('.calendar-header h1')?.textContent).toBe('14 – 20 February 2022')
-    expect(document.querySelectorAll('.calendar-event')).toHaveLength(4)
+    const liveSearch = document.querySelector<HTMLInputElement>('[data-calendar-search]')!
+    liveSearch.value = ''
+    liveSearch.dispatchEvent(new Event('input', { bubbles: true }))
+    document.querySelector<HTMLButtonElement>('[data-calendar-mode="day"]')!.click()
+    expect(document.querySelector('[data-calendar-mode="day"]')?.classList.contains('active')).toBe(true)
+    expect(document.querySelectorAll('.calendar-event')).toHaveLength(2)
     document.querySelector<HTMLButtonElement>('[data-calendar-mode="month"]')!.click()
     expect(document.querySelector('[data-calendar-mode="month"]')?.classList.contains('active')).toBe(true)
-    expect(document.querySelector('.calendar-header h1')?.textContent).toBe('February 2022')
-    expect(document.querySelectorAll('.calendar-event')).toHaveLength(4)
+    expect(document.querySelector('.calendar-header h1')?.textContent).toBe(new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))
+    expect([...document.querySelectorAll('.month-event')].filter(node => node.textContent === 'Calendar deep work').length).toBeGreaterThan(1)
+    expect([...document.querySelectorAll('.month-event')].some(node => node.textContent === 'Overlapping review')).toBe(true)
+  })
+
+  it('puts a timed task on Calendar in its goal color and removes it when done', () => {
+    document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="add-task"]')!.click()
+    const form = document.querySelector<HTMLFormElement>('[data-today-form]')!
+    form.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Timed focus block'
+    form.querySelector<HTMLSelectElement>('[name="goalId"]')!.value = 'personal'
+    form.querySelector<HTMLInputElement>('[name="time"]')!.value = '15:30'
+    form.requestSubmit()
+
+    const selectedCheckbox = document.querySelector<HTMLButtonElement>('.task-row.selected .checkbox')!
+    const taskId = selectedCheckbox.dataset.complete!
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    const search = document.querySelector<HTMLInputElement>('[data-calendar-search]')
+    if (search) {
+      search.value = ''
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+    document.querySelector<HTMLButtonElement>('[data-calendar-mode="day"]')!.click()
+    const calendarTask = document.querySelector<HTMLElement>(`[data-calendar-task="${taskId}"]`)!
+    expect(calendarTask.textContent).toContain('Timed focus block')
+    expect(calendarTask.getAttribute('style')).toContain('#ff666d')
+
+    document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    document.querySelector<HTMLButtonElement>(`[data-complete="${taskId}"]`)!.click()
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    expect(document.querySelector(`[data-calendar-task="${taskId}"]`)).toBeNull()
+  })
+
+  it('shows a monthly calendar item on the next month when the month is short', () => {
+    const current = new Date()
+    const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0, 12)
+    const due = testDateKey(monthEnd)
+    const title = `Monthly closeout ${due}`
+
+    document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    document.querySelector<HTMLInputElement>('[data-calendar-search]')!.value = ''
+    document.querySelector<HTMLInputElement>('[data-calendar-search]')!.dispatchEvent(new Event('input', { bubbles: true }))
+    document.querySelector<HTMLButtonElement>('[data-calendar-mode="month"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="add-event"]')!.click()
+
+    const form = document.querySelector<HTMLFormElement>('[data-calendar-form]')!
+    form.querySelector<HTMLInputElement>('[name="title"]')!.value = title
+    form.querySelector<HTMLInputElement>('[name="due"]')!.value = due
+    form.querySelector<HTMLInputElement>('[name="time"]')!.value = '08:00'
+    form.querySelector<HTMLSelectElement>('[name="recurrence"]')!.value = 'monthly'
+    form.requestSubmit()
+
+    document.querySelector<HTMLButtonElement>('[data-action="next-date"]')!.click()
+    const matchingEvents = [...document.querySelectorAll('.month-event')].filter(node => node.textContent === title)
+    expect(matchingEvents).toHaveLength(2)
   })
 
   it('opens Community and can follow a profile', () => {

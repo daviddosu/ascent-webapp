@@ -1,4 +1,7 @@
+import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
 import './style.css'
+import heroCollage from './assets/ascent-collage.png'
+import peopleCollage from './assets/ascent-people-collage.png'
 import communityPortraits from './assets/community-portraits.png'
 
 type View = 'today' | 'upcoming' | 'calendar' | 'sticky'
@@ -7,22 +10,30 @@ type Subtask = { id: string; title: string; completed: boolean }
 type UpcomingGroup = 'tomorrow' | 'week'
 type ActivityMode = 'daily' | 'weekly' | 'cumulative'
 type Goal = { id: string; name: string; color: string }
-type CalendarMode = 'day' | 'week' | 'month'
-type CalendarEvent = {
-  id: string
+type Recurrence = SharedRecurrence
+type PlannerKind = 'task' | 'event'
+type TodayComposerDraft = {
   title: string
-  date: string
-  hour: string
-  period: 'AM' | 'PM'
-  color: 'aqua' | 'pink'
-  tall?: boolean
+  description: string
+  goalId: string
+  due: string
+  time: string
+  tags: string
 }
+type CalendarMode = 'day' | 'week' | 'month'
 type Task = {
   id: string
   title: string
   description?: string
   goalId?: string
   due?: string
+  time?: string
+  duration?: number
+  kind?: PlannerKind
+  recurrence?: Recurrence
+  reminder?: number
+  location?: string
+  attendees?: string
   subtasks?: number
   subtaskItems?: Subtask[]
   tags?: string[]
@@ -45,6 +56,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!
 const viewStorageKey = 'ascent-active-view'
 const plannerStorageKey = 'ascent-planner-v1'
 const goalsStorageKey = 'ascent-goals-v1'
+const dateStateHook = window as Window & { __ascentRefreshDateState?: (reference?: Date) => void }
 
 function dateKey(date = new Date()) {
   const year = date.getFullYear()
@@ -60,11 +72,25 @@ function addDays(date: Date, amount: number) {
   return next
 }
 
+function refreshDateContext(reference = new Date()) {
+  now = reference
+  todayKey = dateKey(reference)
+  tomorrowKey = dateKey(addDays(reference, 1))
+  weekEndKey = dateKey(addDays(reference, 7))
+}
+
 function formatTaskDate(value: string) {
   const date = new Date(`${value}T12:00:00`)
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}
+
+function formatTaskTime(value: string) {
+  const [hours = '0', minutes = '00'] = value.split(':')
+  const hour = Number(hours)
+  const displayHour = hour % 12 || 12
+  return `${String(displayHour).padStart(2, '0')}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`
 }
 
 function readStoredView(): View {
@@ -85,15 +111,27 @@ function rememberView(nextView: View) {
   }
 }
 
-const now = new Date()
-const todayKey = dateKey(now)
-const tomorrowKey = dateKey(addDays(now, 1))
-const weekEndKey = dateKey(addDays(now, 7))
+let now = new Date()
+let todayKey = dateKey(now)
+let tomorrowKey = dateKey(addDays(now, 1))
+let weekEndKey = dateKey(addDays(now, 7))
 
 const seedGoals: Goal[] = [
   { id: 'personal', name: 'Personal', color: '#ff666d' },
   { id: 'job-search', name: 'Find a new job', color: '#60d4dd' },
   { id: 'paper', name: 'Write a paper', color: '#ffd331' },
+]
+const goalColorPalette = [
+  '#78a7ff',
+  '#a879ff',
+  '#ff8db3',
+  '#ff9f5a',
+  '#6bc48d',
+  '#3bb8a5',
+  '#8a9aad',
+  '#d184e8',
+  '#b6a43a',
+  '#4b87d9',
 ]
 
 function readGoals() {
@@ -108,6 +146,43 @@ function readGoals() {
 }
 
 const goals: Goal[] = readGoals()
+
+function normalizeColor(color: string) {
+  return color.trim().toLowerCase()
+}
+
+function isGoalColorUsed(color: string) {
+  const normalized = normalizeColor(color)
+  return goals.some(goal => normalizeColor(goal.color) === normalized)
+}
+
+function nextGoalColor() {
+  const available = goalColorPalette.find(color => !isGoalColorUsed(color))
+  if (available) return available
+
+  // The palette can grow forever without making two goals look the same.
+  for (let hue = 0; hue < 360; hue += 7) {
+    const color = hslToHex(hue, 65, 62)
+    if (!isGoalColorUsed(color)) return color
+  }
+  return '#78a7ff'
+}
+
+function hslToHex(hue: number, saturation: number, lightness: number) {
+  const s = saturation / 100
+  const l = lightness / 100
+  const chroma = (1 - Math.abs(2 * l - 1)) * s
+  const section = hue / 60
+  const second = chroma * (1 - Math.abs(section % 2 - 1))
+  const [red, green, blue] =
+    section < 1 ? [chroma, second, 0] :
+      section < 2 ? [second, chroma, 0] :
+        section < 3 ? [0, chroma, second] :
+          section < 4 ? [0, second, chroma] :
+            section < 5 ? [second, 0, chroma] : [chroma, 0, second]
+  const match = l - chroma / 2
+  return `#${[red, green, blue].map(value => Math.round((value + match) * 255).toString(16).padStart(2, '0')).join('')}`
+}
 
 const seedTasks: Task[] = [
   { id: 'research', title: 'Research content ideas', due: dateKey(addDays(now, -1)), tags: [] },
@@ -161,16 +236,24 @@ const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task
 let activityMode: ActivityMode = 'daily'
 let plannerDraftGroup: UpcomingGroup | null = null
 let todayComposerOpen = false
+let todayGoalCreatorOpen = false
 let goalComposerOpen = false
 let activeGoalId: string | null = null
+let todayComposerDraft: TodayComposerDraft = {
+  title: '',
+  description: '',
+  goalId: goals[0]?.id ?? '',
+  due: todayKey,
+  time: '',
+  tags: '',
+}
 let toast = ''
-let calendarMode: CalendarMode = 'day'
-let calendarDate = new Date(2022, 1, 16)
-const calendarEvents: CalendarEvent[] = [
-  { id: 'marketing-sprint', title: 'Session 1: Marketing Sprint', date: '2022-02-16', hour: '09:00', period: 'AM', color: 'aqua', tall: true },
-  { id: 'sales-catchup', title: 'Sales Catchup', date: '2022-02-16', hour: '10:00', period: 'AM', color: 'aqua' },
-  { id: 'license-event', title: "Renew driver's license", date: '2022-02-16', hour: '11:00', period: 'AM', color: 'pink', tall: true },
-]
+let calendarMode: CalendarMode = 'week'
+let calendarDate = new Date(now)
+let calendarComposer: { date: string; time: string; taskId?: string } | null = null
+let calendarSearch = ''
+let draggingCalendarTaskId: string | null = null
+const hiddenCalendarGoalIds = new Set<string>()
 const communityProfiles: CommunityProfile[] = [
   {
     id: 'amara',
@@ -314,7 +397,105 @@ function refreshCounts() {
   screenCounts.upcoming = tasksForUpcoming('tomorrow').length + tasksForUpcoming('week').length
 }
 
+function isLandingRoute() {
+  return false
+}
+
+function setRoute(pathname: string) {
+  if (window.location.pathname !== pathname) {
+    window.history.pushState({}, '', pathname)
+  }
+  render()
+}
+
+function landingPeopleCard(name: string, role: string, description: string, column: number, row: number) {
+  return `
+    <article class="landing-people-card">
+      <div class="landing-person" style="--portrait-column:${column};--portrait-row:${row};background-image:url('${peopleCollage}')"></div>
+      <h3>${escapeHtml(name)}</h3>
+      <p>${escapeHtml(role)}</p>
+      <small>${escapeHtml(description)}</small>
+    </article>
+  `
+}
+
+function renderLanding() {
+  return `
+    <main class="ascent-landing">
+      <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="Ascent home">ASCENT</a>
+        <nav aria-label="Primary">
+          <a href="#people">Product</a>
+          <a href="#people">Community</a>
+          <a href="#focus">Pricing</a>
+          <a href="#focus">Download</a>
+        </nav>
+        <div class="landing-nav-actions">
+          <a href="#focus" class="landing-link">Log in</a>
+          <button type="button" class="landing-button" data-action="enter-app">Try Ascent Free</button>
+        </div>
+      </header>
+
+      <section class="landing-hero">
+        <div class="landing-hero-copy">
+          <p class="landing-eyebrow">FOCUS</p>
+          <h1>Your space for goals, focus, and real progress</h1>
+          <p>Ascent turns distant goals into clear daily moves. Capture what matters, choose the next step, and keep moving without losing the bigger picture.</p>
+          <div class="landing-hero-actions">
+            <button type="button" class="landing-button landing-button--primary" data-action="enter-app">Try Ascent Free</button>
+            <a href="#people">See how people use Ascent →</a>
+          </div>
+        </div>
+        <div class="landing-hero-art">
+          <img src="${heroCollage}" alt="A collage-style preview of the Ascent workspace" />
+        </div>
+      </section>
+
+      <section id="people" class="landing-people">
+        <h2>How people use Ascent</h2>
+        <div class="landing-people-rail">
+          ${landingPeopleCard('David', 'researcher', 'Proposals, papers, training, and the next brave step', 0, 0)}
+          ${landingPeopleCard('Amara', 'founder', 'Company priorities, decisions, and quick follow-through', 1, 0)}
+          ${landingPeopleCard('Seoyoung', 'creator', 'Creative ideas, plans, projects, scripts', 2, 0)}
+          ${landingPeopleCard('Leila', 'product designer', 'Design practice, team rituals, learning, and long-term craft', 0, 1)}
+          ${landingPeopleCard('James', 'writer', 'Book chapters, reading, health, and a life beyond deadlines', 1, 1)}
+          ${landingPeopleCard('Aaron', 'student', 'Course notes, project outlines, daily tasks', 2, 1)}
+        </div>
+      </section>
+
+      <section id="focus" class="landing-feature">
+        <div class="landing-feature-copy">
+          <p class="landing-eyebrow">FOCUS</p>
+          <h2>From a big ambition to today’s next move</h2>
+          <p>Ascent turns distant goals into clear daily actions. Capture what matters, choose the next step, and keep moving without losing the larger story.</p>
+        </div>
+        <div class="landing-feature-card">
+          <div class="landing-task-card">
+            <span>Today</span>
+            <strong>What matters now</strong>
+            <ul>
+              <li><i></i>Finish fellowship proposal</li>
+              <li><i></i>Prepare the experiment</li>
+              <li class="checked"><i></i>Morning run</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-cta">
+        <h2>Make the next small step obvious.</h2>
+        <button type="button" class="landing-button landing-button--primary" data-action="enter-app">Try Ascent Free</button>
+      </section>
+    </main>
+  `
+}
+
 function render() {
+  if (isLandingRoute()) {
+    app.innerHTML = renderLanding()
+    return
+  }
+  refreshDateContext(now)
   refreshCounts()
   const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[2]!
   const showInspector = view === 'today' && !todayComposerOpen
@@ -340,6 +521,17 @@ function renderWithMotion(update: () => void) {
     return
   }
   transitionDocument.startViewTransition(update)
+}
+
+function scheduleDateRefresh() {
+  const nextMidnight = new Date()
+  nextMidnight.setHours(24, 0, 0, 50)
+  window.setTimeout(() => {
+    const previousTodayKey = todayKey
+    refreshDateContext()
+    if (todayKey !== previousTodayKey) render()
+    scheduleDateRefresh()
+  }, Math.max(1_000, nextMidnight.getTime() - Date.now()))
 }
 
 function triggerHaptic(pattern: number | number[]) {
@@ -394,10 +586,11 @@ function renderGoalRow(goal: Goal) {
 }
 
 function renderGoalComposer() {
+  const suggestedColor = nextGoalColor()
   return `
     <form class="goal-composer" data-goal-form>
       <input name="name" aria-label="Goal name" placeholder="Goal name" autocomplete="off" required />
-      <input name="color" aria-label="Goal color" type="color" value="#78a7ff" />
+      <input name="color" aria-label="Goal color" type="color" value="${suggestedColor}" title="A fresh color is picked for you" />
       <button type="submit">Add</button>
       <button type="button" data-action="close-goal-composer" aria-label="Cancel">×</button>
     </form>
@@ -451,6 +644,7 @@ function renderToday() {
 }
 
 function renderTodayComposer() {
+  const suggestedGoalColor = nextGoalColor()
   return `
     <form class="today-composer" data-today-form>
       <div class="today-composer-heading">
@@ -460,23 +654,39 @@ function renderTodayComposer() {
       <div class="today-composer-fields">
         <label class="today-field today-field-title">
           <span>Task name</span>
-          <input name="title" placeholder="What needs doing?" autocomplete="off" required />
+          <input name="title" value="${escapeHtml(todayComposerDraft.title)}" placeholder="What needs doing?" autocomplete="off" required />
         </label>
         <label class="today-field today-field-description">
           <span>Description</span>
-          <textarea name="description" placeholder="Add a short note or useful context"></textarea>
+          <textarea name="description" placeholder="Add a short note or useful context">${escapeHtml(todayComposerDraft.description)}</textarea>
         </label>
-        <label class="today-field">
+        <label class="today-field today-goal-field">
           <span>Goal</span>
-          <select name="goalId" aria-label="Goal" required>${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
+          <select name="goalId" aria-label="Goal" required>${renderGoalOptions(todayComposerDraft.goalId)}</select>
+          ${todayGoalCreatorOpen ? `
+            <div class="inline-goal-creator">
+              <input name="newGoalName" aria-label="New goal name" placeholder="Goal name" autocomplete="off" />
+              <input name="newGoalColor" aria-label="New goal color" type="color" value="${suggestedGoalColor}" title="A fresh color is picked for you" />
+              <button type="button" data-action="create-inline-goal">Add</button>
+              <button type="button" data-action="close-inline-goal" aria-label="Cancel">×</button>
+            </div>
+          ` : `
+            <button type="button" class="inline-goal-trigger" data-action="open-inline-goal">
+              ${icon('plus')}<span>Create new goal</span>
+            </button>
+          `}
         </label>
         <label class="today-field">
           <span>Due date</span>
-          <input name="due" type="date" value="${todayKey}" min="${todayKey}" max="${weekEndKey}" required />
+          <input name="due" type="date" value="${escapeHtml(todayComposerDraft.due)}" min="${todayKey}" max="${weekEndKey}" required />
+        </label>
+        <label class="today-field">
+          <span>Due time <small>Optional</small></span>
+          <input name="time" type="time" value="${escapeHtml(todayComposerDraft.time)}" />
         </label>
         <label class="today-field">
           <span>Tags</span>
-          <input name="tags" placeholder="Tag 1, Tag 2" />
+          <input name="tags" value="${escapeHtml(todayComposerDraft.tags)}" placeholder="Tag 1, Tag 2" />
         </label>
       </div>
       <div class="today-composer-actions">
@@ -485,6 +695,31 @@ function renderTodayComposer() {
       </div>
     </form>
   `
+}
+
+function resetTodayComposerDraft() {
+  todayComposerDraft = {
+    title: '',
+    description: '',
+    goalId: activeGoalId ?? goals[0]?.id ?? '',
+    due: todayKey,
+    time: '',
+    tags: '',
+  }
+}
+
+function captureTodayComposerDraft() {
+  const form = document.querySelector<HTMLFormElement>('[data-today-form]')
+  if (!form) return
+  const data = new FormData(form)
+  todayComposerDraft = {
+    title: String(data.get('title') ?? ''),
+    description: String(data.get('description') ?? ''),
+    goalId: String(data.get('goalId') ?? goals[0]?.id ?? ''),
+    due: String(data.get('due') ?? todayKey),
+    time: String(data.get('time') ?? ''),
+    tags: String(data.get('tags') ?? ''),
+  }
 }
 
 function renderGoalOptions(selectedId?: string) {
@@ -501,7 +736,7 @@ function renderTaskRow(task: Task, selected = false) {
       <button class="task-text" data-task="${task.id}">
         <strong>${escapeHtml(task.title)}</strong>
         ${task.due || goal || subtaskCount ? `<small>
-          ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}</span>` : ''}
+          ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
           ${task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
           ${goal ? `<span><i class="list-color" style="--list-color:${goal.color}"></i>${escapeHtml(goal.name)}</span>` : ''}
           ${!task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
@@ -532,6 +767,7 @@ function renderInspector(task: Task) {
         <div class="inspector-fields">
           <label><span>Goal</span><button data-action="cycle-goal">${escapeHtml(goal?.name ?? goals[0]?.name ?? 'No goal')} ${icon('down')}</button></label>
           <label><span>Due date</span><input class="inspector-date" type="date" value="${task.due ?? ''}" aria-label="Due date" /></label>
+          <label><span>Due time</span><input class="inspector-time" type="time" value="${task.time ?? ''}" aria-label="Due time, optional" /></label>
           <label><span>Tags</span><span>${tags.map(tag => `<button class="tag aqua" data-remove-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join('')}<button class="tag neutral" data-action="add-tag">+ Add Tag</button></span></label>
         </div>
 
@@ -580,6 +816,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
     <form class="planner-composer" data-planner-form="${group}">
       <input name="title" aria-label="Task name" placeholder="What needs doing?" autocomplete="off" required />
       ${isWeek ? `<input name="due" aria-label="Task date" type="date" min="${dateKey(addDays(now, 2))}" max="${weekEndKey}" value="${dateKey(addDays(now, 2))}" required />` : `<span class="planner-date">${formatTaskDate(tomorrowKey)}</span>`}
+      <input name="time" aria-label="Task time, optional" type="time" />
       <select name="goalId" aria-label="Goal" required>${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
       <button type="submit">Add</button>
       <button type="button" class="planner-cancel" data-action="close-planner" aria-label="Cancel">×</button>
@@ -671,21 +908,51 @@ function renderActivityGraph() {
 }
 
 function renderCalendar() {
-  const dateTitle = formatCalendarTitle()
-  const dayLabel = calendarMode === 'day'
-    ? calendarDate.toLocaleDateString('en-GB', { weekday: 'long' })
-    : calendarMode === 'week' ? 'This week' : 'This month'
+  const scheduled = calendarOccurrences()
+  const visible = scheduled.filter(item => !hiddenCalendarGoalIds.has(item.task.goalId ?? '') && taskMatchesCalendarSearch(item.task))
+  const unscheduled = tasks.filter(task =>
+    !task.time &&
+    !completedTaskIds.has(task.id) &&
+    !hiddenCalendarGoalIds.has(task.goalId ?? '') &&
+    taskMatchesCalendarSearch(task)
+  )
+  const conflicts = countCalendarConflicts(visible)
+  const plannedMinutes = visible.reduce((total, item) => total + (item.task.duration ?? 30), 0)
   return `
     <section class="calendar-screen">
       <header class="calendar-header">
-        <div><h1>${dateTitle}</h1><div class="calendar-tabs"><button class="${calendarMode === 'day' ? 'active' : ''}" data-calendar-mode="day">Day</button><button class="${calendarMode === 'week' ? 'active' : ''}" data-calendar-mode="week">Week</button><button class="${calendarMode === 'month' ? 'active' : ''}" data-calendar-mode="month">Month</button></div></div>
-        <button class="add-event" data-action="add-event">Add Event</button>
+        <div>
+          <div class="calendar-title-row">
+            <h1>${formatCalendarTitle()}</h1>
+            <button class="calendar-today" data-action="calendar-today">Today</button>
+          </div>
+          <div class="calendar-tabs"><button class="${calendarMode === 'day' ? 'active' : ''}" data-calendar-mode="day">Day</button><button class="${calendarMode === 'week' ? 'active' : ''}" data-calendar-mode="week">Week</button><button class="${calendarMode === 'month' ? 'active' : ''}" data-calendar-mode="month">Month</button></div>
+        </div>
+        <div class="calendar-header-actions">
+          <label class="calendar-search">${icon('search')}<input data-calendar-search aria-label="Search calendar" placeholder="Search calendar" value="${escapeHtml(calendarSearch)}" /></label>
+          <button class="add-event" data-action="add-event">+ New</button>
+        </div>
       </header>
-      <div class="calendar-nav"><button aria-label="Previous ${calendarMode}" data-action="previous-date">‹</button><button aria-label="Next ${calendarMode}" data-action="next-date">›</button></div>
-      <div class="day-label">${dayLabel}</div>
-      <div class="timeline">
-        ${renderCalendarTimeline()}
+      <div class="calendar-toolbar">
+        <div class="calendar-nav"><button aria-label="Previous ${calendarMode}" data-action="previous-date">‹</button><button aria-label="Next ${calendarMode}" data-action="next-date">›</button></div>
+        <div class="calendar-goal-filters">
+          ${goals.map(goal => `<button class="${hiddenCalendarGoalIds.has(goal.id) ? 'muted' : ''}" data-calendar-goal="${goal.id}" aria-pressed="${!hiddenCalendarGoalIds.has(goal.id)}"><i style="--goal-color:${goal.color}"></i>${escapeHtml(goal.name)}</button>`).join('')}
+        </div>
+        <div class="calendar-stats"><span><b>${formatDuration(plannedMinutes)}</b> planned</span><span class="${conflicts ? 'has-conflict' : ''}"><b>${conflicts}</b> conflicts</span></div>
       </div>
+      <div class="calendar-layout">
+        <aside class="unscheduled-tray">
+          <div><h2>To schedule</h2><span>${unscheduled.length}</span></div>
+          <p>Drag a task onto the calendar.</p>
+          <div class="unscheduled-list">
+            ${unscheduled.length ? unscheduled.map(renderUnscheduledTask).join('') : '<div class="tray-empty">Everything has a place.</div>'}
+          </div>
+        </aside>
+        <div class="calendar-board">
+          ${calendarMode === 'month' ? renderCalendarMonth(visible) : renderCalendarTimeGrid(visible)}
+        </div>
+      </div>
+      ${calendarComposer ? renderCalendarComposer() : ''}
     </section>
   `
 }
@@ -710,40 +977,218 @@ function formatCalendarTitle() {
   return calendarDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function renderCalendarTimeline() {
-  const hours: Array<[string, 'AM' | 'PM']> = [
-    ['09:00', 'AM'],
-    ['10:00', 'AM'],
-    ['11:00', 'AM'],
-    ['12:00', 'PM'],
-    ['01:00', 'PM'],
-    ['02:00', 'PM'],
-  ]
-  const eventsForDate = calendarEvents.filter(event => {
-    const eventDate = new Date(`${event.date}T12:00:00`)
-    if (calendarMode === 'day') return event.date === calendarDateKey()
-    if (calendarMode === 'month') {
-      return eventDate.getFullYear() === calendarDate.getFullYear() && eventDate.getMonth() === calendarDate.getMonth()
-    }
-    const monday = new Date(calendarDate)
-    monday.setHours(0, 0, 0, 0)
-    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 7)
-    return eventDate >= monday && eventDate < sunday
-  })
-  return hours.map(([hour, period]) => {
-    const matchingEvents = eventsForDate.filter(event => event.hour === hour && event.period === period)
-    const content = matchingEvents.map(event => `
-      <article class="calendar-event ${event.color}-event ${event.tall ? 'tall' : ''}" data-event="${event.id}"><strong>${escapeHtml(event.title)}</strong></article>
-    `).join('')
-    const currentTime = hour === '09:00' && calendarDateKey() === '2022-02-16' ? '<div class="current-time"><i></i></div>' : ''
-    return timelineHour(hour, period, `${content}${currentTime}`)
-  }).join('')
+type CalendarOccurrence = { task: Task; date: string }
+
+function calendarOccurrences(): CalendarOccurrence[] {
+  const dates = calendarMode === 'month' ? monthGridDates(calendarDate) : visibleCalendarDates()
+  return dates.flatMap(date => tasks
+    .filter(task => task.time && !completedTaskIds.has(task.id) && taskOccursOn(task, date))
+    .map(task => ({ task, date })))
 }
 
-function timelineHour(time: string, period: string, content: string) {
-  return `<div class="timeline-row"><time>${time}<br/>${period}</time><div class="timeline-slot">${content}</div></div>`
+function taskOccursOn(task: Task, date: string) {
+  if (!task.due || date < task.due) return false
+  if (!task.recurrence || task.recurrence === 'none') return date === task.due
+  let nextDate: string | null = task.due
+  const anchorDay = new Date(`${task.due}T12:00:00`).getUTCDate()
+  while (nextDate && nextDate < date) {
+    nextDate = nextRecurringDate(nextDate, task.recurrence, anchorDay)
+  }
+  return nextDate === date
+}
+
+function visibleCalendarDates() {
+  if (calendarMode === 'day') return [calendarDateKey()]
+  const monday = new Date(calendarDate)
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+  return Array.from({ length: 7 }, (_, index) => dateKey(addDays(monday, index)))
+}
+
+function monthGridDates(date: Date) {
+  const first = new Date(date.getFullYear(), date.getMonth(), 1, 12)
+  first.setDate(first.getDate() - ((first.getDay() + 6) % 7))
+  return Array.from({ length: 42 }, (_, index) => dateKey(addDays(first, index)))
+}
+
+function renderCalendarTimeGrid(occurrences: CalendarOccurrence[]) {
+  const dates = visibleCalendarDates()
+  const hours = Array.from({ length: 17 }, (_, index) => index + 6)
+  return `
+    <div class="calendar-time-grid ${calendarMode === 'day' ? 'is-day' : ''}" style="--day-count:${dates.length}">
+      <div class="calendar-day-head spacer"></div>
+      ${dates.map(date => {
+        const day = new Date(`${date}T12:00:00`)
+        return `<div class="calendar-day-head ${date === todayKey ? 'today' : ''}"><span>${day.toLocaleDateString('en-GB', { weekday: 'short' })}</span><b>${day.getDate()}</b></div>`
+      }).join('')}
+      <div class="calendar-hours">${hours.map(hour => `<time>${formatTaskTime(`${String(hour).padStart(2, '0')}:00`)}</time>`).join('')}</div>
+      ${dates.map(date => `
+        <div class="calendar-day-track" data-calendar-drop-date="${date}">
+          ${hours.map(hour => `<button class="calendar-slot" data-calendar-slot="${date}|${String(hour).padStart(2, '0')}:00" aria-label="Add at ${formatTaskTime(`${String(hour).padStart(2, '0')}:00`)}"></button>`).join('')}
+          ${date === todayKey ? renderNowLine() : ''}
+          ${occurrences.filter(item => item.date === date).map(item => renderCalendarBlock(item, occurrences)).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `
+}
+
+function renderNowLine() {
+  const current = new Date()
+  const minutes = current.getHours() * 60 + current.getMinutes()
+  const top = Math.min(17 * 64, Math.max(0, (minutes - 360) / 60 * 64))
+  return `<div class="calendar-now-line" style="--now-top:${top}px"><span>Now</span></div>`
+}
+
+function renderCalendarBlock(item: CalendarOccurrence, all: CalendarOccurrence[]) {
+  const { task, date } = item
+  const goal = goals.find(candidate => candidate.id === task.goalId)
+  const start = timeToMinutes(task.time!)
+  const duration = task.duration ?? 30
+  const top = Math.max(0, (start - 360) / 60 * 64)
+  const height = Math.max(28, duration / 60 * 64)
+  const conflict = all.some(other =>
+    other !== item &&
+    other.date === date &&
+    rangesOverlap(start, start + duration, timeToMinutes(other.task.time!), timeToMinutes(other.task.time!) + (other.task.duration ?? 30))
+  )
+  return `
+    <article class="calendar-event ${conflict ? 'conflict' : ''}" draggable="true" data-calendar-task="${task.id}" data-occurrence-date="${date}" style="--event-color:${goal?.color ?? '#8a9aad'};--event-top:${top}px;--event-height:${height}px">
+      <button data-action="edit-calendar-task" data-task-id="${task.id}">
+        <strong>${escapeHtml(task.title)}</strong>
+        <span>${formatTaskTime(task.time!)} · ${formatDuration(duration)}</span>
+        ${task.location ? `<small>${escapeHtml(task.location)}</small>` : ''}
+        ${renderCalendarDetailChips(task)}
+      </button>
+    </article>
+  `
+}
+
+function renderCalendarMonth(occurrences: CalendarOccurrence[]) {
+  const dates = monthGridDates(calendarDate)
+  const currentMonth = calendarDate.getMonth()
+  return `
+    <div class="calendar-month">
+      ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => `<div class="month-weekday">${day}</div>`).join('')}
+      ${dates.map(date => {
+        const day = new Date(`${date}T12:00:00`)
+        const dayItems = occurrences.filter(item => item.date === date)
+        return `<div class="month-day ${day.getMonth() !== currentMonth ? 'outside' : ''} ${date === todayKey ? 'today' : ''}" data-calendar-drop-date="${date}">
+          <button data-calendar-slot="${date}|09:00">${day.getDate()}</button>
+          ${dayItems.slice(0, 3).map(item => {
+            const goal = goals.find(candidate => candidate.id === item.task.goalId)
+            return `<button class="month-event" draggable="true" data-calendar-task="${item.task.id}" data-action="edit-calendar-task" data-task-id="${item.task.id}" style="--event-color:${goal?.color ?? '#8a9aad'}">${escapeHtml(item.task.title)}</button>`
+          }).join('')}
+          ${dayItems.length > 3 ? `<span class="month-more">+${dayItems.length - 3} more</span>` : ''}
+        </div>`
+      }).join('')}
+    </div>
+  `
+}
+
+function renderUnscheduledTask(task: Task) {
+  const goal = goals.find(item => item.id === task.goalId)
+  return `<button class="unscheduled-task" draggable="true" data-calendar-task="${task.id}" data-action="schedule-task" data-task-id="${task.id}"><i style="--goal-color:${goal?.color ?? '#8a9aad'}"></i><span>${escapeHtml(task.title)}</span>${task.due ? `<small>${formatTaskDate(task.due)}</small>` : ''}</button>`
+}
+
+function renderCalendarDetailChips(task: Task) {
+  const chips = [
+    task.recurrence && task.recurrence !== 'none' ? { label: formatRecurrence(task.recurrence), title: formatRecurrence(task.recurrence) } : null,
+    task.reminder !== undefined ? { label: formatReminderChip(task.reminder), title: formatReminder(task.reminder) } : null,
+    task.attendees ? { label: formatAttendeesChip(task.attendees), title: `With ${task.attendees}` } : null,
+  ].filter(Boolean)
+  return chips.length ? `<div class="calendar-event-chips">${chips.map(chip => `<small title="${escapeHtml(chip!.title)}">${escapeHtml(chip!.label)}</small>`).join('')}</div>` : ''
+}
+
+function renderCalendarComposer() {
+  const editing = calendarComposer?.taskId ? tasks.find(task => task.id === calendarComposer?.taskId) : undefined
+  const date = calendarComposer?.date ?? todayKey
+  const time = calendarComposer?.time ?? '09:00'
+  const formDate = editing?.time ? editing.due ?? date : date
+  const reminder = editing?.reminder ?? 15
+  return `
+    <div class="calendar-composer-backdrop" data-action="close-calendar-composer"></div>
+    <form class="calendar-composer" data-calendar-form data-editing-task="${editing?.id ?? ''}">
+      <div class="calendar-composer-head"><div><strong>${editing ? 'Edit schedule' : 'New calendar item'}</strong><span>Keep it simple. Add only what helps.</span></div><button type="button" data-action="close-calendar-composer" aria-label="Close">×</button></div>
+      <input class="calendar-composer-title" name="title" aria-label="Title" placeholder="What is happening?" value="${escapeHtml(editing?.title ?? '')}" required />
+      <div class="calendar-composer-row">
+        <label><span>Date</span><input name="due" type="date" value="${formDate}" required /></label>
+        <label><span>Start</span><input name="time" type="time" value="${editing?.time ?? time}" required /></label>
+        <label><span>Duration</span><select name="duration">${[15, 30, 45, 60, 90, 120, 180].map(value => `<option value="${value}" ${value === (editing?.duration ?? 30) ? 'selected' : ''}>${formatDuration(value)}</option>`).join('')}</select></label>
+      </div>
+      <div class="calendar-composer-row">
+        <label><span>Goal</span><select name="goalId">${renderGoalOptions(editing?.goalId ?? activeGoalId ?? goals[0]?.id)}</select></label>
+        <label><span>Type</span><select name="kind"><option value="task" ${(editing?.kind ?? 'task') === 'task' ? 'selected' : ''}>Task</option><option value="event" ${editing?.kind === 'event' ? 'selected' : ''}>Event</option></select></label>
+        <label><span>Repeat</span><select name="recurrence">${(['none', 'daily', 'weekdays', 'weekly', 'monthly'] as Recurrence[]).map(value => `<option value="${value}" ${value === (editing?.recurrence ?? 'none') ? 'selected' : ''}>${value[0]!.toUpperCase()}${value.slice(1)}</option>`).join('')}</select></label>
+      </div>
+      <div class="calendar-composer-row">
+        <label><span>Reminder</span><select name="reminder">${[0, 5, 15, 30, 60].map(value => `<option value="${value}" ${value === reminder ? 'selected' : ''}>${formatReminder(value)}</option>`).join('')}</select></label>
+        <label><span>Location</span><input name="location" value="${escapeHtml(editing?.location ?? '')}" placeholder="Optional" /></label>
+        <label><span>People</span><input name="attendees" value="${escapeHtml(editing?.attendees ?? '')}" placeholder="Optional" /></label>
+      </div>
+      <div class="calendar-composer-actions">${editing ? '<button type="button" class="danger" data-action="unschedule-task">Remove time</button>' : '<span></span>'}<button type="button" data-action="close-calendar-composer">Cancel</button><button type="submit">Save</button></div>
+    </form>
+  `
+}
+
+function taskMatchesCalendarSearch(task: Task) {
+  const query = calendarSearch.trim().toLowerCase()
+  if (!query) return true
+  return [task.title, task.description, task.location, task.attendees].some(value => value?.toLowerCase().includes(query))
+}
+
+function countCalendarConflicts(items: CalendarOccurrence[]) {
+  return items.filter((item, index) => {
+    const start = timeToMinutes(item.task.time!)
+    return items.slice(0, index).some(other =>
+      other.date === item.date &&
+      rangesOverlap(start, start + (item.task.duration ?? 30), timeToMinutes(other.task.time!), timeToMinutes(other.task.time!) + (other.task.duration ?? 30))
+    )
+  }).length
+}
+
+function rangesOverlap(startA: number, endA: number, startB: number, endB: number) {
+  return startA < endB && startB < endA
+}
+
+function timeToMinutes(time: string) {
+  const [hours = '0', minutes = '0'] = time.split(':')
+  return Number(hours) * 60 + Number(minutes)
+}
+
+function formatDuration(minutes: number) {
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`
+}
+
+function formatReminder(minutes: number) {
+  if (minutes === 0) return 'At start'
+  if (minutes === 60) return '1 hour before'
+  return `${minutes} minutes before`
+}
+
+function formatReminderChip(minutes: number) {
+  if (minutes === 0) return 'Start'
+  if (minutes === 60) return '1h'
+  return `${minutes}m`
+}
+
+function formatAttendeesChip(attendees: string) {
+  const names = attendees.split(',').map(name => name.trim()).filter(Boolean)
+  if (names.length <= 1) return names[0] ?? attendees
+  return `${names[0]} +${names.length - 1}`
+}
+
+function formatRecurrence(recurrence: Recurrence) {
+  const labels: Record<Recurrence, string> = {
+    none: 'No repeat',
+    daily: 'Daily',
+    weekdays: 'Weekdays',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+  }
+  return labels[recurrence]
 }
 
 function renderStickyWall() {
@@ -867,10 +1312,83 @@ function persistInspectorDraft() {
   const title = document.querySelector<HTMLInputElement>('.inspector-title')?.value.trim()
   const description = document.querySelector<HTMLTextAreaElement>('.inspector textarea')?.value
   const due = document.querySelector<HTMLInputElement>('.inspector-date')?.value
+  const time = document.querySelector<HTMLInputElement>('.inspector-time')?.value
   if (title) task.title = title
   if (description !== undefined) task.description = description
   if (due !== undefined) task.due = due || undefined
+  if (time !== undefined) task.time = time || undefined
   persistPlanner()
+}
+
+function openCalendarComposer(date = calendarDateKey(), time = '09:00', taskId?: string) {
+  calendarComposer = { date, time, taskId }
+  render()
+  document.querySelector<HTMLInputElement>('[data-calendar-form] input[name="title"]')?.focus()
+}
+
+function saveCalendarForm(form: HTMLFormElement) {
+  const data = new FormData(form)
+  const editingId = form.dataset.editingTask
+  const title = String(data.get('title') ?? '').trim()
+  const due = String(data.get('due') ?? '').trim()
+  const time = String(data.get('time') ?? '').trim()
+  if (!title || !due || !time) return
+  const task = editingId ? tasks.find(item => item.id === editingId) : undefined
+  const patch: Partial<Task> = {
+    title,
+    due,
+    time,
+    duration: Number(data.get('duration') ?? 30),
+    goalId: String(data.get('goalId') ?? goals[0]?.id ?? '') || undefined,
+    kind: String(data.get('kind') ?? 'task') as PlannerKind,
+    recurrence: String(data.get('recurrence') ?? 'none') as Recurrence,
+    reminder: Number(data.get('reminder') ?? 15),
+    location: String(data.get('location') ?? '').trim() || undefined,
+    attendees: String(data.get('attendees') ?? '').trim() || undefined,
+  }
+  if (task) {
+    Object.assign(task, patch)
+    selectedTaskId = task.id
+  } else {
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      description: '',
+      tags: [],
+      subtaskItems: [],
+      ...patch,
+      title,
+    }
+    tasks.unshift(newTask)
+    selectedTaskId = newTask.id
+  }
+  calendarComposer = null
+  persistPlanner()
+  refreshCounts()
+  triggerHaptic([35, 30, 60])
+  toast = task ? 'Calendar updated' : 'Added to calendar'
+  render()
+  window.setTimeout(() => {
+    toast = ''
+    render()
+  }, 1400)
+}
+
+function scheduleTask(taskId: string, date: string, time = '09:00') {
+  const task = tasks.find(item => item.id === taskId)
+  if (!task) return
+  task.due = date
+  task.time = time
+  task.duration = task.duration ?? 30
+  task.recurrence = task.recurrence ?? 'none'
+  selectedTaskId = task.id
+  persistPlanner()
+  triggerHaptic([45, 25, 70])
+  toast = `Scheduled for ${formatTaskDate(date)}`
+  render()
+  window.setTimeout(() => {
+    toast = ''
+    render()
+  }, 1400)
 }
 
 app.addEventListener('submit', event => {
@@ -878,9 +1396,11 @@ app.addEventListener('submit', event => {
   const goalForm = target.closest<HTMLFormElement>('[data-goal-form]')
   if (goalForm) {
     event.preventDefault()
+    captureTodayComposerDraft()
     const data = new FormData(goalForm)
     const name = String(data.get('name') ?? '').trim()
-    const color = String(data.get('color') ?? '#78a7ff')
+    const requestedColor = String(data.get('color') ?? nextGoalColor())
+    const color = isGoalColorUsed(requestedColor) ? nextGoalColor() : normalizeColor(requestedColor)
     if (!name) return
     goals.push({ id: crypto.randomUUID(), name, color })
     goalComposerOpen = false
@@ -911,6 +1431,7 @@ app.addEventListener('submit', event => {
       description: String(data.get('description') ?? '').trim(),
       goalId: goalId || undefined,
       due,
+      time: String(data.get('time') ?? '') || undefined,
       tags: String(data.get('tags') ?? '')
         .split(',')
         .map(tag => tag.trim())
@@ -921,6 +1442,8 @@ app.addEventListener('submit', event => {
     tasks.unshift(newTask)
     selectedTaskId = newTask.id
     todayComposerOpen = false
+    todayGoalCreatorOpen = false
+    resetTodayComposerDraft()
     persistPlanner()
     refreshCounts()
     if (due === todayKey) triggerCountAnimation('today', todayCountBefore, screenCounts.today)
@@ -939,6 +1462,13 @@ app.addEventListener('submit', event => {
     return
   }
 
+  const calendarForm = target.closest<HTMLFormElement>('[data-calendar-form]')
+  if (calendarForm) {
+    event.preventDefault()
+    saveCalendarForm(calendarForm)
+    return
+  }
+
   const form = target.closest<HTMLFormElement>('[data-planner-form]')
   if (!form) return
   event.preventDefault()
@@ -947,12 +1477,14 @@ app.addEventListener('submit', event => {
   const title = String(data.get('title') ?? '').trim()
   const due = group === 'tomorrow' ? tomorrowKey : String(data.get('due') ?? '')
   const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
+  const time = String(data.get('time') ?? '').trim()
   if (!title || !due) return
   const from = screenCounts.upcoming
   tasks.unshift({
     id: crypto.randomUUID(),
     title,
     due,
+    time: time || undefined,
     goalId: goalId || undefined,
     tags: [],
     subtaskItems: [],
@@ -968,6 +1500,19 @@ app.addEventListener('submit', event => {
     toast = ''
     render()
   }, 1400)
+})
+
+app.addEventListener('input', event => {
+  const target = event.target as HTMLElement
+  const calendarInput = target.closest<HTMLInputElement>('[data-calendar-search]')
+  if (calendarInput) {
+    const cursor = calendarInput.selectionStart ?? calendarInput.value.length
+    calendarSearch = calendarInput.value
+    render()
+    const nextInput = document.querySelector<HTMLInputElement>('[data-calendar-search]')
+    nextInput?.focus()
+    nextInput?.setSelectionRange(cursor, cursor)
+  }
 })
 
 app.addEventListener('click', event => {
@@ -1009,7 +1554,14 @@ app.addEventListener('click', event => {
 
   const nextView = target.closest<HTMLElement>('[data-view]')?.dataset.view as View | undefined
   if (nextView) {
-    if (nextView !== 'today') todayComposerOpen = false
+    if (nextView !== 'calendar') {
+      calendarComposer = null
+    }
+    if (nextView !== 'today') {
+      todayComposerOpen = false
+      todayGoalCreatorOpen = false
+      resetTodayComposerDraft()
+    }
     rememberView(nextView)
     render()
     return
@@ -1076,8 +1628,31 @@ app.addEventListener('click', event => {
     return
   }
 
+  const calendarGoalId = target.closest<HTMLElement>('[data-calendar-goal]')?.dataset.calendarGoal
+  if (calendarGoalId) {
+    if (hiddenCalendarGoalIds.has(calendarGoalId)) hiddenCalendarGoalIds.delete(calendarGoalId)
+    else hiddenCalendarGoalIds.add(calendarGoalId)
+    render()
+    return
+  }
+
+  const calendarSlot = target.closest<HTMLElement>('[data-calendar-slot]')?.dataset.calendarSlot
+  if (calendarSlot) {
+    const [date = calendarDateKey(), time = '09:00'] = calendarSlot.split('|')
+    openCalendarComposer(date, time)
+    return
+  }
+
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
   if (!action) return
+  if (action === 'enter-app') {
+    setRoute('/app')
+    return
+  }
+  if (action === 'go-home') {
+    setRoute('/')
+    return
+  }
   if (action === 'open-planner') {
     plannerDraftGroup = target.closest<HTMLElement>('[data-task-group]')?.dataset.taskGroup as UpcomingGroup
     render()
@@ -1090,12 +1665,14 @@ app.addEventListener('click', event => {
     return
   }
   if (action === 'open-goal-composer') {
+    captureTodayComposerDraft()
     goalComposerOpen = true
     render()
     document.querySelector<HTMLInputElement>('[data-goal-form] input[name="name"]')?.focus()
     return
   }
   if (action === 'close-goal-composer') {
+    captureTodayComposerDraft()
     goalComposerOpen = false
     render()
     return
@@ -1103,16 +1680,58 @@ app.addEventListener('click', event => {
   if (action === 'close-today-composer') {
     renderWithMotion(() => {
       todayComposerOpen = false
+      todayGoalCreatorOpen = false
+      resetTodayComposerDraft()
       render()
     })
     return
   }
   if (action === 'add-task') {
     renderWithMotion(() => {
+      resetTodayComposerDraft()
       todayComposerOpen = true
+      todayGoalCreatorOpen = false
       render()
       document.querySelector<HTMLInputElement>('[data-today-form] input[name="title"]')?.focus()
     })
+    return
+  }
+  if (action === 'open-inline-goal') {
+    captureTodayComposerDraft()
+    todayGoalCreatorOpen = true
+    render()
+    document.querySelector<HTMLInputElement>('[name="newGoalName"]')?.focus()
+    return
+  }
+  if (action === 'close-inline-goal') {
+    captureTodayComposerDraft()
+    todayGoalCreatorOpen = false
+    render()
+    return
+  }
+  if (action === 'create-inline-goal') {
+    const nameInput = document.querySelector<HTMLInputElement>('[name="newGoalName"]')
+    const colorInput = document.querySelector<HTMLInputElement>('[name="newGoalColor"]')
+    const name = nameInput?.value.trim() ?? ''
+    if (!name) {
+      nameInput?.focus()
+      return
+    }
+    captureTodayComposerDraft()
+    const requestedColor = colorInput?.value ?? nextGoalColor()
+    const color = isGoalColorUsed(requestedColor) ? nextGoalColor() : normalizeColor(requestedColor)
+    const newGoal = { id: crypto.randomUUID(), name, color }
+    goals.push(newGoal)
+    todayComposerDraft.goalId = newGoal.id
+    todayGoalCreatorOpen = false
+    persistGoals()
+    triggerHaptic([35, 30, 60])
+    toast = 'Goal added'
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1400)
     return
   }
   if (action === 'save-task') {
@@ -1157,18 +1776,40 @@ app.addEventListener('click', event => {
     }
     toast = 'New subtask ready'
   } else if (action === 'add-event') {
-    const eventsOnDate = calendarEvents.filter(event => event.date === calendarDateKey()).length
-    const slots: Array<[string, 'AM' | 'PM']> = [['12:00', 'PM'], ['01:00', 'PM'], ['02:00', 'PM']]
-    const [hour, period] = slots[Math.min(eventsOnDate > 2 ? eventsOnDate - 3 : 0, slots.length - 1)]
-    calendarEvents.push({
-      id: crypto.randomUUID(),
-      title: `New event ${calendarEvents.length + 1}`,
-      date: calendarDateKey(),
-      hour,
-      period,
-      color: eventsOnDate % 2 === 0 ? 'aqua' : 'pink',
-    })
-    toast = 'New event ready'
+    openCalendarComposer(calendarDateKey(), '09:00')
+    return
+  } else if (action === 'edit-calendar-task') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const task = tasks.find(item => item.id === taskId)
+    if (task) openCalendarComposer(task.due ?? calendarDateKey(), task.time ?? '09:00', task.id)
+    return
+  } else if (action === 'schedule-task') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    if (taskId) openCalendarComposer(calendarDateKey(), '09:00', taskId)
+    return
+  } else if (action === 'close-calendar-composer') {
+    calendarComposer = null
+    render()
+    return
+  } else if (action === 'unschedule-task') {
+    const task = calendarComposer?.taskId ? tasks.find(item => item.id === calendarComposer?.taskId) : undefined
+    if (task) {
+      task.time = undefined
+      task.duration = undefined
+      task.recurrence = 'none'
+      task.reminder = undefined
+      persistPlanner()
+      toast = 'Time removed'
+    }
+    calendarComposer = null
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1400)
+    return
+  } else if (action === 'calendar-today') {
+    calendarDate = new Date()
   } else if (action === 'previous-date' || action === 'next-date') {
     const direction = action === 'previous-date' ? -1 : 1
     const nextDate = new Date(calendarDate)
@@ -1200,4 +1841,66 @@ app.addEventListener('click', event => {
   }, 1400)
 })
 
+app.addEventListener('dragstart', event => {
+  const target = event.target as HTMLElement
+  const taskId = target.closest<HTMLElement>('[data-calendar-task]')?.dataset.calendarTask
+  if (!taskId) return
+  draggingCalendarTaskId = taskId
+  event.dataTransfer?.setData('text/plain', taskId)
+  event.dataTransfer?.setData('application/x-ascent-task', taskId)
+  event.dataTransfer?.setDragImage?.(target, 12, 12)
+})
+
+app.addEventListener('dragend', () => {
+  draggingCalendarTaskId = null
+})
+
+app.addEventListener('dragover', event => {
+  if (draggingCalendarTaskId && (event.target as HTMLElement).closest('[data-calendar-drop-date], [data-calendar-slot]')) {
+    event.preventDefault()
+  }
+})
+
+app.addEventListener('drop', event => {
+  const target = event.target as HTMLElement
+  const slot = target.closest<HTMLElement>('[data-calendar-slot]')?.dataset.calendarSlot
+  const dropDate = target.closest<HTMLElement>('[data-calendar-drop-date]')?.dataset.calendarDropDate
+  const taskId = event.dataTransfer?.getData('application/x-ascent-task') || event.dataTransfer?.getData('text/plain') || draggingCalendarTaskId
+  if (!taskId || (!slot && !dropDate)) return
+  event.preventDefault()
+  const [date = dropDate ?? calendarDateKey(), time = '09:00'] = slot ? slot.split('|') : [dropDate, '09:00']
+  scheduleTask(taskId, date, time)
+  draggingCalendarTaskId = null
+})
+
+document.addEventListener('keydown', event => {
+  const target = event.target as HTMLElement
+  const isTyping = target.matches('input, textarea, select') || target.isContentEditable
+  if (event.key === 'Escape' && calendarComposer) {
+    calendarComposer = null
+    render()
+    return
+  }
+  if (isTyping || view !== 'calendar') return
+  if (event.key.toLowerCase() === 'c') {
+    event.preventDefault()
+    openCalendarComposer(calendarDateKey(), '09:00')
+    return
+  }
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+  event.preventDefault()
+  const direction = event.key === 'ArrowLeft' ? -1 : 1
+  const nextDate = new Date(calendarDate)
+  if (calendarMode === 'month') nextDate.setMonth(nextDate.getMonth() + direction)
+  else nextDate.setDate(nextDate.getDate() + direction * (calendarMode === 'week' ? 7 : 1))
+  calendarDate = nextDate
+  render()
+})
+
 render()
+scheduleDateRefresh()
+window.addEventListener('popstate', render)
+dateStateHook.__ascentRefreshDateState = (reference = new Date()) => {
+  refreshDateContext(reference)
+  render()
+}
