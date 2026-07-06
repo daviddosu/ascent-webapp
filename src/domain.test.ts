@@ -12,8 +12,25 @@ describe('nextRecurringDate', () => {
     expect(nextRecurringDate('2026-07-03', 'daily')).toBe('2026-07-04')
   })
 
+  it('skips weekends for weekday repeats', () => {
+    expect(nextRecurringDate('2026-07-03', 'weekdays')).toBe('2026-07-06')
+    expect(nextRecurringDate('2026-07-04', 'weekdays')).toBe('2026-07-06')
+  })
+
   it('moves a weekly task across month boundaries', () => {
     expect(nextRecurringDate('2026-07-29', 'weekly')).toBe('2026-08-05')
+  })
+
+  it('moves a monthly task to the next month without overshooting', () => {
+    expect(nextRecurringDate('2026-01-31', 'monthly', 31)).toBe('2026-02-28')
+    expect(nextRecurringDate('2026-02-28', 'monthly', 31)).toBe('2026-03-31')
+    expect(nextRecurringDate('2026-03-31', 'monthly', 31)).toBe('2026-04-30')
+    expect(nextRecurringDate('2026-04-30', 'monthly', 31)).toBe('2026-05-31')
+  })
+
+  it('keeps non-month-end monthly repeats on their original day when possible', () => {
+    expect(nextRecurringDate('2026-01-30', 'monthly', 30)).toBe('2026-02-28')
+    expect(nextRecurringDate('2026-02-28', 'monthly', 30)).toBe('2026-03-30')
   })
 
   it('does not create another date for non-recurring work', () => {

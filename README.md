@@ -11,7 +11,7 @@ pnpm install
 pnpm dev
 ```
 
-The app works without a cloud account. Tasks, goals, reviews, preferences, and lists are saved on the device.
+The app works without a cloud account. Tasks, goals, reviews, and preferences are saved on the device.
 
 ## Verify the product
 

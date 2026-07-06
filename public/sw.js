@@ -1,4 +1,4 @@
-const CACHE = 'ascent-shell-v1'
+const CACHE = 'ascent-shell-v2'
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg']
 
 self.addEventListener('install', event => {
