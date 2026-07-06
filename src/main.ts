@@ -63,6 +63,7 @@ type AppState = {
 }
 
 const STORAGE_KEY = 'ascent-state-v3'
+const ROBUST_WORKSPACE_URL = 'http://127.0.0.1:4174/'
 const DAY_MS = 24 * 60 * 60 * 1000
 let fallbackId = 0
 let focusMotionFrame = 0
@@ -362,10 +363,8 @@ app.addEventListener('click', (event) => {
     state.signedIn = true
     state.view = 'today'
     state.notificationPanelOpen = false
-    if (!isWorkspaceRoute()) {
-      window.history.pushState({}, '', '/workspace')
-    }
-    persistAndRender()
+    persist()
+    window.location.replace(ROBUST_WORKSPACE_URL)
     return
   }
 
@@ -657,41 +656,14 @@ function persist() {
 function render() {
   document.body.dataset.view = state.view
   document.body.dataset.signedIn = String(state.signedIn)
+  void [renderHeader, renderSidebar, renderTodayView, renderFeedView, renderProfileView, renderReviewView, renderNotificationPanel, renderReviewOverlay]
 
-  const showWorkspace = state.signedIn && isWorkspaceRoute()
-
-  if (!showWorkspace) {
-    app.innerHTML = renderAuth()
-    scheduleFocusMotionUpdate()
+  if (isWorkspaceRoute()) {
+    window.location.replace(ROBUST_WORKSPACE_URL)
     return
   }
 
-  const unread = state.notifications.filter((item) => !item.read).length
-  const carryPromptTasks = state.tasks.filter((task) => task.carryPending && !task.archivedAt && !task.completedAt)
-
-  const content =
-    state.view === 'today'
-      ? renderTodayView(carryPromptTasks)
-      : state.view === 'feed'
-        ? renderFeedView()
-        : state.view === 'profile'
-          ? renderProfileView()
-          : renderReviewView()
-
-  app.innerHTML = `
-    <div class="workspace-shell">
-      ${renderSidebar(unread)}
-      <main class="workspace-main">
-        ${renderHeader(unread)}
-        <section class="workspace-canvas">
-          ${content}
-        </section>
-      </main>
-      ${renderNotificationPanel()}
-      ${renderReviewOverlay()}
-    </div>
-  `
-
+  app.innerHTML = renderAuth()
   scheduleFocusMotionUpdate()
 }
 
