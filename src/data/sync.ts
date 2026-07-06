@@ -39,17 +39,17 @@ export async function loadCloudWorkspace(): Promise<CloudWorkspace | null> {
   ])
   ;[profileResult, listsResult, goalsResult, milestonesResult, tasksResult, subtasksResult, tagsResult, taskTagsResult, reviewsResult, dailyReviewsResult].forEach(throwIfError)
 
+  const profileRow = (profileResult.data as Row | null) ?? null
+  const listRows = (listsResult.data ?? []) as Row[]
   const goalRows = (goalsResult.data ?? []) as Row[]
   const taskRows = (tasksResult.data ?? []) as Row[]
   const reviewRows = (reviewsResult.data ?? []) as Row[]
   const dailyReviewRows = (dailyReviewsResult.data ?? []) as Row[]
-  if (!goalRows.length && !taskRows.length && !reviewRows.length && !dailyReviewRows.length) return null
-
-  const listRows = (listsResult.data ?? []) as Row[]
   const milestoneRows = (milestonesResult.data ?? []) as Row[]
   const subtaskRows = (subtasksResult.data ?? []) as Row[]
   const tagRows = (tagsResult.data ?? []) as Row[]
   const taskTagRows = (taskTagsResult.data ?? []) as Row[]
+  if (!profileRow && !listRows.length && !goalRows.length && !taskRows.length && !reviewRows.length && !dailyReviewRows.length) return null
   const listById = new Map(listRows.map(row => [row.id, row]))
   const tagById = new Map(tagRows.map(row => [row.id, row.name]))
 
@@ -120,8 +120,8 @@ export async function loadCloudWorkspace(): Promise<CloudWorkspace | null> {
       tomorrow: row.tomorrow ?? '',
     })),
     profile: {
-      displayName: (profileResult.data as Row | null)?.display_name ?? 'Ascent user',
-      timezone: (profileResult.data as Row | null)?.timezone ?? 'UTC',
+      displayName: profileRow?.display_name ?? 'Ascent user',
+      timezone: profileRow?.timezone ?? 'UTC',
     },
   }
 }
