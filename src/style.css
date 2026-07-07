@@ -1548,21 +1548,38 @@ body[data-signed-in='false'] #app {
 }
 
 .craft-app-window {
+  --craft-preview-scale: 0.72;
   position: absolute;
   z-index: 5;
   left: 50%;
-  bottom: -68px;
-  width: min(880px, 80vw);
-  height: 410px;
+  bottom: -120px;
+  width: 920px;
+  height: 634px;
   transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: 190px 1fr;
   overflow: hidden;
-  border: 1px solid rgba(20, 29, 35, 0.08);
-  border-radius: 14px 14px 0 0;
-  background: #f8f8f8;
-  box-shadow: 0 14px 42px rgba(20, 42, 53, 0.22);
+  border: 1px solid rgba(20, 29, 35, 0.09);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 16px 46px rgba(20, 42, 53, 0.22),
+    0 2px 0 rgba(255, 255, 255, 0.36) inset;
   text-align: left;
+}
+
+.craft-app-viewport {
+  width: 1279px;
+  height: 880px;
+  transform: scale(var(--craft-preview-scale));
+  transform-origin: top left;
+  pointer-events: none;
+}
+
+.craft-app-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #ffffff;
 }
 
 .craft-app-sidebar {
@@ -1745,17 +1762,13 @@ body[data-signed-in='false'] #app {
   }
   .craft-cta { margin-top: 28px; }
   .craft-app-window {
-    bottom: -70px;
-    width: 92vw;
-    height: 330px;
-    grid-template-columns: 105px 1fr;
+    --craft-preview-scale: 0.46;
+    bottom: -92px;
+    width: 1279px;
+    height: 880px;
+    transform: translateX(-50%) scale(0.48);
+    transform-origin: top center;
   }
-  .craft-app-sidebar { padding: 10px 6px; }
-  .craft-app-main { padding: 9px 10px; }
-  .craft-goal-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .goal-card:nth-child(n+3) { display: none; }
 }
 
 .ascent-purpose,
@@ -1977,8 +1990,8 @@ body[data-signed-in='false'] #app {
 }
 .person-art {
   width: 292px;
-  height: 366px;
-  aspect-ratio: auto;
+  aspect-ratio: 1 / 1;
+  height: auto;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -2526,7 +2539,7 @@ body[data-signed-in='false'] #app {
 }
 
 @media(max-width:520px){
-  .person-art{aspect-ratio:.8}.ascent-awards{grid-template-columns:1fr}.ascent-awards article{border-right:0;border-bottom:1px solid #ddd;padding-bottom:30px}
+  .person-art{aspect-ratio:1/1}.ascent-awards{grid-template-columns:1fr}.ascent-awards article{border-right:0;border-bottom:1px solid #ddd;padding-bottom:30px}
   .plan-board{grid-template-columns:1fr}.youtube-featured{min-height:330px;padding:26px}.youtube-play{right:24px;top:24px;width:52px;height:52px}.pricing-grid article{padding:28px}.ascent-footer{grid-template-columns:1fr}
 }
 
