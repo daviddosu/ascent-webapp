@@ -67,6 +67,11 @@ const ROBUST_WORKSPACE_URL = 'http://127.0.0.1:4174/'
 const DAY_MS = 24 * 60 * 60 * 1000
 let fallbackId = 0
 let focusMotionFrame = 0
+let peopleRailFrame = 0
+let peopleRailDragging = false
+let peopleRailPointerId: number | null = null
+let peopleRailStartX = 0
+let peopleRailStartScrollLeft = 0
 
 function createId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -665,6 +670,7 @@ function render() {
 
   app.innerHTML = renderAuth()
   scheduleFocusMotionUpdate()
+  schedulePeopleRailMotion()
 }
 
 function scheduleFocusMotionUpdate() {
@@ -750,6 +756,96 @@ function updateFocusMotion() {
   })
 }
 
+function schedulePeopleRailMotion() {
+  if (peopleRailFrame) return
+
+  peopleRailFrame = window.requestAnimationFrame(() => {
+    peopleRailFrame = 0
+    updatePeopleRailMotion()
+  })
+}
+
+function updatePeopleRailMotion() {
+  const rail = app.querySelector<HTMLElement>('.people-rail')
+  if (!rail) {
+    peopleRailDragging = false
+    peopleRailPointerId = null
+    return
+  }
+
+  wirePeopleRail(rail)
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !peopleRailDragging) {
+    rail.scrollLeft += 0.35
+    wrapPeopleRailScroll(rail)
+  }
+
+  peopleRailFrame = window.requestAnimationFrame(() => {
+    peopleRailFrame = 0
+    updatePeopleRailMotion()
+  })
+}
+
+function wrapPeopleRailScroll(rail: HTMLElement) {
+  const halfWidth = rail.scrollWidth / 2
+  if (halfWidth <= 0) return
+
+  if (rail.scrollLeft >= halfWidth) {
+    rail.scrollLeft -= halfWidth
+  } else if (rail.scrollLeft < 0) {
+    rail.scrollLeft += halfWidth
+  }
+}
+
+function wirePeopleRail(rail: HTMLElement) {
+  if (rail.dataset.dragBound === 'true') return
+  rail.dataset.dragBound = 'true'
+  rail.style.scrollBehavior = 'auto'
+
+  const beginDrag = (event: PointerEvent) => {
+    if (event.button !== 0) return
+    peopleRailDragging = true
+    peopleRailPointerId = event.pointerId
+    peopleRailStartX = event.clientX
+    peopleRailStartScrollLeft = rail.scrollLeft
+    rail.classList.add('is-dragging')
+    try {
+      rail.setPointerCapture(event.pointerId)
+    } catch {
+      // Some browsers do not support capture here; dragging still works.
+    }
+  }
+
+  const moveDrag = (event: PointerEvent) => {
+    if (!peopleRailDragging || peopleRailPointerId !== event.pointerId) return
+    const delta = event.clientX - peopleRailStartX
+    rail.scrollLeft = peopleRailStartScrollLeft - delta
+    wrapPeopleRailScroll(rail)
+  }
+
+  const endDrag = (event: PointerEvent) => {
+    if (peopleRailPointerId !== event.pointerId) return
+    peopleRailDragging = false
+    peopleRailPointerId = null
+    rail.classList.remove('is-dragging')
+    try {
+      rail.releasePointerCapture(event.pointerId)
+    } catch {
+      // Ignore release errors when capture was never granted.
+    }
+  }
+
+  rail.addEventListener('pointerdown', beginDrag)
+  rail.addEventListener('pointermove', moveDrag)
+  rail.addEventListener('pointerup', endDrag)
+  rail.addEventListener('pointercancel', endDrag)
+  rail.addEventListener('pointerleave', () => {
+    if (!peopleRailDragging) {
+      rail.classList.remove('is-dragging')
+    }
+  })
+}
+
 function renderAuth() {
   return `
     <main class="craft-landing">
@@ -774,54 +870,14 @@ function renderAuth() {
         </div>
 
         <section class="craft-app-window" aria-label="Ascent app preview">
-          <aside class="craft-app-sidebar">
-            <div class="craft-window-controls" aria-hidden="true"><i></i><i></i><i></i></div>
-            <button type="button" class="craft-new">⌘ &nbsp; New goal</button>
-            <p class="craft-space"><span>🌱</span> David's Space <b>⌄</b></p>
-            <nav aria-label="App preview pages">
-              <a class="is-active" href="#">▣ <span>Today</span></a>
-              <a href="#">✓ <span>Tasks</span></a>
-              <a href="#">□ <span>Calendar</span></a>
-            </nav>
-            <small>STARRED</small>
-            <nav>
-              <a href="#">◌ <span>Journal</span></a>
-              <a href="#">◇ <span>Ideas</span></a>
-            </nav>
-            <small>FOCUS</small>
-          </aside>
-          <div class="craft-app-main">
-            <div class="craft-app-toolbar">
-              <span>‹</span><span>›</span>
-              <button>◉ &nbsp; All goals</button>
-              <span>＋</span>
-              <div class="craft-tools">⌕ &nbsp; ♟ &nbsp; ●</div>
-            </div>
-            <div class="craft-app-title">
-              <h2><span>＋</span> All goals</h2>
-              <div>▦ &nbsp; ▦ &nbsp; ≡ &nbsp; ⇅</div>
-            </div>
-            <div class="craft-goal-grid">
-              <article class="goal-card goal-pink">
-                <h3>Launch the project</h3>
-                <p>Build a clear plan and ship the first useful version.</p>
-                <strong>■ Draft roadmap</strong>
-              </article>
-              <article class="goal-card goal-white">
-                <h3>Workout routine</h3>
-                <p>Monday</p><small>□ Yoga</small><p>Tuesday</p><small>□ Run 5 km</small>
-              </article>
-              <article class="goal-card goal-yellow">
-                <h3>Deep work week</h3>
-                <p>Protect time for the work that moves everything forward.</p>
-                <strong>Today's focus</strong>
-              </article>
-              <article class="goal-card goal-green">
-                <h3>Learning notes</h3>
-                <ol><li>Decision making</li><li>Systems thinking</li><li>Review</li></ol>
-                <strong>Tasks</strong>
-              </article>
-            </div>
+          <div class="craft-app-viewport" aria-hidden="true">
+            <iframe
+              class="craft-app-iframe"
+              title="Ascent workspace preview"
+              src="/workspace"
+              loading="lazy"
+              tabindex="-1"
+            ></iframe>
           </div>
         </section>
       </section>
