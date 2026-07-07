@@ -21,6 +21,9 @@ type TodayComposerDraft = {
   tags: string
 }
 type CalendarMode = 'day' | 'week' | 'month'
+const previewParams = new URLSearchParams(window.location.search)
+const previewView = previewParams.get('previewView')
+const isPreviewMode = previewParams.has('previewView')
 type Task = {
   id: string
   title: string
@@ -94,6 +97,10 @@ function formatTaskTime(value: string) {
 }
 
 function readStoredView(): View {
+  if (previewView === 'today' || previewView === 'upcoming' || previewView === 'calendar' || previewView === 'sticky') {
+    return previewView
+  }
+
   try {
     const stored = window.sessionStorage.getItem(viewStorageKey)
     return stored === 'today' || stored === 'upcoming' || stored === 'calendar' || stored === 'sticky' ? stored : 'today'
@@ -550,8 +557,8 @@ function renderSidebar() {
 
       <nav aria-label="Tasks">
         <h2>Tasks</h2>
-        ${navButton('today', 'Today', 'today', String(screenCounts.today))}
-        ${navButton('upcoming', 'Upcoming', 'upcoming', String(screenCounts.upcoming))}
+        ${navButton('today', 'Today', 'today', isPreviewMode ? '' : String(screenCounts.today))}
+        ${navButton('upcoming', 'Upcoming', 'upcoming', isPreviewMode ? '' : String(screenCounts.upcoming))}
         ${navButton('calendar', 'Calendar', 'calendar')}
         ${navButton('sticky', 'Community', 'sticky')}
       </nav>
@@ -789,7 +796,7 @@ function renderUpcoming() {
     .join('')
   return `
     <section class="upcoming-screen">
-      <header class="screen-title"><h1>Upcoming</h1>${renderCountWheel('upcoming')}</header>
+      <header class="screen-title"><h1>Upcoming</h1>${isPreviewMode ? '' : renderCountWheel('upcoming')}</header>
       <div class="upcoming-columns">
         <section data-upcoming-section="tomorrow">
           <h2>Tomorrow</h2>
