@@ -237,8 +237,6 @@ const tasks: Task[] = readPlannerTasks()
 let view: View = readStoredView()
 let selectedTaskId = 'license'
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
-const countAnimations: Partial<Record<CountKey, { from: number; to: number; token: number }>> = {}
-let countAnimationSequence = 0
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
 let plannerDraftGroup: UpcomingGroup | null = null
@@ -604,44 +602,11 @@ function renderGoalComposer() {
   `
 }
 
-function triggerCountAnimation(key: CountKey, from: number, to: number) {
-  const token = ++countAnimationSequence
-  countAnimations[key] = { from, to, token }
-  window.setTimeout(() => {
-    if (countAnimations[key]?.token === token) delete countAnimations[key]
-  }, 580)
-}
-
-function renderCountWheel(key: CountKey) {
-  const value = screenCounts[key]
-  const animation = countAnimations[key]
-  const fromValue = animation?.from ?? value
-  const toValue = animation?.to ?? value
-  const digits = String(value).split('')
-  const previousDigits = String(fromValue).padStart(digits.length, '0')
-
-  return `
-    <span class="screen-count" data-count="${value}" aria-label="${value} tasks">
-      ${digits.map((digit, index) => {
-        const fromDigit = previousDigits[index] ?? digit
-        const animate = Boolean(animation) && fromDigit !== digit && toValue === value
-        return `
-          <span class="screen-count__digit ${animate ? 'is-animating' : ''}" style="--from-digit:${fromDigit};--to-digit:${digit};--digit:${animate ? fromDigit : digit};">
-            <span class="screen-count__track" aria-hidden="true">
-              ${Array.from({ length: 10 }, (_, number) => `<span>${number}</span>`).join('')}
-            </span>
-          </span>
-        `
-      }).join('')}
-    </span>
-  `
-}
-
 function renderToday() {
   const todayTasks = sortTasks(tasksForToday())
   return `
     <section class="today-screen">
-      <header class="screen-title"><h1>Today</h1>${renderCountWheel('today')}</header>
+      <header class="screen-title"><h1>Today</h1></header>
       ${todayComposerOpen ? renderTodayComposer() : `<button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>`}
       <div class="task-list">
         ${todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')}
@@ -796,7 +761,7 @@ function renderUpcoming() {
     .join('')
   return `
     <section class="upcoming-screen">
-      <header class="screen-title"><h1>Upcoming</h1>${isPreviewMode ? '' : renderCountWheel('upcoming')}</header>
+      <header class="screen-title"><h1>Upcoming</h1></header>
       <div class="upcoming-columns">
         <section data-upcoming-section="tomorrow">
           <h2>Tomorrow</h2>
@@ -1430,8 +1395,6 @@ app.addEventListener('submit', event => {
     const due = String(data.get('due') ?? todayKey)
     const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
     if (!title || !due) return
-    const todayCountBefore = screenCounts.today
-    const upcomingCountBefore = screenCounts.upcoming
     const newTask: Task = {
       id: crypto.randomUUID(),
       title,
@@ -1453,8 +1416,6 @@ app.addEventListener('submit', event => {
     resetTodayComposerDraft()
     persistPlanner()
     refreshCounts()
-    if (due === todayKey) triggerCountAnimation('today', todayCountBefore, screenCounts.today)
-    else triggerCountAnimation('upcoming', upcomingCountBefore, screenCounts.upcoming)
     triggerHaptic([35, 30, 60])
     toast = due === todayKey
       ? 'Task added to today'
@@ -1486,7 +1447,6 @@ app.addEventListener('submit', event => {
   const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
   const time = String(data.get('time') ?? '').trim()
   if (!title || !due) return
-  const from = screenCounts.upcoming
   tasks.unshift({
     id: crypto.randomUUID(),
     title,
@@ -1500,7 +1460,6 @@ app.addEventListener('submit', event => {
   triggerHaptic([35, 30, 60])
   plannerDraftGroup = null
   refreshCounts()
-  triggerCountAnimation('upcoming', from, screenCounts.upcoming)
   toast = group === 'tomorrow' ? 'Added to tomorrow' : `Added for ${formatTaskDate(due)}`
   render()
   window.setTimeout(() => {
@@ -1747,11 +1706,9 @@ app.addEventListener('click', event => {
   } else if (action === 'delete-task') {
     const taskIndex = tasks.findIndex(task => task.id === selectedTaskId)
     if (taskIndex >= 0) tasks.splice(taskIndex, 1)
-    const from = screenCounts.today
     completedTaskIds.delete(selectedTaskId)
     selectedTaskId = tasksForToday()[0]?.id ?? tasks[0]?.id ?? ''
     refreshCounts()
-    triggerCountAnimation('today', from, screenCounts.today)
     persistPlanner()
     toast = 'Task deleted'
   } else if (action === 'cycle-goal') {

@@ -126,43 +126,6 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   font-size: 16px;
   view-transition-name: today-add-surface;
 }
-.screen-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.015em;
-  font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
-  font-size: 23px;
-  line-height: 1;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  color: #232323;
-  transform: translateY(-1px);
-}
-.screen-count__digit {
-  width: 0.76em;
-  height: 1em;
-  display: block;
-  overflow: hidden;
-}
-.screen-count__track {
-  display: flex;
-  flex-direction: column;
-  transform: translateY(calc(var(--digit) * -1em));
-}
-.screen-count__track span {
-  height: 1em;
-  line-height: 1em;
-  text-align: center;
-}
-.screen-count__digit.is-animating .screen-count__track {
-  animation: count-wheel-spin 540ms cubic-bezier(.2, .8, .2, 1) both;
-}
-@keyframes count-wheel-spin {
-  from { transform: translateY(calc(var(--from-digit) * -1em)); }
-  to { transform: translateY(calc(var(--to-digit) * -1em)); }
-}
-
 .add-task-row {
   width: 100%;
   height: 45px;
