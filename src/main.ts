@@ -874,7 +874,7 @@ function renderAuth() {
             <iframe
               class="craft-app-iframe"
               title="Ascent workspace preview"
-              src="/workspace"
+              src="http://127.0.0.1:4174/?previewView=upcoming"
               loading="lazy"
               tabindex="-1"
             ></iframe>

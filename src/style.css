@@ -1548,13 +1548,13 @@ body[data-signed-in='false'] #app {
 }
 
 .craft-app-window {
-  --craft-preview-scale: 0.77;
+  --craft-preview-scale: 0.58;
   position: absolute;
   z-index: 5;
   left: 50%;
-  bottom: -72px;
-  width: min(880px, 80vw);
-  height: 410px;
+  bottom: -54px;
+  width: min(840px, calc(100vw - 32px));
+  height: 505px;
   transform: translateX(-50%);
   overflow: hidden;
   border: 1px solid rgba(20, 29, 35, 0.09);
@@ -1567,8 +1567,8 @@ body[data-signed-in='false'] #app {
 }
 
 .craft-app-viewport {
-  width: 1279px;
-  height: 880px;
+  width: calc(100% / var(--craft-preview-scale));
+  height: calc(100% / var(--craft-preview-scale));
   transform: scale(var(--craft-preview-scale));
   transform-origin: top left;
   margin-top: 0;
@@ -1763,10 +1763,10 @@ body[data-signed-in='false'] #app {
   }
   .craft-cta { margin-top: 28px; }
   .craft-app-window {
-    --craft-preview-scale: 0.58;
-    bottom: -66px;
-    width: min(880px, calc(100vw - 24px));
-    height: 410px;
+    --craft-preview-scale: 0.52;
+    bottom: -42px;
+    width: calc(100vw - 18px);
+    height: calc((100vw - 18px) * 0.64);
   }
 }
 
