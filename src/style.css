@@ -18,89 +18,46 @@ button, input, textarea, select { font: inherit; color: inherit; }
 button { border: 0; background: none; cursor: pointer; }
 svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
-.workspace-auth-shell {
+.workspace-auth-redirect {
   min-height: 100vh;
   display: grid;
+  align-content: center;
   place-items: center;
+  gap: 14px;
   padding: 24px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(145, 205, 229, .34), transparent 38%),
-    #f7f9fa;
+  background: #fff;
 }
 
-.workspace-auth-card {
-  width: min(480px, 100%);
-  padding: 48px 38px 40px;
-  border: 1px solid rgba(28, 43, 51, .1);
-  border-radius: 26px;
-  background: rgba(255, 255, 255, .94);
-  box-shadow: 0 24px 70px rgba(28, 50, 61, .14);
-  text-align: center;
-}
-
-.workspace-auth-mark {
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 20px;
+.workspace-auth-redirect > span {
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
-  border-radius: 15px;
-  background: #17191a;
+  border-radius: 12px;
+  background: #111516;
   color: #fff;
-  font-size: 25px;
+  font-family: Georgia, serif;
+  font-size: 23px;
   font-weight: 700;
 }
 
-.workspace-auth-card small {
-  color: #6e7a80;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .18em;
-}
-
-.workspace-auth-card h1 {
-  margin: 14px 0 10px;
-  font-size: clamp(28px, 5vw, 38px);
-  line-height: 1.15;
-  letter-spacing: -.035em;
-}
-
-.workspace-auth-card p {
-  max-width: 370px;
-  margin: 0 auto 25px;
-  color: #657177;
+.workspace-auth-redirect p {
+  margin: 0;
+  color: #737b7f;
   font-size: 14px;
-  line-height: 1.65;
 }
 
-.workspace-auth-card button,
-.workspace-auth-card a {
-  min-height: 48px;
-  padding: 0 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
+.workspace-auth-redirect button {
+  min-height: 42px;
+  padding: 0 20px;
+  border-radius: 9px;
   background: #17191a;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-  text-decoration: none;
 }
 
-.workspace-auth-card a { margin-top: 10px; background: transparent; color: #38454b; }
-.workspace-auth-loading i {
-  width: 26px;
-  height: 26px;
-  margin: 4px auto 0;
-  display: block;
-  border: 3px solid #d9e3e7;
-  border-top-color: #17191a;
-  border-radius: 50%;
-  animation: auth-spin .8s linear infinite;
-}
-
-@keyframes auth-spin { to { transform: rotate(360deg); } }
+.workspace-auth-redirect a { color: #5f676b; font-size: 13px; }
 
 .reference-app {
   min-height: 100vh;

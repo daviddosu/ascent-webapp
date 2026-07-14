@@ -564,30 +564,12 @@ function render() {
 }
 
 function renderAuthGate() {
-  if (authState === 'checking') {
-    return `
-      <main class="workspace-auth-shell" aria-live="polite">
-        <section class="workspace-auth-card workspace-auth-loading">
-          <span class="workspace-auth-mark">S</span>
-          <h1>Opening Shotcount</h1>
-          <p>Checking your login ticket…</p>
-          <i aria-hidden="true"></i>
-        </section>
-      </main>
-    `
-  }
-
   const isError = authState === 'error'
   return `
-    <main class="workspace-auth-shell">
-      <section class="workspace-auth-card">
-        <span class="workspace-auth-mark">S</span>
-        <small>SHOTCOUNT</small>
-        <h1>${isError ? 'We hit a small bump' : 'Sign in to your workspace'}</h1>
-        <p>${isError ? 'We could not check your login ticket. Please try once more.' : 'Use your Gmail to sign up or log in. Your work stays behind your account.'}</p>
-        <button type="button" data-action="${isError ? 'retry-auth' : 'continue-google'}">${isError ? 'Try again' : 'Continue with Google'}</button>
-        ${isError ? '<a href="https://shotcount.app/?auth=signin">Go to Gmail sign in</a>' : ''}
-      </section>
+    <main class="workspace-auth-redirect" aria-live="polite">
+      <span>S</span>
+      <p>${isError ? 'We could not check your login.' : 'Opening Shotcount…'}</p>
+      ${isError ? '<button type="button" data-action="retry-auth">Try again</button><a href="https://shotcount.app/?auth=signin">Go to sign in</a>' : ''}
     </main>
   `
 }
@@ -603,7 +585,11 @@ async function verifyAuthSession() {
     })
     if (!response.ok) throw new Error('Session check failed')
     const session = await response.json() as unknown
-    authState = session ? 'authenticated' : 'unauthenticated'
+    if (!session) {
+      window.location.replace('https://shotcount.app/?auth=signin')
+      return
+    }
+    authState = 'authenticated'
   } catch {
     authState = 'error'
   }
