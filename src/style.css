@@ -2684,20 +2684,7 @@ body[data-theme='dark'] .sidebar {
   .mobile-brand {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
     font-size: 14px;
-  }
-
-  .mobile-brand > span {
-    width: 28px;
-    height: 28px;
-    display: grid;
-    place-items: center;
-    border: 1px solid #dfdfdf;
-    border-radius: 8px;
-    background: #f7f7f7;
-    font-size: 12px;
-    font-weight: 700;
   }
 
   .mobile-theme-toggle {
@@ -2952,7 +2939,6 @@ body[data-theme='dark'] .sidebar {
     color: var(--dark-text);
   }
 
-  body[data-theme='dark'] .mobile-brand > span,
   body[data-theme='dark'] .inspector-close {
     border-color: var(--dark-border);
     background: var(--dark-raised);

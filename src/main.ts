@@ -614,7 +614,7 @@ async function signOut() {
 function renderMobileTopbar() {
   return `
     <header class="mobile-topbar">
-      <div class="mobile-brand"><span aria-hidden="true">S</span><strong>Shotcount</strong></div>
+      <div class="mobile-brand"><strong>Shotcount</strong></div>
       <button
         type="button"
         class="mobile-theme-toggle"

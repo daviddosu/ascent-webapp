@@ -33,6 +33,11 @@ beforeAll(async () => {
 })
 
 describe('reference screens', () => {
+  it('shows the Shotcount name without the square S badge in the mobile top bar', () => {
+    expect(document.querySelector('.mobile-brand')?.textContent).toBe('Shotcount')
+    expect(document.querySelector('.mobile-brand span')).toBeNull()
+  })
+
   it('opens Today with its task inspector', () => {
     document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
     expect(document.querySelector('.screen-title h1')?.textContent).toBe('Today')
