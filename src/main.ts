@@ -66,6 +66,7 @@ const STORAGE_PREFIX = 'shotcount-current-v1:'
 const STORAGE_KEY = `${STORAGE_PREFIX}state`
 const ORIGIN_CLEANUP_MARKER = `${STORAGE_PREFIX}previous-app-cleared`
 const ROBUST_WORKSPACE_URL = 'https://app.shotcount.app/'
+const GOOGLE_CLIENT_ID = '368303232542-n47alare1qmc9shtbgpbtid8j644ham5.apps.googleusercontent.com'
 const DAY_MS = 24 * 60 * 60 * 1000
 let fallbackId = 0
 let focusMotionFrame = 0
@@ -74,6 +75,27 @@ let peopleRailDragging = false
 let peopleRailPointerId: number | null = null
 let peopleRailStartX = 0
 let peopleRailStartScrollLeft = 0
+let authModalOpen = new URLSearchParams(window.location.search).get('auth') === 'signin'
+let authError = new URLSearchParams(window.location.search).get('error') ?? ''
+let googleAuthInitialized = false
+
+type GoogleCredentialResponse = { credential?: string }
+type GoogleIdentity = {
+  initialize: (options: {
+    client_id: string
+    callback: (response: GoogleCredentialResponse) => void
+    ux_mode: 'popup'
+    context: 'signin'
+    auto_select: boolean
+  }) => void
+  renderButton: (node: HTMLElement, options: Record<string, string | number>) => void
+}
+
+declare global {
+  interface Window {
+    google?: { accounts?: { id?: GoogleIdentity } }
+  }
+}
 
 function isolateCurrentAppStorage() {
   try {
@@ -83,13 +105,6 @@ function isolateCurrentAppStorage() {
       .filter(key => !key.startsWith(STORAGE_PREFIX))
       .forEach(key => localStorage.removeItem(key))
     sessionStorage.clear()
-
-    document.cookie.split(';').forEach(cookie => {
-      const name = cookie.split('=')[0]?.trim()
-      if (!name) return
-      document.cookie = `${name}=; Max-Age=0; path=/`
-      document.cookie = `${name}=; Max-Age=0; path=/; domain=.shotcount.app`
-    })
 
     localStorage.setItem(ORIGIN_CLEANUP_MARKER, 'yes')
   } catch {
@@ -412,18 +427,12 @@ app.addEventListener('click', (event) => {
   }
 
   if (action === 'signin') {
-    const variant = target.dataset.variant ?? 'email'
-    const emailInput = app.querySelector<HTMLInputElement>('#email-input')
-    const email = variant === 'email' ? emailInput?.value.trim() || 'david@shotcount.app' : `${variant.toLowerCase()}@shotcount.app`
-    state.session = {
-      email,
-      name: deriveName(email, variant),
-    }
-    state.signedIn = true
-    state.view = 'today'
-    state.notificationPanelOpen = false
-    persist()
-    window.location.replace(ROBUST_WORKSPACE_URL)
+    openAuthModal()
+    return
+  }
+
+  if (action === 'close-auth') {
+    closeAuthModal()
     return
   }
 
@@ -592,16 +601,6 @@ function ensureSundayReviewState(today: string) {
   }
 }
 
-function deriveName(email: string, variant: string) {
-  if (variant === 'google') return 'David'
-  if (variant === 'apple') return 'David'
-  const localPart = email.split('@')[0] || 'David'
-  return localPart
-    .split(/[._-]/)
-    .map((chunk) => chunk ? chunk[0]!.toUpperCase() + chunk.slice(1) : '')
-    .join(' ')
-}
-
 function addTask(title: string) {
   const today = todayDate()
   state.tasks.unshift({
@@ -725,6 +724,125 @@ function render() {
   app.innerHTML = renderAuth()
   scheduleFocusMotionUpdate()
   schedulePeopleRailMotion()
+  if (authModalOpen) queueMicrotask(() => void ensureGoogleAuthReady())
+}
+
+function openAuthModal(error = '') {
+  authModalOpen = true
+  authError = error
+  const url = new URL(window.location.href)
+  url.searchParams.set('auth', 'signin')
+  if (error) url.searchParams.set('error', error)
+  else url.searchParams.delete('error')
+  window.history.replaceState({}, '', url)
+  render()
+}
+
+function closeAuthModal() {
+  authModalOpen = false
+  authError = ''
+  const url = new URL(window.location.href)
+  url.searchParams.delete('auth')
+  url.searchParams.delete('error')
+  window.history.replaceState({}, '', url)
+  render()
+}
+
+function loadGoogleAuthScript() {
+  if (window.google?.accounts?.id) return Promise.resolve()
+
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-shotcount-google-auth]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Google sign-in could not load.')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.dataset.shotcountGoogleAuth = 'true'
+    script.addEventListener('load', () => resolve(), { once: true })
+    script.addEventListener('error', () => reject(new Error('Google sign-in could not load.')), { once: true })
+    document.head.appendChild(script)
+  })
+}
+
+function submitGoogleCredential(credential: string) {
+  const form = document.createElement('form')
+  form.method = 'POST'
+  form.action = '/api/auth/google'
+  form.hidden = true
+
+  const credentialInput = document.createElement('input')
+  credentialInput.type = 'hidden'
+  credentialInput.name = 'credential'
+  credentialInput.value = credential
+  form.appendChild(credentialInput)
+  document.body.appendChild(form)
+  form.submit()
+}
+
+async function ensureGoogleAuthReady() {
+  const button = app.querySelector<HTMLElement>('#shotcount-google-button')
+  if (!button) return
+
+  try {
+    await loadGoogleAuthScript()
+    const googleIdentity = window.google?.accounts?.id
+    if (!googleIdentity) throw new Error('Google sign-in is unavailable.')
+
+    if (!googleAuthInitialized) {
+      googleIdentity.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          if (response.credential) submitGoogleCredential(response.credential)
+          else openAuthModal('google-signin-unavailable')
+        },
+        ux_mode: 'popup',
+        context: 'signin',
+        auto_select: false,
+      })
+      googleAuthInitialized = true
+    }
+
+    button.innerHTML = ''
+    googleIdentity.renderButton(button, {
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'pill',
+      width: Math.min(400, Math.max(240, button.clientWidth || 360)),
+    })
+  } catch {
+    authError = 'google-script-unavailable'
+    const message = app.querySelector<HTMLElement>('[data-auth-error]')
+    if (message) message.textContent = 'Google sign-in could not load. Please try again.'
+  }
+}
+
+function renderGoogleAuthModal() {
+  if (!authModalOpen) return ''
+  const errorMessage = authError
+    ? 'Google could not sign you in just now. Please try again.'
+    : ''
+
+  return `
+    <div class="google-auth" role="presentation">
+      <button type="button" class="google-auth-backdrop" data-action="close-auth" aria-label="Close sign in"></button>
+      <section class="google-auth-card" role="dialog" aria-modal="true" aria-labelledby="google-auth-title">
+        <button type="button" class="google-auth-close" data-action="close-auth" aria-label="Close sign in">×</button>
+        <span class="google-auth-kicker">SHOTCOUNT</span>
+        <h2 id="google-auth-title">Welcome</h2>
+        <p>Use your Gmail to sign up or log in. Google keeps your password; Shotcount only receives your basic account details.</p>
+        <div class="google-auth-button" id="shotcount-google-button" aria-live="polite"></div>
+        <p class="google-auth-error" data-auth-error role="alert">${errorMessage}</p>
+        <small>By continuing, you agree to the Shotcount terms and privacy policy.</small>
+      </section>
+    </div>
+  `
 }
 
 function scheduleFocusMotionUpdate() {
@@ -1060,6 +1178,7 @@ function renderAuth() {
         <div><h3>Company</h3><a href="#">About us</a><a href="#">Careers</a><a href="#">Terms</a></div>
         <p class="footer-copy">© 2026 Shotcount. All rights reserved.</p>
       </footer>
+      ${renderGoogleAuthModal()}
     </main>
   `
 }
