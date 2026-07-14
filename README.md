@@ -1,6 +1,6 @@
-# Ascent
+# Shotcount
 
-Ascent is a calm, local-first planning app built around one loop:
+Shotcount is a calm, local-first planning app built around one loop:
 
 `Goal → Plan → Today → Finish → Review → Improve`
 
@@ -24,7 +24,7 @@ This runs the domain tests, browser-like interaction journeys, automated accessi
 ## Enable secure cloud accounts
 
 1. Create a Supabase project.
-2. Apply [`supabase/migrations/202607030001_initial_ascent.sql`](supabase/migrations/202607030001_initial_ascent.sql).
+2. Apply [`supabase/migrations/202607030001_initial_shotcount.sql`](supabase/migrations/202607030001_initial_shotcount.sql).
 3. Copy `.env.example` to `.env.local`.
 4. Add the project URL and public anonymous key.
 5. Restart the development server.
@@ -46,13 +46,13 @@ After deployment, verify the reachable cloud surface without printing credential
 pnpm check:cloud
 ```
 
-For a disposable test account, add `ASCENT_TEST_EMAIL` and `ASCENT_TEST_PASSWORD`, then verify signed-in RLS create/read/delete behavior:
+For a disposable test account, add `SHOTCOUNT_TEST_EMAIL` and `SHOTCOUNT_TEST_PASSWORD`, then verify signed-in RLS create/read/delete behavior:
 
 ```bash
 pnpm check:cloud:auth
 ```
 
-Set `ASCENT_TEST_AI=true` only when you also want this check to make one real, billable AI-coach request.
+Set `SHOTCOUNT_TEST_AI=true` only when you also want this check to make one real, billable AI-coach request.
 
 ## Production behavior
 

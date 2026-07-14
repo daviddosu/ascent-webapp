@@ -19,6 +19,11 @@ function addTestDays(date: Date, amount: number) {
   return next
 }
 
+function refreshAppDate(reference = new Date()) {
+  const hook = window as Window & { __shotcountRefreshDateState?: (reference?: Date) => void }
+  hook.__shotcountRefreshDateState?.(reference)
+}
+
 beforeAll(async () => {
   window.localStorage.clear()
   window.sessionStorage.clear()
@@ -67,7 +72,7 @@ describe('reference screens', () => {
     form.requestSubmit()
 
     expect([...document.querySelectorAll('.goal-row')].some(row => row.textContent?.includes('Grow LinkedIn'))).toBe(true)
-    expect(window.localStorage.getItem('ascent-goals-v1')).toContain('Grow LinkedIn')
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:goals')).toContain('Grow LinkedIn')
 
     document.querySelector<HTMLButtonElement>('[data-goal-filter="job-search"]')!.click()
     expect([...document.querySelectorAll('.today-screen .task-row strong')].some(node => node.textContent === 'Plan launch review')).toBe(true)
@@ -96,8 +101,8 @@ describe('reference screens', () => {
     expect(goalSelect.options[goalSelect.selectedIndex]?.textContent).toBe('Launch a podcast')
     expect(form.querySelector<HTMLInputElement>('[name="title"]')!.value).toBe('Record the first episode')
     expect([...document.querySelectorAll('.goal-row')].some(row => row.textContent?.includes('Launch a podcast'))).toBe(true)
-    expect(window.localStorage.getItem('ascent-goals-v1')).toContain('Launch a podcast')
-    const savedGoals = JSON.parse(window.localStorage.getItem('ascent-goals-v1')!) as Array<{ name: string; color: string }>
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:goals')).toContain('Launch a podcast')
+    const savedGoals = JSON.parse(window.localStorage.getItem('shotcount-workspace-current-v1:goals')!) as Array<{ name: string; color: string }>
     const goalColors = savedGoals.map(goal => goal.color.toLowerCase())
     expect(new Set(goalColors).size).toBe(goalColors.length)
     expect(savedGoals.find(goal => goal.name === 'Launch a podcast')?.color).not.toBe('#2878ff')
@@ -191,7 +196,7 @@ describe('reference screens', () => {
     expect(Number(document.querySelector('.screen-count')?.getAttribute('data-count'))).toBe(countBefore + 1)
     const tomorrowSection = document.querySelector('[data-upcoming-section="tomorrow"]')!
     expect([...tomorrowSection.querySelectorAll('.task-row strong')].some(node => node.textContent === 'Prepare tomorrow brief')).toBe(true)
-    expect(window.localStorage.getItem('ascent-planner-v1')).toContain('"time":"09:15"')
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:planner')).toContain('"time":"09:15"')
   })
 
   it('requires and saves a date for a This Week task', () => {
@@ -219,16 +224,15 @@ describe('reference screens', () => {
 
   it('remembers the active page in session storage', () => {
     document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
-    expect(window.sessionStorage.getItem('ascent-active-view')).toBe('calendar')
+    expect(window.sessionStorage.getItem('shotcount-workspace-current-v1:active-view')).toBe('calendar')
 
     document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
-    expect(window.sessionStorage.getItem('ascent-active-view')).toBe('today')
+    expect(window.sessionStorage.getItem('shotcount-workspace-current-v1:active-view')).toBe('today')
   })
 
   it('refreshes Today defaults when the date changes', () => {
-    const hook = window as Window & { __ascentRefreshDateState?: (reference?: Date) => void }
     const nextDay = addTestDays(new Date(), 1)
-    hook.__ascentRefreshDateState?.(nextDay)
+    refreshAppDate(nextDay)
 
     document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
     document.querySelector<HTMLButtonElement>('[data-action="add-task"]')!.click()
@@ -239,7 +243,7 @@ describe('reference screens', () => {
     expect(due.min).toBe(testDateKey(nextDay))
     expect(due.max).toBe(testDateKey(addTestDays(nextDay, 7)))
 
-    hook.__ascentRefreshDateState?.(new Date())
+    refreshAppDate()
   })
 
   it('opens the Calendar as a week planner with an unscheduled tray', () => {
@@ -254,13 +258,13 @@ describe('reference screens', () => {
     expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(1)
     document.querySelector<HTMLButtonElement>('[data-action="next-date"]')!.click()
     expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(0)
-    document.querySelector<HTMLButtonElement>('[data-action="calendar-today"]')!.click()
+    refreshAppDate()
     document.querySelector<HTMLButtonElement>('[data-calendar-mode="week"]')!.click()
   })
 
   it('uses the visible calendar date when scheduling an unscheduled task from the tray', () => {
     document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
-    document.querySelector<HTMLButtonElement>('[data-action="calendar-today"]')!.click()
+    refreshAppDate()
     document.querySelector<HTMLButtonElement>('[data-calendar-mode="week"]')!.click()
     document.querySelector<HTMLButtonElement>('[data-action="next-date"]')!.click()
     document.querySelector<HTMLButtonElement>('.unscheduled-task[data-task-id="research"]')!.click()
@@ -269,7 +273,7 @@ describe('reference screens', () => {
     expect(form.querySelector<HTMLInputElement>('[name="title"]')!.value).toBe('Research content ideas')
     expect(form.querySelector<HTMLInputElement>('[name="due"]')!.value).toBe(testDateKey(addTestDays(new Date(), 7)))
     form.querySelector<HTMLButtonElement>('[data-action="close-calendar-composer"]')!.click()
-    document.querySelector<HTMLButtonElement>('[data-action="calendar-today"]')!.click()
+    refreshAppDate()
   })
 
   it('closes the calendar composer when leaving Calendar', () => {
@@ -299,6 +303,7 @@ describe('reference screens', () => {
 
     expect([...document.querySelectorAll('.calendar-event strong')].some(node => node.textContent === 'Calendar deep work')).toBe(true)
     expect(document.querySelector('.calendar-event')?.getAttribute('style')).toContain('#ff666d')
+    expect(document.querySelector('.calendar-event .calendar-event-goal')?.textContent).toContain('Personal')
     expect(document.querySelector('.calendar-stats')?.textContent).toContain('1h 30m planned')
     const createdEvent = [...document.querySelectorAll<HTMLElement>('.calendar-event')]
       .find(node => node.textContent?.includes('Calendar deep work'))!
@@ -422,6 +427,22 @@ describe('reference screens', () => {
     expect(follow.getAttribute('aria-pressed')).toBe('false')
     follow.click()
     expect(document.querySelector('[data-follow="kenji"]')?.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('toggles dark mode and remembers it', () => {
+    const toggle = document.querySelector<HTMLButtonElement>('[data-action="toggle-theme"]')!
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+
+    toggle.click()
+
+    expect(document.body.dataset.theme).toBe('dark')
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(document.querySelector('[data-action="toggle-theme"]')?.getAttribute('aria-checked')).toBe('true')
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:theme')).toBe('dark')
+
+    document.querySelector<HTMLButtonElement>('[data-action="toggle-theme"]')!.click()
+    expect(document.body.dataset.theme).toBe('light')
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:theme')).toBe('light')
   })
 
   it('has no serious automated accessibility problems', async () => {

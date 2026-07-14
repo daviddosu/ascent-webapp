@@ -1,7 +1,7 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
 import './style.css'
-import heroCollage from './assets/ascent-collage.png'
-import peopleCollage from './assets/ascent-people-collage.png'
+import heroCollage from './assets/shotcount-collage.png'
+import peopleCollage from './assets/shotcount-people-collage.png'
 import communityPortraits from './assets/community-portraits.png'
 
 type View = 'today' | 'upcoming' | 'calendar' | 'sticky'
@@ -21,6 +21,7 @@ type TodayComposerDraft = {
   tags: string
 }
 type CalendarMode = 'day' | 'week' | 'month'
+type Theme = 'light' | 'dark'
 const previewParams = new URLSearchParams(window.location.search)
 const previewView = previewParams.get('previewView')
 const isPreviewMode = previewParams.has('previewView')
@@ -56,10 +57,44 @@ type CommunityProfile = {
 }
 
 const app = document.querySelector<HTMLDivElement>('#app')!
-const viewStorageKey = 'ascent-active-view'
-const plannerStorageKey = 'ascent-planner-v1'
-const goalsStorageKey = 'ascent-goals-v1'
-const dateStateHook = window as Window & { __ascentRefreshDateState?: (reference?: Date) => void }
+const storagePrefix = 'shotcount-workspace-current-v1:'
+const viewStorageKey = `${storagePrefix}active-view`
+const plannerStorageKey = `${storagePrefix}planner`
+const goalsStorageKey = `${storagePrefix}goals`
+const themeStorageKey = `${storagePrefix}theme`
+const dateStateHook = window as Window & { __shotcountRefreshDateState?: (reference?: Date) => void }
+
+function readStoredValue(storage: Storage, key: string) {
+  return storage.getItem(key)
+}
+
+function readTheme(): Theme {
+  try {
+    return readStoredValue(window.localStorage, themeStorageKey) === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
+let theme: Theme = readTheme()
+
+function applyTheme() {
+  document.documentElement.dataset.theme = theme
+  document.body.dataset.theme = theme
+}
+
+function toggleTheme() {
+  theme = theme === 'dark' ? 'light' : 'dark'
+  try {
+    window.localStorage.setItem(themeStorageKey, theme)
+  } catch {
+    // The switch still works for this visit when storage is unavailable.
+  }
+  applyTheme()
+  render()
+}
+
+applyTheme()
 
 function dateKey(date = new Date()) {
   const year = date.getFullYear()
@@ -102,7 +137,7 @@ function readStoredView(): View {
   }
 
   try {
-    const stored = window.sessionStorage.getItem(viewStorageKey)
+    const stored = readStoredValue(window.sessionStorage, viewStorageKey)
     return stored === 'today' || stored === 'upcoming' || stored === 'calendar' || stored === 'sticky' ? stored : 'today'
   } catch {
     return 'today'
@@ -143,7 +178,7 @@ const goalColorPalette = [
 
 function readGoals() {
   try {
-    const stored = window.localStorage.getItem(goalsStorageKey)
+    const stored = readStoredValue(window.localStorage, goalsStorageKey)
     if (!stored) return seedGoals
     const parsed = JSON.parse(stored) as Goal[]
     return Array.isArray(parsed) && parsed.length ? parsed : seedGoals
@@ -214,7 +249,7 @@ const seedTasks: Task[] = [
 
 function readPlannerTasks() {
   try {
-    const stored = window.localStorage.getItem(plannerStorageKey)
+    const stored = readStoredValue(window.localStorage, plannerStorageKey)
     if (!stored) return seedTasks
     const parsed = JSON.parse(stored) as Array<{ goalId?: string; list?: string } & Task>
     if (!Array.isArray(parsed) || !parsed.length) return seedTasks
@@ -236,6 +271,7 @@ function readPlannerTasks() {
 const tasks: Task[] = readPlannerTasks()
 let view: View = readStoredView()
 let selectedTaskId = 'license'
+let mobileInspectorOpen = false
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
@@ -342,6 +378,7 @@ const icons: Record<string, string> = {
   today: '<path d="M7 6h12M7 12h12M7 18h12"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
   calendar: '<rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 9h16M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/>',
   sticky: '<path d="M5 4h14v12l-4 4H5z"/><path d="M15 20v-4h4"/>',
+  moon: '<path d="M20 15.2A8 8 0 1 1 8.8 4 6.5 6.5 0 0 0 20 15.2Z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   settings: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/>',
   logout: '<path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"/>',
@@ -426,9 +463,9 @@ function landingPeopleCard(name: string, role: string, description: string, colu
 
 function renderLanding() {
   return `
-    <main class="ascent-landing">
+    <main class="shotcount-landing">
       <header class="landing-nav">
-        <a class="landing-brand" href="/" aria-label="Ascent home">ASCENT</a>
+        <a class="landing-brand" href="/" aria-label="Shotcount home">SHOTCOUNT</a>
         <nav aria-label="Primary">
           <a href="#people">Product</a>
           <a href="#people">Community</a>
@@ -437,7 +474,7 @@ function renderLanding() {
         </nav>
         <div class="landing-nav-actions">
           <a href="#focus" class="landing-link">Log in</a>
-          <button type="button" class="landing-button" data-action="enter-app">Try Ascent Free</button>
+          <button type="button" class="landing-button" data-action="enter-app">Try Shotcount Free</button>
         </div>
       </header>
 
@@ -445,19 +482,19 @@ function renderLanding() {
         <div class="landing-hero-copy">
           <p class="landing-eyebrow">FOCUS</p>
           <h1>Your space for goals, focus, and real progress</h1>
-          <p>Ascent turns distant goals into clear daily moves. Capture what matters, choose the next step, and keep moving without losing the bigger picture.</p>
+          <p>Shotcount turns distant goals into clear daily moves. Capture what matters, choose the next step, and keep moving without losing the bigger picture.</p>
           <div class="landing-hero-actions">
-            <button type="button" class="landing-button landing-button--primary" data-action="enter-app">Try Ascent Free</button>
-            <a href="#people">See how people use Ascent →</a>
+            <button type="button" class="landing-button landing-button--primary" data-action="enter-app">Try Shotcount Free</button>
+            <a href="#people">See how people use Shotcount →</a>
           </div>
         </div>
         <div class="landing-hero-art">
-          <img src="${heroCollage}" alt="A collage-style preview of the Ascent workspace" />
+          <img src="${heroCollage}" alt="A collage-style preview of the Shotcount workspace" />
         </div>
       </section>
 
       <section id="people" class="landing-people">
-        <h2>How people use Ascent</h2>
+        <h2>How people use Shotcount</h2>
         <div class="landing-people-rail">
           ${landingPeopleCard('David', 'researcher', 'Proposals, papers, training, and the next brave step', 0, 0)}
           ${landingPeopleCard('Amara', 'founder', 'Company priorities, decisions, and quick follow-through', 1, 0)}
@@ -472,7 +509,7 @@ function renderLanding() {
         <div class="landing-feature-copy">
           <p class="landing-eyebrow">FOCUS</p>
           <h2>From a big ambition to today’s next move</h2>
-          <p>Ascent turns distant goals into clear daily actions. Capture what matters, choose the next step, and keep moving without losing the larger story.</p>
+          <p>Shotcount turns distant goals into clear daily actions. Capture what matters, choose the next step, and keep moving without losing the larger story.</p>
         </div>
         <div class="landing-feature-card">
           <div class="landing-task-card">
@@ -489,7 +526,7 @@ function renderLanding() {
 
       <section class="landing-cta">
         <h2>Make the next small step obvious.</h2>
-        <button type="button" class="landing-button landing-button--primary" data-action="enter-app">Try Ascent Free</button>
+        <button type="button" class="landing-button landing-button--primary" data-action="enter-app">Try Shotcount Free</button>
       </section>
     </main>
   `
@@ -503,17 +540,48 @@ function render() {
   refreshDateContext(now)
   refreshCounts()
   const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[2]!
-  const showInspector = view === 'today' && !todayComposerOpen
+  const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
+  const showInspector = view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
   app.innerHTML = `
     <div class="reference-app ${showInspector ? 'with-inspector' : ''}">
       ${renderSidebar()}
       <main class="workspace">
+        ${renderMobileTopbar()}
         ${view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
       </main>
       ${showInspector ? renderInspector(selected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
   `
+  if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function renderMobileTopbar() {
+  return `
+    <header class="mobile-topbar">
+      <div class="mobile-brand"><span aria-hidden="true">S</span><strong>Shotcount</strong></div>
+      <button
+        type="button"
+        class="mobile-theme-toggle"
+        data-action="toggle-theme"
+        aria-label="Use ${theme === 'dark' ? 'light' : 'dark'} mode"
+        title="Use ${theme === 'dark' ? 'light' : 'dark'} mode"
+      >${icon('moon')}</button>
+    </header>
+  `
+}
+
+function alignMobileScrollSurfaces() {
+  if (view === 'upcoming') {
+    const activity = document.querySelector<HTMLElement>('.activity-scroll')
+    if (activity) activity.scrollLeft = activity.scrollWidth
+  }
+
+  if (view === 'calendar') {
+    const board = document.querySelector<HTMLElement>('.calendar-board')
+    const currentDay = board?.querySelector<HTMLElement>('.calendar-day-head.today, .month-day.today')
+    if (board && currentDay) board.scrollLeft = Math.max(0, currentDay.offsetLeft - 78)
+  }
 }
 
 function renderWithMotion(update: () => void) {
@@ -559,6 +627,18 @@ function renderSidebar() {
         ${navButton('upcoming', 'Upcoming', 'upcoming', isPreviewMode ? '' : String(screenCounts.upcoming))}
         ${navButton('calendar', 'Calendar', 'calendar')}
         ${navButton('sticky', 'Community', 'sticky')}
+        <button
+          type="button"
+          class="theme-toggle"
+          data-action="toggle-theme"
+          role="switch"
+          aria-checked="${theme === 'dark'}"
+          aria-label="Dark mode"
+        >
+          ${icon('moon')}
+          <span>Dark mode</span>
+          <i aria-hidden="true"><b></b></i>
+        </button>
       </nav>
 
       <section class="side-section">
@@ -606,7 +686,7 @@ function renderToday() {
   const todayTasks = sortTasks(tasksForToday())
   return `
     <section class="today-screen">
-      <header class="screen-title"><h1>Today</h1></header>
+      <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} tasks">${screenCounts.today}</span></header>
       ${todayComposerOpen ? renderTodayComposer() : `<button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>`}
       <div class="task-list">
         ${todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')}
@@ -704,7 +784,15 @@ function renderTaskRow(task: Task, selected = false) {
   const subtaskCount = task.subtaskItems?.length ?? task.subtasks ?? 0
   return `
     <div class="task-row ${selected ? 'selected' : ''} ${completed ? 'completed' : ''}">
-      <button class="checkbox" data-complete="${task.id}" aria-label="${completed ? 'Mark as not done' : 'Mark as done'}: ${escapeHtml(task.title)}" aria-pressed="${completed}"></button>
+      <button class="checkbox" data-complete="${task.id}" aria-label="${completed ? 'Mark as not done' : 'Mark as done'}: ${escapeHtml(task.title)}" aria-pressed="${completed}">
+        <span class="completion-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            ${completed
+              ? `<path class="completion-seal" d="M12 1.8c1.2 0 1.8 1.3 2.9 1.6 1.1.3 2.2-.6 3.1.1.9.7.4 2.1 1.1 3 .7.9 2.2.8 2.6 1.9.4 1.1-.8 2-.8 3.2s1.2 2.1.8 3.2c-.4 1.1-1.9 1-2.6 1.9-.7.9-.2 2.3-1.1 3-.9.7-2-.2-3.1.1-1.1.3-1.7 1.6-2.9 1.6s-1.8-1.3-2.9-1.6c-1.1-.3-2.2.6-3.1-.1-.9-.7-.4-2.1-1.1-3-.7-.9-2.2-.8-2.6-1.9-.4-1.1.8-2 .8-3.2s-1.2-2.1-.8-3.2c.4-1.1 1.9-1 2.6-1.9.7-.9.2-2.3 1.1-3 .9-.7 2 .2 3.1-.1C10.2 3.1 10.8 1.8 12 1.8Z"/><path class="completion-check" d="m7.4 12.1 3 2.9 6.2-6.2"/>`
+              : `<circle class="completion-ring" cx="12" cy="12" r="8.4"/>`}
+          </svg>
+        </span>
+      </button>
       <button class="task-text" data-task="${task.id}">
         <strong>${escapeHtml(task.title)}</strong>
         ${task.due || goal || subtaskCount ? `<small>
@@ -731,6 +819,7 @@ function renderInspector(task: Task) {
   const goal = goals.find(item => item.id === task.goalId)
   return `
     <aside class="inspector">
+      <button type="button" class="inspector-close" data-action="close-inspector" aria-label="Close task details">${icon('chevron')}</button>
       <div class="inspector-content">
         <h2>Task:</h2>
         <input class="inspector-title" value="${escapeHtml(task.title)}" aria-label="Task title" />
@@ -761,7 +850,7 @@ function renderUpcoming() {
     .join('')
   return `
     <section class="upcoming-screen">
-      <header class="screen-title"><h1>Upcoming</h1></header>
+      <header class="screen-title"><h1>Upcoming</h1><span class="screen-count" data-count="${screenCounts.upcoming}" aria-label="${screenCounts.upcoming} upcoming tasks">${screenCounts.upcoming}</span></header>
       <div class="upcoming-columns">
         <section data-upcoming-section="tomorrow">
           <h2>Tomorrow</h2>
@@ -858,7 +947,7 @@ function renderActivityGraph() {
       level = row >= 7 - filledRows ? 3 : 0
       label = `${value} tasks completed by ${day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     }
-    return `<button class="activity-cell level-${isFuture ? 0 : level} ${isFuture ? 'is-future' : ''}" style="--column:${column + 1};--row:${row + 1}" title="${label}" aria-label="${label}"></button>`
+    return `<span class="activity-cell level-${isFuture ? 0 : level} ${isFuture ? 'is-future' : ''}" role="img" style="--column:${column + 1};--row:${row + 1}" title="${label}" aria-label="${label}"></span>`
   }).join('')
 
   return `
@@ -874,6 +963,7 @@ function renderActivityGraph() {
         <div class="activity-grid">${cells}</div>
         <div class="activity-months">${monthLabels}</div>
       </div>
+      <span class="activity-mobile-hint">Swipe for earlier weeks</span>
       <div class="activity-legend"><span>Less</span>${[0, 1, 2, 3, 4].map(level => `<i class="level-${level}"></i>`).join('')}<span>More</span></div>
     </section>
   `
@@ -896,7 +986,6 @@ function renderCalendar() {
         <div>
           <div class="calendar-title-row">
             <h1>${formatCalendarTitle()}</h1>
-            <button class="calendar-today" data-action="calendar-today">Today</button>
           </div>
           <div class="calendar-tabs"><button class="${calendarMode === 'day' ? 'active' : ''}" data-calendar-mode="day">Day</button><button class="${calendarMode === 'week' ? 'active' : ''}" data-calendar-mode="week">Week</button><button class="${calendarMode === 'month' ? 'active' : ''}" data-calendar-mode="month">Month</button></div>
         </div>
@@ -910,12 +999,13 @@ function renderCalendar() {
         <div class="calendar-goal-filters">
           ${goals.map(goal => `<button class="${hiddenCalendarGoalIds.has(goal.id) ? 'muted' : ''}" data-calendar-goal="${goal.id}" aria-pressed="${!hiddenCalendarGoalIds.has(goal.id)}"><i style="--goal-color:${goal.color}"></i>${escapeHtml(goal.name)}</button>`).join('')}
         </div>
+        <span class="calendar-mobile-hint">Swipe to see every goal</span>
         <div class="calendar-stats"><span><b>${formatDuration(plannedMinutes)}</b> planned</span><span class="${conflicts ? 'has-conflict' : ''}"><b>${conflicts}</b> conflicts</span></div>
       </div>
       <div class="calendar-layout">
         <aside class="unscheduled-tray">
           <div><h2>To schedule</h2><span>${unscheduled.length}</span></div>
-          <p>Drag a task onto the calendar.</p>
+          <p><span class="desktop-schedule-copy">Drag a task onto the calendar.</span><span class="mobile-schedule-copy">Tap a task to schedule it.</span></p>
           <div class="unscheduled-list">
             ${unscheduled.length ? unscheduled.map(renderUnscheduledTask).join('') : '<div class="tray-empty">Everything has a place.</div>'}
           </div>
@@ -1028,6 +1118,7 @@ function renderCalendarBlock(item: CalendarOccurrence, all: CalendarOccurrence[]
       <button data-action="edit-calendar-task" data-task-id="${task.id}">
         <strong>${escapeHtml(task.title)}</strong>
         <span>${formatTaskTime(task.time!)} · ${formatDuration(duration)}</span>
+        ${goal ? `<small class="calendar-event-goal"><i aria-hidden="true"></i>${escapeHtml(goal.name)}</small>` : ''}
         ${task.location ? `<small>${escapeHtml(task.location)}</small>` : ''}
         ${renderCalendarDetailChips(task)}
       </button>
@@ -1520,6 +1611,7 @@ app.addEventListener('click', event => {
 
   const nextView = target.closest<HTMLElement>('[data-view]')?.dataset.view as View | undefined
   if (nextView) {
+    mobileInspectorOpen = false
     if (nextView !== 'calendar') {
       calendarComposer = null
     }
@@ -1573,6 +1665,7 @@ app.addEventListener('click', event => {
       }, 1400)
       return
     }
+    mobileInspectorOpen = true
     render()
     return
   }
@@ -1611,6 +1704,15 @@ app.addEventListener('click', event => {
 
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
   if (!action) return
+  if (action === 'toggle-theme') {
+    toggleTheme()
+    return
+  }
+  if (action === 'close-inspector') {
+    mobileInspectorOpen = false
+    render()
+    return
+  }
   if (action === 'enter-app') {
     setRoute('/app')
     return
@@ -1703,6 +1805,7 @@ app.addEventListener('click', event => {
   if (action === 'save-task') {
     persistInspectorDraft()
     toast = 'Changes saved'
+    mobileInspectorOpen = false
   } else if (action === 'delete-task') {
     const taskIndex = tasks.findIndex(task => task.id === selectedTaskId)
     if (taskIndex >= 0) tasks.splice(taskIndex, 1)
@@ -1711,6 +1814,7 @@ app.addEventListener('click', event => {
     refreshCounts()
     persistPlanner()
     toast = 'Task deleted'
+    mobileInspectorOpen = false
   } else if (action === 'cycle-goal') {
     persistInspectorDraft()
     const task = selectedTask()
@@ -1772,8 +1876,6 @@ app.addEventListener('click', event => {
       render()
     }, 1400)
     return
-  } else if (action === 'calendar-today') {
-    calendarDate = new Date()
   } else if (action === 'previous-date' || action === 'next-date') {
     const direction = action === 'previous-date' ? -1 : 1
     const nextDate = new Date(calendarDate)
@@ -1811,7 +1913,7 @@ app.addEventListener('dragstart', event => {
   if (!taskId) return
   draggingCalendarTaskId = taskId
   event.dataTransfer?.setData('text/plain', taskId)
-  event.dataTransfer?.setData('application/x-ascent-task', taskId)
+  event.dataTransfer?.setData('application/x-shotcount-task', taskId)
   event.dataTransfer?.setDragImage?.(target, 12, 12)
 })
 
@@ -1829,7 +1931,7 @@ app.addEventListener('drop', event => {
   const target = event.target as HTMLElement
   const slot = target.closest<HTMLElement>('[data-calendar-slot]')?.dataset.calendarSlot
   const dropDate = target.closest<HTMLElement>('[data-calendar-drop-date]')?.dataset.calendarDropDate
-  const taskId = event.dataTransfer?.getData('application/x-ascent-task') || event.dataTransfer?.getData('text/plain') || draggingCalendarTaskId
+  const taskId = event.dataTransfer?.getData('application/x-shotcount-task') || event.dataTransfer?.getData('text/plain') || draggingCalendarTaskId
   if (!taskId || (!slot && !dropDate)) return
   event.preventDefault()
   const [date = dropDate ?? calendarDateKey(), time = '09:00'] = slot ? slot.split('|') : [dropDate, '09:00']
@@ -1840,6 +1942,11 @@ app.addEventListener('drop', event => {
 document.addEventListener('keydown', event => {
   const target = event.target as HTMLElement
   const isTyping = target.matches('input, textarea, select') || target.isContentEditable
+  if (event.key === 'Escape' && mobileInspectorOpen) {
+    mobileInspectorOpen = false
+    render()
+    return
+  }
   if (event.key === 'Escape' && calendarComposer) {
     calendarComposer = null
     render()
@@ -1864,7 +1971,8 @@ document.addEventListener('keydown', event => {
 render()
 scheduleDateRefresh()
 window.addEventListener('popstate', render)
-dateStateHook.__ascentRefreshDateState = (reference = new Date()) => {
+dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {
   refreshDateContext(reference)
+  calendarDate = new Date(reference)
   render()
 }

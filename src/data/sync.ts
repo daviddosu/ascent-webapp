@@ -121,7 +121,7 @@ export async function loadCloudWorkspace(): Promise<CloudWorkspace | null> {
       tomorrow: row.tomorrow ?? '',
     })),
     profile: {
-      displayName: profileRow?.display_name ?? 'Ascent user',
+      displayName: profileRow?.display_name ?? 'Shotcount user',
       timezone: profileRow?.timezone ?? 'UTC',
     },
   }

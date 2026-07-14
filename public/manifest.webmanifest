@@ -1,7 +1,7 @@
 {
-  "name": "Ascent",
-  "short_name": "Ascent",
-  "description": "Ascent is a calm planning system for goals, tasks, and review.",
+  "name": "Shotcount",
+  "short_name": "Shotcount",
+  "description": "Shotcount is a calm planning system for goals, tasks, and review.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffd439",

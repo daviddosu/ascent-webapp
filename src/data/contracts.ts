@@ -9,7 +9,7 @@ export type DataResult<T> =
  * The current implementation is local-first. A Supabase implementation can
  * replace it without changing the screens or product rules.
  */
-export interface AscentRepository<TTask, TGoal, TReview> {
+export interface ShotcountRepository<TTask, TGoal, TReview> {
   loadWorkspace(): Promise<DataResult<{ tasks: TTask[]; goals: TGoal[]; reviews: TReview[] }>>
   saveTask(task: TTask): Promise<DataResult<TTask>>
   deleteTask(id: string): Promise<DataResult<{ id: string }>>
