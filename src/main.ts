@@ -25,6 +25,9 @@ type Theme = 'light' | 'dark'
 const previewParams = new URLSearchParams(window.location.search)
 const previewView = previewParams.get('previewView')
 const isPreviewMode = previewParams.has('previewView')
+type AuthState = 'checking' | 'authenticated' | 'unauthenticated' | 'error'
+const authRequired = !isPreviewMode && (window.location.hostname === 'app.shotcount.app' || window.location.hostname.endsWith('.vercel.app'))
+let authState: AuthState = authRequired ? 'checking' : 'authenticated'
 type Task = {
   id: string
   title: string
@@ -533,6 +536,10 @@ function renderLanding() {
 }
 
 function render() {
+  if (authState !== 'authenticated') {
+    app.innerHTML = renderAuthGate()
+    return
+  }
   if (isLandingRoute()) {
     app.innerHTML = renderLanding()
     return
@@ -554,6 +561,61 @@ function render() {
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function renderAuthGate() {
+  if (authState === 'checking') {
+    return `
+      <main class="workspace-auth-shell" aria-live="polite">
+        <section class="workspace-auth-card workspace-auth-loading">
+          <span class="workspace-auth-mark">S</span>
+          <h1>Opening Shotcount</h1>
+          <p>Checking your login ticket…</p>
+          <i aria-hidden="true"></i>
+        </section>
+      </main>
+    `
+  }
+
+  const isError = authState === 'error'
+  return `
+    <main class="workspace-auth-shell">
+      <section class="workspace-auth-card">
+        <span class="workspace-auth-mark">S</span>
+        <small>SHOTCOUNT</small>
+        <h1>${isError ? 'We hit a small bump' : 'Sign in to your workspace'}</h1>
+        <p>${isError ? 'We could not check your login ticket. Please try once more.' : 'Use your Gmail to sign up or log in. Your work stays behind your account.'}</p>
+        <button type="button" data-action="${isError ? 'retry-auth' : 'continue-google'}">${isError ? 'Try again' : 'Continue with Google'}</button>
+        ${isError ? '<a href="https://shotcount.app/?auth=signin">Go to Gmail sign in</a>' : ''}
+      </section>
+    </main>
+  `
+}
+
+async function verifyAuthSession() {
+  authState = 'checking'
+  render()
+  try {
+    const response = await fetch('/api/auth/session', {
+      credentials: 'include',
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    })
+    if (!response.ok) throw new Error('Session check failed')
+    const session = await response.json() as unknown
+    authState = session ? 'authenticated' : 'unauthenticated'
+  } catch {
+    authState = 'error'
+  }
+  render()
+}
+
+async function signOut() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+  } finally {
+    window.location.replace('https://shotcount.app/?auth=signin')
+  }
 }
 
 function renderMobileTopbar() {
@@ -1572,7 +1634,7 @@ app.addEventListener('input', event => {
   }
 })
 
-app.addEventListener('click', event => {
+app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
   const subtaskId = target.closest<HTMLInputElement>('[data-subtask]')?.dataset.subtask
   if (subtaskId) {
@@ -1703,6 +1765,14 @@ app.addEventListener('click', event => {
   }
 
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (action === 'continue-google') {
+    window.location.assign('https://shotcount.app/?auth=signin')
+    return
+  }
+  if (action === 'retry-auth') {
+    await verifyAuthSession()
+    return
+  }
   if (!action) return
   if (action === 'toggle-theme') {
     toggleTheme()
@@ -1896,6 +1966,8 @@ app.addEventListener('click', event => {
       } catch {
         // If storage is blocked, the app still resets the view.
       }
+      await signOut()
+      return
     }
   }
   persistPlanner()
@@ -1969,6 +2041,7 @@ document.addEventListener('keydown', event => {
 })
 
 render()
+if (authRequired) void verifyAuthSession()
 scheduleDateRefresh()
 window.addEventListener('popstate', render)
 dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {
