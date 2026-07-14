@@ -1329,8 +1329,8 @@ body[data-signed-in='false'] #app {
 
 .craft-hero {
   position: relative;
-  height: calc(100vh - 24px);
-  min-height: 680px;
+  height: max(860px, calc(100vh - 24px));
+  min-height: 860px;
   padding-top: 60px;
   overflow: hidden;
   border-radius: 20px;
@@ -1548,13 +1548,13 @@ body[data-signed-in='false'] #app {
 }
 
 .craft-app-window {
-  --craft-preview-scale: 0.58;
   position: absolute;
   z-index: 5;
   left: 50%;
   bottom: -54px;
   width: min(840px, calc(100vw - 32px));
-  height: 505px;
+  height: auto;
+  aspect-ratio: 1448 / 870;
   transform: translateX(-50%);
   overflow: hidden;
   border: 1px solid rgba(20, 29, 35, 0.09);
@@ -1566,20 +1566,12 @@ body[data-signed-in='false'] #app {
   text-align: left;
 }
 
-.craft-app-viewport {
-  width: calc(100% / var(--craft-preview-scale));
-  height: calc(100% / var(--craft-preview-scale));
-  transform: scale(var(--craft-preview-scale));
-  transform-origin: top left;
-  margin-top: 0;
-  pointer-events: none;
-}
-
-.craft-app-iframe {
+.craft-static-frame {
   width: 100%;
   height: 100%;
   border: 0;
   display: block;
+  pointer-events: none;
   background: #ffffff;
 }
 
@@ -1763,10 +1755,8 @@ body[data-signed-in='false'] #app {
   }
   .craft-cta { margin-top: 28px; }
   .craft-app-window {
-    --craft-preview-scale: 0.52;
     bottom: -42px;
     width: calc(100vw - 18px);
-    height: calc((100vw - 18px) * 0.64);
   }
 }
 
@@ -2546,15 +2536,28 @@ body[data-signed-in='false'] #app {
 .auth-screen {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  align-items: center;
+  justify-items: center;
+  padding: clamp(32px, 7vw, 96px);
+  background: #f8fbf7;
 }
 
-.auth-card {
-  width: min(700px, 100%);
-  padding: 24px;
+.auth-card,
+.auth-panel {
+  width: min(520px, 100%);
+  min-height: calc(100vh - clamp(64px, 14vw, 192px));
+  padding: 0;
   display: grid;
   gap: 22px;
+  align-content: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-panel {
+  justify-self: center;
 }
 
 .brand-lockup,
@@ -2725,5 +2728,351 @@ body[data-signed-in='false'] #app {
 
   .review-overlay {
     padding: 10px;
+  }
+}
+
+/* Phone layout for the current marketing page. Keep the desktop art direction,
+   but make every block comfortable to read and tap with one thumb. */
+@media (max-width: 760px) {
+  .craft-landing {
+    padding: 6px;
+  }
+
+  .craft-hero {
+    height: max(700px, 100svh);
+    min-height: 700px;
+    border-radius: 16px;
+  }
+
+  .craft-nav {
+    top: max(12px, env(safe-area-inset-top));
+    width: calc(100% - 24px);
+    min-height: 56px;
+    padding: 6px 7px 6px 16px;
+    gap: 10px;
+  }
+
+  .craft-logo {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 17px;
+  }
+
+  .craft-try,
+  .craft-cta,
+  .purpose-tabs button,
+  .pricing-card-action button,
+  .ascent-final button {
+    min-height: 44px;
+  }
+
+  .craft-try {
+    padding-inline: 17px;
+    font-size: 13px;
+  }
+
+  .craft-copy {
+    margin-top: 70px;
+    padding-inline: 14px;
+  }
+
+  .craft-copy h1 {
+    font-size: clamp(42px, 12vw, 54px);
+  }
+
+  .craft-app-window {
+    bottom: -28px;
+    width: calc(100vw - 24px);
+    border-radius: 16px;
+  }
+
+  .ascent-purpose,
+  .ascent-feature,
+  .ascent-awards,
+  .ascent-organize,
+  .ascent-community,
+  .ascent-pricing,
+  .ascent-final,
+  .ascent-footer {
+    width: calc(100% - 24px);
+  }
+
+  .ascent-purpose {
+    padding: 96px 0 76px;
+  }
+
+  .ascent-purpose > h2,
+  .ascent-people > h2,
+  .organize-head h2,
+  .ascent-community h2,
+  .ascent-pricing h2,
+  .ascent-final h2 {
+    font-size: clamp(42px, 12vw, 54px);
+    line-height: 1;
+  }
+
+  .purpose-tabs {
+    margin: 32px auto 20px;
+    gap: 7px;
+  }
+
+  .purpose-tabs button {
+    padding-inline: 15px;
+  }
+
+  .purpose-canvas {
+    height: 600px;
+    border-radius: 22px;
+  }
+
+  .purpose-note {
+    padding: 21px;
+    border-radius: 17px;
+  }
+
+  .note-a {
+    width: 88%;
+    left: 4%;
+    top: 54px;
+  }
+
+  .note-b {
+    width: 84%;
+    right: 3%;
+    top: 235px;
+  }
+
+  .note-c {
+    width: 62%;
+    left: 19%;
+    bottom: -24px;
+  }
+
+  .ascent-people {
+    padding: 92px 0 110px;
+  }
+
+  .ascent-people > h2 {
+    margin-bottom: 48px;
+    padding-inline: 18px;
+  }
+
+  .people-rail {
+    gap: 18px;
+    padding: 0 18px;
+    scroll-snap-type: x proximity;
+  }
+
+  .people-rail article {
+    width: min(78vw, 300px);
+    flex-basis: min(78vw, 300px);
+    scroll-snap-align: center;
+  }
+
+  .person-art {
+    width: 100%;
+    border-radius: 22px;
+  }
+
+  .people-rail h3 {
+    margin: 24px 0 10px;
+  }
+
+  .people-rail p {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .ascent-feature {
+    min-height: 0;
+    padding: 48px 22px;
+    gap: 38px;
+    border-radius: 24px;
+  }
+
+  .feature-copy h2 {
+    font-size: clamp(42px, 12vw, 54px);
+  }
+
+  .feature-copy p {
+    margin: 22px 0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .feature-copy a,
+  .pricing-note,
+  .ascent-footer a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .focus-demo button {
+    min-height: 44px;
+    margin-top: 12px;
+  }
+
+  .feature-demo,
+  .orbit-demo,
+  .youtube-board {
+    min-height: 380px;
+    border-radius: 20px;
+  }
+
+  .focus-demo,
+  .orbit-demo {
+    transform: none !important;
+  }
+
+  .focus-demo {
+    padding: 26px;
+  }
+
+  .focus-demo h3 {
+    margin: 58px 0 22px;
+    font-size: 38px;
+  }
+
+  .focus-demo label {
+    padding: 14px 0;
+    font-size: 14px;
+  }
+
+  .orbit-demo::before {
+    inset: 52px;
+  }
+
+  .orbit-demo::after {
+    inset: 105px 32px;
+  }
+
+  .ascent-quote {
+    width: calc(100% - 32px);
+    padding: 96px 0;
+  }
+
+  .ascent-awards {
+    padding: 84px 0;
+    gap: 0;
+  }
+
+  .ascent-awards article {
+    padding: 30px 8px;
+  }
+
+  .ascent-awards h3 {
+    margin-top: 18px;
+  }
+
+  .youtube-board {
+    padding: 12px;
+  }
+
+  .youtube-featured {
+    min-height: 330px;
+    padding: 24px;
+  }
+
+  .youtube-featured strong {
+    font-size: 39px;
+  }
+
+  .youtube-meta {
+    align-items: flex-start;
+  }
+
+  .ascent-organize {
+    padding: 100px 0 70px;
+  }
+
+  .organize-head {
+    margin-bottom: 44px;
+  }
+
+  .organize-head p,
+  .ascent-pricing > p,
+  .ascent-community > p {
+    font-size: 16px;
+  }
+
+  .organize-cards > article {
+    min-height: 390px;
+    padding: 24px;
+    border-radius: 21px;
+  }
+
+  .space-list,
+  .tag-cloud,
+  .mini-table {
+    margin-top: 38px;
+    padding: 17px;
+  }
+
+  .ascent-community {
+    padding: 92px 0;
+  }
+
+  .community-links {
+    margin-top: 42px;
+  }
+
+  .community-links a {
+    padding: 25px 18px;
+  }
+
+  .ascent-pricing {
+    padding: 94px 0 72px;
+  }
+
+  .pricing-grid {
+    margin-top: 44px;
+  }
+
+  .pricing-grid .pricing-card {
+    min-height: 380px;
+    padding: 30px 26px;
+  }
+
+  .pricing-card > p {
+    font-size: 25px;
+  }
+
+  .ascent-final {
+    margin-top: 36px;
+    padding: 92px 18px;
+    border-radius: 24px;
+  }
+
+  .ascent-footer {
+    padding: 76px 0 calc(48px + env(safe-area-inset-bottom));
+    gap: 30px;
+  }
+
+  .footer-copy {
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 380px) {
+  .craft-nav {
+    width: calc(100% - 18px);
+  }
+
+  .craft-try {
+    padding-inline: 13px;
+    font-size: 12px;
+  }
+
+  .craft-copy h1,
+  .ascent-purpose > h2,
+  .ascent-people > h2,
+  .feature-copy h2,
+  .organize-head h2,
+  .ascent-community h2,
+  .ascent-pricing h2,
+  .ascent-final h2 {
+    font-size: 41px;
   }
 }

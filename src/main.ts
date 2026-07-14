@@ -63,7 +63,7 @@ type AppState = {
 }
 
 const STORAGE_KEY = 'ascent-state-v3'
-const ROBUST_WORKSPACE_URL = 'http://127.0.0.1:4174/'
+const ROBUST_WORKSPACE_URL = 'https://ascent-workspace.vercel.app/'
 const DAY_MS = 24 * 60 * 60 * 1000
 let fallbackId = 0
 let focusMotionFrame = 0
@@ -686,7 +686,7 @@ function updateFocusMotion() {
   const panels = app.querySelectorAll<HTMLElement>('.focus-demo, .orbit-demo')
   if (!panels.length) return
 
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? true) {
     panels.forEach((panel) => {
       panel.style.setProperty('--focus-scale', '1')
       panel.style.setProperty('--focus-tilt-x', '0deg')
@@ -775,7 +775,7 @@ function updatePeopleRailMotion() {
 
   wirePeopleRail(rail)
 
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !peopleRailDragging) {
+  if (!(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? true) && !peopleRailDragging) {
     rail.scrollLeft += 0.35
     wrapPeopleRailScroll(rail)
   }
@@ -870,22 +870,20 @@ function renderAuth() {
         </div>
 
         <section class="craft-app-window" aria-label="Ascent app preview">
-          <div class="craft-app-viewport" aria-hidden="true">
-            <iframe
-              class="craft-app-iframe"
-              title="Ascent workspace preview"
-              src="http://127.0.0.1:4174/?previewView=upcoming"
-              loading="lazy"
-              tabindex="-1"
-            ></iframe>
-          </div>
+          <iframe
+            class="craft-static-frame"
+            title="Frozen Ascent Upcoming workspace preview"
+            src="/upcoming-workspace-preview.html"
+            loading="eager"
+            tabindex="-1"
+          ></iframe>
         </section>
       </section>
 
       <section class="ascent-purpose">
         <h2>Ascent isn’t just for one goal,<br />it’s for your whole climb.</h2>
-        <div class="purpose-tabs" role="list">
-          <button class="is-active">Daily focus</button><button>Tasks</button><button>Reviews</button><button>Community</button><button>Streaks</button>
+        <div class="purpose-tabs" role="tablist" aria-label="Ascent features">
+          <button class="is-active" role="tab" aria-selected="true">Daily focus</button><button role="tab" aria-selected="false">Tasks</button><button role="tab" aria-selected="false">Reviews</button><button role="tab" aria-selected="false">Community</button><button role="tab" aria-selected="false">Streaks</button>
         </div>
         <div class="purpose-canvas">
           <div class="purpose-note note-a"><small>TODAY</small><h3>What matters now</h3><p>Finish grant proposal</p><p>Email Professor Müller</p><p>Record YouTube video</p></div>

@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frozen Ascent Upcoming workspace preview</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+      :root {
+        font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+        color: #292929;
+        background: #fff;
+        font-synthesis: none;
+        text-rendering: geometricPrecision;
+      }
+
+      * { box-sizing: border-box; }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      button { border: 0; background: none; color: inherit; font: inherit; }
+
+      .preview-stage {
+        width: 1448px;
+        height: 870px;
+        display: grid;
+        grid-template-columns: 24.5% 75.5%;
+        overflow: hidden;
+        transform-origin: top left;
+        background: #fff;
+      }
+
+      .preview-sidebar {
+        height: 870px;
+        padding: 39px 24px 27px 35px;
+        display: flex;
+        flex-direction: column;
+        background: #f6f6f6;
+      }
+
+      .menu-heading {
+        margin-bottom: 27px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .menu-heading h1,
+      .screen-title h1 {
+        margin: 0;
+        font-size: 25px;
+        line-height: 1;
+        font-weight: 600;
+        letter-spacing: -.02em;
+      }
+
+      .menu-mark {
+        width: 25px;
+        height: 25px;
+        display: grid;
+        place-items: center;
+        color: #666;
+        font-size: 20px;
+      }
+
+      .search {
+        height: 34px;
+        margin-bottom: 38px;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        color: #777;
+        font-size: 15px;
+      }
+
+      .search-icon {
+        width: 14px;
+        height: 14px;
+        position: relative;
+        display: inline-block;
+        border: 1.6px solid #777;
+        border-radius: 50%;
+        transform: scale(.62);
+      }
+
+      .search-icon::after {
+        content: '';
+        position: absolute;
+        width: 7px;
+        height: 1.6px;
+        right: -6px;
+        bottom: -3px;
+        border-radius: 2px;
+        background: #777;
+        transform: rotate(45deg);
+      }
+
+      .side-block { margin-bottom: 25px; }
+      .tags-block { margin-top: 2px; }
+
+      .side-block h2 {
+        margin: 0 0 10px 7px;
+        color: #555;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .side-row,
+      .theme-row {
+        width: 100%;
+        min-height: 40px;
+        padding: 0 10px;
+        display: grid;
+        grid-template-columns: 17px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        border-radius: 6px;
+        color: #4d4d4d;
+        font-size: 16px;
+        font-weight: 500;
+        text-align: left;
+      }
+
+      .side-row.active { background: #e8e8e8; color: #262626; font-weight: 700; }
+      .side-row b { min-width: 19px; font-size: 12px; font-weight: 600; text-align: center; }
+      .side-icon { width: 17px; text-align: center; color: #555; font-size: 15px; }
+      .goal-dot { width: 12px; height: 12px; border-radius: 3px; background: var(--goal-color); }
+      .add-row { margin-top: 4px; }
+
+      .theme-row {
+        min-height: 44px;
+        padding: 0 9px;
+        grid-template-columns: 18px minmax(0, 1fr) 40px;
+        border-bottom: 1px solid #e8e8e8;
+      }
+
+      .glass-toggle {
+        position: relative;
+        width: 38px;
+        height: 22px;
+        padding: 2px;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid rgba(121, 137, 174, .42);
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,255,255,.22)), rgba(172,180,191,.28);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.88), 0 5px 14px rgba(36,43,54,.14), 0 0 17px rgba(92,117,205,.26);
+      }
+
+      .glass-toggle::after {
+        content: '';
+        width: 18px;
+        height: 18px;
+        border: 1px solid rgba(255,255,255,.9);
+        border-radius: 50%;
+        background: radial-gradient(circle at 32% 25%, #fff 0 15%, rgba(255,255,255,.64) 38%, rgba(232,239,248,.72) 100%);
+        box-shadow: inset -2px -3px 5px rgba(72,88,112,.16), 0 2px 5px rgba(26,34,48,.25);
+      }
+
+      .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+      .tag { min-height: 31px; padding: 0 13px; border-radius: 4px; font-size: 13px; font-weight: 600; }
+      .tag.aqua { background: #d5f0ee; }
+      .tag.pink { background: #f8dce2; }
+      .tag.neutral { background: #ededed; }
+      .sidebar-bottom { margin-top: auto; display: grid; gap: 3px; }
+
+      .preview-main {
+        min-width: 0;
+        height: 870px;
+        padding: 37px 24px 48px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .screen-title {
+        height: 82px;
+        display: flex;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      .screen-title h1 { font-size: 23px; }
+
+      .screen-count {
+        min-width: 28px;
+        height: 28px;
+        margin: -3px 0 0 auto;
+        padding: 0 8px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: #f0f0f0;
+        color: #666;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .upcoming-columns {
+        min-height: 340px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border-top: 1px solid #ededed;
+        border-bottom: 1px solid #ededed;
+      }
+
+      .upcoming-column { min-width: 0; padding: 0 28px 24px 29px; }
+      .upcoming-column + .upcoming-column { border-left: 1px solid #ededed; }
+
+      .upcoming-column h2 {
+        height: 63px;
+        margin: 0;
+        padding-top: 18px;
+        border-bottom: 1px solid #ededed;
+        font-size: 20px;
+      }
+
+      .add-task-row {
+        width: 100%;
+        height: 45px;
+        padding: 0 13px;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        border-bottom: 1px solid #ededed;
+        color: #777;
+        font-size: 13px;
+      }
+
+      .plus { font-size: 20px; font-weight: 300; line-height: 1; }
+
+      .task-row {
+        width: 100%;
+        min-height: 61px;
+        padding: 10px 13px 10px 10px;
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr) 14px;
+        align-items: start;
+        gap: 13px;
+        border-bottom: 1px solid #ededed;
+      }
+
+      .task-check {
+        width: 16px;
+        height: 16px;
+        margin: 2px 0 0 3px;
+        border: 1.5px solid #c9c9c9;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      .task-copy { min-width: 0; display: grid; gap: 7px; }
+      .task-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 500; }
+      .task-copy small { display: flex; align-items: center; gap: 16px; color: #484848; font-size: 11px; }
+      .task-copy small span { display: inline-flex; align-items: center; gap: 5px; }
+      .meta-calendar { color: #666; font-size: 10px; }
+      .meta-dot { width: 10px; height: 10px; border-radius: 2px; background: var(--goal-color); }
+      .chevron { padding-top: 1px; color: #666; font-size: 18px; }
+
+      .activity-panel { padding: 37px 28px 0 29px; }
+      .activity-header { margin-bottom: 22px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+      .activity-header h2 { margin: 0; font-size: 19px; }
+      .activity-header p { margin: 5px 0 0; color: #888; font-size: 11px; }
+
+      .activity-tabs {
+        padding: 3px;
+        display: flex;
+        gap: 3px;
+        border: 1px solid rgba(255,255,255,.86);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(238,238,238,.48));
+        box-shadow: 0 8px 24px rgba(20,20,20,.08), inset 0 1px 0 rgba(255,255,255,.96);
+      }
+
+      .activity-tabs span {
+        height: 32px;
+        padding: 0 12px;
+        display: grid;
+        place-items: center;
+        border-radius: 5px;
+        color: #6d6d6d;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .activity-tabs .active {
+        border: 1px solid rgba(255,255,255,.76);
+        background: linear-gradient(145deg, rgba(239,239,239,.82), rgba(211,211,211,.58));
+        color: #252525;
+        font-weight: 600;
+        box-shadow: 0 5px 14px rgba(30,30,30,.11), inset 0 1px 0 rgba(255,255,255,.94);
+      }
+
+      .activity-grid {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(53, minmax(7px, 1fr));
+        grid-template-rows: repeat(7, 1fr);
+        gap: 4px;
+      }
+
+      .activity-cell {
+        grid-column: var(--column);
+        grid-row: var(--row);
+        aspect-ratio: 1;
+        min-width: 0;
+        border-radius: 3px;
+        background: #ebebeb;
+      }
+
+      .level-1 { background: #d8eeee; }
+      .level-2 { background: #a9dcdf; }
+      .level-3 { background: #62c3ca; }
+      .level-4 { background: #169da8; }
+
+      .activity-months {
+        margin-top: 9px;
+        display: flex;
+        justify-content: space-between;
+        color: #777;
+        font-size: 9px;
+      }
+
+      .activity-legend {
+        margin-top: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        color: #888;
+        font-size: 9px;
+      }
+
+      .activity-legend i { width: 11px; height: 11px; border-radius: 3px; background: #ebebeb; }
+      .activity-legend i:nth-of-type(2) { background: #d8eeee; }
+      .activity-legend i:nth-of-type(3) { background: #a9dcdf; }
+      .activity-legend i:nth-of-type(4) { background: #62c3ca; }
+      .activity-legend i:nth-of-type(5) { background: #169da8; }
+    </style>
+  </head>
+  <body>
+    <div class="preview-stage">
+      <aside class="preview-sidebar">
+        <div class="menu-heading"><h1>Menu</h1><span class="menu-mark">≡</span></div>
+        <div class="search"><i class="search-icon"></i><span>Search</span></div>
+
+        <section class="side-block">
+          <h2>Tasks</h2>
+          <div class="side-row"><span class="side-icon">≡</span><span>Today</span></div>
+          <div class="side-row active"><span class="side-icon">»</span><span>Upcoming</span></div>
+          <div class="side-row"><span class="side-icon">▣</span><span>Calendar</span></div>
+          <div class="side-row"><span class="side-icon">▱</span><span>Community</span></div>
+          <div class="theme-row"><span class="side-icon">◡</span><span>Dark mode</span><i class="glass-toggle"></i></div>
+        </section>
+
+        <section class="side-block">
+          <h2>Goals</h2>
+          <div class="side-row"><i class="goal-dot" style="--goal-color:#ff6472"></i><span>Personal</span><b>2</b></div>
+          <div class="side-row"><i class="goal-dot" style="--goal-color:#68d0d5"></i><span>Find a new job</span><b>3</b></div>
+          <div class="side-row"><i class="goal-dot" style="--goal-color:#ffd126"></i><span>Write a paper</span><b>2</b></div>
+          <div class="side-row add-row"><span class="side-icon">＋</span><span>Add New Goal</span></div>
+        </section>
+
+        <section class="side-block tags-block">
+          <h2>Tags</h2>
+          <div class="tags"><button class="tag aqua">Tag 1</button><button class="tag pink">Tag 2</button><button class="tag neutral">+ Add Tag</button></div>
+        </section>
+
+        <div class="sidebar-bottom">
+          <div class="side-row"><span class="side-icon">↔</span><span>Settings</span></div>
+          <div class="side-row"><span class="side-icon">↪</span><span>Sign out</span></div>
+        </div>
+      </aside>
+
+      <main class="preview-main">
+        <header class="screen-title"><h1>Upcoming</h1><span class="screen-count">5</span></header>
+
+        <div class="upcoming-columns">
+          <section class="upcoming-column">
+            <h2>Tomorrow</h2>
+            <div class="add-task-row"><span class="plus">＋</span><span>Add New Task</span></div>
+            <div class="task-row">
+              <i class="task-check"></i>
+              <div class="task-copy"><strong>Create job posting for SEO specialist</strong><small><span><b class="meta-calendar">▣</b>15 Jul</span><span><i class="meta-dot" style="--goal-color:#68d0d5"></i>Find a new job</span></small></div>
+              <span class="chevron">›</span>
+            </div>
+            <div class="task-row">
+              <i class="task-check"></i>
+              <div class="task-copy"><strong>Request design assets for landing page</strong><small><span><b class="meta-calendar">▣</b>15 Jul</span><span><i class="meta-dot" style="--goal-color:#68d0d5"></i>Find a new job</span></small></div>
+              <span class="chevron">›</span>
+            </div>
+          </section>
+
+          <section class="upcoming-column">
+            <h2>This Week</h2>
+            <div class="add-task-row"><span class="plus">＋</span><span>Add New Task</span></div>
+            <div class="task-row">
+              <i class="task-check"></i>
+              <div class="task-copy"><strong>Outline the next newsletter</strong><small><span><b class="meta-calendar">▣</b>16 Jul</span><span><i class="meta-dot" style="--goal-color:#ff6472"></i>Personal</span></small></div>
+              <span class="chevron">›</span>
+            </div>
+            <div class="task-row">
+              <i class="task-check"></i>
+              <div class="task-copy"><strong>Review launch analytics</strong><small><span><b class="meta-calendar">▣</b>18 Jul</span><span><i class="meta-dot" style="--goal-color:#68d0d5"></i>Find a new job</span></small></div>
+              <span class="chevron">›</span>
+            </div>
+            <div class="task-row">
+              <i class="task-check"></i>
+              <div class="task-copy"><strong>Send monthly invoices</strong><small><span><b class="meta-calendar">▣</b>20 Jul</span><span><i class="meta-dot" style="--goal-color:#ffd126"></i>Write a paper</span></small></div>
+              <span class="chevron">›</span>
+            </div>
+          </section>
+        </div>
+
+        <section class="activity-panel">
+          <div class="activity-header">
+            <div><h2>Task activity</h2><p>Your completed work, one square at a time.</p></div>
+            <div class="activity-tabs"><span class="active">Daily</span><span>Weekly</span><span>Cumulative</span></div>
+          </div>
+          <div class="activity-grid" id="activity-grid"></div>
+          <div class="activity-months"><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span></div>
+          <div class="activity-legend"><span>Less</span><i></i><i></i><i></i><i></i><i></i><span>More</span></div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const grid = document.querySelector('#activity-grid');
+      for (let column = 1; column <= 53; column += 1) {
+        for (let row = 1; row <= 7; row += 1) {
+          const cell = document.createElement('i');
+          const active = column > 22 && ((column * 7 + row * 5) % 11) > 2;
+          const level = active ? 1 + ((column * 3 + row * 2) % 4) : 0;
+          cell.className = `activity-cell level-${level}`;
+          cell.style.setProperty('--column', String(column));
+          cell.style.setProperty('--row', String(row));
+          grid.append(cell);
+        }
+      }
+
+      const stage = document.querySelector('.preview-stage');
+      const fit = () => {
+        const scale = window.innerWidth / 1448;
+        stage.style.transform = `scale(${scale})`;
+      };
+      addEventListener('resize', fit, { passive: true });
+      fit();
+    </script>
+  </body>
+</html>

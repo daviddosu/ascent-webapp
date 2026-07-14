@@ -81,18 +81,10 @@ describe('secret isolation', () => {
   })
 })
 
-describe('offline application contract', () => {
-  it('has a valid standalone web manifest', () => {
-    const manifest = JSON.parse(readFileSync(resolve(root, 'public/manifest.webmanifest'), 'utf8'))
-    expect(manifest.display).toBe('standalone')
-    expect(manifest.start_url).toBe('/')
-    expect(manifest.icons.length).toBeGreaterThan(0)
-  })
-
-  it('caches the app shell and provides a navigation fallback', () => {
+describe('retired web app contract', () => {
+  it('has a cleanup service worker for old installed browsers', () => {
     const worker = readFileSync(resolve(root, 'public/sw.js'), 'utf8')
-    expect(worker).toContain("'/index.html'")
-    expect(worker).toContain("caches.match('/index.html')")
-    expect(worker).toContain("event.request.method !== 'GET'")
+    expect(worker).toContain('self.registration.unregister()')
+    expect(worker).toContain("key.startsWith('ascent-')")
   })
 })
