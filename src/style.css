@@ -1547,6 +1547,28 @@ body[data-signed-in='false'] #app {
   outline-offset: 3px;
 }
 
+.auth-loading-screen {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+}
+
+.auth-loading-screen img {
+  display: block;
+  width: min(800px, 100vw);
+  max-width: 100%;
+  max-height: 100vh;
+  max-height: 100dvh;
+  object-fit: contain;
+}
+
 .google-auth {
   position: fixed;
   z-index: 100;

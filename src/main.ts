@@ -80,6 +80,7 @@ let authError = new URLSearchParams(window.location.search).get('error') ?? ''
 let authStep: 'email' | 'code' = 'email'
 let authEmail = ''
 let authBusy = false
+let workspaceNavigationScheduled = false
 
 function isolateCurrentAppStorage() {
   try {
@@ -411,7 +412,7 @@ app.addEventListener('click', (event) => {
   }
 
   if (action === 'signin') {
-    window.location.assign(ROBUST_WORKSPACE_URL)
+    showLoadingThenOpenWorkspace()
     return
   }
 
@@ -726,13 +727,32 @@ function render() {
   void [renderHeader, renderSidebar, renderTodayView, renderFeedView, renderProfileView, renderReviewView, renderNotificationPanel, renderReviewOverlay]
 
   if (isWorkspaceRoute()) {
-    window.location.replace(ROBUST_WORKSPACE_URL)
+    showLoadingThenOpenWorkspace(true)
     return
   }
 
   app.innerHTML = renderAuth()
   scheduleFocusMotionUpdate()
   schedulePeopleRailMotion()
+}
+
+function renderAuthLoadingScreen() {
+  return `
+    <main class="auth-loading-screen" role="status" aria-live="polite" aria-label="Loading Shotcount">
+      <img src="/shotcount-loading.gif" alt="" />
+    </main>
+  `
+}
+
+function showLoadingThenOpenWorkspace(replace = false) {
+  if (workspaceNavigationScheduled) return
+  workspaceNavigationScheduled = true
+  authBusy = true
+  app.innerHTML = renderAuthLoadingScreen()
+  window.requestAnimationFrame(() => {
+    if (replace) window.location.replace(ROBUST_WORKSPACE_URL)
+    else window.location.assign(ROBUST_WORKSPACE_URL)
+  })
 }
 
 function closeAuthModal() {
@@ -1015,6 +1035,8 @@ function wirePeopleRail(rail: HTMLElement) {
 }
 
 function renderAuth() {
+  if (authBusy) return renderAuthLoadingScreen()
+
   return `
     <main class="craft-landing">
       <section class="craft-hero">
