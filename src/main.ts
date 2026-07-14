@@ -26,6 +26,7 @@ type Theme = 'light' | 'dark'
 const previewParams = new URLSearchParams(window.location.search)
 const previewView = previewParams.get('previewView')
 const isPreviewMode = previewParams.has('previewView')
+const showDemoData = isPreviewMode || import.meta.env.MODE === 'test'
 type AuthState = 'checking' | 'authenticated' | 'unauthenticated' | 'error'
 const authRequired = !isPreviewMode && (window.location.hostname === 'app.shotcount.app' || window.location.hostname.endsWith('.vercel.app'))
 let authState: AuthState = authRequired ? 'checking' : 'authenticated'
@@ -167,6 +168,7 @@ const seedGoals: Goal[] = [
   { id: 'job-search', name: 'Find a new job', color: '#60d4dd' },
   { id: 'paper', name: 'Write a paper', color: '#ffd331' },
 ]
+const seedGoalIds = new Set(seedGoals.map(goal => goal.id))
 const goalColorPalette = [
   '#78a7ff',
   '#a879ff',
@@ -183,11 +185,15 @@ const goalColorPalette = [
 function readGoals() {
   try {
     const stored = readStoredValue(window.localStorage, goalsStorageKey)
-    if (!stored) return seedGoals
+    if (!stored) return showDemoData ? seedGoals : []
     const parsed = JSON.parse(stored) as Goal[]
-    return Array.isArray(parsed) && parsed.length ? parsed : seedGoals
+    if (!Array.isArray(parsed)) return showDemoData ? seedGoals : []
+    if (showDemoData) return parsed.length ? parsed : seedGoals
+    const cleaned = parsed.filter(goal => !seedGoalIds.has(goal.id))
+    if (cleaned.length !== parsed.length) window.localStorage.setItem(goalsStorageKey, JSON.stringify(cleaned))
+    return cleaned
   } catch {
-    return seedGoals
+    return showDemoData ? seedGoals : []
   }
 }
 
@@ -250,14 +256,19 @@ const seedTasks: Task[] = [
   { id: 'analytics', title: 'Review launch analytics', due: dateKey(addDays(now, 4)), goalId: 'job-search' },
   { id: 'invoices', title: 'Send monthly invoices', due: dateKey(addDays(now, 6)), goalId: 'paper' },
 ]
+const seedTaskIds = new Set(seedTasks.map(task => task.id))
 
 function readPlannerTasks() {
   try {
     const stored = readStoredValue(window.localStorage, plannerStorageKey)
-    if (!stored) return seedTasks
+    if (!stored) return showDemoData ? seedTasks : []
     const parsed = JSON.parse(stored) as Array<{ goalId?: string; list?: string } & Task>
-    if (!Array.isArray(parsed) || !parsed.length) return seedTasks
-    return parsed.map(task => {
+    if (!Array.isArray(parsed)) return showDemoData ? seedTasks : []
+    const cleaned = showDemoData ? parsed : parsed.filter(task => !seedTaskIds.has(task.id))
+    if (!showDemoData && cleaned.length !== parsed.length) {
+      window.localStorage.setItem(plannerStorageKey, JSON.stringify(cleaned))
+    }
+    return cleaned.map(task => {
       const legacyList = (task as { list?: string }).list
       const goalId =
         task.goalId ??
@@ -268,13 +279,13 @@ function readPlannerTasks() {
       }
     })
   } catch {
-    return seedTasks
+    return showDemoData ? seedTasks : []
   }
 }
 
 const tasks: Task[] = readPlannerTasks()
 let view: View = readStoredView()
-let selectedTaskId = 'license'
+let selectedTaskId = showDemoData && tasks.some(task => task.id === 'license') ? 'license' : tasks[0]?.id ?? ''
 let mobileInspectorOpen = false
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
@@ -547,9 +558,9 @@ function render() {
   }
   refreshDateContext(now)
   refreshCounts()
-  const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[2]!
+  const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
   const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
-  const showInspector = view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
+  const showInspector = Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
   app.innerHTML = `
     <div class="reference-app ${showInspector ? 'with-inspector' : ''}">
       ${renderSidebar()}
@@ -557,7 +568,7 @@ function render() {
         ${renderMobileTopbar()}
         ${view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
       </main>
-      ${showInspector ? renderInspector(selected) : ''}
+      ${showInspector && selected ? renderInspector(selected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
   `
@@ -693,7 +704,7 @@ function renderSidebar() {
 
       <section class="side-section tags-section">
         <h2>Tags</h2>
-        <div class="tags"><button class="tag aqua">Tag 1</button><button class="tag pink">Tag 2</button><button class="tag neutral">+ Add Tag</button></div>
+        <div class="tags">${showDemoData ? '<button class="tag aqua">Tag 1</button><button class="tag pink">Tag 2</button>' : ''}<button class="tag neutral">+ Add Tag</button></div>
       </section>
 
       <div class="sidebar-bottom">
@@ -733,7 +744,9 @@ function renderToday() {
       <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} tasks">${screenCounts.today}</span></header>
       ${todayComposerOpen ? renderTodayComposer() : `<button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>`}
       <div class="task-list">
-        ${todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')}
+        ${todayTasks.length
+          ? todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')
+          : '<div class="planner-empty"><strong>Your day is clear.</strong><p>Add your first task when you are ready.</p></div>'}
       </div>
     </section>
   `
@@ -758,7 +771,7 @@ function renderTodayComposer() {
         </label>
         <label class="today-field today-goal-field">
           <span>Goal</span>
-          <select name="goalId" aria-label="Goal" required>${renderGoalOptions(todayComposerDraft.goalId)}</select>
+          <select name="goalId" aria-label="Goal">${renderGoalOptions(todayComposerDraft.goalId)}</select>
           ${todayGoalCreatorOpen ? `
             <div class="inline-goal-creator">
               <input name="newGoalName" aria-label="New goal name" placeholder="Goal name" autocomplete="off" />
@@ -819,7 +832,7 @@ function captureTodayComposerDraft() {
 }
 
 function renderGoalOptions(selectedId?: string) {
-  return goals.map(goal => `<option value="${goal.id}" ${goal.id === selectedId ? 'selected' : ''}>${escapeHtml(goal.name)}</option>`).join('')
+  return `<option value="" ${selectedId ? '' : 'selected'}>No goal</option>${goals.map(goal => `<option value="${goal.id}" ${goal.id === selectedId ? 'selected' : ''}>${escapeHtml(goal.name)}</option>`).join('')}`
 }
 
 function renderTaskRow(task: Task, selected = false) {
@@ -892,6 +905,8 @@ function renderUpcoming() {
   const renderGroup = (group: UpcomingGroup) => sortTasks(tasksForUpcoming(group))
     .map(task => renderTaskRow(task))
     .join('')
+  const tomorrowTasks = renderGroup('tomorrow')
+  const weekTasks = renderGroup('week')
   return `
     <section class="upcoming-screen">
       <header class="screen-title"><h1>Upcoming</h1><span class="screen-count" data-count="${screenCounts.upcoming}" aria-label="${screenCounts.upcoming} upcoming tasks">${screenCounts.upcoming}</span></header>
@@ -899,12 +914,12 @@ function renderUpcoming() {
         <section data-upcoming-section="tomorrow">
           <h2>Tomorrow</h2>
           ${renderUpcomingComposer('tomorrow')}
-          ${renderGroup('tomorrow')}
+          ${tomorrowTasks || '<div class="planner-empty planner-empty--small"><strong>Nothing planned yet.</strong><p>Add a task for tomorrow.</p></div>'}
         </section>
         <section data-upcoming-section="week">
           <h2>This Week</h2>
           ${renderUpcomingComposer('week')}
-          ${renderGroup('week')}
+          ${weekTasks || '<div class="planner-empty planner-empty--small"><strong>The week is open.</strong><p>Add something when it matters.</p></div>'}
         </section>
       </div>
       ${renderActivityGraph()}
@@ -922,7 +937,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
       <input name="title" aria-label="Task name" placeholder="What needs doing?" autocomplete="off" required />
       ${isWeek ? `<input name="due" aria-label="Task date" type="date" min="${dateKey(addDays(now, 2))}" max="${weekEndKey}" value="${dateKey(addDays(now, 2))}" required />` : `<span class="planner-date">${formatTaskDate(tomorrowKey)}</span>`}
       <input name="time" aria-label="Task time, optional" type="time" />
-      <select name="goalId" aria-label="Goal" required>${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
+      <select name="goalId" aria-label="Goal">${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
       <button type="submit">Add</button>
       <button type="button" class="planner-cancel" data-action="close-planner" aria-label="Cancel">×</button>
     </form>
@@ -945,7 +960,7 @@ function activityDates() {
 function completionCountForDate(day: Date) {
   const key = dateKey(day)
   const saved = tasks.filter(task => task.completedAt && dateKey(new Date(task.completedAt)) === key).length
-  return demoCompletionCount(day) + saved
+  return (showDemoData ? demoCompletionCount(day) : 0) + saved
 }
 
 function activityLevel(value: number, max: number) {

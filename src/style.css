@@ -474,6 +474,18 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .task-row.completed .task-text strong { color: #8b8b8b; text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .task-row.completed .task-text small { opacity: .55; }
 
+.planner-empty {
+  margin: 28px 22px;
+  padding: 34px 24px;
+  border: 1px dashed #dedede;
+  border-radius: 12px;
+  color: #777;
+  text-align: center;
+}
+.planner-empty strong { display: block; margin-bottom: 7px; color: #303030; font-size: 15px; }
+.planner-empty p { margin: 0; font-size: 12px; line-height: 1.5; }
+.planner-empty--small { margin: 24px 0; padding: 26px 18px; }
+
 .inspector {
   min-height: 100vh;
   padding: 45px 28px 28px 20px;
