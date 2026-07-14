@@ -577,11 +577,20 @@ function render() {
 
 function renderAuthGate() {
   const isError = authState === 'error'
+  if (!isError) {
+    return `
+      <main class="workspace-auth-redirect workspace-auth-redirect--loading" role="status" aria-live="polite" aria-label="Loading Shotcount">
+        <img src="/shotcount-loading.gif" alt="" />
+      </main>
+    `
+  }
+
   return `
     <main class="workspace-auth-redirect" aria-live="polite">
       <span>S</span>
-      <p>${isError ? 'We could not check your login.' : 'Opening Shotcount…'}</p>
-      ${isError ? '<button type="button" data-action="retry-auth">Try again</button><a href="https://shotcount.app/?auth=signin">Go to sign in</a>' : ''}
+      <p>We could not check your login.</p>
+      <button type="button" data-action="retry-auth">Try again</button>
+      <a href="https://shotcount.app/?auth=signin">Go to sign in</a>
     </main>
   `
 }

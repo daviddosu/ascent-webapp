@@ -28,6 +28,21 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   background: #fff;
 }
 
+.workspace-auth-redirect--loading {
+  min-height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.workspace-auth-redirect--loading img {
+  display: block;
+  width: min(800px, 100vw);
+  max-width: 100%;
+  max-height: 100vh;
+  max-height: 100dvh;
+  object-fit: contain;
+}
+
 .workspace-auth-redirect > span {
   width: 46px;
   height: 46px;
