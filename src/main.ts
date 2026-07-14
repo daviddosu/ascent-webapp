@@ -1,5 +1,8 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
-import { cloudEnabled, currentUser, signOut as signOutCloud } from './data/cloud'
+import { cloudEnabled, currentUser, getCloudClient, signOut as signOutCloud } from './data/cloud'
+import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
+import type { SyncState } from './data/contracts'
+import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.png'
 import peopleCollage from './assets/shotcount-people-collage.png'
@@ -7,19 +10,16 @@ import communityPortraits from './assets/community-portraits.png'
 
 type View = 'today' | 'upcoming' | 'calendar' | 'sticky'
 type CountKey = 'today' | 'upcoming'
-type Subtask = { id: string; title: string; completed: boolean }
 type UpcomingGroup = 'tomorrow' | 'week'
 type ActivityMode = 'daily' | 'weekly' | 'cumulative'
-type Goal = { id: string; name: string; color: string }
 type Recurrence = SharedRecurrence
-type PlannerKind = 'task' | 'event'
 type TodayComposerDraft = {
   title: string
   description: string
   goalId: string
   due: string
   time: string
-  tags: string
+  visibility: TaskVisibility
 }
 type CalendarMode = 'day' | 'week' | 'month'
 type Theme = 'light' | 'dark'
@@ -30,24 +30,8 @@ const showDemoData = isPreviewMode || import.meta.env.MODE === 'test'
 type AuthState = 'checking' | 'authenticated' | 'unauthenticated' | 'error'
 const authRequired = !isPreviewMode && (window.location.hostname === 'app.shotcount.app' || window.location.hostname.endsWith('.vercel.app'))
 let authState: AuthState = authRequired ? 'checking' : 'authenticated'
-type Task = {
-  id: string
-  title: string
-  description?: string
-  goalId?: string
-  due?: string
-  time?: string
-  duration?: number
-  kind?: PlannerKind
-  recurrence?: Recurrence
-  reminder?: number
-  location?: string
-  attendees?: string
-  subtasks?: number
-  subtaskItems?: Subtask[]
-  tags?: string[]
-  completedAt?: string
-}
+let plannerRepository: CloudPlannerRepository | null = null
+let syncState: SyncState = { status: 'loading', message: 'Loading your workspace…', pending: 0 }
 type CommunityProfile = {
   id: string
   name: string
@@ -185,19 +169,19 @@ const goalColorPalette = [
 function readGoals() {
   try {
     const stored = readStoredValue(window.localStorage, goalsStorageKey)
-    if (!stored) return showDemoData ? seedGoals : []
+    if (!stored) return (showDemoData ? seedGoals : []).map(goal => normalizeGoal(goal))
     const parsed = JSON.parse(stored) as Goal[]
-    if (!Array.isArray(parsed)) return showDemoData ? seedGoals : []
+    if (!Array.isArray(parsed)) return (showDemoData ? seedGoals : []).map(goal => normalizeGoal(goal))
     if (showDemoData) return parsed.length ? parsed : seedGoals
     const cleaned = parsed.filter(goal => !seedGoalIds.has(goal.id))
     if (cleaned.length !== parsed.length) window.localStorage.setItem(goalsStorageKey, JSON.stringify(cleaned))
     return cleaned
   } catch {
-    return showDemoData ? seedGoals : []
+    return (showDemoData ? seedGoals : []).map(goal => normalizeGoal(goal))
   }
 }
 
-const goals: Goal[] = readGoals()
+const goals: Goal[] = readGoals().map(goal => normalizeGoal(goal))
 
 function normalizeColor(color: string) {
   return color.trim().toLowerCase()
@@ -237,8 +221,8 @@ function hslToHex(hue: number, saturation: number, lightness: number) {
 }
 
 const seedTasks: Task[] = [
-  { id: 'research', title: 'Research content ideas', due: dateKey(addDays(now, -1)), tags: [] },
-  { id: 'database', title: 'Create a database of guest authors', due: todayKey, tags: [] },
+  { id: 'research', title: 'Research content ideas', due: dateKey(addDays(now, -1)), visibility: 'private' },
+  { id: 'database', title: 'Create a database of guest authors', due: todayKey, visibility: 'private' },
   {
     id: 'license',
     title: "Renew driver's license",
@@ -246,7 +230,7 @@ const seedTasks: Task[] = [
     due: todayKey,
     subtasks: 1,
     subtaskItems: [{ id: 'license-subtask', title: 'Subtask', completed: false }],
-    tags: ['Tag 1'],
+    visibility: 'private',
   },
   { id: 'accountant', title: 'Consult accountant', goalId: 'paper', due: todayKey, subtasks: 3 },
   { id: 'business-card', title: 'Print business card', due: todayKey },
@@ -261,9 +245,9 @@ const seedTaskIds = new Set(seedTasks.map(task => task.id))
 function readPlannerTasks() {
   try {
     const stored = readStoredValue(window.localStorage, plannerStorageKey)
-    if (!stored) return showDemoData ? seedTasks : []
+    if (!stored) return (showDemoData ? seedTasks : []).map(task => normalizeTask(task))
     const parsed = JSON.parse(stored) as Array<{ goalId?: string; list?: string } & Task>
-    if (!Array.isArray(parsed)) return showDemoData ? seedTasks : []
+    if (!Array.isArray(parsed)) return (showDemoData ? seedTasks : []).map(task => normalizeTask(task))
     const cleaned = showDemoData ? parsed : parsed.filter(task => !seedTaskIds.has(task.id))
     if (!showDemoData && cleaned.length !== parsed.length) {
       window.localStorage.setItem(plannerStorageKey, JSON.stringify(cleaned))
@@ -273,13 +257,13 @@ function readPlannerTasks() {
       const goalId =
         task.goalId ??
         (legacyList === 'Work' ? 'job-search' : legacyList === 'List 1' ? 'paper' : legacyList ? 'personal' : undefined)
-      return {
+      return normalizeTask({
         ...task,
         goalId,
-      }
+      })
     })
   } catch {
-    return showDemoData ? seedTasks : []
+    return (showDemoData ? seedTasks : []).map(task => normalizeTask(task))
   }
 }
 
@@ -301,7 +285,7 @@ let todayComposerDraft: TodayComposerDraft = {
   goalId: goals[0]?.id ?? '',
   due: todayKey,
   time: '',
-  tags: '',
+  visibility: 'private',
 }
 let toast = ''
 let calendarMode: CalendarMode = 'week'
@@ -410,6 +394,10 @@ function escapeHtml(value: string) {
 }
 
 function persistPlanner() {
+  if (plannerRepository) {
+    plannerRepository.save({ tasks, goals })
+    return
+  }
   try {
     window.localStorage.setItem(plannerStorageKey, JSON.stringify(tasks))
   } catch {
@@ -418,6 +406,10 @@ function persistPlanner() {
 }
 
 function persistGoals() {
+  if (plannerRepository) {
+    plannerRepository.save({ tasks, goals })
+    return
+  }
   try {
     window.localStorage.setItem(goalsStorageKey, JSON.stringify(goals))
   } catch {
@@ -563,6 +555,7 @@ function render() {
   const showInspector = Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
   app.innerHTML = `
     <div class="reference-app ${showInspector ? 'with-inspector' : ''}">
+      ${authRequired ? renderSyncStatus() : ''}
       ${renderSidebar()}
       <main class="workspace">
         ${renderMobileTopbar()}
@@ -573,6 +566,25 @@ function render() {
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function renderSyncStatus() {
+  const labels: Record<SyncState['status'], string> = {
+    loading: 'Loading',
+    offline: 'Offline',
+    saving: 'Saving',
+    saved: 'Saved',
+    failed: 'Save failed',
+  }
+  return `<div class="cloud-sync-state cloud-sync-state--${syncState.status}" role="status" aria-live="polite" title="${escapeHtml(syncState.message)}"><i></i><span>${labels[syncState.status]}</span>${syncState.pending ? `<b>${syncState.pending}</b>` : ''}</div>`
+}
+
+function replacePlannerWorkspace(workspace: { tasks: Task[]; goals: Goal[] }) {
+  tasks.splice(0, tasks.length, ...workspace.tasks.map(task => normalizeTask(task)))
+  goals.splice(0, goals.length, ...workspace.goals.map(goal => normalizeGoal(goal)))
+  completedTaskIds.clear()
+  tasks.filter(task => task.completedAt).forEach(task => completedTaskIds.add(task.id))
+  if (!tasks.some(task => task.id === selectedTaskId)) selectedTaskId = tasks[0]?.id ?? ''
 }
 
 function renderAuthGate() {
@@ -600,11 +612,28 @@ async function verifyAuthSession() {
   render()
   try {
     if (!cloudEnabled) throw new Error('Cloud accounts are not configured')
-    const user = await currentUser()
+    const [user, client] = await Promise.all([currentUser(), getCloudClient()])
     if (!user) {
       window.location.replace('https://shotcount.app/?auth=signin')
       return
     }
+    if (!client) throw new Error('Cloud accounts are not configured')
+    plannerRepository?.destroy()
+    plannerRepository = new CloudPlannerRepository({
+      userId: user.id,
+      storage: window.localStorage,
+      adapter: createSupabasePlannerAdapter(client),
+      onWorkspace: workspace => {
+        replacePlannerWorkspace(workspace)
+        if (authState === 'authenticated') render()
+      },
+      onState: nextState => {
+        syncState = nextState
+        if (authState === 'authenticated') render()
+      },
+    })
+    const workspace = await plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] })
+    replacePlannerWorkspace(workspace)
     authState = 'authenticated'
   } catch {
     authState = 'error'
@@ -614,6 +643,10 @@ async function verifyAuthSession() {
 
 async function signOut() {
   try {
+    plannerRepository?.destroy()
+    plannerRepository = null
+    window.localStorage.removeItem(plannerStorageKey)
+    window.localStorage.removeItem(goalsStorageKey)
     await signOutCloud()
   } finally {
     window.location.replace('https://shotcount.app/?auth=signin')
@@ -711,11 +744,6 @@ function renderSidebar() {
         ${goalComposerOpen ? renderGoalComposer() : `<button class="side-row add-side" data-action="open-goal-composer">${icon('plus')}<span>Add New Goal</span></button>`}
       </section>
 
-      <section class="side-section tags-section">
-        <h2>Tags</h2>
-        <div class="tags">${showDemoData ? '<button class="tag aqua">Tag 1</button><button class="tag pink">Tag 2</button>' : ''}<button class="tag neutral">+ Add Tag</button></div>
-      </section>
-
       <div class="sidebar-bottom">
         <button class="side-row" data-action="settings">${icon('settings')}<span>Settings</span></button>
         <button class="side-row" data-action="signout">${icon('logout')}<span>Sign out</span></button>
@@ -803,8 +831,8 @@ function renderTodayComposer() {
           <input name="time" type="time" value="${escapeHtml(todayComposerDraft.time)}" />
         </label>
         <label class="today-field">
-          <span>Tags</span>
-          <input name="tags" value="${escapeHtml(todayComposerDraft.tags)}" placeholder="Tag 1, Tag 2" />
+          <span>Visibility</span>
+          <select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions(todayComposerDraft.visibility)}</select>
         </label>
       </div>
       <div class="today-composer-actions">
@@ -822,7 +850,7 @@ function resetTodayComposerDraft() {
     goalId: activeGoalId ?? goals[0]?.id ?? '',
     due: todayKey,
     time: '',
-    tags: '',
+    visibility: 'private',
   }
 }
 
@@ -836,12 +864,25 @@ function captureTodayComposerDraft() {
     goalId: String(data.get('goalId') ?? goals[0]?.id ?? ''),
     due: String(data.get('due') ?? todayKey),
     time: String(data.get('time') ?? ''),
-    tags: String(data.get('tags') ?? ''),
+    visibility: normalizeTaskVisibility(data.get('visibility')),
   }
 }
 
 function renderGoalOptions(selectedId?: string) {
   return `<option value="" ${selectedId ? '' : 'selected'}>No goal</option>${goals.map(goal => `<option value="${goal.id}" ${goal.id === selectedId ? 'selected' : ''}>${escapeHtml(goal.name)}</option>`).join('')}`
+}
+
+const visibilityLabels: Record<TaskVisibility, string> = {
+  private: 'Private',
+  followers: 'Followers',
+  public: 'Public',
+}
+
+function renderVisibilityOptions(selected?: TaskVisibility) {
+  const current = normalizeTaskVisibility(selected)
+  return (Object.keys(visibilityLabels) as TaskVisibility[])
+    .map(value => `<option value="${value}" ${value === current ? 'selected' : ''}>${visibilityLabels[value]}</option>`)
+    .join('')
 }
 
 function renderTaskRow(task: Task, selected = false) {
@@ -861,12 +902,13 @@ function renderTaskRow(task: Task, selected = false) {
       </button>
       <button class="task-text" data-task="${task.id}">
         <strong>${escapeHtml(task.title)}</strong>
-        ${task.due || goal || subtaskCount ? `<small>
+        <small>
           ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
           ${task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
           ${goal ? `<span><i class="list-color" style="--list-color:${goal.color}"></i>${escapeHtml(goal.name)}</span>` : ''}
           ${!task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
-        </small>` : ''}
+          <span class="task-visibility task-visibility--${normalizeTaskVisibility(task.visibility)}">${visibilityLabels[normalizeTaskVisibility(task.visibility)]}</span>
+        </small>
       </button>
       <button class="task-chevron" data-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
     </div>
@@ -880,8 +922,6 @@ function renderInspector(task: Task) {
     completed: false,
   }))
   task.subtaskItems = subtasks
-  const tags = task.tags ?? (task.id === 'license' ? ['Tag 1'] : [])
-  task.tags = tags
   const goal = goals.find(item => item.id === task.goalId)
   return `
     <aside class="inspector">
@@ -895,7 +935,7 @@ function renderInspector(task: Task) {
           <label><span>Goal</span><button data-action="cycle-goal">${escapeHtml(goal?.name ?? goals[0]?.name ?? 'No goal')} ${icon('down')}</button></label>
           <label><span>Due date</span><input class="inspector-date" type="date" value="${task.due ?? ''}" aria-label="Due date" /></label>
           <label><span>Due time</span><input class="inspector-time" type="time" value="${task.time ?? ''}" aria-label="Due time, optional" /></label>
-          <label><span>Tags</span><span>${tags.map(tag => `<button class="tag aqua" data-remove-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join('')}<button class="tag neutral" data-action="add-tag">+ Add Tag</button></span></label>
+          <label><span>Visibility</span><select class="inspector-visibility" data-task-visibility="${task.id}" aria-label="Task visibility" required>${renderVisibilityOptions(task.visibility)}</select></label>
         </div>
 
         <h3>Subtasks:</h3>
@@ -947,6 +987,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
       ${isWeek ? `<input name="due" aria-label="Task date" type="date" min="${dateKey(addDays(now, 2))}" max="${weekEndKey}" value="${dateKey(addDays(now, 2))}" required />` : `<span class="planner-date">${formatTaskDate(tomorrowKey)}</span>`}
       <input name="time" aria-label="Task time, optional" type="time" />
       <select name="goalId" aria-label="Goal">${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
+      <select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions('private')}</select>
       <button type="submit">Add</button>
       <button type="button" class="planner-cancel" data-action="close-planner" aria-label="Cancel">×</button>
     </form>
@@ -1256,6 +1297,9 @@ function renderCalendarComposer() {
         <label><span>Location</span><input name="location" value="${escapeHtml(editing?.location ?? '')}" placeholder="Optional" /></label>
         <label><span>People</span><input name="attendees" value="${escapeHtml(editing?.attendees ?? '')}" placeholder="Optional" /></label>
       </div>
+      <div class="calendar-composer-row calendar-composer-row--visibility">
+        <label><span>Visibility</span><select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions(editing?.visibility)}</select></label>
+      </div>
       <div class="calendar-composer-actions">${editing ? '<button type="button" class="danger" data-action="unschedule-task">Remove time</button>' : '<span></span>'}<button type="button" data-action="close-calendar-composer">Cancel</button><button type="submit">Save</button></div>
     </form>
   `
@@ -1444,10 +1488,12 @@ function persistInspectorDraft() {
   const description = document.querySelector<HTMLTextAreaElement>('.inspector textarea')?.value
   const due = document.querySelector<HTMLInputElement>('.inspector-date')?.value
   const time = document.querySelector<HTMLInputElement>('.inspector-time')?.value
+  const visibility = document.querySelector<HTMLSelectElement>('.inspector-visibility')?.value
   if (title) task.title = title
   if (description !== undefined) task.description = description
   if (due !== undefined) task.due = due || undefined
   if (time !== undefined) task.time = time || undefined
+  if (visibility !== undefined) task.visibility = normalizeTaskVisibility(visibility)
   persistPlanner()
 }
 
@@ -1476,19 +1522,19 @@ function saveCalendarForm(form: HTMLFormElement) {
     reminder: Number(data.get('reminder') ?? 15),
     location: String(data.get('location') ?? '').trim() || undefined,
     attendees: String(data.get('attendees') ?? '').trim() || undefined,
+    visibility: normalizeTaskVisibility(data.get('visibility')),
   }
   if (task) {
     Object.assign(task, patch)
     selectedTaskId = task.id
   } else {
-    const newTask: Task = {
+    const newTask: Task = normalizeTask({
       id: crypto.randomUUID(),
       description: '',
-      tags: [],
       subtaskItems: [],
       ...patch,
       title,
-    }
+    })
     tasks.unshift(newTask)
     selectedTaskId = newTask.id
   }
@@ -1533,7 +1579,7 @@ app.addEventListener('submit', event => {
     const requestedColor = String(data.get('color') ?? nextGoalColor())
     const color = isGoalColorUsed(requestedColor) ? nextGoalColor() : normalizeColor(requestedColor)
     if (!name) return
-    goals.push({ id: crypto.randomUUID(), name, color })
+    goals.push(normalizeGoal({ id: crypto.randomUUID(), name, color }))
     goalComposerOpen = false
     persistGoals()
     triggerHaptic([35, 30, 60])
@@ -1554,20 +1600,16 @@ app.addEventListener('submit', event => {
     const due = String(data.get('due') ?? todayKey)
     const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
     if (!title || !due) return
-    const newTask: Task = {
+    const newTask: Task = normalizeTask({
       id: crypto.randomUUID(),
       title,
       description: String(data.get('description') ?? '').trim(),
       goalId: goalId || undefined,
       due,
       time: String(data.get('time') ?? '') || undefined,
-      tags: String(data.get('tags') ?? '')
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(Boolean)
-        .slice(0, 8),
+      visibility: normalizeTaskVisibility(data.get('visibility')),
       subtaskItems: [],
-    }
+    })
     tasks.unshift(newTask)
     selectedTaskId = newTask.id
     todayComposerOpen = false
@@ -1606,15 +1648,15 @@ app.addEventListener('submit', event => {
   const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
   const time = String(data.get('time') ?? '').trim()
   if (!title || !due) return
-  tasks.unshift({
+  tasks.unshift(normalizeTask({
     id: crypto.randomUUID(),
     title,
     due,
     time: time || undefined,
     goalId: goalId || undefined,
-    tags: [],
+    visibility: normalizeTaskVisibility(data.get('visibility')),
     subtaskItems: [],
-  })
+  }))
   persistPlanner()
   triggerHaptic([35, 30, 60])
   plannerDraftGroup = null
@@ -1640,6 +1682,22 @@ app.addEventListener('input', event => {
   }
 })
 
+app.addEventListener('change', event => {
+  const select = (event.target as HTMLElement).closest<HTMLSelectElement>('[data-task-visibility]')
+  if (!select) return
+  const task = tasks.find(item => item.id === select.dataset.taskVisibility)
+  if (!task) return
+  persistInspectorDraft()
+  task.visibility = normalizeTaskVisibility(select.value)
+  persistPlanner()
+  toast = `Visibility changed to ${visibilityLabels[task.visibility]}`
+  render()
+  window.setTimeout(() => {
+    toast = ''
+    render()
+  }, 1400)
+})
+
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
   const subtaskId = target.closest<HTMLInputElement>('[data-subtask]')?.dataset.subtask
@@ -1647,6 +1705,7 @@ app.addEventListener('click', async event => {
     const task = selectedTask()
     const subtask = task?.subtaskItems?.find(item => item.id === subtaskId)
     if (subtask) subtask.completed = !subtask.completed
+    persistPlanner()
     render()
     return
   }
@@ -1664,15 +1723,6 @@ app.addEventListener('click', async event => {
       triggerHaptic(65)
     }
     persistPlanner()
-    render()
-    return
-  }
-
-  const removeTag = target.closest<HTMLElement>('[data-remove-tag]')?.dataset.removeTag
-  if (removeTag) {
-    persistInspectorDraft()
-    const task = selectedTask()
-    if (task) task.tags = (task.tags ?? []).filter(tag => tag !== removeTag)
     render()
     return
   }
@@ -1864,7 +1914,7 @@ app.addEventListener('click', async event => {
     captureTodayComposerDraft()
     const requestedColor = colorInput?.value ?? nextGoalColor()
     const color = isGoalColorUsed(requestedColor) ? nextGoalColor() : normalizeColor(requestedColor)
-    const newGoal = { id: crypto.randomUUID(), name, color }
+    const newGoal = normalizeGoal({ id: crypto.randomUUID(), name, color })
     goals.push(newGoal)
     todayComposerDraft.goalId = newGoal.id
     todayGoalCreatorOpen = false
@@ -1898,14 +1948,6 @@ app.addEventListener('click', async event => {
       const currentIndex = goals.findIndex(goal => goal.id === task.goalId)
       task.goalId = goals[(currentIndex + 1 + goals.length) % goals.length]?.id
       persistPlanner()
-    }
-  } else if (action === 'add-tag') {
-    persistInspectorDraft()
-    const task = selectedTask()
-    if (task) {
-      const tags = task.tags ?? []
-      const tagToAdd = !tags.includes('Tag 1') ? 'Tag 1' : !tags.includes('Tag 2') ? 'Tag 2' : null
-      if (tagToAdd) task.tags = [...tags, tagToAdd]
     }
   } else if (action === 'add-subtask') {
     persistInspectorDraft()
@@ -2050,6 +2092,11 @@ render()
 if (authRequired) void verifyAuthSession()
 scheduleDateRefresh()
 window.addEventListener('popstate', render)
+window.addEventListener('online', () => void plannerRepository?.syncNow())
+window.addEventListener('offline', () => void plannerRepository?.syncNow())
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void plannerRepository?.refresh()
+})
 dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {
   refreshDateContext(reference)
   calendarDate = new Date(reference)

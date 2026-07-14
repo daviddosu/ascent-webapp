@@ -38,6 +38,8 @@ const client = createClient(url, key, {
 })
 const temporaryName = `Shotcount verification ${crypto.randomUUID()}`
 let temporaryId
+let plannerRecordId
+let secondClient
 
 try {
   const { data: session, error: signInError } = await client.auth.signInWithPassword({ email, password })
@@ -62,6 +64,52 @@ try {
   temporaryId = undefined
   console.log('✓ Authenticated RLS delete')
 
+  plannerRecordId = crypto.randomUUID()
+  secondClient = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
+  const { error: secondSignInError } = await secondClient.auth.signInWithPassword({ email, password })
+  if (secondSignInError) throw new Error(secondSignInError.message)
+  const firstTime = new Date().toISOString()
+  const titleTime = new Date(Date.now() + 2_000).toISOString()
+  const dueTime = new Date(Date.now() + 1_000).toISOString()
+  const initial = await client.rpc('merge_planner_record', {
+    p_record_type: 'task',
+    p_record_id: plannerRecordId,
+    p_parent_id: null,
+    p_patch: { title: 'Cloud verification', due: '2026-07-14' },
+    p_field_versions: { title: firstTime, due: firstTime, _deleted: firstTime },
+    p_deleted_at: null,
+  })
+  if (initial.error) throw new Error(initial.error.message)
+  const [phoneEdit, laptopEdit] = await Promise.all([
+    client.rpc('merge_planner_record', {
+      p_record_type: 'task', p_record_id: plannerRecordId, p_parent_id: null,
+      p_patch: { title: 'Phone title' }, p_field_versions: { title: titleTime }, p_deleted_at: null,
+    }),
+    secondClient.rpc('merge_planner_record', {
+      p_record_type: 'task', p_record_id: plannerRecordId, p_parent_id: null,
+      p_patch: { due: '2026-07-20' }, p_field_versions: { due: dueTime }, p_deleted_at: null,
+    }),
+  ])
+  if (phoneEdit.error) throw new Error(phoneEdit.error.message)
+  if (laptopEdit.error) throw new Error(laptopEdit.error.message)
+  const { data: merged, error: mergeReadError } = await client
+    .from('planner_records')
+    .select('data')
+    .eq('record_type', 'task')
+    .eq('record_id', plannerRecordId)
+    .single()
+  if (mergeReadError || merged?.data?.title !== 'Phone title' || merged?.data?.due !== '2026-07-20') {
+    throw new Error(mergeReadError?.message ?? 'Two-device fields did not merge.')
+  }
+  console.log('✓ Cross-device field merge')
+  const { error: plannerDeleteError } = await client
+    .from('planner_records')
+    .delete()
+    .eq('record_type', 'task')
+    .eq('record_id', plannerRecordId)
+  if (plannerDeleteError) throw new Error(plannerDeleteError.message)
+  plannerRecordId = undefined
+
   if ((env.SHOTCOUNT_TEST_AI ?? env[`${previousEnvPrefix}_TEST_AI`]) === 'true') {
     const { data, error } = await client.functions.invoke('ai-coach', { method: 'POST' })
     if (error || !data?.title || !data?.detail || !Array.isArray(data?.actions)) {
@@ -76,5 +124,7 @@ try {
   process.exitCode = 1
 } finally {
   if (temporaryId) await client.from('lists').delete().eq('id', temporaryId)
+  if (plannerRecordId) await client.from('planner_records').delete().eq('record_type', 'task').eq('record_id', plannerRecordId)
+  if (secondClient) await secondClient.auth.signOut()
   await client.auth.signOut()
 }

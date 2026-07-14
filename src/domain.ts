@@ -1,19 +1,5 @@
 export type Recurrence = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly'
 
-export function parseTags(value: string, limit = 8) {
-  const seen = new Set<string>()
-  return value
-    .split(',')
-    .map(tag => tag.trim().replace(/^#/, ''))
-    .filter(tag => {
-      const key = tag.toLocaleLowerCase()
-      if (!tag || seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    .slice(0, limit)
-}
-
 export function nextRecurringDate(dateKey: string, recurrence: Recurrence, monthlyAnchorDay?: number) {
   if (recurrence === 'none') return null
   const date = new Date(`${dateKey}T12:00:00Z`)

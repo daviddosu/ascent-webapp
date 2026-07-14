@@ -4,6 +4,8 @@ import { resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
 const migration = readFileSync(resolve(root, 'supabase/migrations/202607030001_initial_shotcount.sql'), 'utf8')
+const plannerMigration = readFileSync(resolve(root, 'supabase/migrations/202607140001_cloud_planner_records.sql'), 'utf8')
+const visibilityMigration = readFileSync(resolve(root, 'supabase/migrations/202607140002_task_visibility.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -57,6 +59,52 @@ describe('database security contract', () => {
     ]) {
       expect(migration).toContain(`create index ${index}`)
     }
+  })
+})
+
+describe('cloud planner contract', () => {
+  it('protects planner records with authenticated row ownership', () => {
+    expect(plannerMigration).toContain('alter table public.planner_records enable row level security;')
+    expect(plannerMigration).toContain('user_id = (select auth.uid())')
+    expect(plannerMigration).toContain('to authenticated')
+  })
+
+  it('merges one field at a time while holding a database row lock', () => {
+    expect(plannerMigration).toContain('create or replace function public.merge_planner_record')
+    expect(plannerMigration).toContain('for update;')
+    expect(plannerMigration).toContain('jsonb_each_text')
+    expect(plannerMigration).toContain('incoming_version::timestamptz >= current_version::timestamptz')
+  })
+
+  it('publishes planner changes for other open devices', () => {
+    expect(plannerMigration).toContain('alter publication supabase_realtime add table public.planner_records')
+  })
+
+  it('stores and validates the three task visibility choices in the database', () => {
+    expect(plannerMigration).toContain("visibility text not null default 'private'")
+    expect(plannerMigration).toContain("visibility in ('private', 'followers', 'public')")
+    expect(visibilityMigration).toContain('create trigger enforce_planner_task_visibility')
+    expect(visibilityMigration).toContain('Task visibility must be private, followers, or public')
+  })
+
+  it('lets the server reveal tasks only to the allowed audience', () => {
+    expect(visibilityMigration).toContain('alter table public.follows enable row level security;')
+    expect(visibilityMigration).toContain('create or replace function public.can_read_planner_task')
+    expect(visibilityMigration).toContain('task.visibility = \'public\'')
+    expect(visibilityMigration).toContain("task.visibility = 'followers'")
+    expect(visibilityMigration).toContain('create policy "planner_records_shared_task_read"')
+    expect(visibilityMigration).toContain('public.can_read_planner_task(user_id, parent_id)')
+  })
+
+  it('uses the shared planner model and no longer replaces whole workspaces', () => {
+    const main = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
+    const sync = readFileSync(resolve(root, 'src/data/sync.ts'), 'utf8')
+    expect(main).toContain("from './data/planner-model'")
+    expect(sync).toContain("from './planner-model'")
+    expect(sync).not.toContain('deleteMissing')
+    expect(sync).not.toContain("from('task_tags').delete().eq('user_id'")
+    expect(main).not.toContain('name="tags"')
+    expect(sync).not.toContain("recordType: 'task_tag'")
   })
 })
 

@@ -50,6 +50,10 @@ await check('Database migration and tasks endpoint', {
   url: `${base}/rest/v1/tasks?select=id&limit=1`,
   options: { headers },
 })
+await check('Conflict-safe planner migration', {
+  url: `${base}/rest/v1/planner_records?select=record_id&limit=1`,
+  options: { headers },
+})
 await check('Account deletion function deployed', {
   url: `${base}/functions/v1/delete-account`,
   options: { method: 'OPTIONS', headers },

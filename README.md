@@ -1,6 +1,6 @@
 # Shotcount
 
-Shotcount is a calm, local-first planning app built around one loop:
+Shotcount is a calm, cloud-based planning app built around one loop:
 
 `Goal → Plan → Today → Finish → Review → Improve`
 
@@ -11,7 +11,7 @@ pnpm install
 pnpm dev
 ```
 
-The app works without a cloud account. Tasks, goals, reviews, and preferences are saved on the device.
+The production planner loads the signed-in user's Supabase workspace first. It also keeps a user-scoped local copy, so an already-loaded workspace keeps working offline and sends queued changes when the internet returns.
 
 ## Verify the product
 
@@ -24,7 +24,7 @@ This runs the domain tests, browser-like interaction journeys, automated accessi
 ## Enable secure cloud accounts
 
 1. Create a Supabase project.
-2. Apply [`supabase/migrations/202607030001_initial_shotcount.sql`](supabase/migrations/202607030001_initial_shotcount.sql).
+2. Apply the SQL files in [`supabase/migrations`](supabase/migrations) in filename order. The `202607140001` migration adds conflict-safe planner records and realtime updates.
 3. Copy `.env.example` to `.env.local`.
 4. Add the project URL and public anonymous key.
 5. Restart the development server.
@@ -56,8 +56,10 @@ Set `SHOTCOUNT_TEST_AI=true` only when you also want this check to make one real
 
 ## Production behavior
 
-- Local changes save immediately, then sync quietly when an account is connected.
-- An existing cloud workspace is loaded after sign-in.
-- A new account receives the current local workspace.
+- Local changes save immediately to a user-scoped offline backup, then sync to Supabase.
+- An existing cloud workspace is loaded before the planner is shown after sign-in.
+- A new account receives its current local workspace, and an older account is imported once from the original task tables when needed.
+- Tasks, goals, visibility choices, subtasks, and completions merge by field so independent changes from two devices are kept.
+- The planner shows Loading, Offline, Saving, Saved, and Save failed states.
 - The production build is installable and keeps working offline after its first successful load.
 - Account data can be exported from Settings.

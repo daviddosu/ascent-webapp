@@ -56,7 +56,7 @@ describe('reference screens', () => {
     form.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Plan launch review'
     form.querySelector<HTMLTextAreaElement>('[name="description"]')!.value = 'Gather the launch notes.'
     form.querySelector<HTMLSelectElement>('[name="goalId"]')!.value = 'job-search'
-    form.querySelector<HTMLInputElement>('[name="tags"]')!.value = 'Tag 1, Tag 2'
+    form.querySelector<HTMLSelectElement>('[name="visibility"]')!.value = 'followers'
     const due = form.querySelector<HTMLInputElement>('[name="due"]')!
     expect(due.min).not.toBe('')
     expect(due.max > due.min).toBe(true)
@@ -66,6 +66,8 @@ describe('reference screens', () => {
     expect(document.querySelector('.task-row.selected .task-text strong')?.textContent).toBe('Plan launch review')
     expect(document.querySelector<HTMLInputElement>('.inspector-title')?.value).toBe('Plan launch review')
     expect(document.querySelector<HTMLTextAreaElement>('.inspector textarea')?.value).toBe('Gather the launch notes.')
+    expect(document.querySelector<HTMLSelectElement>('.inspector-visibility')?.value).toBe('followers')
+    expect(document.querySelector('.task-row.selected .task-visibility')?.textContent).toBe('Followers')
     expect(vibrate).toHaveBeenCalledWith([35, 30, 60])
   })
 
@@ -140,8 +142,12 @@ describe('reference screens', () => {
     document.querySelector<HTMLButtonElement>('[data-action="cycle-goal"]')!.click()
     expect(document.querySelector('[data-action="cycle-goal"]')?.textContent).toContain('Find a new job')
     expect(document.querySelector<HTMLInputElement>('.inspector-date')?.value).not.toBe('')
-    document.querySelector<HTMLButtonElement>('[data-action="add-tag"]')!.click()
-    expect(document.querySelector('[data-remove-tag="Tag 1"]')).not.toBeNull()
+    const visibility = document.querySelector<HTMLSelectElement>('.inspector-visibility')!
+    expect(visibility.value).toBe('private')
+    visibility.value = 'public'
+    visibility.dispatchEvent(new Event('change', { bubbles: true }))
+    expect(document.querySelector('.task-row.selected .task-visibility')?.textContent).toBe('Public')
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:planner')).toContain('"visibility":"public"')
 
     document.querySelector<HTMLButtonElement>('[data-action="add-subtask"]')!.click()
     const subtask = document.querySelector<HTMLInputElement>('[data-subtask]')!

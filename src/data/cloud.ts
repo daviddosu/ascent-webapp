@@ -20,9 +20,15 @@ async function ensureCloud() {
   return cloud
 }
 
+export async function getCloudClient() {
+  return ensureCloud()
+}
+
 export async function currentUser(): Promise<User | null> {
   const client = await ensureCloud()
   if (!client) return null
+  const sessionResult = await client.auth.getSession()
+  if (sessionResult.data.session?.user) return sessionResult.data.session.user
   const { data, error } = await client.auth.getUser()
   if (error) return null
   return data.user

@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { completionPercent, nextRecurringDate, parseTags, reorderById } from './domain'
-
-describe('parseTags', () => {
-  it('cleans, de-duplicates, and limits tags', () => {
-    expect(parseTags(' Focus, #work, focus, , Deep Work ', 3)).toEqual(['Focus', 'work', 'Deep Work'])
-  })
-})
+import { completionPercent, nextRecurringDate, reorderById } from './domain'
 
 describe('nextRecurringDate', () => {
   it('moves a daily task by one day', () => {
