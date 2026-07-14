@@ -1553,7 +1553,7 @@ body[data-signed-in='false'] #app {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 .google-auth-backdrop {
@@ -1562,58 +1562,65 @@ body[data-signed-in='false'] #app {
   width: 100%;
   height: 100%;
   border: 0;
-  background: rgba(8, 12, 14, 0.48);
-  backdrop-filter: blur(10px);
+  background: rgba(19, 24, 27, 0.34);
+  backdrop-filter: blur(8px);
 }
 
-.google-auth-card {
+.google-auth-card.simple-auth-card {
   position: relative;
   z-index: 1;
-  width: min(500px, 100%);
-  padding: 48px 38px 34px;
+  width: min(520px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 40px 42px 32px;
   border: 1px solid rgba(15, 24, 29, 0.1);
-  border-radius: 28px;
+  border-radius: 24px;
   background: #fff;
   box-shadow: 0 30px 90px rgba(10, 25, 31, 0.24);
-  text-align: center;
+  text-align: left;
 }
 
 .google-auth-close {
   position: absolute;
-  top: 18px;
-  right: 18px;
+  top: 16px;
+  right: 16px;
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #101415;
-  color: #fff;
+  background: transparent;
+  color: #565d61;
   font-size: 24px;
   line-height: 1;
 }
 
-.google-auth-kicker {
-  display: block;
-  margin-bottom: 15px;
-  color: #60717a;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.2em;
+.simple-auth-logo {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #111516;
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 25px;
+  font-weight: 700;
 }
 
-.google-auth-card h2 {
+.google-auth-card.simple-auth-card h2 {
   margin: 0;
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 46px;
-  font-weight: 400;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.14;
   letter-spacing: -0.035em;
 }
 
-.google-auth-card > p {
-  max-width: 390px;
-  margin: 14px auto 25px;
-  color: #617078;
-  font-size: 14px;
-  line-height: 1.65;
+.google-auth-card.simple-auth-card > p {
+  margin: 8px 0 28px;
+  color: #9a9a96;
+  font-size: 17px;
+  line-height: 1.45;
 }
 
 .google-auth-button {
@@ -1622,25 +1629,106 @@ body[data-signed-in='false'] #app {
   justify-content: center;
 }
 
-.google-auth-card .google-auth-error {
-  min-height: 20px;
-  margin: 14px auto 0;
-  color: #a53c2f;
+.simple-auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.simple-auth-form label {
+  color: #555b5e;
   font-size: 13px;
   font-weight: 600;
 }
 
-.google-auth-card small {
+.simple-auth-form input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid #cfd4d6;
+  border-radius: 10px;
+  background: #fff;
+  outline: 0;
+  font-size: 16px;
+}
+
+.simple-auth-form input:focus {
+  border-color: #3284e4;
+  box-shadow: 0 0 0 2px rgba(50, 132, 228, 0.2);
+}
+
+.simple-auth-form button {
+  min-height: 52px;
+  margin-top: 4px;
+  border-radius: 10px;
+  background: #111516;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.simple-auth-form button:disabled { opacity: .58; cursor: wait; }
+.code-form input { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: .28em; }
+
+.simple-auth-divider {
+  margin: 22px 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #9a9a96;
+  font-size: 13px;
+}
+
+.simple-auth-divider::before,
+.simple-auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #e2e4e5;
+}
+
+.simple-auth-back {
+  width: 100%;
+  margin-top: 14px;
+  color: #5d676c;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.google-auth-card.simple-auth-card .google-auth-error {
+  min-height: 20px;
+  margin: 14px 0 0;
+  color: #a53c2f;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.google-auth-card.simple-auth-card small {
   display: block;
   margin-top: 16px;
   color: #879197;
   font-size: 11px;
   line-height: 1.5;
+  text-align: center;
 }
 
-@media (max-width: 520px) {
-  .google-auth-card { padding: 46px 22px 28px; border-radius: 22px; }
-  .google-auth-card h2 { font-size: 40px; }
+@media (max-width: 620px) {
+  .google-auth { padding: 0; background: #fff; }
+  .google-auth-backdrop { display: none; }
+  .google-auth-card.simple-auth-card {
+    width: 100%;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    padding: max(34px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .google-auth-close { top: max(16px, env(safe-area-inset-top)); right: 14px; }
+  .simple-auth-logo { margin: 54px auto 34px; }
+  .google-auth-card.simple-auth-card h2 { font-size: 30px; text-align: center; }
+  .google-auth-card.simple-auth-card > p { margin: 9px 0 38px; text-align: center; }
+  .simple-auth-form input, .simple-auth-form button { min-height: 56px; }
 }
 
 .craft-app-window {

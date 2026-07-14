@@ -78,6 +78,9 @@ let peopleRailStartScrollLeft = 0
 let authModalOpen = new URLSearchParams(window.location.search).get('auth') === 'signin'
 let authError = new URLSearchParams(window.location.search).get('error') ?? ''
 let googleAuthInitialized = false
+let authStep: 'email' | 'code' = 'email'
+let authEmail = ''
+let authBusy = false
 
 type GoogleCredentialResponse = { credential?: string }
 type GoogleIdentity = {
@@ -436,6 +439,14 @@ app.addEventListener('click', (event) => {
     return
   }
 
+  if (action === 'change-auth-email') {
+    authStep = 'email'
+    authEmail = ''
+    authError = ''
+    render()
+    return
+  }
+
   if (action === 'toggle-notifications') {
     state.notificationPanelOpen = !state.notificationPanelOpen
     persistAndRender()
@@ -495,8 +506,20 @@ app.addEventListener('click', (event) => {
   }
 })
 
-app.addEventListener('submit', (event) => {
+app.addEventListener('submit', async (event) => {
   const form = event.target as HTMLFormElement
+  if (form.id === 'email-auth-form') {
+    event.preventDefault()
+    await requestEmailCode(form)
+    return
+  }
+
+  if (form.id === 'email-code-form') {
+    event.preventDefault()
+    await verifyEmailCode(form)
+    return
+  }
+
   if (form.id === 'review-form') {
     event.preventDefault()
     submitReview(form)
@@ -741,11 +764,64 @@ function openAuthModal(error = '') {
 function closeAuthModal() {
   authModalOpen = false
   authError = ''
+  authStep = 'email'
+  authEmail = ''
   const url = new URL(window.location.href)
   url.searchParams.delete('auth')
   url.searchParams.delete('error')
   window.history.replaceState({}, '', url)
   render()
+}
+
+async function requestEmailCode(form: HTMLFormElement) {
+  const email = String(new FormData(form).get('email') ?? '').trim().toLowerCase()
+  if (!email || authBusy) return
+  authBusy = true
+  authError = ''
+  render()
+  try {
+    const response = await fetch('/api/auth/email-code', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const result = await response.json().catch(() => null) as { detail?: string; error?: string } | null
+    if (!response.ok) throw new Error(result?.detail || result?.error || 'We could not send the code.')
+    authEmail = email
+    authStep = 'code'
+  } catch (error) {
+    authError = error instanceof Error ? error.message : 'We could not send the code.'
+  } finally {
+    authBusy = false
+    render()
+    if (authStep === 'code') queueMicrotask(() => app.querySelector<HTMLInputElement>('#email-code')?.focus())
+  }
+}
+
+async function verifyEmailCode(form: HTMLFormElement) {
+  const code = String(new FormData(form).get('code') ?? '').replace(/\D/g, '').slice(0, 6)
+  if (code.length !== 6 || authBusy) {
+    authError = 'Enter the six numbers from your email.'
+    render()
+    return
+  }
+  authBusy = true
+  authError = ''
+  render()
+  try {
+    const response = await fetch('/api/auth/verify-email-code', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: authEmail, code }),
+    })
+    const result = await response.json().catch(() => null) as { detail?: string; error?: string } | null
+    if (!response.ok) throw new Error(result?.detail || result?.error || 'That code did not work.')
+    window.location.replace(ROBUST_WORKSPACE_URL)
+  } catch (error) {
+    authBusy = false
+    authError = error instanceof Error ? error.message : 'That code did not work.'
+    render()
+  }
 }
 
 function loadGoogleAuthScript() {
@@ -825,21 +901,38 @@ async function ensureGoogleAuthReady() {
 
 function renderGoogleAuthModal() {
   if (!authModalOpen) return ''
-  const errorMessage = authError
+  const errorMessage = authError === 'google-signin-unavailable'
     ? 'Google could not sign you in just now. Please try again.'
-    : ''
+    : authError
+
+  const emailStep = authStep === 'email'
 
   return `
     <div class="google-auth" role="presentation">
       <button type="button" class="google-auth-backdrop" data-action="close-auth" aria-label="Close sign in"></button>
-      <section class="google-auth-card" role="dialog" aria-modal="true" aria-labelledby="google-auth-title">
+      <section class="google-auth-card simple-auth-card" role="dialog" aria-modal="true" aria-labelledby="google-auth-title">
         <button type="button" class="google-auth-close" data-action="close-auth" aria-label="Close sign in">×</button>
-        <span class="google-auth-kicker">SHOTCOUNT</span>
-        <h2 id="google-auth-title">Welcome</h2>
-        <p>Use your Gmail to sign up or log in. Google keeps your password; Shotcount only receives your basic account details.</p>
-        <div class="google-auth-button" id="shotcount-google-button" aria-live="polite"></div>
-        <p class="google-auth-error" data-auth-error role="alert">${errorMessage}</p>
-        <small>By continuing, you agree to the Shotcount terms and privacy policy.</small>
+        <div class="simple-auth-logo" aria-hidden="true">S</div>
+        <h2 id="google-auth-title">Shotcount: your space for real progress.</h2>
+        <p>${emailStep ? 'Sign up or log in with your email' : `We sent a six-digit code to <strong>${escapeHtml(authEmail)}</strong>`}</p>
+        ${emailStep ? `
+          <form class="simple-auth-form" id="email-auth-form">
+            <label for="auth-email">Email</label>
+            <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+            <button type="submit" ${authBusy ? 'disabled' : ''}>${authBusy ? 'Sending…' : 'Continue with email'}</button>
+          </form>
+          <div class="simple-auth-divider"><span>or continue with</span></div>
+          <div class="google-auth-button" id="shotcount-google-button" aria-live="polite"></div>
+        ` : `
+          <form class="simple-auth-form code-form" id="email-code-form">
+            <label for="email-code">Login code</label>
+            <input id="email-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required />
+            <button type="submit" ${authBusy ? 'disabled' : ''}>${authBusy ? 'Checking…' : 'Open Shotcount'}</button>
+          </form>
+          <button type="button" class="simple-auth-back" data-action="change-auth-email">Use a different email</button>
+        `}
+        <p class="google-auth-error" data-auth-error role="alert">${escapeHtml(errorMessage)}</p>
+        <small>By continuing, you agree to the Shotcount Terms &amp; Conditions and Privacy Policy.</small>
       </section>
     </div>
   `
