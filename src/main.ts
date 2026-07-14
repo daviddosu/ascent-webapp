@@ -411,7 +411,7 @@ app.addEventListener('click', (event) => {
   }
 
   if (action === 'signin') {
-    openAuthModal()
+    window.location.assign(ROBUST_WORKSPACE_URL)
     return
   }
 
@@ -733,17 +733,6 @@ function render() {
   app.innerHTML = renderAuth()
   scheduleFocusMotionUpdate()
   schedulePeopleRailMotion()
-}
-
-function openAuthModal(error = '') {
-  authModalOpen = true
-  authError = error
-  const url = new URL(window.location.href)
-  url.searchParams.set('auth', 'signin')
-  if (error) url.searchParams.set('error', error)
-  else url.searchParams.delete('error')
-  window.history.replaceState({}, '', url)
-  render()
 }
 
 function closeAuthModal() {
