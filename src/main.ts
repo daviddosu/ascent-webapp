@@ -814,7 +814,6 @@ function renderGoogleAuthModal() {
       <button type="button" class="google-auth-backdrop" data-action="close-auth" aria-label="Close sign in"></button>
       <section class="google-auth-card simple-auth-card" role="dialog" aria-modal="true" aria-labelledby="google-auth-title">
         <button type="button" class="google-auth-close" data-action="close-auth" aria-label="Close sign in">×</button>
-        <div class="simple-auth-logo" aria-hidden="true">S</div>
         <h2 id="google-auth-title">Shotcount: your space for real progress.</h2>
         <p>${emailStep ? 'Sign up or log in with your email' : `We sent a six-digit code to <strong>${escapeHtml(authEmail)}</strong>`}</p>
         ${emailStep ? `

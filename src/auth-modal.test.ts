@@ -1,0 +1,25 @@
+// @vitest-environment jsdom
+
+import { beforeAll, describe, expect, it } from 'vitest'
+
+beforeAll(async () => {
+  window.history.replaceState({}, '', '/?auth=signin')
+  window.localStorage.clear()
+  window.sessionStorage.clear()
+  document.body.innerHTML = '<div id="app"></div>'
+  await import('./main')
+})
+
+describe('Shotcount sign-in pop-over', () => {
+  it('does not show the square S logo', () => {
+    expect(document.querySelector('.simple-auth-logo')).toBeNull()
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+  })
+
+  it('closes from its close button and cleans the URL', () => {
+    document.querySelector<HTMLButtonElement>('.google-auth-close')!.click()
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(window.location.search).toBe('')
+  })
+})
