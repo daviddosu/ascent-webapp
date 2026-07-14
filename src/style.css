@@ -1624,10 +1624,28 @@ body[data-signed-in='false'] #app {
 }
 
 .google-auth-button {
+  width: 100%;
   min-height: 48px;
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 12px;
+  border: 1px solid #d8dcde;
+  border-radius: 10px;
+  background: #fff;
+  color: #25292b;
+  font-size: 15px;
+  font-weight: 650;
 }
+
+.google-auth-button span {
+  color: #4285f4;
+  font-family: Arial, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.google-auth-button:disabled { opacity: .58; cursor: wait; }
 
 .simple-auth-form {
   display: grid;

@@ -1,4 +1,5 @@
 import './style.css'
+import { continueWithGoogle, openWorkspaceWithSession, requestEmailCode as requestCloudEmailCode, verifyEmailCode as verifyCloudEmailCode } from './data/cloud'
 
 type View = 'today' | 'feed' | 'profile' | 'review'
 
@@ -66,7 +67,6 @@ const STORAGE_PREFIX = 'shotcount-current-v1:'
 const STORAGE_KEY = `${STORAGE_PREFIX}state`
 const ORIGIN_CLEANUP_MARKER = `${STORAGE_PREFIX}previous-app-cleared`
 const ROBUST_WORKSPACE_URL = 'https://app.shotcount.app/'
-const GOOGLE_CLIENT_ID = '368303232542-n47alare1qmc9shtbgpbtid8j644ham5.apps.googleusercontent.com'
 const DAY_MS = 24 * 60 * 60 * 1000
 let fallbackId = 0
 let focusMotionFrame = 0
@@ -77,28 +77,9 @@ let peopleRailStartX = 0
 let peopleRailStartScrollLeft = 0
 let authModalOpen = new URLSearchParams(window.location.search).get('auth') === 'signin'
 let authError = new URLSearchParams(window.location.search).get('error') ?? ''
-let googleAuthInitialized = false
 let authStep: 'email' | 'code' = 'email'
 let authEmail = ''
 let authBusy = false
-
-type GoogleCredentialResponse = { credential?: string }
-type GoogleIdentity = {
-  initialize: (options: {
-    client_id: string
-    callback: (response: GoogleCredentialResponse) => void
-    ux_mode: 'popup'
-    context: 'signin'
-    auto_select: boolean
-  }) => void
-  renderButton: (node: HTMLElement, options: Record<string, string | number>) => void
-}
-
-declare global {
-  interface Window {
-    google?: { accounts?: { id?: GoogleIdentity } }
-  }
-}
 
 function isolateCurrentAppStorage() {
   try {
@@ -439,6 +420,11 @@ app.addEventListener('click', (event) => {
     return
   }
 
+  if (action === 'continue-google') {
+    void startGoogleSignIn()
+    return
+  }
+
   if (action === 'change-auth-email') {
     authStep = 'email'
     authEmail = ''
@@ -747,7 +733,6 @@ function render() {
   app.innerHTML = renderAuth()
   scheduleFocusMotionUpdate()
   schedulePeopleRailMotion()
-  if (authModalOpen) queueMicrotask(() => void ensureGoogleAuthReady())
 }
 
 function openAuthModal(error = '') {
@@ -780,13 +765,8 @@ async function requestEmailCode(form: HTMLFormElement) {
   authError = ''
   render()
   try {
-    const response = await fetch('/api/auth/email-code', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    const result = await response.json().catch(() => null) as { detail?: string; error?: string } | null
-    if (!response.ok) throw new Error(result?.detail || result?.error || 'We could not send the code.')
+    const { error } = await requestCloudEmailCode(email)
+    if (error) throw error
     authEmail = email
     authStep = 'code'
   } catch (error) {
@@ -809,14 +789,9 @@ async function verifyEmailCode(form: HTMLFormElement) {
   authError = ''
   render()
   try {
-    const response = await fetch('/api/auth/verify-email-code', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: authEmail, code }),
-    })
-    const result = await response.json().catch(() => null) as { detail?: string; error?: string } | null
-    if (!response.ok) throw new Error(result?.detail || result?.error || 'That code did not work.')
-    window.location.replace(ROBUST_WORKSPACE_URL)
+    const { data, error } = await verifyCloudEmailCode(authEmail, code)
+    if (error || !data.session) throw error ?? new Error('That code did not work.')
+    openWorkspaceWithSession(data.session)
   } catch (error) {
     authBusy = false
     authError = error instanceof Error ? error.message : 'That code did not work.'
@@ -824,78 +799,16 @@ async function verifyEmailCode(form: HTMLFormElement) {
   }
 }
 
-function loadGoogleAuthScript() {
-  if (window.google?.accounts?.id) return Promise.resolve()
-
-  return new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>('script[data-shotcount-google-auth]')
-    if (existing) {
-      existing.addEventListener('load', () => resolve(), { once: true })
-      existing.addEventListener('error', () => reject(new Error('Google sign-in could not load.')), { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    script.dataset.shotcountGoogleAuth = 'true'
-    script.addEventListener('load', () => resolve(), { once: true })
-    script.addEventListener('error', () => reject(new Error('Google sign-in could not load.')), { once: true })
-    document.head.appendChild(script)
-  })
-}
-
-function submitGoogleCredential(credential: string) {
-  const form = document.createElement('form')
-  form.method = 'POST'
-  form.action = '/api/auth/google'
-  form.hidden = true
-
-  const credentialInput = document.createElement('input')
-  credentialInput.type = 'hidden'
-  credentialInput.name = 'credential'
-  credentialInput.value = credential
-  form.appendChild(credentialInput)
-  document.body.appendChild(form)
-  form.submit()
-}
-
-async function ensureGoogleAuthReady() {
-  const button = app.querySelector<HTMLElement>('#shotcount-google-button')
-  if (!button) return
-
-  try {
-    await loadGoogleAuthScript()
-    const googleIdentity = window.google?.accounts?.id
-    if (!googleIdentity) throw new Error('Google sign-in is unavailable.')
-
-    if (!googleAuthInitialized) {
-      googleIdentity.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          if (response.credential) submitGoogleCredential(response.credential)
-          else openAuthModal('google-signin-unavailable')
-        },
-        ux_mode: 'popup',
-        context: 'signin',
-        auto_select: false,
-      })
-      googleAuthInitialized = true
-    }
-
-    button.innerHTML = ''
-    googleIdentity.renderButton(button, {
-      theme: 'outline',
-      size: 'large',
-      text: 'continue_with',
-      shape: 'pill',
-      width: Math.min(400, Math.max(240, button.clientWidth || 360)),
-    })
-  } catch {
-    authError = 'google-script-unavailable'
-    const message = app.querySelector<HTMLElement>('[data-auth-error]')
-    if (message) message.textContent = 'Google sign-in could not load. Please try again.'
+async function startGoogleSignIn() {
+  if (authBusy) return
+  authBusy = true
+  authError = ''
+  render()
+  const { error } = await continueWithGoogle()
+  if (error) {
+    authBusy = false
+    authError = error.message || 'Google could not sign you in just now.'
+    render()
   }
 }
 
@@ -922,7 +835,9 @@ function renderGoogleAuthModal() {
             <button type="submit" ${authBusy ? 'disabled' : ''}>${authBusy ? 'Sending…' : 'Continue with email'}</button>
           </form>
           <div class="simple-auth-divider"><span>or continue with</span></div>
-          <div class="google-auth-button" id="shotcount-google-button" aria-live="polite"></div>
+          <button type="button" class="google-auth-button" data-action="continue-google" ${authBusy ? 'disabled' : ''}>
+            <span aria-hidden="true">G</span>${authBusy ? 'Opening Google…' : 'Continue with Google'}
+          </button>
         ` : `
           <form class="simple-auth-form code-form" id="email-code-form">
             <label for="email-code">Login code</label>
