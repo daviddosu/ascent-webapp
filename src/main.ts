@@ -1,4 +1,5 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
+import { cloudEnabled, currentUser, signOut as signOutCloud } from './data/cloud'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.png'
 import peopleCollage from './assets/shotcount-people-collage.png'
@@ -578,14 +579,9 @@ async function verifyAuthSession() {
   authState = 'checking'
   render()
   try {
-    const response = await fetch('/api/auth/session', {
-      credentials: 'include',
-      headers: { accept: 'application/json' },
-      cache: 'no-store',
-    })
-    if (!response.ok) throw new Error('Session check failed')
-    const session = await response.json() as unknown
-    if (!session) {
+    if (!cloudEnabled) throw new Error('Cloud accounts are not configured')
+    const user = await currentUser()
+    if (!user) {
       window.location.replace('https://shotcount.app/?auth=signin')
       return
     }
@@ -598,7 +594,7 @@ async function verifyAuthSession() {
 
 async function signOut() {
   try {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    await signOutCloud()
   } finally {
     window.location.replace('https://shotcount.app/?auth=signin')
   }

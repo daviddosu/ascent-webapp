@@ -96,3 +96,13 @@ describe('offline application contract', () => {
     expect(worker).toContain("event.request.method !== 'GET'")
   })
 })
+
+describe('backend separation contract', () => {
+  it('does not call the retired Shotcount backend', () => {
+    const browserFiles = ['src/main.ts', 'src/data/cloud.ts']
+      .map(file => readFileSync(resolve(root, file), 'utf8'))
+      .join('\n')
+    expect(browserFiles).not.toContain('daviddosu--shotcount-backend')
+    expect(browserFiles).not.toContain('/api/auth/')
+  })
+})
