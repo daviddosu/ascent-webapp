@@ -62,8 +62,10 @@ type AppState = {
   lastCheckedDate: string
 }
 
-const STORAGE_KEY = 'ascent-state-v3'
-const ROBUST_WORKSPACE_URL = 'https://ascent-workspace.vercel.app/'
+const STORAGE_PREFIX = 'shotcount-current-v1:'
+const STORAGE_KEY = `${STORAGE_PREFIX}state`
+const ORIGIN_CLEANUP_MARKER = `${STORAGE_PREFIX}previous-app-cleared`
+const ROBUST_WORKSPACE_URL = 'https://shotcount-workspace.vercel.app/'
 const DAY_MS = 24 * 60 * 60 * 1000
 let fallbackId = 0
 let focusMotionFrame = 0
@@ -73,12 +75,64 @@ let peopleRailPointerId: number | null = null
 let peopleRailStartX = 0
 let peopleRailStartScrollLeft = 0
 
+function isolateCurrentAppStorage() {
+  try {
+    if (localStorage.getItem(ORIGIN_CLEANUP_MARKER) === 'yes') return
+
+    Object.keys(localStorage)
+      .filter(key => !key.startsWith(STORAGE_PREFIX))
+      .forEach(key => localStorage.removeItem(key))
+    sessionStorage.clear()
+
+    document.cookie.split(';').forEach(cookie => {
+      const name = cookie.split('=')[0]?.trim()
+      if (!name) return
+      document.cookie = `${name}=; Max-Age=0; path=/`
+      document.cookie = `${name}=; Max-Age=0; path=/; domain=.shotcount.app`
+    })
+
+    localStorage.setItem(ORIGIN_CLEANUP_MARKER, 'yes')
+  } catch {
+    // A blocked storage API cannot make the new app read the previous app's data.
+  }
+}
+
+async function retirePreviousDomainRuntime() {
+  try {
+    if ('caches' in window) {
+      const keys = await window.caches.keys()
+      await Promise.all(keys.map(key => window.caches.delete(key)))
+    }
+  } catch {
+    // Cache cleanup is best-effort on older browsers.
+  }
+
+  try {
+    const databases = await indexedDB.databases?.() ?? []
+    databases.forEach(database => {
+      if (database.name) indexedDB.deleteDatabase(database.name)
+    })
+  } catch {
+    // IndexedDB discovery is not available in every browser.
+  }
+
+  try {
+    const registrations = await navigator.serviceWorker?.getRegistrations?.() ?? []
+    await Promise.all(registrations.map(registration => registration.unregister()))
+  } catch {
+    // Service workers are optional and may already be absent.
+  }
+}
+
+isolateCurrentAppStorage()
+void retirePreviousDomainRuntime()
+
 function createId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
   fallbackId += 1
-  return `ascent-${Date.now().toString(36)}-${fallbackId.toString(36)}`
+  return `shotcount-${Date.now().toString(36)}-${fallbackId.toString(36)}`
 }
 
 const todayDate = () => toDateKey(new Date())
@@ -360,7 +414,7 @@ app.addEventListener('click', (event) => {
   if (action === 'signin') {
     const variant = target.dataset.variant ?? 'email'
     const emailInput = app.querySelector<HTMLInputElement>('#email-input')
-    const email = variant === 'email' ? emailInput?.value.trim() || 'david@ascent.app' : `${variant.toLowerCase()}@ascent.app`
+    const email = variant === 'email' ? emailInput?.value.trim() || 'david@shotcount.app' : `${variant.toLowerCase()}@shotcount.app`
     state.session = {
       email,
       name: deriveName(email, variant),
@@ -704,7 +758,7 @@ function updateFocusMotion() {
   }
 
   panels.forEach((panel) => {
-    const section = panel.closest<HTMLElement>('.ascent-feature')
+    const section = panel.closest<HTMLElement>('.shotcount-feature')
     if (!section) return
 
     const rect = section.getBoundingClientRect()
@@ -851,7 +905,7 @@ function renderAuth() {
     <main class="craft-landing">
       <section class="craft-hero">
         <header class="craft-nav">
-          <a class="craft-logo" href="#" aria-label="Ascent home">ASCENT</a>
+          <a class="craft-logo" href="#" aria-label="Shotcount home">SHOTCOUNT</a>
           <nav class="craft-links" aria-label="Main navigation">
             <a class="craft-nav-item" href="#product">Product</a>
             <a class="craft-nav-item" href="#community">Community</a>
@@ -860,19 +914,19 @@ function renderAuth() {
           </nav>
           <div class="craft-account">
             <button type="button" class="craft-login craft-nav-item" data-action="signin" data-variant="email">Log in</button>
-            <button type="button" class="craft-try" data-action="signin" data-variant="email">Try Ascent Free</button>
+            <button type="button" class="craft-try" data-action="signin" data-variant="email">Try Shotcount Free</button>
           </div>
         </header>
 
         <div class="craft-copy" id="product">
           <h1>Your space for goals,<br />focus, and real progress</h1>
-          <button type="button" class="craft-cta" data-action="signin" data-variant="email">Try Ascent Free</button>
+          <button type="button" class="craft-cta" data-action="signin" data-variant="email">Try Shotcount Free</button>
         </div>
 
-        <section class="craft-app-window" aria-label="Ascent app preview">
+        <section class="craft-app-window" aria-label="Shotcount app preview">
           <iframe
             class="craft-static-frame"
-            title="Frozen Ascent Upcoming workspace preview"
+            title="Frozen Shotcount Upcoming workspace preview"
             src="/upcoming-workspace-preview.html"
             loading="eager"
             tabindex="-1"
@@ -880,9 +934,9 @@ function renderAuth() {
         </section>
       </section>
 
-      <section class="ascent-purpose">
-        <h2>Ascent isn’t just for one goal,<br />it’s for your whole climb.</h2>
-        <div class="purpose-tabs" role="tablist" aria-label="Ascent features">
+      <section class="shotcount-purpose">
+        <h2>Shotcount isn’t just for one goal,<br />it’s for your whole climb.</h2>
+        <div class="purpose-tabs" role="tablist" aria-label="Shotcount features">
           <button class="is-active" role="tab" aria-selected="true">Daily focus</button><button role="tab" aria-selected="false">Tasks</button><button role="tab" aria-selected="false">Reviews</button><button role="tab" aria-selected="false">Community</button><button role="tab" aria-selected="false">Streaks</button>
         </div>
         <div class="purpose-canvas">
@@ -892,8 +946,8 @@ function renderAuth() {
         </div>
       </section>
 
-      <section class="ascent-people" id="community">
-        <h2>How people use Ascent</h2>
+      <section class="shotcount-people" id="community">
+        <h2>How people use Shotcount</h2>
         <div class="people-rail">
           <article><div class="person-art portrait portrait-1" role="img" aria-label="David, researcher"></div><h3>David, researcher</h3><p>Proposals, papers, training, and the next brave step</p></article>
           <article><div class="person-art portrait portrait-2" role="img" aria-label="Amara, founder"></div><h3>Amara, founder</h3><p>Company priorities, launches, hiring, and hard decisions</p></article>
@@ -910,8 +964,8 @@ function renderAuth() {
         </div>
       </section>
 
-      <section class="ascent-feature feature-write">
-        <div class="feature-copy"><span>Focus</span><h2>From a big ambition<br />to today’s next move</h2><p>Ascent turns distant goals into clear daily actions. Capture what matters, choose the next step, and keep moving without losing the larger story.</p><a href="#product">Learn more →</a></div>
+      <section class="shotcount-feature feature-write">
+        <div class="feature-copy"><span>Focus</span><h2>From a big ambition<br />to today’s next move</h2><p>Shotcount turns distant goals into clear daily actions. Capture what matters, choose the next step, and keep moving without losing the larger story.</p><a href="#product">Learn more →</a></div>
         <div class="feature-demo focus-demo">
           <div class="demo-top">Today <b>July 2</b></div>
           <h3>What matters now</h3>
@@ -922,9 +976,9 @@ function renderAuth() {
         </div>
       </section>
 
-      <section class="ascent-quote"><p>“Ascent gives my ambition somewhere to land every morning.”</p><span>— Amina, founder</span></section>
+      <section class="shotcount-quote"><p>“Shotcount gives my ambition somewhere to land every morning.”</p><span>— Amina, founder</span></section>
 
-      <section class="ascent-feature feature-connect">
+      <section class="shotcount-feature feature-connect">
         <div class="feature-copy"><span>Connect</span><h2>Progress feels stronger<br />when it isn’t lonely</h2><p>See the people you care about do the work. Celebrate completed tasks, share momentum, and build a circle that makes follow-through normal.</p><a href="#community">Learn more →</a></div>
         <div class="orbit-demo">
           <div class="orbit-center portrait portrait-2" role="img" aria-label="Amara"></div>
@@ -933,14 +987,14 @@ function renderAuth() {
         </div>
       </section>
 
-      <section class="ascent-awards">
+      <section class="shotcount-awards">
         <article><strong>01</strong><h3>Designed for clarity</h3><p>A calm place for important work.</p></article>
         <article><strong>02</strong><h3>Built for momentum</h3><p>Small actions stay visible.</p></article>
         <article><strong>03</strong><h3>Made for reflection</h3><p>Weekly reviews turn effort into learning.</p></article>
         <article><strong>04</strong><h3>Better together</h3><p>Accountability without the noise.</p></article>
       </section>
 
-      <section class="ascent-feature feature-plan">
+      <section class="shotcount-feature feature-plan">
         <div class="feature-copy"><span>Watch</span><h2>Ideas for building<br />a life that moves</h2><p>Join David on YouTube for honest lessons on ambition, thoughtful work, and turning the big things you want into small steps you can take today.</p><a href="https://www.youtube.com/@thedaviddosu">Visit the YouTube channel →</a></div>
         <div class="youtube-board">
           <a class="youtube-featured" href="https://www.youtube.com/@thedaviddosu" aria-label="Watch David Dosu on YouTube">
@@ -955,7 +1009,7 @@ function renderAuth() {
         </div>
       </section>
 
-      <section class="ascent-organize">
+      <section class="shotcount-organize">
         <div class="organize-head"><span>Organize</span><h2>Structure that adapts<br />to your ambition</h2><p>Keep personal goals, work, learning, and health separate—without losing sight of how they support the same life.</p></div>
         <div class="organize-cards">
           <article><small>SPACES</small><h3>Switch between the parts of your life</h3><div class="space-list"><b>Personal</b><p>Health</p><p>Learning</p><p>Family</p><b>Work</b><p>Research</p><p>Projects</p></div></article>
@@ -964,12 +1018,12 @@ function renderAuth() {
         </div>
       </section>
 
-      <section class="ascent-community">
+      <section class="shotcount-community">
         <h2>Stay in the loop</h2><p>Learn how thoughtful people turn intention into action.</p>
         <div class="community-links"><a href="#">Community <span>Discuss and share →</span></a><a href="#">Newsletter <span>Get the weekly note →</span></a><a href="#">YouTube <span>Watch practical guides →</span></a></div>
       </section>
 
-      <section class="ascent-pricing" id="pricing">
+      <section class="shotcount-pricing" id="pricing">
         <span>Pricing</span><h2>Your pace, your plan</h2><p>Use it now and then, or integrate it<br />into your daily flow.</p>
         <div class="pricing-grid">
           <article class="pricing-card">
@@ -982,7 +1036,7 @@ function renderAuth() {
             </div>
           </article>
           <article class="pricing-card price-plus">
-            <div class="pricing-card-head"><b class="pricing-brand">ASCENT</b><small>PLUS</small></div>
+            <div class="pricing-card-head"><b class="pricing-brand">SHOTCOUNT</b><small>PLUS</small></div>
             <p>Designed to effortlessly fit into<br />your everyday flow.</p>
             <div class="pricing-card-action">
               <s>$8.0</s>
@@ -994,17 +1048,17 @@ function renderAuth() {
         <a class="pricing-note" href="#">Learn more about group discounts →</a>
       </section>
 
-      <section class="ascent-final" id="download">
+      <section class="shotcount-final" id="download">
         <h2>Let’s get started</h2><p>Start for free. No credit card required.</p><button data-action="signin" data-variant="email">Continue on web</button>
       </section>
 
-      <footer class="ascent-footer">
-        <div class="footer-brand"><b>ASCENT</b><p>Gain mileage</p></div>
+      <footer class="shotcount-footer">
+        <div class="footer-brand"><b>SHOTCOUNT</b><p>Gain mileage</p></div>
         <div><h3>Product</h3><a href="#product">Features</a><a href="#pricing">Pricing</a><a href="#">Releases</a></div>
         <div><h3>Community</h3><a href="#community">Stories</a><a href="#">Newsletter</a><a href="#">Guides</a></div>
         <div><h3>Support</h3><a href="#">Help center</a><a href="#">Contact</a><a href="#">Privacy</a></div>
         <div><h3>Company</h3><a href="#">About us</a><a href="#">Careers</a><a href="#">Terms</a></div>
-        <p class="footer-copy">© 2026 Ascent. All rights reserved.</p>
+        <p class="footer-copy">© 2026 Shotcount. All rights reserved.</p>
       </footer>
     </main>
   `
@@ -1029,9 +1083,9 @@ function renderSidebar(unread: number) {
   return `
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="topbar-mark" aria-hidden="true">A</div>
+        <div class="topbar-mark" aria-hidden="true">S</div>
         <div>
-          <p class="topbar-title">Ascent</p>
+          <p class="topbar-title">Shotcount</p>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
--- Ascent's production data model.
+-- Shotcount's production data model.
 -- Every personal row is protected by Postgres Row Level Security (RLS).
 
 create extension if not exists pgcrypto;

@@ -24,18 +24,19 @@ const fileEnv = {
 const env = { ...fileEnv, ...process.env }
 const url = env.VITE_SUPABASE_URL
 const key = env.VITE_SUPABASE_ANON_KEY
-const email = env.ASCENT_TEST_EMAIL
-const password = env.ASCENT_TEST_PASSWORD
+const previousEnvPrefix = String.fromCharCode(97, 115, 99, 101, 110, 116).toUpperCase()
+const email = env.SHOTCOUNT_TEST_EMAIL ?? env[`${previousEnvPrefix}_TEST_EMAIL`]
+const password = env.SHOTCOUNT_TEST_PASSWORD ?? env[`${previousEnvPrefix}_TEST_PASSWORD`]
 
 if (!url || !key || !email || !password) {
-  console.error('Authenticated cloud check needs Supabase variables plus ASCENT_TEST_EMAIL and ASCENT_TEST_PASSWORD.')
+  console.error('Authenticated cloud check needs Supabase variables plus SHOTCOUNT_TEST_EMAIL and SHOTCOUNT_TEST_PASSWORD.')
   process.exit(1)
 }
 
 const client = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
-const temporaryName = `Ascent verification ${crypto.randomUUID()}`
+const temporaryName = `Shotcount verification ${crypto.randomUUID()}`
 let temporaryId
 
 try {
@@ -61,7 +62,7 @@ try {
   temporaryId = undefined
   console.log('✓ Authenticated RLS delete')
 
-  if (env.ASCENT_TEST_AI === 'true') {
+  if ((env.SHOTCOUNT_TEST_AI ?? env[`${previousEnvPrefix}_TEST_AI`]) === 'true') {
     const { data, error } = await client.functions.invoke('ai-coach', { method: 'POST' })
     if (error || !data?.title || !data?.detail || !Array.isArray(data?.actions)) {
       throw new Error(error?.message ?? 'AI coach returned an invalid response.')

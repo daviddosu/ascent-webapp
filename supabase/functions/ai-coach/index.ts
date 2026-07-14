@@ -47,7 +47,7 @@ Deno.serve(async request => {
       store: false,
       max_output_tokens: 500,
       instructions: [
-        'You are Ascent’s calm planning coach.',
+        'You are Shotcount’s calm planning coach.',
         'Find one useful pattern in the supplied task and review summary.',
         'Be warm, specific, non-judgmental, and concise.',
         'Never diagnose health, infer protected traits, or claim certainty.',
@@ -58,7 +58,7 @@ Deno.serve(async request => {
         verbosity: 'low',
         format: {
           type: 'json_schema',
-          name: 'ascent_coaching',
+          name: 'shotcount_coaching',
           strict: true,
           schema: {
             type: 'object',

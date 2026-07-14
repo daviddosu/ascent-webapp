@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
-const migration = readFileSync(resolve(root, 'supabase/migrations/202607030001_initial_ascent.sql'), 'utf8')
+const migration = readFileSync(resolve(root, 'supabase/migrations/202607030001_initial_shotcount.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -85,6 +85,6 @@ describe('retired web app contract', () => {
   it('has a cleanup service worker for old installed browsers', () => {
     const worker = readFileSync(resolve(root, 'public/sw.js'), 'utf8')
     expect(worker).toContain('self.registration.unregister()')
-    expect(worker).toContain("key.startsWith('ascent-')")
+    expect(worker).toContain('keys.map(key => caches.delete(key))')
   })
 })

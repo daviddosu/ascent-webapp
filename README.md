@@ -1,6 +1,6 @@
-# Ascent
+# Shotcount
 
-Ascent is a social to-do list. The core product idea is simple: people already
+Shotcount is a social to-do list. The core product idea is simple: people already
 know how to make task lists, but they often follow through better when their
 daily tasks and progress are visible to people in their circle.
 
@@ -16,10 +16,10 @@ The main differentiation is the social layer added to everyday task management:
 - The app turns task completion into shared momentum instead of a private list
   that is easy to ignore.
 
-In one sentence: Ascent helps people get things done by making their to-do list
+In one sentence: Shotcount helps people get things done by making their to-do list
 social, visible, and motivating.
 
-The launch wedge is social proof around execution. Ascent should launch around
+The launch wedge is social proof around execution. Shotcount should launch around
 influencers and people others already see as highly productive. By letting users
 see those people's to-do lists and get a feel for how quickly they execute, the
 app can make agency feel learnable. "Agency" here means the ability to decide,
@@ -35,7 +35,7 @@ The app still supports a personal execution loop:
 
 `Goal → Plan → Today → Finish → Review → Improve`
 
-That loop is useful, but it is not the headline. The headline is that Ascent
+That loop is useful, but it is not the headline. The headline is that Shotcount
 adds social visibility and accountability to task completion.
 
 ## What the app does
@@ -68,7 +68,7 @@ pnpm install
 pnpm dev
 ```
 
-The default dev experience opens the landing page. From there, `Try Ascent Free` sends users into the workspace app.
+The default dev experience opens the landing page. From there, `Try Shotcount Free` sends users into the workspace app.
 
 ## Verify the product
 
@@ -85,7 +85,7 @@ Cloud mode adds sign-up, sign-in, secure row-level data isolation, cross-device 
 To enable cloud accounts:
 
 1. Create a Supabase project.
-2. Apply [`supabase/migrations/202607030001_initial_ascent.sql`](supabase/migrations/202607030001_initial_ascent.sql).
+2. Apply [`supabase/migrations/202607030001_initial_shotcount.sql`](supabase/migrations/202607030001_initial_shotcount.sql).
 3. Copy `.env.example` to `.env.local`.
 4. Add the project URL and public anonymous key.
 5. Restart the development server.
@@ -105,13 +105,13 @@ After deployment, verify the cloud surface:
 pnpm check:cloud
 ```
 
-For a disposable test account, add `ASCENT_TEST_EMAIL` and `ASCENT_TEST_PASSWORD`, then verify signed-in create/read/delete behavior:
+For a disposable test account, add `SHOTCOUNT_TEST_EMAIL` and `SHOTCOUNT_TEST_PASSWORD`, then verify signed-in create/read/delete behavior:
 
 ```bash
 pnpm check:cloud:auth
 ```
 
-Set `ASCENT_TEST_AI=true` only when you want that check to make one real, billable AI-coach request.
+Set `SHOTCOUNT_TEST_AI=true` only when you want that check to make one real, billable AI-coach request.
 
 ## Production behavior
 
