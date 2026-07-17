@@ -41,6 +41,14 @@ describe('reference screens', () => {
     expect(document.querySelectorAll('[data-profile-field].is-missing')).toHaveLength(4)
     expect(document.querySelectorAll('.profile-required:not([hidden])')).toHaveLength(4)
     const username = document.querySelector<HTMLInputElement>('[data-profile-form] input[name="username"]')!
+    const bio = document.querySelector<HTMLTextAreaElement>('[data-profile-form] textarea[name="bio"]')!
+    expect(document.querySelectorAll('.profile-info-tip')).toHaveLength(2)
+    expect(document.querySelector('#profile-username-tip')?.textContent).toContain('You can change it')
+    expect(username.getAttribute('aria-describedby')).toBe('profile-username-tip')
+    expect(bio.placeholder).toBe('What are you building?')
+    expect(document.querySelector('#profile-bio-tip')?.textContent).toContain('followers on X')
+    expect(bio.getAttribute('aria-describedby')).toBe('profile-bio-tip')
+    expect(document.querySelector('.profile-form-actions [data-action="close-profile"]')?.textContent).toBe('Not now')
     username.value = 'David.Dosu!'
     username.dispatchEvent(new Event('input', { bubbles: true }))
     expect(username.value).toBe('daviddosu')

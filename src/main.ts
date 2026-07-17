@@ -703,11 +703,24 @@ function renderProfileModal() {
             </label>
             <label class="${fieldState('username')}" data-profile-field="username">
               <span>Username ${required('username')}</span>
-              <div class="profile-username"><i>@</i><input name="username" autocomplete="username" minlength="3" maxlength="30" pattern="[a-z0-9_]{3,30}" value="${escapeHtml(profileDraft.username)}" required /></div>
+              <div class="profile-username">
+                <i>@</i>
+                <input name="username" autocomplete="username" minlength="3" maxlength="30" pattern="[a-z0-9_]{3,30}" value="${escapeHtml(profileDraft.username)}" aria-describedby="profile-username-tip" required />
+                <button type="button" class="profile-info-tip" aria-label="Username help" aria-describedby="profile-username-tip">
+                  <span aria-hidden="true">i</span>
+                  <small class="profile-info-tooltip" id="profile-username-tip" role="tooltip">We suggested this from your name. You can change it.</small>
+                </button>
+              </div>
             </label>
             <label class="profile-form-wide${fieldState('bio')}" data-profile-field="bio">
               <span>Short bio ${required('bio')}</span>
-              <textarea name="bio" maxlength="140" rows="2" placeholder="What are you building?" required>${escapeHtml(profileDraft.bio)}</textarea>
+              <div class="profile-textarea">
+                <textarea name="bio" maxlength="140" rows="2" placeholder="What are you building?" aria-describedby="profile-bio-tip" required>${escapeHtml(profileDraft.bio)}</textarea>
+                <button type="button" class="profile-info-tip" aria-label="Short bio help" aria-describedby="profile-bio-tip">
+                  <span aria-hidden="true">i</span>
+                  <small class="profile-info-tooltip" id="profile-bio-tip" role="tooltip">Try: “Designer at Kuda · 8k followers on X · Building tools for creators.”</small>
+                </button>
+              </div>
             </label>
             <label class="${fieldState('timezone')}" data-profile-field="timezone">
               <span>Timezone ${required('timezone')}</span>
