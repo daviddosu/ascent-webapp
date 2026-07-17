@@ -6,6 +6,7 @@ const root = resolve(import.meta.dirname, '..')
 const migration = readFileSync(resolve(root, 'supabase/migrations/202607030001_initial_shotcount.sql'), 'utf8')
 const plannerMigration = readFileSync(resolve(root, 'supabase/migrations/202607140001_cloud_planner_records.sql'), 'utf8')
 const visibilityMigration = readFileSync(resolve(root, 'supabase/migrations/202607140002_task_visibility.sql'), 'utf8')
+const profileMigration = readFileSync(resolve(root, 'supabase/migrations/202607170001_creator_profiles.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -105,6 +106,22 @@ describe('cloud planner contract', () => {
     expect(sync).not.toContain("from('task_tags').delete().eq('user_id'")
     expect(main).not.toContain('name="tags"')
     expect(sync).not.toContain("recordType: 'task_tag'")
+  })
+})
+
+describe('creator profile contract', () => {
+  it('stores the small profile and keeps new tasks private by default', () => {
+    expect(profileMigration).toContain('add column if not exists username text')
+    expect(profileMigration).toContain("default_task_visibility text not null default 'private'")
+    expect(profileMigration).toContain('onboarding_completed boolean not null default false')
+    expect(profileMigration).toContain('profiles_username_unique_idx')
+    expect(profileMigration).toContain('profiles_completed_fields_check')
+    expect(profileMigration).toContain('not onboarding_completed')
+  })
+
+  it('limits avatar uploads to the owner folder', () => {
+    expect(profileMigration).toContain("values ('avatars', 'avatars', true, 3145728")
+    expect(profileMigration).toContain('(storage.foldername(name))[1] = (select auth.uid())::text')
   })
 })
 

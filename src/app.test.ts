@@ -33,9 +33,26 @@ beforeAll(async () => {
 })
 
 describe('reference screens', () => {
+  it('uses one short profile pop-over from Settings', () => {
+    document.querySelector<HTMLButtonElement>('[data-action="settings"]')!.click()
+    expect(document.querySelector('[role="dialog"] h2')?.textContent).toBe('Your profile')
+    expect(document.querySelectorAll('[data-profile-form] input, [data-profile-form] textarea, [data-profile-form] select')).toHaveLength(6)
+    expect(document.querySelector<HTMLSelectElement>('[name="defaultTaskVisibility"]')?.value).toBe('private')
+    expect(document.querySelectorAll('[data-profile-field].is-missing')).toHaveLength(4)
+    expect(document.querySelectorAll('.profile-required:not([hidden])')).toHaveLength(4)
+    const username = document.querySelector<HTMLInputElement>('[data-profile-form] input[name="username"]')!
+    username.value = 'David.Dosu!'
+    username.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(username.value).toBe('daviddosu')
+    expect(username.closest('[data-profile-field]')?.classList.contains('is-missing')).toBe(false)
+    document.querySelector<HTMLButtonElement>('.profile-form-actions [data-action="close-profile"]')!.click()
+    expect(document.querySelector('.profile-popover')).toBeNull()
+  })
+
   it('shows the Shotcount name without the square S badge in the mobile top bar', () => {
     expect(document.querySelector('.mobile-brand')?.textContent).toBe('Shotcount')
     expect(document.querySelector('.mobile-brand span')).toBeNull()
+    expect(document.querySelector<HTMLButtonElement>('.mobile-profile-button')?.getAttribute('aria-label')).toBe('Profile')
   })
 
   it('opens Today with its task inspector', () => {

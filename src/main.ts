@@ -1,5 +1,17 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
 import { cloudEnabled, currentUser, getCloudClient, signOut as signOutCloud } from './data/cloud'
+import {
+  loadCreatorProfile,
+  isCreatorProfileComplete,
+  missingCreatorProfileFields,
+  normalizeUsername,
+  profileDefaults,
+  saveCreatorProfile,
+  uploadProfilePhoto,
+  type CreatorProfile,
+  type CreatorProfileField,
+  type CreatorProfileInput,
+} from './data/profile'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
@@ -32,6 +44,15 @@ const authRequired = !isPreviewMode && (window.location.hostname === 'app.shotco
 let authState: AuthState = authRequired ? 'checking' : 'authenticated'
 let plannerRepository: CloudPlannerRepository | null = null
 let syncState: SyncState = { status: 'loading', message: 'Loading your workspace…', pending: 0 }
+let activeUser: Awaited<ReturnType<typeof currentUser>> = null
+let creatorProfile: CreatorProfile | null = null
+let profileDraft: CreatorProfileInput = profileDefaults()
+let profileModalOpen = false
+let profileBusy = false
+let profileError = ''
+let profilePhotoFile: File | null = null
+let profilePhotoPreview = ''
+let profilePromptDismissed = false
 type CommunityProfile = {
   id: string
   name: string
@@ -393,6 +414,10 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
 }
 
+function defaultTaskVisibility() {
+  return creatorProfile?.defaultTaskVisibility ?? profileDraft.defaultTaskVisibility ?? 'private'
+}
+
 function persistPlanner() {
   if (plannerRepository) {
     plannerRepository.save({ tasks, goals })
@@ -564,6 +589,7 @@ function render() {
       ${showInspector && selected ? renderInspector(selected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
+    ${renderProfileModal()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
 }
@@ -577,6 +603,132 @@ function renderSyncStatus() {
     failed: 'Save failed',
   }
   return `<div class="cloud-sync-state cloud-sync-state--${syncState.status}" role="status" aria-live="polite" title="${escapeHtml(syncState.message)}"><i></i><span>${labels[syncState.status]}</span>${syncState.pending ? `<b>${syncState.pending}</b>` : ''}</div>`
+}
+
+function profileInput(profile: CreatorProfile): CreatorProfileInput {
+  return {
+    username: profile.username,
+    displayName: profile.displayName,
+    bio: profile.bio,
+    avatarUrl: profile.avatarUrl,
+    timezone: profile.timezone,
+    defaultTaskVisibility: profile.defaultTaskVisibility,
+  }
+}
+
+function profileInputWithAccountDefaults(profile: CreatorProfile, user = activeUser): CreatorProfileInput {
+  const input = profileInput(profile)
+  const defaults = profileDefaults(user)
+  return {
+    ...input,
+    displayName: input.displayName || defaults.displayName,
+    username: input.username || defaults.username,
+    avatarUrl: input.avatarUrl || defaults.avatarUrl,
+    timezone: !profile.onboardingCompleted && input.timezone === 'UTC' ? defaults.timezone : input.timezone,
+  }
+}
+
+function captureProfileDraft(form = document.querySelector<HTMLFormElement>('[data-profile-form]')) {
+  if (!form) return
+  const data = new FormData(form)
+  profileDraft = {
+    ...profileDraft,
+    displayName: String(data.get('displayName') ?? '').trimStart(),
+    username: normalizeUsername(String(data.get('username') ?? '')),
+    bio: String(data.get('bio') ?? '').slice(0, 140),
+    timezone: String(data.get('timezone') ?? '').trim() || profileDraft.timezone,
+    defaultTaskVisibility: normalizeTaskVisibility(data.get('defaultTaskVisibility')),
+  }
+}
+
+function currentProfileMissingFields() {
+  return missingCreatorProfileFields({
+    ...profileDraft,
+    avatarUrl: profilePhotoPreview || profileDraft.avatarUrl,
+  })
+}
+
+function refreshProfileMissingMarkers() {
+  const missing = new Set(currentProfileMissingFields())
+  document.querySelectorAll<HTMLElement>('[data-profile-field]').forEach(field => {
+    const isMissing = missing.has(field.dataset.profileField as CreatorProfileField)
+    field.classList.toggle('is-missing', isMissing)
+    const badge = field.querySelector<HTMLElement>('.profile-required')
+    if (badge) badge.hidden = !isMissing
+  })
+}
+
+function clearProfilePhotoPreview() {
+  if (profilePhotoPreview.startsWith('blob:')) URL.revokeObjectURL(profilePhotoPreview)
+  profilePhotoPreview = ''
+  profilePhotoFile = null
+}
+
+function openProfileModal() {
+  profileDraft = creatorProfile ? profileInputWithAccountDefaults(creatorProfile) : profileDraft
+  profilePromptDismissed = false
+  profileError = ''
+  profileModalOpen = true
+  render()
+  queueMicrotask(() => document.querySelector<HTMLInputElement>('[data-profile-form] input[name="displayName"]')?.focus())
+}
+
+function renderProfileModal() {
+  if (!profileModalOpen) return ''
+  const photo = profilePhotoPreview || profileDraft.avatarUrl
+  const initial = profileDraft.displayName.trim().charAt(0).toUpperCase() || 'S'
+  const missing = new Set(currentProfileMissingFields())
+  const fieldState = (field: CreatorProfileField) => missing.has(field) ? ' is-missing' : ''
+  const required = (field: CreatorProfileField) => `<small class="profile-required" ${missing.has(field) ? '' : 'hidden'} aria-label="required">*</small>`
+  return `
+    <div class="profile-popover" role="presentation">
+      <button type="button" class="profile-popover-backdrop" data-action="close-profile" aria-label="Close profile setup"></button>
+      <section class="profile-popover-card" role="dialog" aria-modal="true" aria-labelledby="profile-popover-title">
+        <button type="button" class="profile-popover-close" data-action="close-profile" aria-label="Close profile setup">×</button>
+        <h2 id="profile-popover-title">Your profile</h2>
+        <form class="profile-form" data-profile-form>
+          <div class="profile-photo-row${fieldState('avatarUrl')}" data-profile-field="avatarUrl">
+            <div class="profile-photo-preview" aria-hidden="true">
+              ${photo ? `<img src="${escapeHtml(photo)}" alt="" />` : `<span>${escapeHtml(initial)}</span>`}
+            </div>
+            <label class="profile-photo-button">
+              <span>${photo ? 'Change photo' : 'Add photo'} ${required('avatarUrl')}</span>
+              <input name="photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-profile-photo />
+            </label>
+          </div>
+          <div class="profile-form-grid">
+            <label class="${fieldState('displayName')}" data-profile-field="displayName">
+              <span>Name ${required('displayName')}</span>
+              <input name="displayName" autocomplete="name" maxlength="80" value="${escapeHtml(profileDraft.displayName)}" required />
+            </label>
+            <label class="${fieldState('username')}" data-profile-field="username">
+              <span>Username ${required('username')}</span>
+              <div class="profile-username"><i>@</i><input name="username" autocomplete="username" minlength="3" maxlength="30" pattern="[a-z0-9_]{3,30}" value="${escapeHtml(profileDraft.username)}" required /></div>
+            </label>
+            <label class="profile-form-wide${fieldState('bio')}" data-profile-field="bio">
+              <span>Short bio ${required('bio')}</span>
+              <textarea name="bio" maxlength="140" rows="2" placeholder="What are you building?" required>${escapeHtml(profileDraft.bio)}</textarea>
+            </label>
+            <label class="${fieldState('timezone')}" data-profile-field="timezone">
+              <span>Timezone ${required('timezone')}</span>
+              <input name="timezone" autocomplete="off" value="${escapeHtml(profileDraft.timezone)}" required />
+            </label>
+            <label class="${fieldState('defaultTaskVisibility')}" data-profile-field="defaultTaskVisibility">
+              <span>New tasks ${required('defaultTaskVisibility')}</span>
+              <select name="defaultTaskVisibility" aria-label="Default task visibility">
+                ${renderVisibilityOptions(profileDraft.defaultTaskVisibility)}
+              </select>
+            </label>
+          </div>
+          <p class="profile-form-error" role="alert">${escapeHtml(profileError)}</p>
+          <div class="profile-form-actions">
+            <button type="button" data-action="close-profile">Not now</button>
+            <button type="submit" ${profileBusy ? 'disabled' : ''}>${profileBusy ? 'Saving…' : 'Save profile'}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `
 }
 
 function replacePlannerWorkspace(workspace: { tasks: Task[]; goals: Goal[] }) {
@@ -632,8 +784,21 @@ async function verifyAuthSession() {
         if (authState === 'authenticated') render()
       },
     })
-    const workspace = await plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] })
+    activeUser = user
+    const [workspace, profileResult] = await Promise.all([
+      plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] }),
+      loadCreatorProfile(user)
+        .then(value => ({ ok: true as const, value }))
+        .catch(() => ({ ok: false as const, value: null })),
+    ])
     replacePlannerWorkspace(workspace)
+    if (profileResult.ok) {
+      creatorProfile = profileResult.value
+      profileDraft = creatorProfile ? profileInputWithAccountDefaults(creatorProfile, user) : profileDefaults(user)
+      profilePromptDismissed = false
+      profileModalOpen = !isCreatorProfileComplete(profileDraft)
+      resetTodayComposerDraft()
+    }
     authState = 'authenticated'
   } catch {
     authState = 'error'
@@ -645,6 +810,9 @@ async function signOut() {
   try {
     plannerRepository?.destroy()
     plannerRepository = null
+    activeUser = null
+    creatorProfile = null
+    clearProfilePhotoPreview()
     window.localStorage.removeItem(plannerStorageKey)
     window.localStorage.removeItem(goalsStorageKey)
     await signOutCloud()
@@ -653,17 +821,37 @@ async function signOut() {
   }
 }
 
+async function refreshSignedInProfile() {
+  if (!activeUser || profileModalOpen || profileBusy) return
+  try {
+    const latest = await loadCreatorProfile(activeUser)
+    creatorProfile = latest
+    profileDraft = latest ? profileInputWithAccountDefaults(latest, activeUser) : profileDefaults(activeUser)
+    if (!profilePromptDismissed && !isCreatorProfileComplete(profileDraft)) profileModalOpen = true
+    render()
+  } catch {
+    // A temporary profile check must never block the task workspace.
+  }
+}
+
 function renderMobileTopbar() {
+  const profilePhoto = creatorProfile?.avatarUrl || profileDraft.avatarUrl
+  const profileInitial = (creatorProfile?.displayName || profileDraft.displayName).trim().charAt(0).toUpperCase() || 'S'
   return `
     <header class="mobile-topbar">
       <div class="mobile-brand"><strong>Shotcount</strong></div>
-      <button
-        type="button"
-        class="mobile-theme-toggle"
-        data-action="toggle-theme"
-        aria-label="Use ${theme === 'dark' ? 'light' : 'dark'} mode"
-        title="Use ${theme === 'dark' ? 'light' : 'dark'} mode"
-      >${icon('moon')}</button>
+      <div class="mobile-topbar-actions">
+        <button type="button" class="mobile-profile-button" data-action="settings" aria-label="Profile">
+          ${profilePhoto ? `<img src="${escapeHtml(profilePhoto)}" alt="" />` : `<span>${escapeHtml(profileInitial)}</span>`}
+        </button>
+        <button
+          type="button"
+          class="mobile-theme-toggle"
+          data-action="toggle-theme"
+          aria-label="Use ${theme === 'dark' ? 'light' : 'dark'} mode"
+          title="Use ${theme === 'dark' ? 'light' : 'dark'} mode"
+        >${icon('moon')}</button>
+      </div>
     </header>
   `
 }
@@ -850,7 +1038,7 @@ function resetTodayComposerDraft() {
     goalId: activeGoalId ?? goals[0]?.id ?? '',
     due: todayKey,
     time: '',
-    visibility: 'private',
+    visibility: defaultTaskVisibility(),
   }
 }
 
@@ -987,7 +1175,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
       ${isWeek ? `<input name="due" aria-label="Task date" type="date" min="${dateKey(addDays(now, 2))}" max="${weekEndKey}" value="${dateKey(addDays(now, 2))}" required />` : `<span class="planner-date">${formatTaskDate(tomorrowKey)}</span>`}
       <input name="time" aria-label="Task time, optional" type="time" />
       <select name="goalId" aria-label="Goal">${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
-      <select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions('private')}</select>
+      <select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions(defaultTaskVisibility())}</select>
       <button type="submit">Add</button>
       <button type="button" class="planner-cancel" data-action="close-planner" aria-label="Cancel">×</button>
     </form>
@@ -1298,7 +1486,7 @@ function renderCalendarComposer() {
         <label><span>People</span><input name="attendees" value="${escapeHtml(editing?.attendees ?? '')}" placeholder="Optional" /></label>
       </div>
       <div class="calendar-composer-row calendar-composer-row--visibility">
-        <label><span>Visibility</span><select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions(editing?.visibility)}</select></label>
+        <label><span>Visibility</span><select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions(editing?.visibility ?? defaultTaskVisibility())}</select></label>
       </div>
       <div class="calendar-composer-actions">${editing ? '<button type="button" class="danger" data-action="unschedule-task">Remove time</button>' : '<span></span>'}<button type="button" data-action="close-calendar-composer">Cancel</button><button type="submit">Save</button></div>
     </form>
@@ -1568,8 +1756,42 @@ function scheduleTask(taskId: string, date: string, time = '09:00') {
   }, 1400)
 }
 
-app.addEventListener('submit', event => {
+app.addEventListener('submit', async event => {
   const target = event.target as HTMLElement
+  const profileForm = target.closest<HTMLFormElement>('[data-profile-form]')
+  if (profileForm) {
+    event.preventDefault()
+    captureProfileDraft(profileForm)
+    if (!activeUser) {
+      profileError = 'Sign in to save your profile.'
+      render()
+      return
+    }
+    profileBusy = true
+    profileError = ''
+    render()
+    try {
+      if (profilePhotoFile) profileDraft.avatarUrl = await uploadProfilePhoto(activeUser, profilePhotoFile)
+      creatorProfile = await saveCreatorProfile(activeUser, profileDraft)
+      profileDraft = profileInput(creatorProfile)
+      profileModalOpen = false
+      profileBusy = false
+      clearProfilePhotoPreview()
+      resetTodayComposerDraft()
+      toast = 'Profile saved'
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 1400)
+    } catch (error) {
+      profileBusy = false
+      profileError = error instanceof Error ? error.message : 'Your profile could not be saved.'
+      render()
+    }
+    return
+  }
+
   const goalForm = target.closest<HTMLFormElement>('[data-goal-form]')
   if (goalForm) {
     event.preventDefault()
@@ -1671,6 +1893,18 @@ app.addEventListener('submit', event => {
 
 app.addEventListener('input', event => {
   const target = event.target as HTMLElement
+  const usernameInput = target.closest<HTMLInputElement>('[data-profile-form] input[name="username"]')
+  if (usernameInput) {
+    usernameInput.value = normalizeUsername(usernameInput.value)
+    captureProfileDraft()
+    refreshProfileMissingMarkers()
+    return
+  }
+  if (target.closest('[data-profile-form]')) {
+    captureProfileDraft()
+    refreshProfileMissingMarkers()
+    return
+  }
   const calendarInput = target.closest<HTMLInputElement>('[data-calendar-search]')
   if (calendarInput) {
     const cursor = calendarInput.selectionStart ?? calendarInput.value.length
@@ -1683,6 +1917,28 @@ app.addEventListener('input', event => {
 })
 
 app.addEventListener('change', event => {
+  const profilePhoto = (event.target as HTMLElement).closest<HTMLInputElement>('[data-profile-photo]')
+  if (profilePhoto) {
+    captureProfileDraft()
+    const file = profilePhoto.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/') || file.size > 3 * 1024 * 1024) {
+      profileError = file.size > 3 * 1024 * 1024 ? 'Choose an image smaller than 3 MB.' : 'Choose an image file.'
+      render()
+      return
+    }
+    clearProfilePhotoPreview()
+    profilePhotoFile = file
+    profilePhotoPreview = URL.createObjectURL(file)
+    profileError = ''
+    render()
+    return
+  }
+  if ((event.target as HTMLElement).closest('[data-profile-form]')) {
+    captureProfileDraft()
+    refreshProfileMissingMarkers()
+    return
+  }
   const select = (event.target as HTMLElement).closest<HTMLSelectElement>('[data-task-visibility]')
   if (!select) return
   const task = tasks.find(item => item.id === select.dataset.taskVisibility)
@@ -1830,6 +2086,20 @@ app.addEventListener('click', async event => {
     return
   }
   if (!action) return
+  if (action === 'close-profile') {
+    captureProfileDraft()
+    profilePromptDismissed = true
+    profileModalOpen = false
+    profileBusy = false
+    profileError = ''
+    clearProfilePhotoPreview()
+    render()
+    return
+  }
+  if (action === 'settings') {
+    openProfileModal()
+    return
+  }
   if (action === 'toggle-theme') {
     toggleTheme()
     return
@@ -2003,7 +2273,6 @@ app.addEventListener('click', async event => {
   } else {
     const messages: Record<string, string> = {
       'discover-people': 'More communities coming soon',
-      settings: 'Settings',
       signout: 'Signed out',
     }
     toast = messages[action] ?? ''
@@ -2062,6 +2331,15 @@ app.addEventListener('drop', event => {
 document.addEventListener('keydown', event => {
   const target = event.target as HTMLElement
   const isTyping = target.matches('input, textarea, select') || target.isContentEditable
+  if (event.key === 'Escape' && profileModalOpen) {
+    captureProfileDraft()
+    profileModalOpen = false
+    profileBusy = false
+    profileError = ''
+    clearProfilePhotoPreview()
+    render()
+    return
+  }
   if (event.key === 'Escape' && mobileInspectorOpen) {
     mobileInspectorOpen = false
     render()
@@ -2095,7 +2373,10 @@ window.addEventListener('popstate', render)
 window.addEventListener('online', () => void plannerRepository?.syncNow())
 window.addEventListener('offline', () => void plannerRepository?.syncNow())
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') void plannerRepository?.refresh()
+  if (document.visibilityState === 'visible') {
+    void plannerRepository?.refresh()
+    void refreshSignedInProfile()
+  }
 })
 dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {
   refreshDateContext(reference)
