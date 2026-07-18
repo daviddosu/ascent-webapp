@@ -113,6 +113,19 @@ describe('cloud planner contract', () => {
   })
 })
 
+describe('Google Calendar account upgrade contract', () => {
+  it('automatically upgrades existing Google accounts without looping OAuth', () => {
+    const main = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
+    const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
+    expect(cloud).toContain('export function hasGoogleIdentity')
+    expect(cloud).toContain("identity.provider === 'google'")
+    expect(main).toContain('populateGoogleCalendarForExistingUser')
+    expect(main).toContain('claimGoogleCalendarConsentAttempt')
+    expect(main).toContain('window.sessionStorage.getItem(key)')
+    expect(main).toContain("nextView === 'calendar'")
+  })
+})
+
 describe('creator profile contract', () => {
   it('stores the small profile and keeps new tasks private by default', () => {
     expect(profileMigration).toContain('add column if not exists username text')
