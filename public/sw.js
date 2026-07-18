@@ -26,3 +26,33 @@ self.addEventListener('fetch', event => {
       .catch(() => caches.match(event.request).then(response => response || caches.match('/index.html'))),
   )
 })
+
+self.addEventListener('push', event => {
+  const payload = event.data?.json?.() ?? {}
+  event.waitUntil((async () => {
+    const openWindows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    if (openWindows.some(client => client.visibilityState === 'visible')) return
+    await self.registration.showNotification(payload.title || 'Shotcount', {
+      body: payload.body || 'Someone you follow just finished today.',
+      icon: payload.icon || '/favicon.svg',
+      badge: payload.badge || '/favicon.svg',
+      tag: payload.tag || 'shotcount-completion',
+      data: { url: payload.url || '/' },
+      silent: false,
+    })
+  })())
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).href
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const existing = windows.find(client => new URL(client.url).origin === self.location.origin)
+    if (existing) {
+      await existing.navigate(target)
+      return existing.focus()
+    }
+    return self.clients.openWindow(target)
+  })())
+})

@@ -524,18 +524,8 @@ describe('reference screens', () => {
     document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
   })
 
-  it('saves completion alerts, quiet hours, and creator mute controls', async () => {
-    document.querySelector<HTMLButtonElement>('[data-action="notification-settings"]')!.click()
-    const form = document.querySelector<HTMLFormElement>('[data-notification-form]')!
-    expect(document.querySelector('[role="dialog"] h2')?.textContent).toBe('Notification settings')
-    expect(form.querySelector<HTMLInputElement>('[name="completionAlerts"]')!.checked).toBe(true)
-    const quietEnabled = form.querySelector<HTMLInputElement>('[name="quietHoursEnabled"]')!
-    quietEnabled.checked = true
-    form.querySelector<HTMLInputElement>('[name="quietStart"]')!.value = '21:30'
-    form.querySelector<HTMLInputElement>('[name="quietEnd"]')!.value = '07:15'
-    form.requestSubmit()
-    expect(document.querySelector('[data-notification-form]')).toBeNull()
-
+  it('keeps creator muting on the creator page without a notification settings screen', async () => {
+    expect(document.querySelector('[data-notification-form], .notification-card')).toBeNull()
     document.querySelector<HTMLButtonElement>('[data-community="amara"]')!.click()
     await vi.waitFor(() => expect(document.querySelectorAll('.creator-task-row')).toHaveLength(6))
     document.querySelector<HTMLButtonElement>('[data-creator-task]')!.click()
@@ -546,9 +536,15 @@ describe('reference screens', () => {
     mute.click()
     expect(document.querySelector('[data-mute-creator="amara"]')?.getAttribute('aria-pressed')).toBe('true')
     document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
-    document.querySelector<HTMLButtonElement>('[data-action="notification-settings"]')!.click()
-    expect(document.querySelector('[data-unmute-creator="amara"]')).not.toBeNull()
-    document.querySelector<HTMLButtonElement>('[data-action="close-notification-settings"]')!.click()
+  })
+
+  it('enables browser delivery from one top-right bell', async () => {
+    const bell = document.querySelector<HTMLButtonElement>('.notification-bell')!
+    expect(bell.getAttribute('aria-pressed')).toBe('false')
+    bell.click()
+    await vi.waitFor(() => expect(document.querySelector('.notification-bell')?.getAttribute('aria-pressed')).toBe('true'))
+    expect(document.querySelector('.toast')?.textContent).toBe('Alerts are on')
+    expect(document.querySelector('[data-notification-form], .notification-card')).toBeNull()
   })
 
   it('toggles dark mode and remembers it', () => {

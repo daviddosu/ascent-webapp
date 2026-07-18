@@ -9,6 +9,7 @@ const visibilityMigration = readFileSync(resolve(root, 'supabase/migrations/2026
 const profileMigration = readFileSync(resolve(root, 'supabase/migrations/202607170001_creator_profiles.sql'), 'utf8')
 const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_creator_directory.sql'), 'utf8')
 const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
+const webPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607180005_web_push.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -190,6 +191,33 @@ describe('offline application contract', () => {
   it('opens personal creator paths through the same small web app', () => {
     const vercel = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')) as { rewrites: Array<{ destination: string }> }
     expect(vercel.rewrites[0]?.destination).toBe('/index.html')
+  })
+
+  it('receives background push and opens the creator page safely', () => {
+    const worker = readFileSync(resolve(root, 'public/sw.js'), 'utf8')
+    expect(worker).toContain("addEventListener('push'")
+    expect(worker).toContain('showNotification')
+    expect(worker).toContain("addEventListener('notificationclick'")
+    expect(worker).toContain("visibilityState === 'visible'")
+  })
+})
+
+describe('web push contract', () => {
+  it('stores a separate protected subscription for every browser', () => {
+    expect(webPushMigration).toContain('create table if not exists public.push_subscriptions')
+    expect(webPushMigration).toContain('alter table public.push_subscriptions enable row level security')
+    expect(webPushMigration).toContain('user_id = (select auth.uid())')
+    expect(webPushMigration).toContain('create table if not exists public.push_deliveries')
+    expect(webPushMigration).toContain('primary key (completion_event_id, push_subscription_id)')
+  })
+
+  it('keeps VAPID private keys inside the server sender', () => {
+    const sender = readFileSync(resolve(root, 'supabase/functions/send-completion-push/index.ts'), 'utf8')
+    const browser = readFileSync(resolve(root, 'src/data/notifications.ts'), 'utf8')
+    expect(sender).toContain("Deno.env.get('VAPID_PRIVATE_KEY')")
+    expect(sender).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')")
+    expect(sender).toContain('push_deliveries')
+    expect(browser).not.toContain('VAPID_PRIVATE_KEY')
   })
 })
 

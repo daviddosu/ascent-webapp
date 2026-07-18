@@ -22,14 +22,17 @@ import {
 } from './data/community'
 import {
   defaultNotificationPreferences,
+  dispatchCompletionPush,
+  enableWebPush,
   loadCompletionFeed,
   loadCreatorToday,
   loadNotificationPreferences,
-  saveNotificationPreferences,
   setCreatorMuted,
   subscribeToCompletionAlerts,
+  webPushStatus,
   type CreatorCompletion,
   type SharedCreatorTask,
+  type WebPushStatus,
 } from './data/notifications'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
 import type { SyncState } from './data/contracts'
@@ -458,17 +461,16 @@ type CreatorTodayState = {
 let creatorTodayState: CreatorTodayState | null = null
 let selectedCreatorTaskId = ''
 let notificationPreferences = defaultNotificationPreferences()
-let notificationSettingsOpen = false
-let notificationSettingsBusy = false
-let notificationSettingsError = ''
+let browserPushStatus: WebPushStatus = 'available'
+let browserPushBusy = false
 let islandCompletions: CreatorCompletion[] = []
 let queuedCompletions: CreatorCompletion[] = []
 let completionBatchTimer = 0
 let islandDismissTimer = 0
 let completionSubscription: (() => void) | null = null
 let lastCompletionCheck = new Date(Date.now() - 15_000).toISOString()
+let notificationAudioContext: AudioContext | null = null
 const islandPreview = previewParams.get('previewIsland')
-const notificationPreview = previewParams.has('previewNotifications')
 const islandHook = window as Window & {
   __shotcountShowCompletion?: (items?: CreatorCompletion[]) => void
 }
@@ -600,8 +602,39 @@ function clearIsland() {
 function showQueuedCompletions() {
   if (islandCompletions.length || !queuedCompletions.length) return
   islandCompletions = queuedCompletions.splice(0)
+  playShotcountChime()
+  triggerHaptic([22, 34, 46])
   render()
   islandDismissTimer = window.setTimeout(clearIsland, 6_000)
+}
+
+function playShotcountChime() {
+  if (document.visibilityState === 'hidden' || typeof AudioContext === 'undefined') return
+  try {
+    notificationAudioContext ??= new AudioContext()
+    const context = notificationAudioContext
+    void context.resume()
+    const master = context.createGain()
+    master.gain.setValueAtTime(0.0001, context.currentTime)
+    master.gain.exponentialRampToValueAtTime(0.075, context.currentTime + 0.018)
+    master.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.72)
+    master.connect(context.destination)
+    ;[659.25, 830.61, 987.77].forEach((frequency, index) => {
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      const startsAt = context.currentTime + index * 0.085
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(frequency, startsAt)
+      gain.gain.setValueAtTime(0.0001, startsAt)
+      gain.gain.exponentialRampToValueAtTime(0.5 - index * 0.09, startsAt + 0.025)
+      gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + 0.42)
+      oscillator.connect(gain).connect(master)
+      oscillator.start(startsAt)
+      oscillator.stop(startsAt + 0.45)
+    })
+  } catch {
+    // Sound is a gentle enhancement. The Island still appears if audio is blocked.
+  }
 }
 
 function queueCompletionAlerts(items: CreatorCompletion[], immediate = false) {
@@ -630,7 +663,9 @@ async function startNotificationSystem() {
   completionSubscription?.()
   completionSubscription = null
   try {
-    notificationPreferences = await loadNotificationPreferences()
+    const [preferences, pushStatus] = await Promise.all([loadNotificationPreferences(), webPushStatus()])
+    notificationPreferences = preferences
+    browserPushStatus = pushStatus
     completionSubscription = await subscribeToCompletionAlerts(() => void checkForCompletionAlerts())
     await checkForCompletionAlerts()
   } catch {
@@ -836,6 +871,7 @@ function render() {
   app.innerHTML = `
     <div class="reference-app ${showInspector || showCreatorInspector ? 'with-inspector' : ''}">
       ${authRequired ? renderSyncStatus() : ''}
+      ${renderNotificationBell()}
       ${renderSidebar()}
       <main class="workspace">
         ${renderMobileTopbar()}
@@ -847,9 +883,14 @@ function render() {
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
     ${renderShotcountIsland()}
     ${renderProfileModal()}
-    ${renderNotificationSettings()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function renderNotificationBell() {
+  const enabled = browserPushStatus === 'enabled'
+  const label = enabled ? 'Browser alerts are on' : browserPushBusy ? 'Turning on browser alerts' : 'Enable browser alerts'
+  return `<button type="button" class="notification-bell ${authRequired ? 'has-sync' : ''} ${enabled ? 'is-enabled' : ''} ${browserPushBusy ? 'is-busy' : ''}" data-action="notification-bell" aria-label="${label}" aria-pressed="${enabled}">${icon('bell')}<i aria-hidden="true"></i></button>`
 }
 
 function renderShotcountIsland() {
@@ -940,46 +981,6 @@ function renderCreatorInspector(task: SharedCreatorTask) {
       <p class="creator-readonly-note">Read only · ${visibilityLabels[task.visibility]}</p>
     </div>
   </aside>`
-}
-
-function renderNotificationSettings() {
-  if (!notificationSettingsOpen) return ''
-  const mutedProfiles = communityProfiles.filter(profile => notificationPreferences.mutedCreatorIds.includes(profile.id))
-  return `
-    <div class="profile-popover notification-popover" role="presentation">
-      <button type="button" class="profile-popover-backdrop" data-action="close-notification-settings" aria-label="Close notification settings"></button>
-      <section class="profile-popover-card notification-card" role="dialog" aria-modal="true" aria-labelledby="notification-settings-title">
-        <button type="button" class="profile-popover-close" data-action="close-notification-settings" aria-label="Close notification settings">×</button>
-        <p class="notification-eyebrow">Shotcount Island</p>
-        <h2 id="notification-settings-title">Notification settings</h2>
-        <p class="notification-intro">Choose when the little completion pill can say hello.</p>
-        <form class="notification-form" data-notification-form>
-          <label class="notification-switch-row">
-            <span><strong>Completion alerts</strong><small>Show when people you follow finish today.</small></span>
-            <input type="checkbox" name="completionAlerts" ${notificationPreferences.completionAlerts ? 'checked' : ''} />
-          </label>
-          <label class="notification-switch-row">
-            <span><strong>Quiet hours</strong><small>Keep the Island hidden while you rest or focus.</small></span>
-            <input type="checkbox" name="quietHoursEnabled" ${notificationPreferences.quietHoursEnabled ? 'checked' : ''} />
-          </label>
-          <div class="quiet-hours-fields">
-            <label><span>From</span><input type="time" name="quietStart" value="${escapeHtml(notificationPreferences.quietStart)}" /></label>
-            <span aria-hidden="true">→</span>
-            <label><span>Until</span><input type="time" name="quietEnd" value="${escapeHtml(notificationPreferences.quietEnd)}" /></label>
-          </div>
-          <section class="muted-creators">
-            <div><strong>Muted creators</strong><small>They stay followed. Their completion pills stay quiet.</small></div>
-            ${mutedProfiles.length ? mutedProfiles.map(profile => `<div class="muted-creator-row"><span>${escapeHtml(profile.name)} <small>@${escapeHtml(profile.username)}</small></span><button type="button" data-unmute-creator="${profile.id}">Unmute</button></div>`).join('') : '<p>No one is muted.</p>'}
-          </section>
-          <p class="profile-form-error" role="alert">${escapeHtml(notificationSettingsError)}</p>
-          <div class="notification-actions">
-            <button type="button" data-action="close-notification-settings">Cancel</button>
-            <button type="submit" ${notificationSettingsBusy ? 'disabled' : ''}>${notificationSettingsBusy ? 'Saving…' : 'Save settings'}</button>
-          </div>
-        </form>
-      </section>
-    </div>
-  `
 }
 
 function renderSyncStatus() {
@@ -1324,7 +1325,7 @@ function renderMobileTopbar() {
     <header class="mobile-topbar">
       <div class="mobile-brand"><strong>Shotcount</strong></div>
       <div class="mobile-topbar-actions">
-        <button type="button" class="mobile-alert-button" data-action="notification-settings" aria-label="Notification settings">${icon('bell')}</button>
+        <button type="button" class="mobile-alert-button ${browserPushStatus === 'enabled' ? 'is-enabled' : ''}" data-action="notification-bell" aria-label="${browserPushStatus === 'enabled' ? 'Browser alerts are on' : 'Enable browser alerts'}" aria-pressed="${browserPushStatus === 'enabled'}">${icon('bell')}<i aria-hidden="true"></i></button>
         <button type="button" class="mobile-profile-button" data-action="settings" aria-label="Profile">
           ${profilePhoto ? `<img src="${escapeHtml(profilePhoto)}" alt="" />` : `<span>${escapeHtml(profileInitial)}</span>`}
         </button>
@@ -1417,7 +1418,6 @@ function renderSidebar() {
       </section>
 
       <div class="sidebar-bottom">
-        <button class="side-row" data-action="notification-settings">${icon('bell')}<span>Alerts</span></button>
         <button class="side-row" data-action="settings">${icon('settings')}<span>Settings</span></button>
         <button class="side-row" data-action="signout">${icon('logout')}<span>Sign out</span></button>
       </div>
@@ -2248,39 +2248,6 @@ function scheduleTask(taskId: string, date: string, time = '09:00') {
 
 app.addEventListener('submit', async event => {
   const target = event.target as HTMLElement
-  const notificationForm = target.closest<HTMLFormElement>('[data-notification-form]')
-  if (notificationForm) {
-    event.preventDefault()
-    const data = new FormData(notificationForm)
-    notificationPreferences = {
-      ...notificationPreferences,
-      completionAlerts: data.get('completionAlerts') === 'on',
-      quietHoursEnabled: data.get('quietHoursEnabled') === 'on',
-      quietStart: String(data.get('quietStart') ?? '22:00'),
-      quietEnd: String(data.get('quietEnd') ?? '08:00'),
-    }
-    notificationSettingsBusy = true
-    notificationSettingsError = ''
-    render()
-    try {
-      if (!showDemoData) await saveNotificationPreferences(notificationPreferences, creatorProfile?.timezone ?? profileDraft.timezone)
-      notificationSettingsBusy = false
-      notificationSettingsOpen = false
-      if (!notificationPreferences.completionAlerts) clearIsland()
-      toast = 'Notification settings saved'
-      render()
-      window.setTimeout(() => {
-        toast = ''
-        render()
-      }, 1400)
-    } catch (error) {
-      notificationSettingsBusy = false
-      notificationSettingsError = error instanceof Error ? error.message : 'Notification settings could not be saved.'
-      render()
-    }
-    return
-  }
-
   const profileForm = target.closest<HTMLFormElement>('[data-profile-form]')
   if (profileForm) {
     event.preventDefault()
@@ -2527,6 +2494,12 @@ app.addEventListener('click', async event => {
       triggerHaptic(65)
     }
     persistPlanner()
+    if (!wasCompleted) {
+      const todayTasks = tasksForToday()
+      if (todayTasks.length && todayTasks.every(item => completedTaskIds.has(item.id))) {
+        window.setTimeout(() => void dispatchCompletionPush().catch(() => undefined), 3_200)
+      }
+    }
     render()
     return
   }
@@ -2658,17 +2631,42 @@ app.addEventListener('click', async event => {
     await openCreatorToday(creatorTodayState.profile)
     return
   }
-  if (action === 'notification-settings') {
-    notificationSettingsError = ''
-    notificationSettingsOpen = true
+  if (action === 'notification-bell') {
+    if (browserPushBusy) return
+    if (browserPushStatus === 'enabled') {
+      playShotcountChime()
+      toast = 'Alerts are on'
+      render()
+      window.setTimeout(() => { toast = ''; render() }, 1400)
+      return
+    }
+    if (browserPushStatus === 'blocked') {
+      toast = 'Allow Shotcount in this browser’s notification settings'
+      render()
+      window.setTimeout(() => { toast = ''; render() }, 2200)
+      return
+    }
+    if (browserPushStatus === 'unsupported') {
+      toast = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+        ? 'On iPhone, add Shotcount to your Home Screen first'
+        : 'This browser does not support background alerts'
+      render()
+      window.setTimeout(() => { toast = ''; render() }, 2600)
+      return
+    }
+    browserPushBusy = true
+    playShotcountChime()
     render()
-    return
-  }
-  if (action === 'close-notification-settings') {
-    notificationSettingsBusy = false
-    notificationSettingsError = ''
-    notificationSettingsOpen = false
-    render()
+    try {
+      browserPushStatus = showDemoData ? 'enabled' : await enableWebPush()
+      toast = browserPushStatus === 'enabled' ? 'Alerts are on' : 'Alerts were not enabled'
+    } catch (error) {
+      toast = error instanceof Error ? error.message : 'Browser alerts could not be enabled'
+    } finally {
+      browserPushBusy = false
+      render()
+      window.setTimeout(() => { toast = ''; render() }, 2200)
+    }
     return
   }
   if (action === 'continue-google') {
@@ -2966,7 +2964,6 @@ document.addEventListener('keydown', event => {
 
 rememberCreatorIntent(creatorSlugFromLocation())
 if (!authRequired) resolveCreatorIntent()
-if (notificationPreview) notificationSettingsOpen = true
 const previewCompletion = (name: string, id: string, completedCount = 6, taskTitle = 'Approve the onboarding flow'): CreatorCompletion => ({
   id: `preview-${id}`,
   creatorId: id,
