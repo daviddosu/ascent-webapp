@@ -293,12 +293,15 @@ describe('reference screens', () => {
     refreshAppDate()
   })
 
-  it('opens the Calendar as a week planner with an unscheduled tray', () => {
+  it('opens the Calendar in Month and keeps the detailed week planner available', () => {
     document.querySelector<HTMLButtonElement>('[data-view="calendar"]')!.click()
+    expect(document.querySelector('[data-calendar-mode="month"]')?.classList.contains('active')).toBe(true)
+    expect(document.querySelector('.calendar-month')).not.toBeNull()
+    expect(document.querySelector('.unscheduled-tray')?.textContent).toContain('To schedule')
+    document.querySelector<HTMLButtonElement>('[data-calendar-mode="week"]')!.click()
     expect(document.querySelector('[data-calendar-mode="week"]')?.classList.contains('active')).toBe(true)
     expect(document.querySelector('.calendar-header h1')?.textContent).toContain(String(new Date().getFullYear()))
     expect(document.querySelectorAll('.calendar-day-head:not(.spacer)')).toHaveLength(7)
-    expect(document.querySelector('.unscheduled-tray')?.textContent).toContain('To schedule')
     expect(document.querySelectorAll('.calendar-event')).toHaveLength(1)
     expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(1)
     document.querySelector<HTMLButtonElement>('[data-calendar-mode="day"]')!.click()

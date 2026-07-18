@@ -10,6 +10,7 @@ const profileMigration = readFileSync(resolve(root, 'supabase/migrations/2026071
 const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_creator_directory.sql'), 'utf8')
 const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
 const webPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607180005_web_push.sql'), 'utf8')
+const googleCalendarMigration = readFileSync(resolve(root, 'supabase/migrations/202607180006_google_calendar_sync.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -170,6 +171,29 @@ describe('secret isolation', () => {
     const coachFunction = readFileSync(resolve(root, 'supabase/functions/ai-coach/index.ts'), 'utf8')
     expect(deleteFunction).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')")
     expect(coachFunction).toContain("Deno.env.get('OPENAI_API_KEY')")
+  })
+})
+
+describe('Google Calendar sync contract', () => {
+  it('keeps imported events private to their signed-in owner', () => {
+    expect(googleCalendarMigration).toContain('alter table public.google_calendar_events enable row level security')
+    expect(googleCalendarMigration).toContain('user_id = (select auth.uid())')
+    expect(googleCalendarMigration).toContain('google_calendar_events_owner')
+    expect(googleCalendarMigration).toContain('unique (user_id, calendar_id, google_event_id)')
+  })
+
+  it('stores sync health separately from calendar content', () => {
+    expect(googleCalendarMigration).toContain('create table if not exists public.google_calendar_sync_state')
+    expect(googleCalendarMigration).toContain("'needs_permission'")
+    expect(googleCalendarMigration).toContain('last_synced_at timestamptz')
+  })
+
+  it('requests read-only access and never ships a Google client secret', () => {
+    const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
+    const sync = readFileSync(resolve(root, 'src/data/google-calendar.ts'), 'utf8')
+    expect(cloud).toContain('https://www.googleapis.com/auth/calendar.readonly')
+    expect(sync).toContain('https://www.googleapis.com/calendar/v3')
+    expect(sync).not.toContain('GOOGLE_CLIENT_SECRET')
   })
 })
 

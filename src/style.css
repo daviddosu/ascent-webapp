@@ -782,6 +782,23 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 }
 .calendar-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
 .calendar-title-row { display: flex; align-items: center; gap: 12px; }
+.google-calendar-status {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid #dedede;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #fff;
+  color: #666;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.google-calendar-status::before { width: 6px; height: 6px; border-radius: 50%; background: #34a853; content: ''; }
+.google-calendar-status.needs-permission::before { background: #4285f4; }
+.google-calendar-status.has-error::before { background: #d64149; }
+.google-calendar-status.is-syncing::before { background: #fbbc04; animation: saved-pulse 1.2s ease-in-out infinite; }
 .calendar-header h1 { margin: 0 0 21px; font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif; font-size: 23px; line-height: 1; font-weight: 600; letter-spacing: -.02em; }
 .calendar-tabs {
   display: inline-flex;
@@ -1015,6 +1032,20 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   justify-content: flex-start;
   text-align: left;
 }
+.calendar-event > a,
+.calendar-event > div {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+  padding: 8px 9px;
+  color: inherit;
+  text-decoration: none;
+}
+.google-calendar-event { border-left-style: solid; }
+.google-calendar-name { font-weight: 600; }
 .calendar-event strong { overflow: hidden; max-width: 100%; font-size: 11px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event span, .calendar-event small { margin-top: 3px; color: #6f6f6f; font-size: 9px; }
 .calendar-event-chips {
@@ -1048,6 +1079,15 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   min-width: 720px;
   display: grid;
   grid-template-columns: repeat(7, minmax(98px, 1fr));
+}
+.month-event.google-month-event {
+  display: block;
+  overflow: hidden;
+  color: inherit;
+  line-height: 1.5;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .month-weekday { padding: 14px 12px; border-bottom: 1px solid #ececec; color: #777; font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .month-day {
@@ -2150,6 +2190,7 @@ body[data-theme='dark'] .community-launch-popover {
 body[data-theme='dark'] .calendar-tabs,
 body[data-theme='dark'] .calendar-search,
 body[data-theme='dark'] .calendar-toolbar,
+body[data-theme='dark'] .google-calendar-status,
 body[data-theme='dark'] .calendar-nav button,
 body[data-theme='dark'] .calendar-goal-filters button,
 body[data-theme='dark'] .calendar-stats span,
@@ -2161,6 +2202,12 @@ body[data-theme='dark'] .calendar-composer {
 
 body[data-theme='dark'] .calendar-search input {
   background: transparent;
+}
+
+body[data-theme='dark'] .google-calendar-status {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+  color: var(--dark-muted);
 }
 
 body[data-theme='dark'] .calendar-search:focus-within {

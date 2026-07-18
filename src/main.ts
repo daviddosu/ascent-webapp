@@ -1,5 +1,12 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
-import { cloudEnabled, currentUser, getCloudClient, signOut as signOutCloud } from './data/cloud'
+import { cloudEnabled, connectGoogleCalendar, currentUser, getCloudClient, signOut as signOutCloud } from './data/cloud'
+import {
+  loadGoogleCalendarEvents,
+  loadGoogleCalendarSyncState,
+  syncGoogleCalendar,
+  type GoogleCalendarEvent,
+  type GoogleCalendarSyncState,
+} from './data/google-calendar'
 import {
   loadCreatorProfile,
   isCreatorProfileComplete,
@@ -59,6 +66,7 @@ type CalendarMode = 'day' | 'week' | 'month'
 type Theme = 'light' | 'dark'
 const previewParams = new URLSearchParams(window.location.search)
 const previewView = previewParams.get('previewView')
+const previewGoogleCalendar = previewParams.has('previewGoogleCalendar')
 const isPreviewMode = previewParams.has('previewView')
 const showDemoData = isPreviewMode || import.meta.env.MODE === 'test'
 type AuthState = 'checking' | 'authenticated' | 'unauthenticated' | 'error'
@@ -337,12 +345,32 @@ let todayComposerDraft: TodayComposerDraft = {
   visibility: 'private',
 }
 let toast = ''
-let calendarMode: CalendarMode = 'week'
+let calendarMode: CalendarMode = 'month'
 let calendarDate = new Date(now)
 let calendarComposer: { date: string; time: string; taskId?: string } | null = null
 let calendarSearch = ''
 let draggingCalendarTaskId: string | null = null
 const hiddenCalendarGoalIds = new Set<string>()
+let googleCalendarEvents: GoogleCalendarEvent[] = previewGoogleCalendar ? [{
+  id: 'google-preview',
+  googleEventId: 'google-preview',
+  calendarId: 'primary',
+  calendarName: 'Google Calendar',
+  calendarColor: '#4285f4',
+  title: 'Google design review',
+  startAt: `${todayKey}T10:00:00.000Z`,
+  endAt: `${todayKey}T11:00:00.000Z`,
+  startDate: null,
+  endDate: null,
+  allDay: false,
+  location: 'Google Meet',
+  htmlLink: 'https://calendar.google.com/calendar/event?eid=preview',
+}] : []
+let googleCalendarState: GoogleCalendarSyncState = previewGoogleCalendar
+  ? { status: 'synced', lastSyncedAt: new Date().toISOString(), message: '' }
+  : { status: 'idle', lastSyncedAt: null, message: '' }
+let googleCalendarBusy = false
+let googleCalendarSyncTimer: number | undefined
 const demoCommunityProfiles: CommunityProfile[] = [
   {
     id: 'amara',
@@ -1199,7 +1227,7 @@ async function verifyAuthSession() {
       },
     })
     activeUser = user
-    const [workspace, profileResult, communityResult] = await Promise.all([
+    const [workspace, profileResult, communityResult, googleEventsResult, googleStateResult] = await Promise.all([
       plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] }),
       loadCreatorProfile(user)
         .then(value => ({ ok: true as const, value }))
@@ -1207,6 +1235,12 @@ async function verifyAuthSession() {
       loadCreatorDirectory()
         .then(value => ({ ok: true as const, value }))
         .catch(() => ({ ok: false as const, value: [] as CommunityCreator[] })),
+      loadGoogleCalendarEvents(user)
+        .then(value => ({ ok: true as const, value }))
+        .catch(() => ({ ok: false as const, value: [] as GoogleCalendarEvent[] })),
+      loadGoogleCalendarSyncState(user)
+        .then(value => ({ ok: true as const, value }))
+        .catch(() => ({ ok: false as const, value: { status: 'idle', lastSyncedAt: null, message: '' } as GoogleCalendarSyncState })),
     ])
     replacePlannerWorkspace(workspace)
     if (profileResult.ok) {
@@ -1218,8 +1252,11 @@ async function verifyAuthSession() {
     }
     if (communityResult.ok) applyCommunityDirectory(communityResult.value)
     else communityState = 'failed'
+    if (googleEventsResult.ok) googleCalendarEvents = googleEventsResult.value
+    if (googleStateResult.ok) googleCalendarState = googleStateResult.value
     authState = 'authenticated'
     void startNotificationSystem()
+    void refreshGoogleCalendar(true)
   } catch {
     authState = 'error'
   }
@@ -1228,6 +1265,10 @@ async function verifyAuthSession() {
 
 async function signOut() {
   try {
+    if (googleCalendarSyncTimer !== undefined) window.clearTimeout(googleCalendarSyncTimer)
+    googleCalendarSyncTimer = undefined
+    googleCalendarEvents = []
+    googleCalendarState = { status: 'idle', lastSyncedAt: null, message: '' }
     completionSubscription?.()
     completionSubscription = null
     plannerRepository?.destroy()
@@ -1254,6 +1295,45 @@ async function refreshSignedInProfile() {
   } catch {
     // A temporary profile check must never block the task workspace.
   }
+}
+
+function scheduleGoogleCalendarSync() {
+  if (googleCalendarSyncTimer !== undefined) window.clearTimeout(googleCalendarSyncTimer)
+  if (!activeUser || googleCalendarState.status === 'needs_permission') return
+  googleCalendarSyncTimer = window.setTimeout(() => void refreshGoogleCalendar(true), 5 * 60 * 1000)
+}
+
+async function refreshGoogleCalendar(runRemoteSync = false) {
+  if (!activeUser || googleCalendarBusy) return
+  googleCalendarBusy = true
+  if (runRemoteSync) googleCalendarState = { ...googleCalendarState, status: 'syncing', message: '' }
+  if (view === 'calendar') render()
+  try {
+    if (runRemoteSync) googleCalendarState = await syncGoogleCalendar(activeUser)
+    googleCalendarEvents = await loadGoogleCalendarEvents(activeUser)
+  } catch (error) {
+    googleCalendarState = {
+      status: 'failed',
+      lastSyncedAt: googleCalendarState.lastSyncedAt,
+      message: error instanceof Error ? error.message : 'Google Calendar could not sync.',
+    }
+  } finally {
+    googleCalendarBusy = false
+    scheduleGoogleCalendarSync()
+    if (view === 'calendar') render()
+  }
+}
+
+async function beginGoogleCalendarConnection() {
+  if (googleCalendarBusy) return
+  googleCalendarBusy = true
+  googleCalendarState = { ...googleCalendarState, status: 'syncing', message: '' }
+  render()
+  const { error } = await connectGoogleCalendar()
+  if (!error) return
+  googleCalendarBusy = false
+  googleCalendarState = { ...googleCalendarState, status: 'failed', message: error.message }
+  render()
 }
 
 function resolveCreatorIntent() {
@@ -1771,8 +1851,10 @@ function renderActivityGraph() {
 }
 
 function renderCalendar() {
-  const scheduled = calendarOccurrences()
-  const visible = scheduled.filter(item => !hiddenCalendarGoalIds.has(item.task.goalId ?? '') && taskMatchesCalendarSearch(item.task))
+  const scheduled: CalendarOccurrence[] = [...calendarOccurrences(), ...googleCalendarOccurrences()]
+  const visible = scheduled.filter(item => item.source === 'google'
+    ? googleEventMatchesCalendarSearch(item.event)
+    : !hiddenCalendarGoalIds.has(item.task.goalId ?? '') && taskMatchesCalendarSearch(item.task))
   const unscheduled = tasks.filter(task =>
     !task.time &&
     !completedTaskIds.has(task.id) &&
@@ -1780,13 +1862,14 @@ function renderCalendar() {
     taskMatchesCalendarSearch(task)
   )
   const conflicts = countCalendarConflicts(visible)
-  const plannedMinutes = visible.reduce((total, item) => total + (item.task.duration ?? 30), 0)
+  const plannedMinutes = visible.reduce((total, item) => total + (item.source === 'google' && item.event.allDay ? 0 : calendarOccurrenceDuration(item)), 0)
   return `
     <section class="calendar-screen">
       <header class="calendar-header">
         <div>
           <div class="calendar-title-row">
             <h1>${formatCalendarTitle()}</h1>
+            ${renderGoogleCalendarStatus()}
           </div>
           <div class="calendar-tabs"><button class="${calendarMode === 'day' ? 'active' : ''}" data-calendar-mode="day">Day</button><button class="${calendarMode === 'week' ? 'active' : ''}" data-calendar-mode="week">Week</button><button class="${calendarMode === 'month' ? 'active' : ''}" data-calendar-mode="month">Month</button></div>
         </div>
@@ -1820,6 +1903,18 @@ function renderCalendar() {
   `
 }
 
+function renderGoogleCalendarStatus() {
+  if (googleCalendarState.status === 'needs_permission') {
+    return '<button class="google-calendar-status needs-permission" data-action="connect-google-calendar">Connect Google Calendar</button>'
+  }
+  if (googleCalendarState.status === 'syncing') return '<span class="google-calendar-status is-syncing">Google · Syncing…</span>'
+  if (googleCalendarState.status === 'failed') {
+    return `<button class="google-calendar-status has-error" data-action="sync-google-calendar" title="${escapeHtml(googleCalendarState.message)}">Google · Retry</button>`
+  }
+  if (googleCalendarState.status === 'synced') return '<button class="google-calendar-status" data-action="sync-google-calendar">Google · Synced</button>'
+  return '<button class="google-calendar-status" data-action="connect-google-calendar">Connect Google Calendar</button>'
+}
+
 function calendarDateKey(date = calendarDate) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -1840,13 +1935,39 @@ function formatCalendarTitle() {
   return calendarDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-type CalendarOccurrence = { task: Task; date: string }
+type TaskCalendarOccurrence = { source: 'shotcount'; task: Task; date: string }
+type GoogleCalendarOccurrence = { source: 'google'; event: GoogleCalendarEvent; date: string; time: string; duration: number }
+type CalendarOccurrence = TaskCalendarOccurrence | GoogleCalendarOccurrence
 
-function calendarOccurrences(): CalendarOccurrence[] {
+function calendarOccurrences(): TaskCalendarOccurrence[] {
   const dates = calendarMode === 'month' ? monthGridDates(calendarDate) : visibleCalendarDates()
   return dates.flatMap(date => tasks
     .filter(task => task.time && !completedTaskIds.has(task.id) && taskOccursOn(task, date))
-    .map(task => ({ task, date })))
+    .map(task => ({ source: 'shotcount' as const, task, date })))
+}
+
+function googleCalendarOccurrences(): GoogleCalendarOccurrence[] {
+  const visibleDates = calendarMode === 'month' ? monthGridDates(calendarDate) : visibleCalendarDates()
+  return googleCalendarEvents.flatMap(event => {
+    if (event.allDay && event.startDate) {
+      const end = event.endDate ?? event.startDate
+      return visibleDates
+        .filter(date => date >= event.startDate! && date < end)
+        .map(date => ({ source: 'google' as const, event, date, time: '06:00', duration: 30 }))
+    }
+    if (!event.startAt) return []
+    const start = new Date(event.startAt)
+    const end = event.endAt ? new Date(event.endAt) : new Date(start.getTime() + 30 * 60 * 1000)
+    const date = dateKey(start)
+    if (!visibleDates.includes(date)) return []
+    return [{
+      source: 'google' as const,
+      event,
+      date,
+      time: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
+      duration: Math.max(15, Math.round((end.getTime() - start.getTime()) / 60_000)),
+    }]
+  })
 }
 
 function taskOccursOn(task: Task, date: string) {
@@ -1903,6 +2024,7 @@ function renderNowLine() {
 }
 
 function renderCalendarBlock(item: CalendarOccurrence, all: CalendarOccurrence[]) {
+  if (item.source === 'google') return renderGoogleCalendarBlock(item, all)
   const { task, date } = item
   const goal = goals.find(candidate => candidate.id === task.goalId)
   const start = timeToMinutes(task.time!)
@@ -1910,9 +2032,8 @@ function renderCalendarBlock(item: CalendarOccurrence, all: CalendarOccurrence[]
   const top = Math.max(0, (start - 360) / 60 * 64)
   const height = Math.max(28, duration / 60 * 64)
   const conflict = all.some(other =>
-    other !== item &&
-    other.date === date &&
-    rangesOverlap(start, start + duration, timeToMinutes(other.task.time!), timeToMinutes(other.task.time!) + (other.task.duration ?? 30))
+    other !== item && other.date === date && !calendarOccurrenceAllDay(other) &&
+    rangesOverlap(start, start + duration, timeToMinutes(calendarOccurrenceTime(other)), timeToMinutes(calendarOccurrenceTime(other)) + calendarOccurrenceDuration(other))
   )
   return `
     <article class="calendar-event ${conflict ? 'conflict' : ''}" draggable="true" data-calendar-task="${task.id}" data-occurrence-date="${date}" style="--event-color:${goal?.color ?? '#8a9aad'};--event-top:${top}px;--event-height:${height}px">
@@ -1923,6 +2044,23 @@ function renderCalendarBlock(item: CalendarOccurrence, all: CalendarOccurrence[]
         ${task.location ? `<small>${escapeHtml(task.location)}</small>` : ''}
         ${renderCalendarDetailChips(task)}
       </button>
+    </article>
+  `
+}
+
+function renderGoogleCalendarBlock(item: GoogleCalendarOccurrence, all: CalendarOccurrence[]) {
+  const { event, date, time, duration } = item
+  const start = timeToMinutes(time)
+  const top = Math.max(0, (start - 360) / 60 * 64)
+  const height = Math.max(28, duration / 60 * 64)
+  const conflict = !event.allDay && all.some(other =>
+    other !== item && other.date === date && !calendarOccurrenceAllDay(other) &&
+    rangesOverlap(start, start + duration, timeToMinutes(calendarOccurrenceTime(other)), timeToMinutes(calendarOccurrenceTime(other)) + calendarOccurrenceDuration(other))
+  )
+  const content = `<strong>${escapeHtml(event.title)}</strong><span>${event.allDay ? 'All day' : `${formatTaskTime(time)} · ${formatDuration(duration)}`}</span><small class="google-calendar-name">${escapeHtml(event.calendarName)}</small>${event.location ? `<small>${escapeHtml(event.location)}</small>` : ''}`
+  return `
+    <article class="calendar-event google-calendar-event ${conflict ? 'conflict' : ''}" data-google-event="${escapeHtml(event.googleEventId)}" style="--event-color:${event.calendarColor};--event-top:${top}px;--event-height:${height}px">
+      ${event.htmlLink ? `<a href="${escapeHtml(event.htmlLink)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtml(event.title)} in Google Calendar">${content}</a>` : `<div>${content}</div>`}
     </article>
   `
 }
@@ -1939,6 +2077,12 @@ function renderCalendarMonth(occurrences: CalendarOccurrence[]) {
         return `<div class="month-day ${day.getMonth() !== currentMonth ? 'outside' : ''} ${date === todayKey ? 'today' : ''}" data-calendar-drop-date="${date}">
           <button data-calendar-slot="${date}|09:00">${day.getDate()}</button>
           ${dayItems.slice(0, 3).map(item => {
+            if (item.source === 'google') {
+              const content = `${item.event.allDay ? '' : `${formatTaskTime(item.time)} `}${escapeHtml(item.event.title)}`
+              return item.event.htmlLink
+                ? `<a class="month-event google-month-event" href="${escapeHtml(item.event.htmlLink)}" target="_blank" rel="noreferrer" style="--event-color:${item.event.calendarColor}">${content}</a>`
+                : `<span class="month-event google-month-event" style="--event-color:${item.event.calendarColor}">${content}</span>`
+            }
             const goal = goals.find(candidate => candidate.id === item.task.goalId)
             return `<button class="month-event" draggable="true" data-calendar-task="${item.task.id}" data-action="edit-calendar-task" data-task-id="${item.task.id}" style="--event-color:${goal?.color ?? '#8a9aad'}">${escapeHtml(item.task.title)}</button>`
           }).join('')}
@@ -2003,12 +2147,31 @@ function taskMatchesCalendarSearch(task: Task) {
   return [task.title, task.description, task.location, task.attendees].some(value => value?.toLowerCase().includes(query))
 }
 
+function googleEventMatchesCalendarSearch(event: GoogleCalendarEvent) {
+  const query = calendarSearch.trim().toLowerCase()
+  if (!query) return true
+  return [event.title, event.calendarName, event.location].some(value => value.toLowerCase().includes(query))
+}
+
+function calendarOccurrenceTime(item: CalendarOccurrence) {
+  return item.source === 'google' ? item.time : item.task.time!
+}
+
+function calendarOccurrenceDuration(item: CalendarOccurrence) {
+  return item.source === 'google' ? item.duration : item.task.duration ?? 30
+}
+
+function calendarOccurrenceAllDay(item: CalendarOccurrence) {
+  return item.source === 'google' && item.event.allDay
+}
+
 function countCalendarConflicts(items: CalendarOccurrence[]) {
   return items.filter((item, index) => {
-    const start = timeToMinutes(item.task.time!)
+    if (calendarOccurrenceAllDay(item)) return false
+    const start = timeToMinutes(calendarOccurrenceTime(item))
     return items.slice(0, index).some(other =>
-      other.date === item.date &&
-      rangesOverlap(start, start + (item.task.duration ?? 30), timeToMinutes(other.task.time!), timeToMinutes(other.task.time!) + (other.task.duration ?? 30))
+      other.date === item.date && !calendarOccurrenceAllDay(other) &&
+      rangesOverlap(start, start + calendarOccurrenceDuration(item), timeToMinutes(calendarOccurrenceTime(other)), timeToMinutes(calendarOccurrenceTime(other)) + calendarOccurrenceDuration(other))
     )
   }).length
 }
@@ -2466,6 +2629,7 @@ app.addEventListener('change', event => {
 
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
+  const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
   const muteCreatorId = target.closest<HTMLElement>('[data-mute-creator]')?.dataset.muteCreator
   const unmuteCreatorId = target.closest<HTMLElement>('[data-unmute-creator]')?.dataset.unmuteCreator
   const creatorMuteId = muteCreatorId || unmuteCreatorId
@@ -2620,6 +2784,16 @@ app.addEventListener('click', async event => {
     return
   }
 
+  if (action === 'connect-google-calendar') {
+    void beginGoogleCalendarConnection()
+    return
+  }
+
+  if (action === 'sync-google-calendar') {
+    void refreshGoogleCalendar(true)
+    return
+  }
+
   const calendarGoalId = target.closest<HTMLElement>('[data-calendar-goal]')?.dataset.calendarGoal
   if (calendarGoalId) {
     if (hiddenCalendarGoalIds.has(calendarGoalId)) hiddenCalendarGoalIds.delete(calendarGoalId)
@@ -2635,7 +2809,6 @@ app.addEventListener('click', async event => {
     return
   }
 
-  const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
   if (action === 'copy-creator-link') {
     captureProfileDraft()
     const username = normalizeCreatorSlug(profileDraft.username)
@@ -3033,6 +3206,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     void plannerRepository?.refresh()
     void refreshSignedInProfile()
+    const lastGoogleSync = googleCalendarState.lastSyncedAt ? new Date(googleCalendarState.lastSyncedAt).getTime() : 0
+    void refreshGoogleCalendar(googleCalendarState.status !== 'needs_permission' && Date.now() - lastGoogleSync > 5 * 60 * 1000)
     void checkForCompletionAlerts()
   }
 })

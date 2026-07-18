@@ -52,6 +52,24 @@ export async function signOut() {
   await client.auth.signOut()
 }
 
+export async function connectGoogleCalendar() {
+  const client = await ensureCloud()
+  if (!client) return { error: new Error('Cloud accounts are not configured.') }
+  const { error } = await client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/`,
+      scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+      queryParams: {
+        access_type: 'offline',
+        include_granted_scopes: 'true',
+        prompt: 'consent',
+      },
+    },
+  })
+  return { error }
+}
+
 export async function deleteCloudAccount() {
   const client = await ensureCloud()
   if (!client) throw new Error('Cloud accounts are not configured.')
