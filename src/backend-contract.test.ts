@@ -7,7 +7,8 @@ const migration = readFileSync(resolve(root, 'supabase/migrations/202607030001_i
 const plannerMigration = readFileSync(resolve(root, 'supabase/migrations/202607140001_cloud_planner_records.sql'), 'utf8')
 const visibilityMigration = readFileSync(resolve(root, 'supabase/migrations/202607140002_task_visibility.sql'), 'utf8')
 const profileMigration = readFileSync(resolve(root, 'supabase/migrations/202607170001_creator_profiles.sql'), 'utf8')
-const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_public_creator_today.sql'), 'utf8')
+const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_creator_directory.sql'), 'utf8')
+const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -125,6 +126,19 @@ describe('creator profile contract', () => {
     expect(profileMigration).toContain('(storage.foldername(name))[1] = (select auth.uid())::text')
   })
 
+  it('shares only the small public creator card and real follower state', () => {
+    expect(creatorDirectoryMigration).toContain('create or replace function public.creator_directory')
+    expect(creatorDirectoryMigration).toContain('security definer')
+    expect(creatorDirectoryMigration).toContain("set search_path = ''")
+    expect(creatorDirectoryMigration).toContain('profile.onboarding_completed')
+    expect(creatorDirectoryMigration).toContain('follower_count bigint')
+    expect(creatorDirectoryMigration).toContain('followed_by_me boolean')
+    expect(creatorDirectoryMigration).toContain('grant execute on function public.creator_directory(text) to anon, authenticated')
+    expect(creatorDirectoryMigration).not.toContain('profile.email')
+    expect(creatorDirectoryMigration).not.toContain('profile.timezone')
+    expect(creatorDirectoryMigration).not.toContain('planner_records')
+  })
+
   it('returns a small read-only creator Today bundle through the server', () => {
     expect(creatorTodayMigration).toContain('create or replace function public.get_creator_today')
     expect(creatorTodayMigration).toContain('security definer')
@@ -132,10 +146,7 @@ describe('creator profile contract', () => {
     expect(creatorTodayMigration).toContain('profile.onboarding_completed = true')
     expect(creatorTodayMigration).toContain("task.visibility in ('public', 'followers')")
     expect(creatorTodayMigration).toContain('public.can_read_planner_task(creator.id, task.record_id)')
-    expect(creatorTodayMigration).toContain("task.data ->> 'due'")
     expect(creatorTodayMigration).not.toContain("task.data ->> 'description'")
-    expect(creatorTodayMigration).not.toContain("task.data ->> 'location'")
-    expect(creatorTodayMigration).not.toContain("task.data ->> 'attendees'")
     expect(creatorTodayMigration).toContain('revoke all on function public.get_creator_today(text) from public')
   })
 })
@@ -174,6 +185,11 @@ describe('offline application contract', () => {
     expect(worker).toContain("'/index.html'")
     expect(worker).toContain("caches.match('/index.html')")
     expect(worker).toContain("event.request.method !== 'GET'")
+  })
+
+  it('opens personal creator paths through the same small web app', () => {
+    const vercel = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')) as { rewrites: Array<{ destination: string }> }
+    expect(vercel.rewrites[0]?.destination).toBe('/index.html')
   })
 })
 

@@ -1,6 +1,15 @@
-import { cloud, currentUser } from './cloud'
-import { getCloudClient } from './cloud'
+import { currentUser, getCloudClient } from './cloud'
 import { normalizeTask, type Task } from './planner-model'
+
+export type CommunityCreator = {
+  id: string
+  username: string
+  displayName: string
+  bio: string
+  avatarUrl: string
+  followerCount: number
+  followedByMe: boolean
+}
 
 export type CreatorTodayProfile = {
   id: string
@@ -19,20 +28,55 @@ export type CreatorToday = {
 }
 
 type CreatorTodayPayload = {
-  profile?: {
-    id?: unknown
-    username?: unknown
-    displayName?: unknown
-    bio?: unknown
-    avatarUrl?: unknown
-    timezone?: unknown
-  }
+  profile?: Record<string, unknown>
   date?: unknown
   viewerIsFollowing?: unknown
   tasks?: unknown
 }
 
-export async function loadCreatorToday(username: string): Promise<CreatorToday | null> {
+type CommunityCreatorRow = {
+  id: string
+  username: string
+  display_name: string
+  bio: string
+  avatar_url: string
+  follower_count: number | string
+  followed_by_me: boolean
+}
+
+function mapCommunityCreator(row: CommunityCreatorRow): CommunityCreator {
+  return {
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    bio: row.bio,
+    avatarUrl: row.avatar_url,
+    followerCount: Number(row.follower_count) || 0,
+    followedByMe: Boolean(row.followed_by_me),
+  }
+}
+
+export function normalizeCreatorSlug(value: string | null | undefined) {
+  const normalized = String(value ?? '').trim().toLowerCase().replace(/^@/, '')
+  return /^[a-z0-9_]{3,30}$/.test(normalized) ? normalized : ''
+}
+
+export function formatFollowerCount(count: number) {
+  if (count < 1_000) return String(Math.max(0, count))
+  if (count < 1_000_000) return `${(count / 1_000).toFixed(count < 10_000 ? 1 : 0).replace(/\.0$/, '')}k`
+  return `${(count / 1_000_000).toFixed(count < 10_000_000 ? 1 : 0).replace(/\.0$/, '')}m`
+}
+
+export async function loadCreatorDirectory(username?: string) {
+  const client = await getCloudClient()
+  if (!client) throw new Error('Shotcount Community is not configured.')
+  const slug = normalizeCreatorSlug(username)
+  const { data, error } = await client.rpc('creator_directory', { p_username: slug || null })
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as CommunityCreatorRow[]).map(mapCommunityCreator)
+}
+
+export async function loadPublicCreatorToday(username: string): Promise<CreatorToday | null> {
   const client = await getCloudClient()
   if (!client) throw new Error('Creator pages are not connected yet.')
   const { data, error } = await client.rpc('get_creator_today', { p_username: username })
@@ -74,9 +118,18 @@ export async function loadCreatorToday(username: string): Promise<CreatorToday |
   }
 }
 
+export async function setCreatorFollowing(creatorId: string, following: boolean) {
+  const { client, user } = await clientAndUser()
+  const query = following
+    ? client.from('follows').upsert({ follower_id: user.id, followed_id: creatorId }, { onConflict: 'follower_id,followed_id', ignoreDuplicates: true })
+    : client.from('follows').delete().eq('follower_id', user.id).eq('followed_id', creatorId)
+  const { error } = await query
+  if (error) throw new Error(error.message)
+}
+
 async function clientAndUser() {
   const user = await currentUser()
-  const client = cloud
+  const client = await getCloudClient()
   if (!client || !user) throw new Error('Sign in before using cloud invitations.')
   return { client, user }
 }

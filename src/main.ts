@@ -12,8 +12,25 @@ import {
   type CreatorProfileField,
   type CreatorProfileInput,
 } from './data/profile'
+import {
+  formatFollowerCount,
+  loadCreatorDirectory,
+  normalizeCreatorSlug,
+  setCreatorFollowing,
+  type CommunityCreator,
+} from './data/community'
+import {
+  defaultNotificationPreferences,
+  loadCompletionFeed,
+  loadCreatorToday,
+  loadNotificationPreferences,
+  saveNotificationPreferences,
+  setCreatorMuted,
+  subscribeToCompletionAlerts,
+  type CreatorCompletion,
+  type SharedCreatorTask,
+} from './data/notifications'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
-import { loadCreatorToday, type CreatorToday } from './data/community'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
 import './style.css'
@@ -56,6 +73,7 @@ let profilePhotoPreview = ''
 let profilePromptDismissed = false
 type CommunityProfile = {
   id: string
+  username: string
   name: string
   role: string
   category: string
@@ -65,14 +83,11 @@ type CommunityProfile = {
   portraitColumn: number
   portraitRow: number
   bioLines: string[]
+  avatarUrl: string
+  followerCount: number
+  followed: boolean
+  isDemo: boolean
 }
-type CreatorPageState =
-  | { status: 'idle'; username: '' }
-  | { status: 'loading'; username: string }
-  | { status: 'ready'; username: string; value: CreatorToday }
-  | { status: 'missing' | 'error'; username: string }
-let creatorPage: CreatorPageState = { status: 'idle', username: '' }
-let selectedCreatorTaskId = ''
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 const storagePrefix = 'shotcount-workspace-current-v1:'
@@ -80,6 +95,7 @@ const viewStorageKey = `${storagePrefix}active-view`
 const plannerStorageKey = `${storagePrefix}planner`
 const goalsStorageKey = `${storagePrefix}goals`
 const themeStorageKey = `${storagePrefix}theme`
+const creatorQueryKey = 'creator'
 const dateStateHook = window as Window & { __shotcountRefreshDateState?: (reference?: Date) => void }
 
 function readStoredValue(storage: Storage, key: string) {
@@ -323,9 +339,10 @@ let calendarComposer: { date: string; time: string; taskId?: string } | null = n
 let calendarSearch = ''
 let draggingCalendarTaskId: string | null = null
 const hiddenCalendarGoalIds = new Set<string>()
-const communityProfiles: CommunityProfile[] = [
+const demoCommunityProfiles: CommunityProfile[] = [
   {
     id: 'amara',
+    username: 'amara',
     name: 'Amara Okafor',
     role: 'Product founder',
     category: 'Building & creating',
@@ -335,9 +352,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 0,
     portraitRow: 0,
     bioLines: ['CTO, Bumpa', 'Research intern, EPFL', 'Content creator with 18k followers'],
+    avatarUrl: '',
+    followerCount: 12_800,
+    followed: true,
+    isDemo: true,
   },
   {
     id: 'kenji',
+    username: 'kenji',
     name: 'Kenji Watanabe',
     role: 'Creative director',
     category: 'Building & creating',
@@ -347,9 +369,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 1,
     portraitRow: 0,
     bioLines: ['Creative director, independent brands', 'Systems thinker', 'Designing in public'],
+    avatarUrl: '',
+    followerCount: 9_400,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'maya',
+    username: 'maya',
     name: 'Maya Raman',
     role: 'Research scientist',
     category: 'Building & creating',
@@ -359,9 +386,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 2,
     portraitRow: 0,
     bioLines: ['Research scientist, EPFL', 'Writes about deep work', '6k newsletter subscribers'],
+    avatarUrl: '',
+    followerCount: 7_200,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'malik',
+    username: 'malik',
     name: 'Malik Thompson',
     role: 'Endurance athlete',
     category: 'Research & performance',
@@ -371,9 +403,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 0,
     portraitRow: 1,
     bioLines: ['Endurance athlete', 'Coach and builder', '18.1k followers'],
+    avatarUrl: '',
+    followerCount: 18_100,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'sofia',
+    username: 'sofia',
     name: 'Sofía Reyes',
     role: 'Independent filmmaker',
     category: 'Research & performance',
@@ -383,9 +420,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 1,
     portraitRow: 1,
     bioLines: ['Independent filmmaker', 'Storytelling coach', '11.6k members'],
+    avatarUrl: '',
+    followerCount: 11_600,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'theo',
+    username: 'theo',
     name: 'Theo Bennett',
     role: 'Bestselling author',
     category: 'Research & performance',
@@ -395,9 +437,40 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 2,
     portraitRow: 1,
     bioLines: ['Bestselling author', 'Writes daily in public', '15.3k readers'],
+    avatarUrl: '',
+    followerCount: 15_300,
+    followed: false,
+    isDemo: true,
   },
 ]
-const followedCommunityIds = new Set<string>(['amara'])
+let communityProfiles: CommunityProfile[] = showDemoData ? demoCommunityProfiles.map(profile => ({ ...profile })) : []
+let communityState: 'loading' | 'ready' | 'failed' = showDemoData ? 'ready' : 'loading'
+const communityBusyIds = new Set<string>()
+let pendingCreatorSlug = ''
+let creatorLinkTargetId = ''
+let communityFollowError = ''
+type CreatorTodayState = {
+  profile: CommunityProfile
+  tasks: SharedCreatorTask[]
+  status: 'loading' | 'ready' | 'failed'
+}
+let creatorTodayState: CreatorTodayState | null = null
+let selectedCreatorTaskId = ''
+let notificationPreferences = defaultNotificationPreferences()
+let notificationSettingsOpen = false
+let notificationSettingsBusy = false
+let notificationSettingsError = ''
+let islandCompletions: CreatorCompletion[] = []
+let queuedCompletions: CreatorCompletion[] = []
+let completionBatchTimer = 0
+let islandDismissTimer = 0
+let completionSubscription: (() => void) | null = null
+let lastCompletionCheck = new Date(Date.now() - 15_000).toISOString()
+const islandPreview = previewParams.get('previewIsland')
+const notificationPreview = previewParams.has('previewNotifications')
+const islandHook = window as Window & {
+  __shotcountShowCompletion?: (items?: CreatorCompletion[]) => void
+}
 
 const icons: Record<string, string> = {
   menu: '<path d="M5 7h14M5 12h14M5 17h14"/>',
@@ -412,6 +485,8 @@ const icons: Record<string, string> = {
   logout: '<path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"/>',
   chevron: '<path d="m9 6 6 6-6 6"/>',
   down: '<path d="m8 10 4 4 4-4"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  back: '<path d="m15 18-6-6 6-6"/>',
 }
 
 function icon(name: string) {
@@ -422,8 +497,177 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
 }
 
+function creatorSlugFromLocation() {
+  const querySlug = normalizeCreatorSlug(new URLSearchParams(window.location.search).get(creatorQueryKey))
+  if (querySlug) return querySlug
+  return creatorSlugFromPathname(window.location.pathname)
+}
+
+function creatorSlugFromPathname(pathname: string) {
+  const pathSlug = normalizeCreatorSlug(pathname.split('/').filter(Boolean)[0])
+  return pathSlug && !['app', 'workspace'].includes(pathSlug) ? pathSlug : ''
+}
+
+function rememberCreatorIntent(slug: string) {
+  pendingCreatorSlug = normalizeCreatorSlug(slug)
+}
+
+function clearCreatorIntentFromUrl() {
+  pendingCreatorSlug = ''
+  const url = new URL(window.location.href)
+  url.searchParams.delete(creatorQueryKey)
+  if (creatorSlugFromPathname(url.pathname)) url.pathname = '/'
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+function mapCommunityCreator(profile: CommunityCreator, index: number): CommunityProfile {
+  const count = Math.max(0, profile.followerCount)
+  const role = profile.bio.split('·')[0]?.trim() || 'Shotcount creator'
+  return {
+    id: profile.id,
+    username: profile.username,
+    name: profile.displayName,
+    role,
+    category: 'Shotcount creator',
+    members: formatFollowerCount(count),
+    tasksToday: 0,
+    latest: profile.bio,
+    portraitColumn: index % 3,
+    portraitRow: Math.floor(index / 3) % 2,
+    bioLines: [profile.bio],
+    avatarUrl: profile.avatarUrl,
+    followerCount: count,
+    followed: profile.followedByMe,
+    isDemo: false,
+  }
+}
+
 function defaultTaskVisibility() {
   return creatorProfile?.defaultTaskVisibility ?? profileDraft.defaultTaskVisibility ?? 'private'
+}
+
+function demoCreatorTasks(profile: CommunityProfile): SharedCreatorTask[] {
+  const names = profile.id === 'maya'
+    ? ['Ship the homepage revision', 'Review creator interviews', 'Write tomorrow’s launch note']
+    : ['Review the launch brief', 'Approve the onboarding flow', 'Founder interviews', 'Reply to the design team', 'Read the weekly numbers', 'Plan tomorrow’s focus']
+  return names.map((title, index) => ({
+    id: `${profile.id}-shared-${index}`,
+    title,
+    due: todayKey,
+    time: index < 2 ? `${String(8 + index * 2).padStart(2, '0')}:${index ? '15' : '40'}` : '',
+    completedAt: index < Math.max(1, names.length - 1) ? `${todayKey}T${String(9 + index).padStart(2, '0')}:10:00.000Z` : '',
+    visibility: index % 2 ? 'public' : 'followers',
+  }))
+}
+
+function isQuietTime(preferences = notificationPreferences, reference = new Date()) {
+  if (!preferences.quietHoursEnabled) return false
+  let hour = reference.getHours()
+  let minute = reference.getMinutes()
+  try {
+    const timezone = creatorProfile?.timezone || profileDraft.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(reference)
+    hour = Number(parts.find(part => part.type === 'hour')?.value ?? hour)
+    minute = Number(parts.find(part => part.type === 'minute')?.value ?? minute)
+  } catch {
+    // A mistyped timezone falls back to the clock on this device.
+  }
+  const minutes = hour * 60 + minute
+  const toMinutes = (value: string) => {
+    const [hours = '0', minute = '0'] = value.split(':')
+    return Number(hours) * 60 + Number(minute)
+  }
+  const start = toMinutes(preferences.quietStart)
+  const end = toMinutes(preferences.quietEnd)
+  if (start === end) return true
+  return start < end ? minutes >= start && minutes < end : minutes >= start || minutes < end
+}
+
+function clearIsland() {
+  window.clearTimeout(islandDismissTimer)
+  islandDismissTimer = 0
+  islandCompletions = []
+  render()
+  if (queuedCompletions.length) window.setTimeout(showQueuedCompletions, 240)
+}
+
+function showQueuedCompletions() {
+  if (islandCompletions.length || !queuedCompletions.length) return
+  islandCompletions = queuedCompletions.splice(0)
+  render()
+  islandDismissTimer = window.setTimeout(clearIsland, 6_000)
+}
+
+function queueCompletionAlerts(items: CreatorCompletion[], immediate = false) {
+  if (!notificationPreferences.completionAlerts || isQuietTime()) return
+  const knownIds = new Set([...queuedCompletions, ...islandCompletions].map(item => item.id))
+  const allowed = items.filter(item => !knownIds.has(item.id) && !notificationPreferences.mutedCreatorIds.includes(item.creatorId))
+  if (!allowed.length) return
+  queuedCompletions.push(...allowed)
+  window.clearTimeout(completionBatchTimer)
+  if (immediate) showQueuedCompletions()
+  else completionBatchTimer = window.setTimeout(showQueuedCompletions, 1_800)
+}
+
+async function checkForCompletionAlerts() {
+  const checkedAt = new Date().toISOString()
+  try {
+    queueCompletionAlerts(await loadCompletionFeed(lastCompletionCheck))
+  } catch {
+    // Alerts can retry after the next realtime nudge or app focus.
+  } finally {
+    lastCompletionCheck = checkedAt
+  }
+}
+
+async function startNotificationSystem() {
+  completionSubscription?.()
+  completionSubscription = null
+  try {
+    notificationPreferences = await loadNotificationPreferences()
+    completionSubscription = await subscribeToCompletionAlerts(() => void checkForCompletionAlerts())
+    await checkForCompletionAlerts()
+  } catch {
+    // Notification setup must never block the task workspace.
+  }
+}
+
+async function openCreatorToday(profile: CommunityProfile) {
+  selectedCreatorTaskId = ''
+  mobileInspectorOpen = false
+  creatorTodayState = { profile, tasks: [], status: 'loading' }
+  rememberView('sticky')
+  const url = new URL(window.location.href)
+  url.pathname = `/${profile.username}`
+  url.searchParams.delete(creatorQueryKey)
+  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  clearIsland()
+  render()
+  try {
+    const sharedTasks = profile.isDemo ? demoCreatorTasks(profile) : await loadCreatorToday(profile.id)
+    if (!creatorTodayState || creatorTodayState.profile.id !== profile.id) return
+    creatorTodayState = { profile, tasks: sharedTasks, status: 'ready' }
+  } catch {
+    if (!creatorTodayState || creatorTodayState.profile.id !== profile.id) return
+    creatorTodayState = { profile, tasks: [], status: 'failed' }
+  }
+  render()
+}
+
+function closeCreatorToday() {
+  creatorTodayState = null
+  selectedCreatorTaskId = ''
+  mobileInspectorOpen = false
+  const url = new URL(window.location.href)
+  if (creatorSlugFromPathname(url.pathname)) url.pathname = '/'
+  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  rememberView('sticky')
+  render()
 }
 
 function persistPlanner() {
@@ -483,66 +727,11 @@ function isLandingRoute() {
   return false
 }
 
-function creatorRouteUsername() {
-  const match = window.location.pathname.match(/^\/creator\/([^/]+)\/today\/?$/)
-  if (!match) return ''
-  try {
-    return normalizeUsername(decodeURIComponent(match[1]!))
-  } catch {
-    return ''
-  }
-}
-
-function demoCreatorToday(username: string): CreatorToday | null {
-  const profile = communityProfiles.find(item => item.id === username)
-  if (!showDemoData || !profile) return null
-  const sampleTitles = [profile.latest, 'Plan the next important step', 'Share today’s progress']
-  return {
-    profile: {
-      id: profile.id,
-      username: profile.id,
-      displayName: profile.name,
-      bio: profile.bioLines.join(' · '),
-      avatarUrl: '',
-      timezone: 'Africa/Lagos',
-    },
-    date: todayKey,
-    viewerIsFollowing: followedCommunityIds.has(profile.id),
-    tasks: sampleTitles.map((title, index) => normalizeTask({
-      id: `${profile.id}-today-${index}`,
-      title,
-      due: todayKey,
-      time: ['08:40', '10:15', '14:00'][index],
-      completedAt: index === 0 ? new Date().toISOString() : undefined,
-      visibility: index === 2 ? 'followers' : 'public',
-    })),
-  }
-}
-
-async function syncCreatorRoute(force = false) {
-  const username = creatorRouteUsername()
-  if (!username) {
-    creatorPage = { status: 'idle', username: '' }
-    return
-  }
-  if (!force && creatorPage.username === username && creatorPage.status !== 'idle') return
-  creatorPage = { status: 'loading', username }
-  render()
-  try {
-    const value = demoCreatorToday(username) ?? await loadCreatorToday(username)
-    creatorPage = value ? { status: 'ready', username, value } : { status: 'missing', username }
-  } catch {
-    creatorPage = { status: 'error', username }
-  }
-  render()
-}
-
 function setRoute(pathname: string) {
   if (window.location.pathname !== pathname) {
     window.history.pushState({}, '', pathname)
   }
   render()
-  void syncCreatorRoute()
 }
 
 function landingPeopleCard(name: string, role: string, description: string, column: number, row: number) {
@@ -638,86 +827,158 @@ function render() {
   }
   refreshDateContext(now)
   refreshCounts()
-  const creatorUsername = creatorRouteUsername()
   const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
   const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
-  const showInspector = !creatorUsername && Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
-  const creatorSelected = creatorPage.status === 'ready'
-    ? creatorPage.value.tasks.find(task => task.id === selectedCreatorTaskId) ?? creatorPage.value.tasks[0]
-    : undefined
-  const showCreatorInspector = Boolean(creatorUsername && creatorSelected && (!isPhone || mobileInspectorOpen))
+  const showInspector = !creatorTodayState && Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
+  const creatorSelected = creatorTodayState?.tasks.find(task => task.id === selectedCreatorTaskId) ?? creatorTodayState?.tasks[0]
+  const showCreatorInspector = Boolean(creatorTodayState?.status === 'ready' && creatorSelected && (!isPhone || mobileInspectorOpen))
   app.innerHTML = `
     <div class="reference-app ${showInspector || showCreatorInspector ? 'with-inspector' : ''}">
       ${authRequired ? renderSyncStatus() : ''}
       ${renderSidebar()}
       <main class="workspace">
         ${renderMobileTopbar()}
-        ${creatorUsername ? renderCreatorToday() : view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
+        ${creatorTodayState ? renderCreatorTodayView(creatorTodayState) : view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
       </main>
       ${showInspector && selected ? renderInspector(selected) : ''}
       ${showCreatorInspector && creatorSelected ? renderCreatorInspector(creatorSelected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
+    ${renderShotcountIsland()}
     ${renderProfileModal()}
+    ${renderNotificationSettings()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
 }
 
-function renderCreatorToday() {
-  if (creatorPage.status === 'loading' || creatorPage.status === 'idle') {
-    return `<section class="today-screen creator-today"><div class="planner-empty" role="status"><strong>Loading Today…</strong><p>Getting this creator’s shared tasks.</p></div></section>`
-  }
-  if (creatorPage.status !== 'ready') {
-    const message = creatorPage.status === 'missing' ? 'This creator page is not available.' : 'We could not load this creator’s Today page.'
-    return `<section class="today-screen creator-today">
-      <button class="creator-back" data-action="back-community">← Community</button>
-      <div class="planner-empty"><strong>${message}</strong><p>Nothing private was shown.</p>${creatorPage.status === 'error' ? '<button data-action="retry-creator">Try again</button>' : ''}</div>
-    </section>`
-  }
-
-  const { profile, tasks: creatorTasks } = creatorPage.value
-  return `<section class="today-screen creator-today">
-    <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${creatorTasks.length}" aria-label="${creatorTasks.length} shared tasks">${creatorTasks.length}</span></header>
-    <button class="add-task-row creator-context-row" data-action="back-community">
-      <span class="creator-mini-avatar">${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : escapeHtml(profile.displayName.charAt(0).toUpperCase())}</span>
-      <span><strong>${escapeHtml(profile.displayName)}</strong><small>@${escapeHtml(profile.username)} · Back to Community</small></span>
+function renderShotcountIsland() {
+  if (!islandCompletions.length) return ''
+  const first = islandCompletions[0]!
+  const profile = communityProfiles.find(item => item.id === first.creatorId)
+  const many = islandCompletions.length > 1
+  const firstName = first.displayName.trim().split(/\s+/)[0] || first.displayName
+  const taskTitle = first.taskTitle || 'Today’s Shotcount'
+  const message = many
+    ? `${firstName} and ${islandCompletions.length - 1} ${islandCompletions.length === 2 ? 'other' : 'others'} completed today`
+    : `${first.displayName} completed ${taskTitle}`
+  const initial = first.displayName.trim().charAt(0).toUpperCase() || 'S'
+  const portraitStyle = profile ? `--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)` : ''
+  return `
+    <button type="button" class="shotcount-island ${many ? 'is-batch' : ''}" data-action="open-island" aria-label="${escapeHtml(message)}. ${first.completedCount} of ${first.totalCount} tasks complete. Open ${escapeHtml(first.displayName)}’s Today screen">
+      <span class="island-head">
+        <span class="island-portrait portrait-frame" style="${portraitStyle}">
+          ${first.avatarUrl ? `<img src="${escapeHtml(first.avatarUrl)}" alt="" />` : profile ? '<span class="community-portrait-art" aria-hidden="true"></span>' : `<span class="island-initial">${escapeHtml(initial)}</span>`}
+        </span>
+        <span class="island-identity">
+          <small>${many ? `${islandCompletions.length} PEOPLE FINISHED` : 'SHOTCOUNT COMPLETE'}</small>
+          <strong>${many ? escapeHtml(message) : escapeHtml(first.displayName)}</strong>
+          <span>${many ? 'Tap to open the first update' : `@${escapeHtml(first.username)}`}</span>
+        </span>
+        <span class="island-result"><strong>${many ? islandCompletions.length : `${first.completedCount}/${first.totalCount}`}</strong><small>${many ? 'PEOPLE' : 'DONE'}</small></span>
+      </span>
+      <span class="island-task">
+        <span class="island-task-check" aria-hidden="true">✓</span>
+        <span><small>${many ? `${escapeHtml(firstName)}’S LAST TASK` : 'TASK COMPLETED'}</small><strong>${escapeHtml(taskTitle)}</strong></span>
+        <span class="island-task-arrow" aria-hidden="true">›</span>
+      </span>
+      <span class="island-open">View ${escapeHtml(firstName)}’s Today <b aria-hidden="true">↗</b></span>
     </button>
-    <div class="task-list">
-      ${creatorTasks.length
-        ? creatorTasks.map(renderCreatorTaskRow).join('')
-        : '<div class="planner-empty"><strong>Nothing shared today.</strong><p>This creator has no Public or Followers tasks ready for you.</p></div>'}
-    </div>
-  </section>`
+  `
 }
 
-function renderCreatorTaskRow(task: Task) {
+function renderCreatorTodayView(state: CreatorTodayState) {
+  const { profile } = state
+  const total = state.tasks.length
+  const firstName = profile.name.trim().split(/\s+/)[0] || profile.name
+  const initial = profile.name.trim().charAt(0).toUpperCase() || 'S'
+  const muted = notificationPreferences.mutedCreatorIds.includes(profile.id)
+  return `
+    <section class="today-screen creator-today-screen">
+      <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${total}" aria-label="${total} shared tasks">${total}</span></header>
+      <header class="add-task-row creator-context-row">
+        <button type="button" class="creator-context-main" data-action="close-creator-today" aria-label="Back to Community">
+          <span class="creator-mini-avatar">${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : escapeHtml(initial)}</span>
+          <span><strong>${escapeHtml(profile.name)}</strong><small>@${escapeHtml(profile.username)} · Back to Community</small></span>
+        </button>
+        <button type="button" class="creator-today-mute" data-mute-creator="${profile.id}" aria-pressed="${muted}">${muted ? 'Unmute alerts' : 'Mute alerts'}</button>
+      </header>
+      <div class="task-list">
+        ${state.status === 'loading' ? '<div class="planner-empty"><strong>Opening today…</strong><p>This will only take a moment.</p></div>' : ''}
+        ${state.status === 'failed' ? '<div class="planner-empty"><strong>Today could not open.</strong><p>Your own tasks are safe. Please try again.</p><button data-action="retry-creator-today">Try again</button></div>' : ''}
+        ${state.status === 'ready' && !total ? `<div class="planner-empty"><strong>Nothing shared today.</strong><p>${escapeHtml(firstName)} has not shared a task with you yet.</p></div>` : ''}
+        ${state.status === 'ready' ? state.tasks.map(renderSharedCreatorTask).join('') : ''}
+      </div>
+    </section>
+  `
+}
+
+function renderSharedCreatorTask(task: SharedCreatorTask) {
   const completed = Boolean(task.completedAt)
-  const subtaskCount = task.subtaskItems?.length ?? 0
   return `<div class="task-row creator-task-row ${completed ? 'completed' : ''}">
-    <span class="checkbox creator-checkbox" role="img" aria-label="${completed ? 'Done' : 'Not done'}">
-      <span class="completion-badge" aria-hidden="true"><svg viewBox="0 0 24 24">${completed
-        ? '<path class="completion-seal" d="M12 1.8c1.2 0 1.8 1.3 2.9 1.6 1.1.3 2.2-.6 3.1.1.9.7.4 2.1 1.1 3 .7.9 2.2.8 2.6 1.9.4 1.1-.8 2-.8 3.2s1.2 2.1.8 3.2c-.4 1.1-1.9 1-2.6 1.9-.7.9-.2 2.3-1.1 3-.9.7-2-.2-3.1.1-1.1.3-1.7 1.6-2.9 1.6s-1.8-1.3-2.9-1.6c-1.1-.3-2.2.6-3.1-.1-.9-.7-.4-2.1-1.1-3-.7-.9-2.2-.8-2.6-1.9-.4-1.1.8-2 .8-3.2s-1.2-2.1-.8-3.2c.4-1.1 1.9-1 2.6-1.9.7-.9.2-2.3 1.1-3 .9-.7 2 .2 3.1-.1C10.2 3.1 10.8 1.8 12 1.8Z"/><path class="completion-check" d="m7.4 12.1 3 2.9 6.2-6.2"/>'
-        : '<circle class="completion-ring" cx="12" cy="12" r="8.4"/>'}</svg></span>
-    </span>
-    <button class="task-text" data-creator-task="${task.id}"><strong>${escapeHtml(task.title)}</strong><small>
-      ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
-      ${subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
-    </small></button>
-    <button class="task-chevron" data-creator-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
-  </div>`
+      <span class="checkbox creator-checkbox" role="img" aria-label="${completed ? 'Done' : 'Not done'}">
+        <span class="completion-badge" aria-hidden="true"><svg viewBox="0 0 24 24">${completed
+          ? `<path class="completion-seal" d="M12 1.8c1.2 0 1.8 1.3 2.9 1.6 1.1.3 2.2-.6 3.1.1.9.7.4 2.1 1.1 3 .7.9 2.2.8 2.6 1.9.4 1.1-.8 2-.8 3.2s1.2 2.1.8 3.2c-.4 1.1-1.9 1-2.6 1.9-.7.9-.2 2.3-1.1 3-.9.7-2-.2-3.1.1-1.1.3-1.7 1.6-2.9 1.6s-1.8-1.3-2.9-1.6c-1.1-.3-2.2.6-3.1-.1-.9-.7-.4-2.1-1.1-3-.7-.9-2.2-.8-2.6-1.9-.4-1.1.8-2 .8-3.2s-1.2-2.1-.8-3.2c.4-1.1 1.9-1 2.6-1.9.7-.9.2-2.3 1.1-3 .9-.7 2-.2 3.1-.1C10.2 3.1 10.8 1.8 12 1.8Z"/><path class="completion-check" d="m7.4 12.1 3 2.9 6.2-6.2"/>`
+          : '<circle class="completion-ring" cx="12" cy="12" r="8.4"/>'}</svg></span>
+      </span>
+      <button class="task-text" data-creator-task="${task.id}"><strong>${escapeHtml(task.title)}</strong><small>
+        ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
+        <span class="task-visibility task-visibility--${task.visibility}">${visibilityLabels[task.visibility]}</span>
+      </small></button>
+      <button class="task-chevron" data-creator-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
+    </div>`
 }
 
-function renderCreatorInspector(task: Task) {
-  const subtasks = task.subtaskItems ?? []
+function renderCreatorInspector(task: SharedCreatorTask) {
   return `<aside class="inspector creator-inspector">
     <button type="button" class="inspector-close" data-action="close-inspector" aria-label="Close task details">${icon('chevron')}</button>
     <div class="inspector-content">
       <h2>Task:</h2>
       <div class="inspector-title creator-inspector-title">${escapeHtml(task.title)}</div>
-      <h3>Subtasks:</h3>
-      ${subtasks.length ? subtasks.map(subtask => `<div class="subtask"><span class="creator-subtask-check">${subtask.completed ? '✓' : ''}</span><span class="${subtask.completed ? 'completed' : ''}">${escapeHtml(subtask.title)}</span></div>`).join('') : '<p class="creator-no-subtasks">No subtasks</p>'}
+      <h3>Details:</h3>
+      <p class="creator-no-subtasks">${task.time ? `${formatTaskDate(task.due)} · ${formatTaskTime(task.time)}` : formatTaskDate(task.due)}</p>
+      <p class="creator-readonly-note">Read only · ${visibilityLabels[task.visibility]}</p>
     </div>
   </aside>`
+}
+
+function renderNotificationSettings() {
+  if (!notificationSettingsOpen) return ''
+  const mutedProfiles = communityProfiles.filter(profile => notificationPreferences.mutedCreatorIds.includes(profile.id))
+  return `
+    <div class="profile-popover notification-popover" role="presentation">
+      <button type="button" class="profile-popover-backdrop" data-action="close-notification-settings" aria-label="Close notification settings"></button>
+      <section class="profile-popover-card notification-card" role="dialog" aria-modal="true" aria-labelledby="notification-settings-title">
+        <button type="button" class="profile-popover-close" data-action="close-notification-settings" aria-label="Close notification settings">×</button>
+        <p class="notification-eyebrow">Shotcount Island</p>
+        <h2 id="notification-settings-title">Notification settings</h2>
+        <p class="notification-intro">Choose when the little completion pill can say hello.</p>
+        <form class="notification-form" data-notification-form>
+          <label class="notification-switch-row">
+            <span><strong>Completion alerts</strong><small>Show when people you follow finish today.</small></span>
+            <input type="checkbox" name="completionAlerts" ${notificationPreferences.completionAlerts ? 'checked' : ''} />
+          </label>
+          <label class="notification-switch-row">
+            <span><strong>Quiet hours</strong><small>Keep the Island hidden while you rest or focus.</small></span>
+            <input type="checkbox" name="quietHoursEnabled" ${notificationPreferences.quietHoursEnabled ? 'checked' : ''} />
+          </label>
+          <div class="quiet-hours-fields">
+            <label><span>From</span><input type="time" name="quietStart" value="${escapeHtml(notificationPreferences.quietStart)}" /></label>
+            <span aria-hidden="true">→</span>
+            <label><span>Until</span><input type="time" name="quietEnd" value="${escapeHtml(notificationPreferences.quietEnd)}" /></label>
+          </div>
+          <section class="muted-creators">
+            <div><strong>Muted creators</strong><small>They stay followed. Their completion pills stay quiet.</small></div>
+            ${mutedProfiles.length ? mutedProfiles.map(profile => `<div class="muted-creator-row"><span>${escapeHtml(profile.name)} <small>@${escapeHtml(profile.username)}</small></span><button type="button" data-unmute-creator="${profile.id}">Unmute</button></div>`).join('') : '<p>No one is muted.</p>'}
+          </section>
+          <p class="profile-form-error" role="alert">${escapeHtml(notificationSettingsError)}</p>
+          <div class="notification-actions">
+            <button type="button" data-action="close-notification-settings">Cancel</button>
+            <button type="submit" ${notificationSettingsBusy ? 'disabled' : ''}>${notificationSettingsBusy ? 'Saving…' : 'Save settings'}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `
 }
 
 function renderSyncStatus() {
@@ -905,7 +1166,10 @@ async function verifyAuthSession() {
     if (!cloudEnabled) throw new Error('Cloud accounts are not configured')
     const [user, client] = await Promise.all([currentUser(), getCloudClient()])
     if (!user) {
-      window.location.replace('https://shotcount.app/?auth=signin')
+      const signInUrl = new URL('https://shotcount.app/')
+      signInUrl.searchParams.set('auth', 'signin')
+      if (pendingCreatorSlug) signInUrl.searchParams.set(creatorQueryKey, pendingCreatorSlug)
+      window.location.replace(signInUrl.toString())
       return
     }
     if (!client) throw new Error('Cloud accounts are not configured')
@@ -924,11 +1188,14 @@ async function verifyAuthSession() {
       },
     })
     activeUser = user
-    const [workspace, profileResult] = await Promise.all([
+    const [workspace, profileResult, communityResult] = await Promise.all([
       plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] }),
       loadCreatorProfile(user)
         .then(value => ({ ok: true as const, value }))
         .catch(() => ({ ok: false as const, value: null })),
+      loadCreatorDirectory()
+        .then(value => ({ ok: true as const, value }))
+        .catch(() => ({ ok: false as const, value: [] as CommunityCreator[] })),
     ])
     replacePlannerWorkspace(workspace)
     if (profileResult.ok) {
@@ -938,16 +1205,20 @@ async function verifyAuthSession() {
       profileModalOpen = !isCreatorProfileComplete(profileDraft)
       resetTodayComposerDraft()
     }
+    if (communityResult.ok) applyCommunityDirectory(communityResult.value)
+    else communityState = 'failed'
     authState = 'authenticated'
+    void startNotificationSystem()
   } catch {
     authState = 'error'
   }
   render()
-  if (authState === 'authenticated') void syncCreatorRoute()
 }
 
 async function signOut() {
   try {
+    completionSubscription?.()
+    completionSubscription = null
     plannerRepository?.destroy()
     plannerRepository = null
     activeUser = null
@@ -974,6 +1245,77 @@ async function refreshSignedInProfile() {
   }
 }
 
+function resolveCreatorIntent() {
+  if (!pendingCreatorSlug) return
+  const target = communityProfiles.find(profile => profile.username === pendingCreatorSlug)
+  if (!target) {
+    if (communityState === 'ready') {
+      toast = `We could not find @${pendingCreatorSlug}.`
+      clearCreatorIntentFromUrl()
+    }
+    return
+  }
+  communityProfiles = [target, ...communityProfiles.filter(profile => profile.id !== target.id)]
+  creatorLinkTargetId = target.id
+  rememberView('sticky')
+  if (target.id === activeUser?.id) {
+    toast = 'This is your creator link.'
+    clearCreatorIntentFromUrl()
+    return
+  }
+  if (target.followed) {
+    toast = `You already follow ${target.name}.`
+    clearCreatorIntentFromUrl()
+    return
+  }
+}
+
+function applyCommunityDirectory(directory: CommunityCreator[]) {
+  communityProfiles = directory.map(mapCommunityCreator)
+  communityState = 'ready'
+  resolveCreatorIntent()
+}
+
+async function refreshCommunityDirectory() {
+  if (showDemoData) {
+    communityState = 'ready'
+    resolveCreatorIntent()
+    return
+  }
+  communityState = 'loading'
+  render()
+  try {
+    applyCommunityDirectory(await loadCreatorDirectory())
+  } catch {
+    communityState = 'failed'
+  }
+  render()
+}
+
+async function updateCreatorFollowing(profile: CommunityProfile, following: boolean) {
+  if (communityBusyIds.has(profile.id)) return false
+  communityBusyIds.add(profile.id)
+  communityFollowError = ''
+  render()
+  try {
+    if (!profile.isDemo) {
+      if (!activeUser) throw new Error('Sign in before following a creator.')
+      await setCreatorFollowing(profile.id, following)
+    }
+    profile.followed = following
+    profile.followerCount = Math.max(0, profile.followerCount + (following ? 1 : -1))
+    profile.members = formatFollowerCount(profile.followerCount)
+    if (following && creatorLinkTargetId === profile.id) clearCreatorIntentFromUrl()
+    return true
+  } catch (error) {
+    communityFollowError = error instanceof Error ? error.message : 'We could not update this follow.'
+    return false
+  } finally {
+    communityBusyIds.delete(profile.id)
+    render()
+  }
+}
+
 function renderMobileTopbar() {
   const profilePhoto = creatorProfile?.avatarUrl || profileDraft.avatarUrl
   const profileInitial = (creatorProfile?.displayName || profileDraft.displayName).trim().charAt(0).toUpperCase() || 'S'
@@ -981,6 +1323,7 @@ function renderMobileTopbar() {
     <header class="mobile-topbar">
       <div class="mobile-brand"><strong>Shotcount</strong></div>
       <div class="mobile-topbar-actions">
+        <button type="button" class="mobile-alert-button" data-action="notification-settings" aria-label="Notification settings">${icon('bell')}</button>
         <button type="button" class="mobile-profile-button" data-action="settings" aria-label="Profile">
           ${profilePhoto ? `<img src="${escapeHtml(profilePhoto)}" alt="" />` : `<span>${escapeHtml(profileInitial)}</span>`}
         </button>
@@ -1073,6 +1416,7 @@ function renderSidebar() {
       </section>
 
       <div class="sidebar-bottom">
+        <button class="side-row" data-action="notification-settings">${icon('bell')}<span>Alerts</span></button>
         <button class="side-row" data-action="settings">${icon('settings')}<span>Settings</span></button>
         <button class="side-row" data-action="signout">${icon('logout')}<span>Sign out</span></button>
       </div>
@@ -1695,7 +2039,7 @@ function formatRecurrence(recurrence: Recurrence) {
 }
 
 function renderStickyWall() {
-  const spotlight = communityProfiles[0]!
+  const spotlight = communityProfiles[0]
   return `
     <section class="sticky-screen community-screen">
       <header class="sticky-title community-title">
@@ -1706,6 +2050,10 @@ function renderStickyWall() {
         <button class="community-discover" data-action="discover-people">Discover people</button>
       </header>
       <div class="community-content">
+        ${communityState === 'loading' ? `<div class="community-state"><strong>Finding creators…</strong><p>Bringing the Community up to date.</p></div>` : ''}
+        ${communityState === 'failed' ? `<div class="community-state"><strong>Community could not load.</strong><p>Your tasks are safe. Try again when your connection is steadier.</p><button data-action="retry-community">Try again</button></div>` : ''}
+        ${communityState === 'ready' && !spotlight ? `<div class="community-state"><strong>No creators are public yet.</strong><p>Complete your profile to become one of the first.</p><button data-action="settings">Complete profile</button></div>` : ''}
+        ${spotlight ? `
         <section class="spotlight-section" aria-labelledby="spotlight-title">
           <div class="community-section-heading">
             <div><h2 id="spotlight-title">This week’s spotlight</h2><p>Step inside the working rhythm of someone exceptional.</p></div>
@@ -1714,7 +2062,7 @@ function renderStickyWall() {
           ${renderSpotlight(spotlight)}
         </section>
 
-        <section class="explore-section" aria-labelledby="explore-title">
+        ${communityProfiles.length > 1 ? `<section class="explore-section" aria-labelledby="explore-title">
           <div class="community-section-heading">
             <div><h2 id="explore-title">Explore communities</h2><p>Find a person whose way of working helps you move.</p></div>
             <button data-action="discover-people">View all</button>
@@ -1722,42 +2070,38 @@ function renderStickyWall() {
           <div class="community-grid explore-grid">
             ${communityProfiles.slice(1).map(renderCommunityCard).join('')}
           </div>
-        </section>
+        </section>` : ''}
+        ` : ''}
       </div>
     </section>
   `
 }
 
 function renderSpotlight(profile: CommunityProfile) {
-  const followed = followedCommunityIds.has(profile.id)
+  const busy = communityBusyIds.has(profile.id)
+  const isCreatorLinkTarget = creatorLinkTargetId === profile.id
+  const firstName = profile.name.trim().split(/\s+/)[0] || profile.name
   return `
-    <article class="spotlight-card">
-      <div class="community-launch-popover spotlight-launch-popover" aria-hidden="true">
-        <p class="community-launch-label">Public launch page</p>
-        <h4>${escapeHtml(profile.name)}</h4>
-        <ul>
-          ${profile.bioLines.map(line => `<li>${escapeHtml(line)}</li>`).join('')}
-        </ul>
-        <button class="community-launch-subscribe">Subscribe with Plus</button>
-      </div>
+    <article class="spotlight-card ${isCreatorLinkTarget ? 'creator-link-target' : ''}">
+      ${renderLaunchPopover(profile, true)}
       <div class="spotlight-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
-        <div class="community-portrait-art" aria-hidden="true"></div>
-        <span class="spotlight-members">${profile.members} people learning alongside her</span>
+        ${renderCommunityPortrait(profile)}
+        <span class="spotlight-members">${profile.members} ${profile.isDemo ? 'people learning alongside them' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
       </div>
       <div class="spotlight-body">
-        <p class="spotlight-role">${escapeHtml(profile.role)} · Lagos</p>
+        <p class="spotlight-role">${isCreatorLinkTarget ? `CREATOR LINK · @${escapeHtml(profile.username)}` : profile.isDemo ? `${escapeHtml(profile.role)} · Lagos` : `@${escapeHtml(profile.username)}`}</p>
         <h3>${escapeHtml(profile.name)}</h3>
-        <p class="spotlight-intro">Building useful products without losing the quiet routines that make ambitious work possible.</p>
-        <div class="spotlight-tasks">
+        <p class="spotlight-intro">${escapeHtml(profile.isDemo ? 'Building useful products without losing the quiet routines that make ambitious work possible.' : profile.latest)}</p>
+        ${profile.isDemo ? `<div class="spotlight-tasks">
           <div class="spotlight-tasks-heading"><strong>Today’s focus</strong><span>${profile.tasksToday} tasks · 3 complete</span></div>
           <div><i class="done">✓</i><span>Review the launch brief</span><time>8:40</time></div>
           <div><i class="done">✓</i><span>Approve the onboarding flow</span><time>10:15</time></div>
           <div><i></i><span>Founder interviews</span><time>14:00</time></div>
-        </div>
+        </div>` : `<div class="creator-profile-facts"><strong>${profile.members}</strong><span>${profile.followerCount === 1 ? 'follower' : 'followers'}</span><small>Only tasks marked Followers or Public can be shared.</small></div>`}
         <div class="spotlight-actions">
-          <button class="spotlight-open" data-community="${profile.id}">Enter Amara’s community ${icon('chevron')}</button>
-          <button class="spotlight-follow ${followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${followed}">
-            ${followed ? 'Following' : 'Follow'}
+          <button class="spotlight-open" data-community="${profile.id}">${profile.isDemo ? `Enter ${escapeHtml(firstName)}’s community` : 'Open creator link'} ${icon('chevron')}</button>
+          <button class="spotlight-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
+            ${busy ? 'Saving…' : profile.followed ? 'Following' : 'Follow'}
           </button>
         </div>
       </div>
@@ -1766,41 +2110,46 @@ function renderSpotlight(profile: CommunityProfile) {
 }
 
 function renderCommunityCard(profile: CommunityProfile) {
-  const followed = followedCommunityIds.has(profile.id)
+  const busy = communityBusyIds.has(profile.id)
   return `
     <article class="community-card">
       ${renderLaunchPopover(profile)}
       <div class="community-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
-        <div class="community-portrait-art" aria-hidden="true"></div>
-        <span>${profile.members} members</span>
-        <button class="community-follow ${followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-label="${followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${followed}">
-          ${followed ? '✓' : icon('plus')}
+        ${renderCommunityPortrait(profile)}
+        <span>${profile.members} ${profile.isDemo ? 'members' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
+        <button class="community-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-label="${profile.followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
+          ${busy ? '…' : profile.followed ? '✓' : icon('plus')}
         </button>
       </div>
       <div class="community-card-body">
-        <p class="community-role">${escapeHtml(profile.role)}</p>
+        <p class="community-role">${profile.isDemo ? escapeHtml(profile.role) : `@${escapeHtml(profile.username)}`}</p>
         <h3>${escapeHtml(profile.name)}</h3>
         <div class="community-activity">
-          <span><b>${profile.tasksToday}</b> tasks today</span>
+          <span>${profile.isDemo ? `<b>${profile.tasksToday}</b> tasks today` : `<b>${profile.members}</b> ${profile.followerCount === 1 ? 'follower' : 'followers'}`}</span>
           <span class="activity-dot"></span>
-          <span>Active now</span>
+          <span>${profile.isDemo ? 'Active now' : 'Public profile'}</span>
         </div>
-        <p class="community-latest"><span>✓</span>${escapeHtml(profile.latest)}</p>
-        <button class="community-open" data-community="${profile.id}">View community ${icon('chevron')}</button>
+        <p class="community-latest">${profile.isDemo ? '<span>✓</span>' : ''}${escapeHtml(profile.latest)}</p>
+        <button class="community-open" data-community="${profile.id}">${profile.isDemo ? 'View community' : 'Open creator link'} ${icon('chevron')}</button>
       </div>
     </article>
   `
 }
 
-function renderLaunchPopover(profile: CommunityProfile) {
+function renderCommunityPortrait(profile: CommunityProfile) {
+  return profile.avatarUrl
+    ? `<img class="community-profile-avatar" src="${escapeHtml(profile.avatarUrl)}" alt="" />`
+    : '<div class="community-portrait-art" aria-hidden="true"></div>'
+}
+
+function renderLaunchPopover(profile: CommunityProfile, spotlight = false) {
   return `
-    <div class="community-launch-popover" aria-hidden="true">
-      <p class="community-launch-label">Public launch page</p>
+    <div class="community-launch-popover ${spotlight ? 'spotlight-launch-popover' : ''}" aria-hidden="true">
+      <p class="community-launch-label">${profile.isDemo ? 'Public launch page' : 'Personal creator link'}</p>
       <h4>${escapeHtml(profile.name)}</h4>
-      <ul>
+      ${profile.isDemo ? `<ul>
         ${profile.bioLines.map(line => `<li>${escapeHtml(line)}</li>`).join('')}
-      </ul>
-      <button class="community-launch-subscribe">Subscribe with Plus</button>
+      </ul><button class="community-launch-subscribe">Subscribe with Plus</button>` : `<p class="community-launch-bio">${escapeHtml(profile.latest)}</p><small class="community-launch-link">app.shotcount.app/${escapeHtml(profile.username)}</small>`}
     </div>
   `
 }
@@ -1898,6 +2247,39 @@ function scheduleTask(taskId: string, date: string, time = '09:00') {
 
 app.addEventListener('submit', async event => {
   const target = event.target as HTMLElement
+  const notificationForm = target.closest<HTMLFormElement>('[data-notification-form]')
+  if (notificationForm) {
+    event.preventDefault()
+    const data = new FormData(notificationForm)
+    notificationPreferences = {
+      ...notificationPreferences,
+      completionAlerts: data.get('completionAlerts') === 'on',
+      quietHoursEnabled: data.get('quietHoursEnabled') === 'on',
+      quietStart: String(data.get('quietStart') ?? '22:00'),
+      quietEnd: String(data.get('quietEnd') ?? '08:00'),
+    }
+    notificationSettingsBusy = true
+    notificationSettingsError = ''
+    render()
+    try {
+      if (!showDemoData) await saveNotificationPreferences(notificationPreferences, creatorProfile?.timezone ?? profileDraft.timezone)
+      notificationSettingsBusy = false
+      notificationSettingsOpen = false
+      if (!notificationPreferences.completionAlerts) clearIsland()
+      toast = 'Notification settings saved'
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 1400)
+    } catch (error) {
+      notificationSettingsBusy = false
+      notificationSettingsError = error instanceof Error ? error.message : 'Notification settings could not be saved.'
+      render()
+    }
+    return
+  }
+
   const profileForm = target.closest<HTMLFormElement>('[data-profile-form]')
   if (profileForm) {
     event.preventDefault()
@@ -1920,6 +2302,7 @@ app.addEventListener('submit', async event => {
       resetTodayComposerDraft()
       toast = 'Profile saved'
       render()
+      void refreshCommunityDirectory()
       window.setTimeout(() => {
         toast = ''
         render()
@@ -2096,6 +2479,30 @@ app.addEventListener('change', event => {
 
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
+  const muteCreatorId = target.closest<HTMLElement>('[data-mute-creator]')?.dataset.muteCreator
+  const unmuteCreatorId = target.closest<HTMLElement>('[data-unmute-creator]')?.dataset.unmuteCreator
+  const creatorMuteId = muteCreatorId || unmuteCreatorId
+  if (creatorMuteId) {
+    const muted = muteCreatorId ? !notificationPreferences.mutedCreatorIds.includes(creatorMuteId) : false
+    try {
+      if (!showDemoData) await setCreatorMuted(creatorMuteId, muted)
+      notificationPreferences.mutedCreatorIds = muted
+        ? [...new Set([...notificationPreferences.mutedCreatorIds, creatorMuteId])]
+        : notificationPreferences.mutedCreatorIds.filter(id => id !== creatorMuteId)
+      if (muted && islandCompletions.some(item => item.creatorId === creatorMuteId)) clearIsland()
+      toast = muted ? 'Creator alerts muted' : 'Creator alerts unmuted'
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 1400)
+    } catch (error) {
+      toast = error instanceof Error ? error.message : 'That alert could not be changed.'
+      render()
+    }
+    return
+  }
+
   const subtaskId = target.closest<HTMLInputElement>('[data-subtask]')?.dataset.subtask
   if (subtaskId) {
     const task = selectedTask()
@@ -2125,7 +2532,7 @@ app.addEventListener('click', async event => {
 
   const nextView = target.closest<HTMLElement>('[data-view]')?.dataset.view as View | undefined
   if (nextView) {
-    if (creatorRouteUsername()) window.history.pushState({}, '', '/')
+    creatorTodayState = null
     mobileInspectorOpen = false
     if (nextView !== 'calendar') {
       calendarComposer = null
@@ -2150,30 +2557,31 @@ app.addEventListener('click', async event => {
 
   const followId = target.closest<HTMLElement>('[data-follow]')?.dataset.follow
   if (followId) {
-    if (followedCommunityIds.has(followId)) followedCommunityIds.delete(followId)
-    else followedCommunityIds.add(followId)
-    render()
+    const profile = communityProfiles.find(item => item.id === followId)
+    if (!profile) return
+    const following = !profile.followed
+    if (await updateCreatorFollowing(profile, following)) {
+      toast = following ? `Following ${profile.name}` : `Unfollowed ${profile.name}`
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 1400)
+    } else if (communityFollowError) {
+      toast = communityFollowError
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 2200)
+    }
     return
   }
 
   const communityId = target.closest<HTMLElement>('[data-community]')?.dataset.community
   if (communityId) {
     const profile = communityProfiles.find(item => item.id === communityId)
-    if (profile) {
-      rememberView('sticky')
-      setRoute(`/creator/${encodeURIComponent(profile.id)}/today`)
-    }
-    return
-  }
-
-  const creatorAction = target.closest<HTMLElement>('[data-action]')?.dataset.action
-  if (creatorAction === 'back-community') {
-    rememberView('sticky')
-    setRoute('/')
-    return
-  }
-  if (creatorAction === 'retry-creator') {
-    void syncCreatorRoute(true)
+    if (profile) await openCreatorToday(profile)
     return
   }
 
@@ -2235,6 +2643,33 @@ app.addEventListener('click', async event => {
   }
 
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (action === 'open-island') {
+    const first = islandCompletions[0]
+    const profile = first && communityProfiles.find(item => item.id === first.creatorId)
+    if (profile) await openCreatorToday(profile)
+    return
+  }
+  if (action === 'close-creator-today') {
+    closeCreatorToday()
+    return
+  }
+  if (action === 'retry-creator-today' && creatorTodayState) {
+    await openCreatorToday(creatorTodayState.profile)
+    return
+  }
+  if (action === 'notification-settings') {
+    notificationSettingsError = ''
+    notificationSettingsOpen = true
+    render()
+    return
+  }
+  if (action === 'close-notification-settings') {
+    notificationSettingsBusy = false
+    notificationSettingsError = ''
+    notificationSettingsOpen = false
+    render()
+    return
+  }
   if (action === 'continue-google') {
     window.location.assign('https://shotcount.app/?auth=signin')
     return
@@ -2244,6 +2679,10 @@ app.addEventListener('click', async event => {
     return
   }
   if (!action) return
+  if (action === 'retry-community') {
+    await refreshCommunityDirectory()
+    return
+  }
   if (action === 'close-profile') {
     captureProfileDraft()
     profilePromptDismissed = true
@@ -2524,13 +2963,35 @@ document.addEventListener('keydown', event => {
   render()
 })
 
+rememberCreatorIntent(creatorSlugFromLocation())
+if (!authRequired) resolveCreatorIntent()
+if (notificationPreview) notificationSettingsOpen = true
+const previewCompletion = (name: string, id: string, completedCount = 6, taskTitle = 'Approve the onboarding flow'): CreatorCompletion => ({
+  id: `preview-${id}`,
+  creatorId: id,
+  username: id,
+  displayName: name,
+  avatarUrl: '',
+  completedCount,
+  totalCount: completedCount,
+  completedAt: new Date().toISOString(),
+  taskTitle,
+})
+islandHook.__shotcountShowCompletion = (items = [previewCompletion('Amara Okafor', 'amara')]) => queueCompletionAlerts(items, true)
+if (islandPreview === 'single') islandCompletions = [previewCompletion('Amara Okafor', 'amara')]
+if (islandPreview === 'batch') islandCompletions = [
+  previewCompletion('Amara Okafor', 'amara'),
+  previewCompletion('Kenji Watanabe', 'kenji', 4, 'Send the campaign boards'),
+  previewCompletion('Maya Raman', 'maya', 3, 'Ship the homepage revision'),
+]
 render()
 if (authRequired) void verifyAuthSession()
-else void syncCreatorRoute()
 scheduleDateRefresh()
 window.addEventListener('popstate', () => {
+  rememberCreatorIntent(creatorSlugFromLocation())
+  if (!creatorSlugFromLocation()) creatorTodayState = null
+  resolveCreatorIntent()
   render()
-  void syncCreatorRoute()
 })
 window.addEventListener('online', () => void plannerRepository?.syncNow())
 window.addEventListener('offline', () => void plannerRepository?.syncNow())
@@ -2538,6 +2999,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     void plannerRepository?.refresh()
     void refreshSignedInProfile()
+    void checkForCompletionAlerts()
   }
 })
 dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {
