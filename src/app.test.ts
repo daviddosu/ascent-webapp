@@ -466,6 +466,23 @@ describe('reference screens', () => {
     expect(document.querySelector('[data-follow="kenji"]')?.getAttribute('aria-pressed')).toBe('true')
   })
 
+  it('opens a creator in the same Today surface without edit controls', async () => {
+    document.querySelector<HTMLButtonElement>('[data-view="sticky"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-community="amara"]')!.click()
+    await Promise.resolve()
+
+    expect(window.location.pathname).toBe('/creator/amara/today')
+    expect(document.querySelector('.today-screen.creator-today')).not.toBeNull()
+    expect(document.querySelector('.creator-today-profile h1')?.textContent).toBe('Amara Okafor’s Today')
+    expect(document.querySelectorAll('.creator-task-row')).toHaveLength(3)
+    expect(document.querySelector('[data-action="add-task"]')).toBeNull()
+    expect(document.querySelector('[data-task], [data-complete], .task-chevron, .inspector')).toBeNull()
+
+    document.querySelector<HTMLButtonElement>('[data-action="back-community"]')!.click()
+    expect(window.location.pathname).toBe('/')
+    expect(document.querySelector('.community-title h1')?.textContent).toBe('Community')
+  })
+
   it('toggles dark mode and remembers it', () => {
     const toggle = document.querySelector<HTMLButtonElement>('[data-action="toggle-theme"]')!
     expect(toggle.getAttribute('aria-checked')).toBe('false')

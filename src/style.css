@@ -9,6 +9,27 @@
   text-rendering: geometricPrecision;
 }
 
+/* A creator's shared Today page reuses the planner surface without edit controls. */
+.creator-today { padding-top: 30px; }
+.creator-back { width: max-content; margin: 0 0 22px; border: 0; background: transparent; color: #687074; font: inherit; font-weight: 700; cursor: pointer; transition: color .18s ease, transform .18s ease; }
+.creator-back:hover { color: #17191a; transform: translateX(-2px); }
+.creator-today-profile { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid #e7e9ea; }
+.creator-avatar { width: 58px; height: 58px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #eef0f1; font-size: 22px; font-weight: 800; }
+.creator-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.creator-today-profile p, .creator-today-profile h1, .creator-today-profile span { margin: 0; }
+.creator-today-profile p, .creator-today-profile span, .creator-today-profile small { color: #687074; }
+.creator-today-profile h1 { margin: 2px 0 4px; font-size: clamp(24px, 3vw, 34px); }
+.creator-today-profile small { white-space: nowrap; font-weight: 700; }
+.creator-task-list { margin-top: 0; }
+.creator-task-row, .creator-checkbox, .creator-task-text { cursor: default; }
+
+@media (max-width: 620px) {
+  .creator-today { padding-top: 18px; }
+  .creator-today-profile { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; }
+  .creator-avatar { width: 48px; height: 48px; }
+  .creator-today-profile small { grid-column: 1 / -1; }
+}
+
 :root[data-theme='dark'] { color-scheme: dark; }
 
 * { box-sizing: border-box; }

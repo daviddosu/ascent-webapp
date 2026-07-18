@@ -13,6 +13,7 @@ import {
   type CreatorProfileInput,
 } from './data/profile'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
+import { loadCreatorToday, type CreatorToday } from './data/community'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
 import './style.css'
@@ -65,6 +66,12 @@ type CommunityProfile = {
   portraitRow: number
   bioLines: string[]
 }
+type CreatorPageState =
+  | { status: 'idle'; username: '' }
+  | { status: 'loading'; username: string }
+  | { status: 'ready'; username: string; value: CreatorToday }
+  | { status: 'missing' | 'error'; username: string }
+let creatorPage: CreatorPageState = { status: 'idle', username: '' }
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 const storagePrefix = 'shotcount-workspace-current-v1:'
@@ -475,11 +482,66 @@ function isLandingRoute() {
   return false
 }
 
+function creatorRouteUsername() {
+  const match = window.location.pathname.match(/^\/creator\/([^/]+)\/today\/?$/)
+  if (!match) return ''
+  try {
+    return normalizeUsername(decodeURIComponent(match[1]!))
+  } catch {
+    return ''
+  }
+}
+
+function demoCreatorToday(username: string): CreatorToday | null {
+  const profile = communityProfiles.find(item => item.id === username)
+  if (!showDemoData || !profile) return null
+  const sampleTitles = [profile.latest, 'Plan the next important step', 'Share today’s progress']
+  return {
+    profile: {
+      id: profile.id,
+      username: profile.id,
+      displayName: profile.name,
+      bio: profile.bioLines.join(' · '),
+      avatarUrl: '',
+      timezone: 'Africa/Lagos',
+    },
+    date: todayKey,
+    viewerIsFollowing: followedCommunityIds.has(profile.id),
+    tasks: sampleTitles.map((title, index) => normalizeTask({
+      id: `${profile.id}-today-${index}`,
+      title,
+      due: todayKey,
+      time: ['08:40', '10:15', '14:00'][index],
+      completedAt: index === 0 ? new Date().toISOString() : undefined,
+      visibility: index === 2 ? 'followers' : 'public',
+    })),
+  }
+}
+
+async function syncCreatorRoute(force = false) {
+  const username = creatorRouteUsername()
+  if (!username) {
+    creatorPage = { status: 'idle', username: '' }
+    return
+  }
+  if (!force && creatorPage.username === username && creatorPage.status !== 'idle') return
+  creatorPage = { status: 'loading', username }
+  render()
+  try {
+    const value = demoCreatorToday(username) ?? await loadCreatorToday(username)
+    creatorPage = value ? { status: 'ready', username, value } : { status: 'missing', username }
+  } catch {
+    creatorPage = { status: 'error', username }
+  }
+  render()
+}
+
 function setRoute(pathname: string) {
   if (window.location.pathname !== pathname) {
     window.history.pushState({}, '', pathname)
   }
   render()
+  void syncCreatorRoute()
 }
 
 function landingPeopleCard(name: string, role: string, description: string, column: number, row: number) {
@@ -575,16 +637,17 @@ function render() {
   }
   refreshDateContext(now)
   refreshCounts()
+  const creatorUsername = creatorRouteUsername()
   const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
   const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
-  const showInspector = Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
+  const showInspector = !creatorUsername && Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
   app.innerHTML = `
     <div class="reference-app ${showInspector ? 'with-inspector' : ''}">
       ${authRequired ? renderSyncStatus() : ''}
       ${renderSidebar()}
       <main class="workspace">
         ${renderMobileTopbar()}
-        ${view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
+        ${creatorUsername ? renderCreatorToday() : view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
       </main>
       ${showInspector && selected ? renderInspector(selected) : ''}
     </div>
@@ -592,6 +655,51 @@ function render() {
     ${renderProfileModal()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function renderCreatorToday() {
+  if (creatorPage.status === 'loading' || creatorPage.status === 'idle') {
+    return `<section class="today-screen creator-today"><div class="planner-empty" role="status"><strong>Loading Today…</strong><p>Getting this creator’s shared tasks.</p></div></section>`
+  }
+  if (creatorPage.status !== 'ready') {
+    const message = creatorPage.status === 'missing' ? 'This creator page is not available.' : 'We could not load this creator’s Today page.'
+    return `<section class="today-screen creator-today">
+      <button class="creator-back" data-action="back-community">← Community</button>
+      <div class="planner-empty"><strong>${message}</strong><p>Nothing private was shown.</p>${creatorPage.status === 'error' ? '<button data-action="retry-creator">Try again</button>' : ''}</div>
+    </section>`
+  }
+
+  const { profile, tasks: creatorTasks } = creatorPage.value
+  const completedCount = creatorTasks.filter(task => task.completedAt).length
+  return `<section class="today-screen creator-today">
+    <button class="creator-back" data-action="back-community">← Community</button>
+    <header class="creator-today-profile">
+      <div class="creator-avatar">${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : `<span>${escapeHtml(profile.displayName.charAt(0).toUpperCase())}</span>`}</div>
+      <div><p>@${escapeHtml(profile.username)}</p><h1>${escapeHtml(profile.displayName)}’s Today</h1><span>${escapeHtml(profile.bio)}</span></div>
+      <small>${completedCount} of ${creatorTasks.length} complete</small>
+    </header>
+    <div class="task-list creator-task-list">
+      ${creatorTasks.length
+        ? creatorTasks.map(renderCreatorTaskRow).join('')
+        : '<div class="planner-empty"><strong>Nothing shared today.</strong><p>This creator has no Public or Followers tasks ready for you.</p></div>'}
+    </div>
+  </section>`
+}
+
+function renderCreatorTaskRow(task: Task) {
+  const completed = Boolean(task.completedAt)
+  const subtaskCount = task.subtaskItems?.length ?? 0
+  return `<div class="task-row creator-task-row ${completed ? 'completed' : ''}">
+    <span class="checkbox creator-checkbox" aria-label="${completed ? 'Done' : 'Not done'}">
+      <span class="completion-badge" aria-hidden="true"><svg viewBox="0 0 24 24">${completed
+        ? '<path class="completion-seal" d="M12 1.8c1.2 0 1.8 1.3 2.9 1.6 1.1.3 2.2-.6 3.1.1.9.7.4 2.1 1.1 3 .7.9 2.2.8 2.6 1.9.4 1.1-.8 2-.8 3.2s1.2 2.1.8 3.2c-.4 1.1-1.9 1-2.6 1.9-.7.9-.2 2.3-1.1 3-.9.7-2-.2-3.1.1-1.1.3-1.7 1.6-2.9 1.6s-1.8-1.3-2.9-1.6c-1.1-.3-2.2.6-3.1-.1-.9-.7-.4-2.1-1.1-3-.7-.9-2.2-.8-2.6-1.9-.4-1.1.8-2 .8-3.2s-1.2-2.1-.8-3.2c.4-1.1 1.9-1 2.6-1.9.7-.9.2-2.3 1.1-3 .9-.7 2 .2 3.1-.1C10.2 3.1 10.8 1.8 12 1.8Z"/><path class="completion-check" d="m7.4 12.1 3 2.9 6.2-6.2"/>'
+        : '<circle class="completion-ring" cx="12" cy="12" r="8.4"/>'}</svg></span>
+    </span>
+    <div class="task-text creator-task-text"><strong>${escapeHtml(task.title)}</strong><small>
+      ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
+      ${subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
+    </small></div>
+  </div>`
 }
 
 function renderSyncStatus() {
@@ -817,6 +925,7 @@ async function verifyAuthSession() {
     authState = 'error'
   }
   render()
+  if (authState === 'authenticated') void syncCreatorRoute()
 }
 
 async function signOut() {
@@ -1998,6 +2107,7 @@ app.addEventListener('click', async event => {
 
   const nextView = target.closest<HTMLElement>('[data-view]')?.dataset.view as View | undefined
   if (nextView) {
+    if (creatorRouteUsername()) window.history.pushState({}, '', '/')
     mobileInspectorOpen = false
     if (nextView !== 'calendar') {
       calendarComposer = null
@@ -2031,12 +2141,21 @@ app.addEventListener('click', async event => {
   const communityId = target.closest<HTMLElement>('[data-community]')?.dataset.community
   if (communityId) {
     const profile = communityProfiles.find(item => item.id === communityId)
-    toast = profile ? `Opening ${profile.name}'s community` : ''
-    render()
-    window.setTimeout(() => {
-      toast = ''
-      render()
-    }, 1400)
+    if (profile) {
+      rememberView('sticky')
+      setRoute(`/creator/${encodeURIComponent(profile.id)}/today`)
+    }
+    return
+  }
+
+  const creatorAction = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (creatorAction === 'back-community') {
+    rememberView('sticky')
+    setRoute('/')
+    return
+  }
+  if (creatorAction === 'retry-creator') {
+    void syncCreatorRoute(true)
     return
   }
 
@@ -2381,8 +2500,12 @@ document.addEventListener('keydown', event => {
 
 render()
 if (authRequired) void verifyAuthSession()
+else void syncCreatorRoute()
 scheduleDateRefresh()
-window.addEventListener('popstate', render)
+window.addEventListener('popstate', () => {
+  render()
+  void syncCreatorRoute()
+})
 window.addEventListener('online', () => void plannerRepository?.syncNow())
 window.addEventListener('offline', () => void plannerRepository?.syncNow())
 document.addEventListener('visibilitychange', () => {
