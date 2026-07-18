@@ -40,16 +40,19 @@ alter table public.notification_preferences enable row level security;
 alter table public.muted_creators enable row level security;
 alter table public.completion_events enable row level security;
 
+drop policy if exists "notification_preferences_own_rows" on public.notification_preferences;
 create policy "notification_preferences_own_rows" on public.notification_preferences
 for all to authenticated
 using (user_id = (select auth.uid()))
 with check (user_id = (select auth.uid()));
 
+drop policy if exists "muted_creators_own_rows" on public.muted_creators;
 create policy "muted_creators_own_rows" on public.muted_creators
 for all to authenticated
 using (viewer_id = (select auth.uid()))
 with check (viewer_id = (select auth.uid()));
 
+drop policy if exists "completion_events_followed_read" on public.completion_events;
 create policy "completion_events_followed_read" on public.completion_events
 for select to authenticated
 using (
@@ -125,7 +128,7 @@ $$;
 
 drop trigger if exists record_shotcount_completion on public.planner_records;
 create trigger record_shotcount_completion
-after insert or update of data, deleted_at on public.planner_records
+after insert or update of data, deleted_at, visibility on public.planner_records
 for each row execute function public.record_shotcount_completion();
 
 drop function if exists public.completion_alert_feed(timestamptz);
@@ -181,7 +184,7 @@ returns table (
   id text,
   title text,
   due text,
-  time text,
+  "time" text,
   completed_at text,
   visibility text
 )
