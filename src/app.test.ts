@@ -49,6 +49,10 @@ describe('reference screens', () => {
     expect(document.querySelector('#profile-bio-tip')?.textContent).toContain('Example:')
     expect(document.querySelector('#profile-bio-tip')?.textContent).toContain('followers on X')
     expect(bio.getAttribute('aria-describedby')).toBe('profile-bio-tip')
+    expect(document.querySelector('.creator-launch-card')).not.toBeNull()
+    expect(document.querySelector('.creator-link-row')?.textContent).toContain('Choose a username')
+    expect(document.querySelector('.creator-visibility-key')).toBeNull()
+    expect(document.querySelector('[data-action="preview-creator-link"]')).toBeNull()
     expect(document.querySelector('.profile-form-actions [data-action="close-profile"]')?.textContent).toBe('Not now')
     username.value = 'David.Dosu!'
     username.dispatchEvent(new Event('input', { bubbles: true }))
@@ -56,6 +60,12 @@ describe('reference screens', () => {
     expect(username.closest('[data-profile-field]')?.classList.contains('is-missing')).toBe(false)
     document.querySelector<HTMLButtonElement>('.profile-form-actions [data-action="close-profile"]')!.click()
     expect(document.querySelector('.profile-popover')).toBeNull()
+
+    document.querySelector<HTMLButtonElement>('[data-action="settings"]')!.click()
+    expect(document.querySelector('.creator-link-row')?.textContent).toContain('app.shotcount.app/daviddosu')
+    expect(document.querySelector<HTMLButtonElement>('[data-action="copy-creator-link"]')?.disabled).toBe(false)
+    expect(document.querySelector('[data-action="preview-creator-link"]')).toBeNull()
+    document.querySelector<HTMLButtonElement>('.profile-form-actions [data-action="close-profile"]')!.click()
   })
 
   it('shows the Shotcount name without the square S badge in the mobile top bar', () => {

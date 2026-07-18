@@ -1069,6 +1069,8 @@ function renderProfileModal() {
   const missing = new Set(currentProfileMissingFields())
   const fieldState = (field: CreatorProfileField) => missing.has(field) ? ' is-missing' : ''
   const required = (field: CreatorProfileField) => `<small class="profile-required" ${missing.has(field) ? '' : 'hidden'} aria-label="required">*</small>`
+  const creatorSlug = normalizeCreatorSlug(profileDraft.username)
+  const creatorLink = creatorSlug ? `https://app.shotcount.app/${creatorSlug}` : ''
   return `
     <div class="profile-popover" role="presentation">
       <button type="button" class="profile-popover-backdrop" data-action="close-profile" aria-label="Close profile setup"></button>
@@ -1122,6 +1124,13 @@ function renderProfileModal() {
               </select>
             </label>
           </div>
+          <section class="creator-launch-card" aria-labelledby="creator-launch-title">
+            <strong id="creator-launch-title">Your creator link</strong>
+            <div class="creator-link-row">
+              <span>${creatorLink ? escapeHtml(creatorLink.replace('https://', '')) : 'Choose a username to make your link'}</span>
+              <button type="button" data-action="copy-creator-link" ${creatorLink ? '' : 'disabled'}>Copy</button>
+            </div>
+          </section>
           <p class="profile-form-error" role="alert">${escapeHtml(profileError)}</p>
           <div class="profile-form-actions">
             <button type="button" data-action="close-profile">Not now</button>
@@ -1268,8 +1277,19 @@ function resolveCreatorIntent() {
   if (target.followed) {
     toast = `You already follow ${target.name}.`
     clearCreatorIntentFromUrl()
+    void openCreatorToday(target)
     return
   }
+  void updateCreatorFollowing(target, true).then(async followed => {
+    if (!followed) return
+    toast = `You’re now following ${target.name}`
+    creatorLinkTargetId = target.id
+    await openCreatorToday(target)
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1800)
+  })
 }
 
 function applyCommunityDirectory(directory: CommunityCreator[]) {
@@ -2617,6 +2637,23 @@ app.addEventListener('click', async event => {
   }
 
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (action === 'copy-creator-link') {
+    captureProfileDraft()
+    const username = normalizeCreatorSlug(profileDraft.username)
+    if (!username) return
+    try {
+      await navigator.clipboard.writeText(`https://app.shotcount.app/${username}`)
+      toast = 'Creator link copied'
+    } catch {
+      toast = 'Could not copy the link'
+    }
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1600)
+    return
+  }
   if (action === 'open-island') {
     const first = islandCompletions[0]
     const profile = first && communityProfiles.find(item => item.id === first.creatorId)
