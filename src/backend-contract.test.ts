@@ -8,6 +8,7 @@ const plannerMigration = readFileSync(resolve(root, 'supabase/migrations/2026071
 const visibilityMigration = readFileSync(resolve(root, 'supabase/migrations/202607140002_task_visibility.sql'), 'utf8')
 const profileMigration = readFileSync(resolve(root, 'supabase/migrations/202607170001_creator_profiles.sql'), 'utf8')
 const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_creator_directory.sql'), 'utf8')
+const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_public_creator_today.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -136,6 +137,17 @@ describe('creator profile contract', () => {
     expect(creatorDirectoryMigration).not.toContain('profile.email')
     expect(creatorDirectoryMigration).not.toContain('profile.timezone')
     expect(creatorDirectoryMigration).not.toContain('planner_records')
+  })
+
+  it('returns a small read-only creator Today bundle through the server', () => {
+    expect(creatorTodayMigration).toContain('create or replace function public.get_creator_today')
+    expect(creatorTodayMigration).toContain('security definer')
+    expect(creatorTodayMigration).toContain("set search_path = ''")
+    expect(creatorTodayMigration).toContain('profile.onboarding_completed = true')
+    expect(creatorTodayMigration).toContain("task.visibility in ('public', 'followers')")
+    expect(creatorTodayMigration).toContain('public.can_read_planner_task(creator.id, task.record_id)')
+    expect(creatorTodayMigration).not.toContain("task.data ->> 'description'")
+    expect(creatorTodayMigration).toContain('revoke all on function public.get_creator_today(text) from public')
   })
 })
 

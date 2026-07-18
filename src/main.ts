@@ -1088,7 +1088,7 @@ function renderProfileModal() {
                 <textarea name="bio" maxlength="140" rows="2" placeholder="What are you building?" aria-describedby="profile-bio-tip" required>${escapeHtml(profileDraft.bio)}</textarea>
                 <button type="button" class="profile-info-tip" aria-label="Short bio help" aria-describedby="profile-bio-tip">
                   <span aria-hidden="true">i</span>
-                  <small class="profile-info-tooltip" id="profile-bio-tip" role="tooltip">Try: “Designer at Kuda · 8k followers on X · Building tools for creators.”</small>
+                  <small class="profile-info-tooltip" id="profile-bio-tip" role="tooltip">Example: “Designer at Kuda · 8k followers on X · Building tools for creators.”</small>
                 </button>
               </div>
             </label>

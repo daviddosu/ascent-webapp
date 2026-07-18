@@ -46,6 +46,7 @@ describe('reference screens', () => {
     expect(document.querySelector('#profile-username-tip')?.textContent).toContain('You can change it')
     expect(username.getAttribute('aria-describedby')).toBe('profile-username-tip')
     expect(bio.placeholder).toBe('What are you building?')
+    expect(document.querySelector('#profile-bio-tip')?.textContent).toContain('Example:')
     expect(document.querySelector('#profile-bio-tip')?.textContent).toContain('followers on X')
     expect(bio.getAttribute('aria-describedby')).toBe('profile-bio-tip')
     expect(document.querySelector('.profile-form-actions [data-action="close-profile"]')?.textContent).toBe('Not now')
