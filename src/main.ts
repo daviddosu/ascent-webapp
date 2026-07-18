@@ -72,6 +72,7 @@ type CreatorPageState =
   | { status: 'ready'; username: string; value: CreatorToday }
   | { status: 'missing' | 'error'; username: string }
 let creatorPage: CreatorPageState = { status: 'idle', username: '' }
+let selectedCreatorTaskId = ''
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 const storagePrefix = 'shotcount-workspace-current-v1:'
@@ -641,8 +642,12 @@ function render() {
   const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
   const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
   const showInspector = !creatorUsername && Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
+  const creatorSelected = creatorPage.status === 'ready'
+    ? creatorPage.value.tasks.find(task => task.id === selectedCreatorTaskId) ?? creatorPage.value.tasks[0]
+    : undefined
+  const showCreatorInspector = Boolean(creatorUsername && creatorSelected && (!isPhone || mobileInspectorOpen))
   app.innerHTML = `
-    <div class="reference-app ${showInspector ? 'with-inspector' : ''}">
+    <div class="reference-app ${showInspector || showCreatorInspector ? 'with-inspector' : ''}">
       ${authRequired ? renderSyncStatus() : ''}
       ${renderSidebar()}
       <main class="workspace">
@@ -650,6 +655,7 @@ function render() {
         ${creatorUsername ? renderCreatorToday() : view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
       </main>
       ${showInspector && selected ? renderInspector(selected) : ''}
+      ${showCreatorInspector && creatorSelected ? renderCreatorInspector(creatorSelected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
     ${renderProfileModal()}
@@ -670,15 +676,13 @@ function renderCreatorToday() {
   }
 
   const { profile, tasks: creatorTasks } = creatorPage.value
-  const completedCount = creatorTasks.filter(task => task.completedAt).length
   return `<section class="today-screen creator-today">
-    <button class="creator-back" data-action="back-community">← Community</button>
-    <header class="creator-today-profile">
-      <div class="creator-avatar">${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : `<span>${escapeHtml(profile.displayName.charAt(0).toUpperCase())}</span>`}</div>
-      <div><p>@${escapeHtml(profile.username)}</p><h1>${escapeHtml(profile.displayName)}’s Today</h1><span>${escapeHtml(profile.bio)}</span></div>
-      <small>${completedCount} of ${creatorTasks.length} complete</small>
-    </header>
-    <div class="task-list creator-task-list">
+    <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${creatorTasks.length}" aria-label="${creatorTasks.length} shared tasks">${creatorTasks.length}</span></header>
+    <button class="add-task-row creator-context-row" data-action="back-community">
+      <span class="creator-mini-avatar">${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : escapeHtml(profile.displayName.charAt(0).toUpperCase())}</span>
+      <span><strong>${escapeHtml(profile.displayName)}</strong><small>@${escapeHtml(profile.username)} · Back to Community</small></span>
+    </button>
+    <div class="task-list">
       ${creatorTasks.length
         ? creatorTasks.map(renderCreatorTaskRow).join('')
         : '<div class="planner-empty"><strong>Nothing shared today.</strong><p>This creator has no Public or Followers tasks ready for you.</p></div>'}
@@ -690,16 +694,30 @@ function renderCreatorTaskRow(task: Task) {
   const completed = Boolean(task.completedAt)
   const subtaskCount = task.subtaskItems?.length ?? 0
   return `<div class="task-row creator-task-row ${completed ? 'completed' : ''}">
-    <span class="checkbox creator-checkbox" aria-label="${completed ? 'Done' : 'Not done'}">
+    <span class="checkbox creator-checkbox" role="img" aria-label="${completed ? 'Done' : 'Not done'}">
       <span class="completion-badge" aria-hidden="true"><svg viewBox="0 0 24 24">${completed
         ? '<path class="completion-seal" d="M12 1.8c1.2 0 1.8 1.3 2.9 1.6 1.1.3 2.2-.6 3.1.1.9.7.4 2.1 1.1 3 .7.9 2.2.8 2.6 1.9.4 1.1-.8 2-.8 3.2s1.2 2.1.8 3.2c-.4 1.1-1.9 1-2.6 1.9-.7.9-.2 2.3-1.1 3-.9.7-2-.2-3.1.1-1.1.3-1.7 1.6-2.9 1.6s-1.8-1.3-2.9-1.6c-1.1-.3-2.2.6-3.1-.1-.9-.7-.4-2.1-1.1-3-.7-.9-2.2-.8-2.6-1.9-.4-1.1.8-2 .8-3.2s-1.2-2.1-.8-3.2c.4-1.1 1.9-1 2.6-1.9.7-.9.2-2.3 1.1-3 .9-.7 2 .2 3.1-.1C10.2 3.1 10.8 1.8 12 1.8Z"/><path class="completion-check" d="m7.4 12.1 3 2.9 6.2-6.2"/>'
         : '<circle class="completion-ring" cx="12" cy="12" r="8.4"/>'}</svg></span>
     </span>
-    <div class="task-text creator-task-text"><strong>${escapeHtml(task.title)}</strong><small>
+    <button class="task-text" data-creator-task="${task.id}"><strong>${escapeHtml(task.title)}</strong><small>
       ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
       ${subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
-    </small></div>
+    </small></button>
+    <button class="task-chevron" data-creator-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
   </div>`
+}
+
+function renderCreatorInspector(task: Task) {
+  const subtasks = task.subtaskItems ?? []
+  return `<aside class="inspector creator-inspector">
+    <button type="button" class="inspector-close" data-action="close-inspector" aria-label="Close task details">${icon('chevron')}</button>
+    <div class="inspector-content">
+      <h2>Task:</h2>
+      <div class="inspector-title creator-inspector-title">${escapeHtml(task.title)}</div>
+      <h3>Subtasks:</h3>
+      ${subtasks.length ? subtasks.map(subtask => `<div class="subtask"><span class="creator-subtask-check">${subtask.completed ? '✓' : ''}</span><span class="${subtask.completed ? 'completed' : ''}">${escapeHtml(subtask.title)}</span></div>`).join('') : '<p class="creator-no-subtasks">No subtasks</p>'}
+    </div>
+  </aside>`
 }
 
 function renderSyncStatus() {
@@ -2156,6 +2174,14 @@ app.addEventListener('click', async event => {
   }
   if (creatorAction === 'retry-creator') {
     void syncCreatorRoute(true)
+    return
+  }
+
+  const creatorTaskId = target.closest<HTMLElement>('[data-creator-task]')?.dataset.creatorTask
+  if (creatorTaskId) {
+    selectedCreatorTaskId = creatorTaskId
+    mobileInspectorOpen = true
+    render()
     return
   }
 

@@ -473,10 +473,12 @@ describe('reference screens', () => {
 
     expect(window.location.pathname).toBe('/creator/amara/today')
     expect(document.querySelector('.today-screen.creator-today')).not.toBeNull()
-    expect(document.querySelector('.creator-today-profile h1')?.textContent).toBe('Amara Okafor’s Today')
+    expect(document.querySelector('.creator-today .screen-title h1')?.textContent).toBe('Today')
+    expect(document.querySelector('.creator-context-row')?.textContent).toContain('Amara Okafor')
     expect(document.querySelectorAll('.creator-task-row')).toHaveLength(3)
     expect(document.querySelector('[data-action="add-task"]')).toBeNull()
-    expect(document.querySelector('[data-task], [data-complete], .task-chevron, .inspector')).toBeNull()
+    expect(document.querySelector('[data-task], [data-complete], .inspector input, .inspector textarea, .inspector select, .inspector-actions')).toBeNull()
+    expect(document.querySelector('.creator-inspector')).not.toBeNull()
 
     document.querySelector<HTMLButtonElement>('[data-action="back-community"]')!.click()
     expect(window.location.pathname).toBe('/')
