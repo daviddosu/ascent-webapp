@@ -26,3 +26,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Local QA captures and Supabase CLI connection/cache files
+/artifacts/
+/supabase/.temp/
