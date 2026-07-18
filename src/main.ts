@@ -436,9 +436,8 @@ let communityProfiles: CommunityProfile[] = showDemoData ? demoCommunityProfiles
 let communityState: 'loading' | 'ready' | 'failed' = showDemoData ? 'ready' : 'loading'
 const communityBusyIds = new Set<string>()
 let pendingCreatorSlug = ''
-let creatorFollowPrompt: CommunityProfile | null = null
-let creatorFollowBusy = false
-let creatorFollowError = ''
+let creatorLinkTargetId = ''
+let communityFollowError = ''
 
 const icons: Record<string, string> = {
   menu: '<path d="M5 7h14M5 12h14M5 17h14"/>',
@@ -684,7 +683,6 @@ function render() {
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
     ${renderProfileModal()}
-    ${renderCreatorFollowPrompt()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
 }
@@ -839,34 +837,6 @@ function renderProfileModal() {
   `
 }
 
-function renderCreatorFollowPrompt() {
-  const profile = creatorFollowPrompt
-  if (!profile || profileModalOpen) return ''
-  const firstName = profile.name.trim().split(/\s+/)[0] || profile.name
-  return `
-    <div class="profile-popover creator-follow-popover" role="presentation">
-      <button type="button" class="profile-popover-backdrop" data-action="cancel-creator-follow" aria-label="Close follow confirmation"></button>
-      <section class="profile-popover-card creator-follow-card" role="dialog" aria-modal="true" aria-labelledby="creator-follow-title">
-        <button type="button" class="profile-popover-close" data-action="cancel-creator-follow" aria-label="Close follow confirmation">×</button>
-        <div class="creator-follow-identity">
-          <div class="creator-follow-avatar" aria-hidden="true">
-            ${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : `<span>${escapeHtml(profile.name.charAt(0).toUpperCase())}</span>`}
-          </div>
-          <div><small>CREATOR LINK</small><strong>@${escapeHtml(profile.username)}</strong></div>
-        </div>
-        <h2 id="creator-follow-title">Follow ${escapeHtml(profile.name)}?</h2>
-        <p class="creator-follow-copy">You opened ${escapeHtml(profile.name)}’s personal Shotcount link. Follow them to see the tasks they choose to share with followers.</p>
-        <p class="creator-follow-privacy">Private tasks always stay private.</p>
-        <p class="profile-form-error" role="alert">${escapeHtml(creatorFollowError)}</p>
-        <div class="profile-form-actions creator-follow-actions">
-          <button type="button" data-action="cancel-creator-follow">Not now</button>
-          <button type="button" data-action="confirm-creator-follow" ${creatorFollowBusy ? 'disabled' : ''}>${creatorFollowBusy ? 'Following…' : `Follow ${escapeHtml(firstName)}`}</button>
-        </div>
-      </section>
-    </div>
-  `
-}
-
 function replacePlannerWorkspace(workspace: { tasks: Task[]; goals: Goal[] }) {
   tasks.splice(0, tasks.length, ...workspace.tasks.map(task => normalizeTask(task)))
   goals.splice(0, goals.length, ...workspace.goals.map(goal => normalizeGoal(goal)))
@@ -988,19 +958,19 @@ function resolveCreatorIntent() {
     }
     return
   }
+  communityProfiles = [target, ...communityProfiles.filter(profile => profile.id !== target.id)]
+  creatorLinkTargetId = target.id
+  rememberView('sticky')
   if (target.id === activeUser?.id) {
     toast = 'This is your creator link.'
     clearCreatorIntentFromUrl()
     return
   }
   if (target.followed) {
-    rememberView('sticky')
     toast = `You already follow ${target.name}.`
     clearCreatorIntentFromUrl()
     return
   }
-  creatorFollowError = ''
-  creatorFollowPrompt = target
 }
 
 function applyCommunityDirectory(directory: CommunityCreator[]) {
@@ -1038,7 +1008,7 @@ function openCreatorLink(profile: CommunityProfile) {
 async function updateCreatorFollowing(profile: CommunityProfile, following: boolean) {
   if (communityBusyIds.has(profile.id)) return false
   communityBusyIds.add(profile.id)
-  creatorFollowError = ''
+  communityFollowError = ''
   render()
   try {
     if (!profile.isDemo) {
@@ -1048,9 +1018,10 @@ async function updateCreatorFollowing(profile: CommunityProfile, following: bool
     profile.followed = following
     profile.followerCount = Math.max(0, profile.followerCount + (following ? 1 : -1))
     profile.members = formatFollowerCount(profile.followerCount)
+    if (following && creatorLinkTargetId === profile.id) clearCreatorIntentFromUrl()
     return true
   } catch (error) {
-    creatorFollowError = error instanceof Error ? error.message : 'We could not update this follow.'
+    communityFollowError = error instanceof Error ? error.message : 'We could not update this follow.'
     return false
   } finally {
     communityBusyIds.delete(profile.id)
@@ -1819,15 +1790,17 @@ function renderStickyWall() {
 
 function renderSpotlight(profile: CommunityProfile) {
   const busy = communityBusyIds.has(profile.id)
+  const isCreatorLinkTarget = creatorLinkTargetId === profile.id
+  const firstName = profile.name.trim().split(/\s+/)[0] || profile.name
   return `
-    <article class="spotlight-card">
+    <article class="spotlight-card ${isCreatorLinkTarget ? 'creator-link-target' : ''}">
       ${renderLaunchPopover(profile, true)}
       <div class="spotlight-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
         ${renderCommunityPortrait(profile)}
-        <span class="spotlight-members">${profile.members} ${profile.isDemo ? 'people learning alongside her' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
+        <span class="spotlight-members">${profile.members} ${profile.isDemo ? 'people learning alongside them' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
       </div>
       <div class="spotlight-body">
-        <p class="spotlight-role">${profile.isDemo ? `${escapeHtml(profile.role)} · Lagos` : `@${escapeHtml(profile.username)}`}</p>
+        <p class="spotlight-role">${isCreatorLinkTarget ? `CREATOR LINK · @${escapeHtml(profile.username)}` : profile.isDemo ? `${escapeHtml(profile.role)} · Lagos` : `@${escapeHtml(profile.username)}`}</p>
         <h3>${escapeHtml(profile.name)}</h3>
         <p class="spotlight-intro">${escapeHtml(profile.isDemo ? 'Building useful products without losing the quiet routines that make ambitious work possible.' : profile.latest)}</p>
         ${profile.isDemo ? `<div class="spotlight-tasks">
@@ -1837,7 +1810,7 @@ function renderSpotlight(profile: CommunityProfile) {
           <div><i></i><span>Founder interviews</span><time>14:00</time></div>
         </div>` : `<div class="creator-profile-facts"><strong>${profile.members}</strong><span>${profile.followerCount === 1 ? 'follower' : 'followers'}</span><small>Only tasks marked Followers or Public can be shared.</small></div>`}
         <div class="spotlight-actions">
-          <button class="spotlight-open" data-community="${profile.id}">${profile.isDemo ? 'Enter Amara’s community' : 'Open creator link'} ${icon('chevron')}</button>
+          <button class="spotlight-open" data-community="${profile.id}">${profile.isDemo ? `Enter ${escapeHtml(firstName)}’s community` : 'Open creator link'} ${icon('chevron')}</button>
           <button class="spotlight-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
             ${busy ? 'Saving…' : profile.followed ? 'Following' : 'Follow'}
           </button>
@@ -2247,6 +2220,13 @@ app.addEventListener('click', async event => {
         toast = ''
         render()
       }, 1400)
+    } else if (communityFollowError) {
+      toast = communityFollowError
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 2200)
     }
     return
   }
@@ -2319,37 +2299,6 @@ app.addEventListener('click', async event => {
   if (!action) return
   if (action === 'retry-community') {
     await refreshCommunityDirectory()
-    return
-  }
-  if (action === 'cancel-creator-follow') {
-    creatorFollowPrompt = null
-    creatorFollowBusy = false
-    creatorFollowError = ''
-    clearCreatorIntentFromUrl()
-    render()
-    return
-  }
-  if (action === 'confirm-creator-follow') {
-    const profile = creatorFollowPrompt
-    if (!profile || creatorFollowBusy) return
-    creatorFollowBusy = true
-    creatorFollowError = ''
-    render()
-    const followed = await updateCreatorFollowing(profile, true)
-    creatorFollowBusy = false
-    if (!followed) {
-      render()
-      return
-    }
-    creatorFollowPrompt = null
-    rememberView('sticky')
-    clearCreatorIntentFromUrl()
-    toast = `Following ${profile.name}`
-    render()
-    window.setTimeout(() => {
-      toast = ''
-      render()
-    }, 1400)
     return
   }
   if (action === 'close-profile') {
@@ -2603,14 +2552,6 @@ document.addEventListener('keydown', event => {
     profileBusy = false
     profileError = ''
     clearProfilePhotoPreview()
-    render()
-    return
-  }
-  if (event.key === 'Escape' && creatorFollowPrompt) {
-    creatorFollowPrompt = null
-    creatorFollowBusy = false
-    creatorFollowError = ''
-    clearCreatorIntentFromUrl()
     render()
     return
   }

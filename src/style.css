@@ -1501,6 +1501,15 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   border-radius: 9px;
   background: #fff;
 }
+.spotlight-card.creator-link-target {
+  border-color: #aeb5b8;
+  box-shadow: 0 0 0 4px rgba(18, 24, 27, .06);
+  animation: creator-link-focus .48s ease-out both;
+}
+@keyframes creator-link-focus {
+  from { opacity: .72; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .spotlight-portrait {
   position: relative;
   min-height: 362px;
@@ -3333,45 +3342,6 @@ body[data-theme='dark'] .sidebar {
 .profile-form-actions button:last-child:disabled { opacity: .58; cursor: wait; }
 .profile-form-actions button:focus-visible { outline: 2px solid #3284e4; outline-offset: 2px; }
 
-.creator-follow-card { width: min(430px, 100%); padding: 30px; }
-.creator-follow-identity {
-  margin: 2px 0 23px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.creator-follow-avatar {
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid #e0e3e4;
-  border-radius: 50%;
-  background: #f2f3f3;
-  color: #2b3032;
-  font-size: 18px;
-  font-weight: 700;
-}
-.creator-follow-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.creator-follow-identity > div:last-child { display: grid; gap: 2px; }
-.creator-follow-identity small { color: #8a9194; font-size: 9px; font-weight: 700; letter-spacing: .09em; }
-.creator-follow-identity strong { color: #343a3d; font-size: 13px; }
-.creator-follow-card h2 { margin-bottom: 10px; font-size: 28px; }
-.creator-follow-copy { margin: 0; color: #5f6669; font-size: 13px; line-height: 1.6; }
-.creator-follow-privacy {
-  margin: 17px 0 20px;
-  padding: 11px 12px;
-  border: 1px solid #e4e7e8;
-  border-radius: 9px;
-  background: #f7f8f8;
-  color: #555c5f;
-  font-size: 11px;
-  font-weight: 600;
-}
-.creator-follow-actions { margin-top: 3px; }
-
 body[data-theme='dark'] .profile-popover-card {
   border-color: var(--dark-border);
   background: var(--dark-surface);
@@ -3398,17 +3368,9 @@ body[data-theme='dark'] .profile-info-tip:hover,
 body[data-theme='dark'] .profile-info-tip:focus-visible { background: var(--dark-raised); color: var(--dark-text); }
 
 body[data-theme='dark'] .profile-required { color: #ff7777 !important; }
-body[data-theme='dark'] .creator-follow-avatar,
-body[data-theme='dark'] .creator-follow-privacy {
-  border-color: var(--dark-border);
-  background: var(--dark-raised);
-  color: var(--dark-text);
-}
-body[data-theme='dark'] .creator-follow-identity strong { color: var(--dark-text); }
-body[data-theme='dark'] .creator-follow-copy,
-body[data-theme='dark'] .creator-follow-identity small { color: var(--dark-muted); }
 body[data-theme='dark'] .community-state { border-color: var(--dark-border); color: var(--dark-muted); }
 body[data-theme='dark'] .community-state strong { color: var(--dark-text); }
+body[data-theme='dark'] .spotlight-card.creator-link-target { box-shadow: 0 0 0 4px rgba(255, 255, 255, .06); }
 
 @keyframes profile-popover-in {
   from { opacity: 0; transform: translateY(6px); }
@@ -3432,28 +3394,12 @@ body[data-theme='dark'] .community-state strong { color: var(--dark-text); }
   .profile-form-grid { grid-template-columns: 1fr; gap: 13px; }
   .profile-form-wide { grid-column: auto; }
   .profile-form-actions { position: sticky; bottom: 0; padding-top: 8px; background: inherit; }
-  .creator-follow-popover {
-    padding: 16px;
-    place-items: end center;
-    background: transparent;
-  }
-  .creator-follow-popover .profile-popover-backdrop { display: block; }
-  .creator-follow-card {
-    width: 100%;
-    min-height: 0;
-    max-height: calc(100dvh - 32px);
-    padding: 28px 22px max(22px, env(safe-area-inset-bottom));
-    border: 1px solid rgba(15, 24, 29, .10);
-    border-radius: 20px;
-    box-shadow: 0 24px 70px rgba(10, 25, 31, .20);
-  }
-  .creator-follow-card h2 { margin-top: 0; font-size: 26px; }
-  .creator-follow-actions { position: static; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .profile-popover { animation: none; }
   .profile-info-tooltip { transition: none; }
+  .spotlight-card.creator-link-target { animation: none; }
 }
 
 .cloud-sync-state {

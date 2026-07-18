@@ -465,19 +465,14 @@ describe('reference screens', () => {
     expect(document.querySelector('[data-follow="kenji"]')?.getAttribute('aria-pressed')).toBe('true')
 
     document.querySelector<HTMLButtonElement>('[data-community="maya"]')!.click()
-    expect(document.querySelector('.creator-follow-card h2')?.textContent).toBe('Follow Maya Raman?')
-    expect(document.querySelector('.creator-follow-copy')?.textContent).toContain('personal Shotcount link')
-    expect(document.querySelector('.creator-follow-privacy')?.textContent).toBe('Private tasks always stay private.')
-    expect(window.location.pathname).toBe('/maya')
-    document.querySelector<HTMLButtonElement>('[data-action="cancel-creator-follow"]')!.click()
     expect(document.querySelector('.creator-follow-card')).toBeNull()
-    expect(window.location.pathname).toBe('/')
+    expect(document.querySelector('.spotlight-card.creator-link-target h3')?.textContent).toBe('Maya Raman')
+    expect(document.querySelector('.spotlight-card .spotlight-role')?.textContent).toContain('@maya')
+    expect(window.location.pathname).toBe('/maya')
 
-    document.querySelector<HTMLButtonElement>('[data-community="maya"]')!.click()
-    document.querySelector<HTMLButtonElement>('[data-action="confirm-creator-follow"]')!.click()
+    document.querySelector<HTMLButtonElement>('.spotlight-card [data-follow="maya"]')!.click()
     await vi.waitFor(() => {
       expect(document.querySelector('[data-follow="maya"]')?.getAttribute('aria-pressed')).toBe('true')
-      expect(document.querySelector('.creator-follow-card')).toBeNull()
       expect(window.location.pathname).toBe('/')
     })
   })
