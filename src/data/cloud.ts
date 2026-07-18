@@ -1,10 +1,15 @@
-import type { SupabaseClient, User } from '@supabase/supabase-js'
+import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 export const cloudEnabled = Boolean(url && publicKey)
 export let cloud: SupabaseClient | null = null
+let googleProviderToken: string | null = null
+
+function captureGoogleProviderToken(session: Session | null) {
+  if (session?.provider_token) googleProviderToken = session.provider_token
+}
 
 async function ensureCloud() {
   if (!cloudEnabled) return null
@@ -17,11 +22,20 @@ async function ensureCloud() {
       detectSessionInUrl: true,
     },
   })
+  cloud.auth.onAuthStateChange((_event, session) => captureGoogleProviderToken(session))
   return cloud
 }
 
 export async function getCloudClient() {
   return ensureCloud()
+}
+
+export async function currentGoogleProviderToken() {
+  const client = await ensureCloud()
+  if (!client) return null
+  const { data } = await client.auth.getSession()
+  captureGoogleProviderToken(data.session)
+  return googleProviderToken
 }
 
 export async function currentUser(): Promise<User | null> {

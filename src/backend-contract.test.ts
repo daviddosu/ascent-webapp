@@ -124,6 +124,16 @@ describe('Google Calendar account upgrade contract', () => {
     expect(main).toContain('window.sessionStorage.getItem(key)')
     expect(main).toContain("nextView === 'calendar'")
   })
+
+  it('captures the short-lived provider token during the OAuth callback', () => {
+    const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
+    const calendar = readFileSync(resolve(root, 'src/data/google-calendar.ts'), 'utf8')
+    expect(cloud).toContain('cloud.auth.onAuthStateChange')
+    expect(cloud).toContain('captureGoogleProviderToken(session)')
+    expect(cloud).toContain('export async function currentGoogleProviderToken')
+    expect(calendar).toContain('await currentGoogleProviderToken()')
+    expect(calendar).not.toContain('session?.provider_token')
+  })
 })
 
 describe('creator profile contract', () => {

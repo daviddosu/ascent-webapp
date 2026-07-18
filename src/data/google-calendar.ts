@@ -1,5 +1,5 @@
-import type { Session, User } from '@supabase/supabase-js'
-import { getCloudClient } from './cloud'
+import type { User } from '@supabase/supabase-js'
+import { currentGoogleProviderToken, getCloudClient } from './cloud'
 
 export type GoogleCalendarEvent = {
   id: string
@@ -126,13 +126,6 @@ async function pagedGoogleList<T>(path: string, token: string) {
   return items
 }
 
-export async function googleCalendarSession(): Promise<Session | null> {
-  const client = await getCloudClient()
-  if (!client) return null
-  const { data } = await client.auth.getSession()
-  return data.session
-}
-
 export async function loadGoogleCalendarEvents(user: User) {
   const client = await getCloudClient()
   if (!client) return []
@@ -178,8 +171,7 @@ async function saveSyncState(user: User, state: GoogleCalendarSyncState) {
 export async function syncGoogleCalendar(user: User): Promise<GoogleCalendarSyncState> {
   const client = await getCloudClient()
   if (!client) return { status: 'failed', lastSyncedAt: null, message: 'Cloud sync is unavailable.' }
-  const session = await googleCalendarSession()
-  const token = session?.provider_token
+  const token = await currentGoogleProviderToken()
   if (!token) {
     const state = { status: 'needs_permission' as const, lastSyncedAt: null, message: 'Connect Google Calendar to import events.' }
     await saveSyncState(user, state)
