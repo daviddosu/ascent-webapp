@@ -1270,7 +1270,6 @@ function resolveCreatorIntent() {
   creatorLinkTargetId = target.id
   rememberView('sticky')
   if (target.id === activeUser?.id) {
-    toast = 'This is your creator link.'
     clearCreatorIntentFromUrl()
     return
   }
