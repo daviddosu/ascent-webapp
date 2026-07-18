@@ -5,6 +5,7 @@ const publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 export const cloudEnabled = Boolean(url && publicKey)
 export let cloud: SupabaseClient | null = null
+let cloudPromise: Promise<SupabaseClient | null> | null = null
 let googleProviderToken: string | null = null
 
 function captureGoogleProviderToken(session: Session | null) {
@@ -14,16 +15,23 @@ function captureGoogleProviderToken(session: Session | null) {
 async function ensureCloud() {
   if (!cloudEnabled) return null
   if (cloud) return cloud
-  const { createClient } = await import('@supabase/supabase-js')
-  cloud = createClient(url!, publicKey!, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
+  if (cloudPromise) return cloudPromise
+  cloudPromise = import('@supabase/supabase-js').then(({ createClient }) => {
+    const client = createClient(url!, publicKey!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+    client.auth.onAuthStateChange((_event, session) => captureGoogleProviderToken(session))
+    cloud = client
+    return client
+  }).catch(error => {
+    cloudPromise = null
+    throw error
   })
-  cloud.auth.onAuthStateChange((_event, session) => captureGoogleProviderToken(session))
-  return cloud
+  return cloudPromise
 }
 
 export async function getCloudClient() {

@@ -128,11 +128,19 @@ describe('Google Calendar account upgrade contract', () => {
   it('captures the short-lived provider token during the OAuth callback', () => {
     const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
     const calendar = readFileSync(resolve(root, 'src/data/google-calendar.ts'), 'utf8')
-    expect(cloud).toContain('cloud.auth.onAuthStateChange')
+    expect(cloud).toContain('client.auth.onAuthStateChange')
     expect(cloud).toContain('captureGoogleProviderToken(session)')
     expect(cloud).toContain('export async function currentGoogleProviderToken')
     expect(calendar).toContain('await currentGoogleProviderToken()')
     expect(calendar).not.toContain('session?.provider_token')
+  })
+
+  it('shares one authentication client across concurrent startup requests', () => {
+    const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
+    expect(cloud).toContain('let cloudPromise: Promise<SupabaseClient | null> | null = null')
+    expect(cloud).toContain('if (cloudPromise) return cloudPromise')
+    expect(cloud).toContain("cloudPromise = import('@supabase/supabase-js')")
+    expect(cloud.match(/createClient\(url!/g)).toHaveLength(1)
   })
 })
 
