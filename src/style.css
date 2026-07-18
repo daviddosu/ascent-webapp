@@ -1946,7 +1946,7 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   }
 }
 
-/* Dark theme keeps the same shapes, but swaps the paper-like whites for soft charcoal. */
+/* Dark theme keeps the same shapes and lets the black workspace remain dominant. */
 body[data-theme='dark'] {
   --dark-bg: #111315;
   --dark-surface: #181b1e;
@@ -2009,6 +2009,19 @@ body[data-theme='dark'] .community-card-portrait,
 body[data-theme='dark'] .spotlight-portrait {
   background-color: var(--dark-raised);
   color: var(--dark-text);
+}
+
+body[data-theme='dark'] .today-composer,
+body[data-theme='dark'] .planner-composer {
+  background: var(--dark-bg);
+}
+
+body[data-theme='dark'] .today-field input,
+body[data-theme='dark'] .today-field textarea,
+body[data-theme='dark'] .today-field select,
+body[data-theme='dark'] .planner-composer input,
+body[data-theme='dark'] .planner-composer select {
+  background-color: var(--dark-surface);
 }
 
 body[data-theme='dark'] .nav-row,
@@ -3054,7 +3067,7 @@ body[data-theme='dark'] .sidebar {
   body[data-theme='dark'] .today-composer,
   body[data-theme='dark'] .planner-composer {
     border-color: var(--dark-border);
-    background: var(--dark-surface);
+    background: var(--dark-bg);
     color: var(--dark-text);
   }
 
@@ -3070,7 +3083,7 @@ body[data-theme='dark'] .sidebar {
   body[data-theme='dark'] .inspector-title:focus,
   body[data-theme='dark'] .inspector textarea:focus {
     border-color: #7f96ff;
-    background: var(--dark-raised);
+    background: var(--dark-surface);
     box-shadow: 0 0 0 3px rgba(127, 150, 255, .16);
   }
 
@@ -3890,7 +3903,7 @@ body[data-theme='dark'] .reference-app select option,
 body[data-theme='dark'] .reference-app select optgroup,
 body[data-theme='dark'] .profile-popover select option,
 body[data-theme='dark'] .profile-popover select optgroup {
-  background: #202428;
+  background: #111315;
   color: #eef1f4;
 }
 
