@@ -8,7 +8,7 @@ const plannerMigration = readFileSync(resolve(root, 'supabase/migrations/2026071
 const visibilityMigration = readFileSync(resolve(root, 'supabase/migrations/202607140002_task_visibility.sql'), 'utf8')
 const profileMigration = readFileSync(resolve(root, 'supabase/migrations/202607170001_creator_profiles.sql'), 'utf8')
 const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_creator_directory.sql'), 'utf8')
-const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_public_creator_today.sql'), 'utf8')
+const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
