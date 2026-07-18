@@ -1,5 +1,6 @@
 import { currentUser, getCloudClient } from './cloud'
 import { normalizeTask, type Task } from './planner-model'
+import { highResolutionAvatarUrl } from './profile'
 
 export type CommunityCreator = {
   id: string
@@ -50,7 +51,7 @@ function mapCommunityCreator(row: CommunityCreatorRow): CommunityCreator {
     username: row.username,
     displayName: row.display_name,
     bio: row.bio,
-    avatarUrl: row.avatar_url,
+    avatarUrl: highResolutionAvatarUrl(row.avatar_url),
     followerCount: Number(row.follower_count) || 0,
     followedByMe: Boolean(row.followed_by_me),
   }
@@ -97,7 +98,7 @@ export async function loadPublicCreatorToday(username: string): Promise<CreatorT
       username: String(profile.username ?? ''),
       displayName: String(profile.displayName ?? ''),
       bio: String(profile.bio ?? ''),
-      avatarUrl: String(profile.avatarUrl ?? ''),
+      avatarUrl: highResolutionAvatarUrl(String(profile.avatarUrl ?? '')),
       timezone: String(profile.timezone ?? 'UTC'),
     },
     date: String(payload.date ?? ''),

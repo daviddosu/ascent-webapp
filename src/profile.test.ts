@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isCreatorProfileComplete, missingCreatorProfileFields, normalizeUsername, profileDefaults } from './data/profile'
+import { highResolutionAvatarUrl, isCreatorProfileComplete, missingCreatorProfileFields, normalizeUsername, profileDefaults } from './data/profile'
 
 describe('creator profile helpers', () => {
   it('keeps usernames short, simple, and link-safe', () => {
@@ -11,6 +11,16 @@ describe('creator profile helpers', () => {
 
   it('starts new tasks as private', () => {
     expect(profileDefaults().defaultTaskVisibility).toBe('private')
+  })
+
+  it('asks Google for a sharp profile photo instead of its tiny thumbnail', () => {
+    expect(highResolutionAvatarUrl('https://lh3.googleusercontent.com/a/example=s96-c')).toBe(
+      'https://lh3.googleusercontent.com/a/example=s1024-c',
+    )
+    expect(highResolutionAvatarUrl('https://lh3.googleusercontent.com/a/example=s96-c-k-no')).toBe(
+      'https://lh3.googleusercontent.com/a/example=s1024-c-k-no',
+    )
+    expect(highResolutionAvatarUrl('https://example.com/avatar.jpg')).toBe('https://example.com/avatar.jpg')
   })
 
   it('names the exact details an email-only account still needs', () => {

@@ -40,6 +40,24 @@ export function normalizeUsername(value: string) {
   return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30)
 }
 
+export function highResolutionAvatarUrl(value: string | null | undefined) {
+  const avatarUrl = String(value ?? '').trim()
+  if (!avatarUrl) return ''
+
+  try {
+    const url = new URL(avatarUrl)
+    if (!url.hostname.endsWith('googleusercontent.com')) return avatarUrl
+
+    url.pathname = url.pathname.replace(/=s\d+(-c)?(-k-no)?$/, (_match, crop = '', privacy = '') => (
+      `=s1024${crop || '-c'}${privacy}`
+    ))
+    if (url.searchParams.has('sz')) url.searchParams.set('sz', '1024')
+    return url.toString()
+  } catch {
+    return avatarUrl
+  }
+}
+
 export function detectedTimezone() {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -79,7 +97,7 @@ export function profileDefaults(user?: User | null): CreatorProfileInput {
     username: normalizeUsername(displayName.replace(/\s+/g, '_')),
     displayName,
     bio: '',
-    avatarUrl: String(user?.user_metadata?.avatar_url ?? ''),
+    avatarUrl: highResolutionAvatarUrl(String(user?.user_metadata?.avatar_url ?? '')),
     timezone: detectedTimezone(),
     defaultTaskVisibility: 'private',
   }
@@ -91,7 +109,7 @@ function mapProfile(row: ProfileRow): CreatorProfile {
     username: row.username ?? '',
     displayName: row.display_name,
     bio: row.bio ?? '',
-    avatarUrl: row.avatar_url ?? '',
+    avatarUrl: highResolutionAvatarUrl(row.avatar_url),
     timezone: row.timezone,
     defaultTaskVisibility: row.default_task_visibility ?? 'private',
     onboardingCompleted: Boolean(row.onboarding_completed),
@@ -127,7 +145,7 @@ export async function saveCreatorProfile(user: User, input: CreatorProfileInput)
       username,
       display_name: input.displayName.trim().slice(0, 80),
       bio: input.bio.trim().slice(0, 140),
-      avatar_url: input.avatarUrl,
+      avatar_url: highResolutionAvatarUrl(input.avatarUrl),
       timezone: input.timezone || 'UTC',
       default_task_visibility: input.defaultTaskVisibility,
       onboarding_completed: true,
