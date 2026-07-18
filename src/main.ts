@@ -19,6 +19,17 @@ import {
   setCreatorFollowing,
   type CommunityCreator,
 } from './data/community'
+import {
+  defaultNotificationPreferences,
+  loadCompletionFeed,
+  loadCreatorToday,
+  loadNotificationPreferences,
+  saveNotificationPreferences,
+  setCreatorMuted,
+  subscribeToCompletionAlerts,
+  type CreatorCompletion,
+  type SharedCreatorTask,
+} from './data/notifications'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
@@ -438,6 +449,27 @@ const communityBusyIds = new Set<string>()
 let pendingCreatorSlug = ''
 let creatorLinkTargetId = ''
 let communityFollowError = ''
+type CreatorTodayState = {
+  profile: CommunityProfile
+  tasks: SharedCreatorTask[]
+  status: 'loading' | 'ready' | 'failed'
+}
+let creatorTodayState: CreatorTodayState | null = null
+let notificationPreferences = defaultNotificationPreferences()
+let notificationSettingsOpen = false
+let notificationSettingsBusy = false
+let notificationSettingsError = ''
+let islandCompletions: CreatorCompletion[] = []
+let queuedCompletions: CreatorCompletion[] = []
+let completionBatchTimer = 0
+let islandDismissTimer = 0
+let completionSubscription: (() => void) | null = null
+let lastCompletionCheck = new Date(Date.now() - 15_000).toISOString()
+const islandPreview = previewParams.get('previewIsland')
+const notificationPreview = previewParams.has('previewNotifications')
+const islandHook = window as Window & {
+  __shotcountShowCompletion?: (items?: CreatorCompletion[]) => void
+}
 
 const icons: Record<string, string> = {
   menu: '<path d="M5 7h14M5 12h14M5 17h14"/>',
@@ -452,6 +484,8 @@ const icons: Record<string, string> = {
   logout: '<path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"/>',
   chevron: '<path d="m9 6 6 6-6 6"/>',
   down: '<path d="m8 10 4 4 4-4"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  back: '<path d="m15 18-6-6 6-6"/>',
 }
 
 function icon(name: string) {
@@ -509,6 +543,126 @@ function mapCommunityCreator(profile: CommunityCreator, index: number): Communit
 
 function defaultTaskVisibility() {
   return creatorProfile?.defaultTaskVisibility ?? profileDraft.defaultTaskVisibility ?? 'private'
+}
+
+function demoCreatorTasks(profile: CommunityProfile): SharedCreatorTask[] {
+  const names = profile.id === 'maya'
+    ? ['Ship the homepage revision', 'Review creator interviews', 'Write tomorrow’s launch note']
+    : ['Review the launch brief', 'Approve the onboarding flow', 'Founder interviews', 'Reply to the design team', 'Read the weekly numbers', 'Plan tomorrow’s focus']
+  return names.map((title, index) => ({
+    id: `${profile.id}-shared-${index}`,
+    title,
+    due: todayKey,
+    time: index < 2 ? `${String(8 + index * 2).padStart(2, '0')}:${index ? '15' : '40'}` : '',
+    completedAt: index < Math.max(1, names.length - 1) ? `${todayKey}T${String(9 + index).padStart(2, '0')}:10:00.000Z` : '',
+    visibility: index % 2 ? 'public' : 'followers',
+  }))
+}
+
+function isQuietTime(preferences = notificationPreferences, reference = new Date()) {
+  if (!preferences.quietHoursEnabled) return false
+  let hour = reference.getHours()
+  let minute = reference.getMinutes()
+  try {
+    const timezone = creatorProfile?.timezone || profileDraft.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(reference)
+    hour = Number(parts.find(part => part.type === 'hour')?.value ?? hour)
+    minute = Number(parts.find(part => part.type === 'minute')?.value ?? minute)
+  } catch {
+    // A mistyped timezone falls back to the clock on this device.
+  }
+  const minutes = hour * 60 + minute
+  const toMinutes = (value: string) => {
+    const [hours = '0', minute = '0'] = value.split(':')
+    return Number(hours) * 60 + Number(minute)
+  }
+  const start = toMinutes(preferences.quietStart)
+  const end = toMinutes(preferences.quietEnd)
+  if (start === end) return true
+  return start < end ? minutes >= start && minutes < end : minutes >= start || minutes < end
+}
+
+function clearIsland() {
+  window.clearTimeout(islandDismissTimer)
+  islandDismissTimer = 0
+  islandCompletions = []
+  render()
+  if (queuedCompletions.length) window.setTimeout(showQueuedCompletions, 240)
+}
+
+function showQueuedCompletions() {
+  if (islandCompletions.length || !queuedCompletions.length) return
+  islandCompletions = queuedCompletions.splice(0)
+  render()
+  islandDismissTimer = window.setTimeout(clearIsland, 6_000)
+}
+
+function queueCompletionAlerts(items: CreatorCompletion[], immediate = false) {
+  if (!notificationPreferences.completionAlerts || isQuietTime()) return
+  const knownIds = new Set([...queuedCompletions, ...islandCompletions].map(item => item.id))
+  const allowed = items.filter(item => !knownIds.has(item.id) && !notificationPreferences.mutedCreatorIds.includes(item.creatorId))
+  if (!allowed.length) return
+  queuedCompletions.push(...allowed)
+  window.clearTimeout(completionBatchTimer)
+  if (immediate) showQueuedCompletions()
+  else completionBatchTimer = window.setTimeout(showQueuedCompletions, 1_800)
+}
+
+async function checkForCompletionAlerts() {
+  const checkedAt = new Date().toISOString()
+  try {
+    queueCompletionAlerts(await loadCompletionFeed(lastCompletionCheck))
+  } catch {
+    // Alerts can retry after the next realtime nudge or app focus.
+  } finally {
+    lastCompletionCheck = checkedAt
+  }
+}
+
+async function startNotificationSystem() {
+  completionSubscription?.()
+  completionSubscription = null
+  try {
+    notificationPreferences = await loadNotificationPreferences()
+    completionSubscription = await subscribeToCompletionAlerts(() => void checkForCompletionAlerts())
+    await checkForCompletionAlerts()
+  } catch {
+    // Notification setup must never block the task workspace.
+  }
+}
+
+async function openCreatorToday(profile: CommunityProfile) {
+  creatorTodayState = { profile, tasks: [], status: 'loading' }
+  rememberView('sticky')
+  const url = new URL(window.location.href)
+  url.pathname = `/${profile.username}`
+  url.searchParams.delete(creatorQueryKey)
+  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  clearIsland()
+  render()
+  try {
+    const sharedTasks = profile.isDemo ? demoCreatorTasks(profile) : await loadCreatorToday(profile.id)
+    if (!creatorTodayState || creatorTodayState.profile.id !== profile.id) return
+    creatorTodayState = { profile, tasks: sharedTasks, status: 'ready' }
+  } catch {
+    if (!creatorTodayState || creatorTodayState.profile.id !== profile.id) return
+    creatorTodayState = { profile, tasks: [], status: 'failed' }
+  }
+  render()
+}
+
+function closeCreatorToday() {
+  creatorTodayState = null
+  const url = new URL(window.location.href)
+  if (creatorSlugFromPathname(url.pathname)) url.pathname = '/'
+  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  rememberView('sticky')
+  render()
 }
 
 function persistPlanner() {
@@ -670,21 +824,144 @@ function render() {
   refreshCounts()
   const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
   const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
-  const showInspector = Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
+  const showInspector = !creatorTodayState && Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
   app.innerHTML = `
     <div class="reference-app ${showInspector ? 'with-inspector' : ''}">
       ${authRequired ? renderSyncStatus() : ''}
       ${renderSidebar()}
       <main class="workspace">
         ${renderMobileTopbar()}
-        ${view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
+        ${creatorTodayState ? renderCreatorTodayView(creatorTodayState) : view === 'today' ? renderToday() : view === 'upcoming' ? renderUpcoming() : view === 'calendar' ? renderCalendar() : renderStickyWall()}
       </main>
       ${showInspector && selected ? renderInspector(selected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
+    ${renderShotcountIsland()}
     ${renderProfileModal()}
+    ${renderNotificationSettings()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function renderShotcountIsland() {
+  if (!islandCompletions.length) return ''
+  const first = islandCompletions[0]!
+  const profile = communityProfiles.find(item => item.id === first.creatorId)
+  const many = islandCompletions.length > 1
+  const firstName = first.displayName.trim().split(/\s+/)[0] || first.displayName
+  const taskTitle = first.taskTitle || 'Today’s Shotcount'
+  const message = many
+    ? `${firstName} and ${islandCompletions.length - 1} ${islandCompletions.length === 2 ? 'other' : 'others'} completed today`
+    : `${first.displayName} completed ${taskTitle}`
+  const initial = first.displayName.trim().charAt(0).toUpperCase() || 'S'
+  const portraitStyle = profile ? `--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)` : ''
+  return `
+    <button type="button" class="shotcount-island ${many ? 'is-batch' : ''}" data-action="open-island" aria-label="${escapeHtml(message)}. ${first.completedCount} of ${first.totalCount} tasks complete. Open ${escapeHtml(first.displayName)}’s Today screen">
+      <span class="island-head">
+        <span class="island-portrait portrait-frame" style="${portraitStyle}">
+          ${first.avatarUrl ? `<img src="${escapeHtml(first.avatarUrl)}" alt="" />` : profile ? '<span class="community-portrait-art" aria-hidden="true"></span>' : `<span class="island-initial">${escapeHtml(initial)}</span>`}
+        </span>
+        <span class="island-identity">
+          <small>${many ? `${islandCompletions.length} PEOPLE FINISHED` : 'SHOTCOUNT COMPLETE'}</small>
+          <strong>${many ? escapeHtml(message) : escapeHtml(first.displayName)}</strong>
+          <span>${many ? 'Tap to open the first update' : `@${escapeHtml(first.username)}`}</span>
+        </span>
+        <span class="island-result"><strong>${many ? islandCompletions.length : `${first.completedCount}/${first.totalCount}`}</strong><small>${many ? 'PEOPLE' : 'DONE'}</small></span>
+      </span>
+      <span class="island-task">
+        <span class="island-task-check" aria-hidden="true">✓</span>
+        <span><small>${many ? `${escapeHtml(firstName)}’S LAST TASK` : 'TASK COMPLETED'}</small><strong>${escapeHtml(taskTitle)}</strong></span>
+        <span class="island-task-arrow" aria-hidden="true">›</span>
+      </span>
+      <span class="island-open">View ${escapeHtml(firstName)}’s Today <b aria-hidden="true">↗</b></span>
+    </button>
+  `
+}
+
+function renderCreatorTodayView(state: CreatorTodayState) {
+  const { profile } = state
+  const completed = state.tasks.filter(task => task.completedAt).length
+  const total = state.tasks.length
+  const firstName = profile.name.trim().split(/\s+/)[0] || profile.name
+  const initial = profile.name.trim().charAt(0).toUpperCase() || 'S'
+  const muted = notificationPreferences.mutedCreatorIds.includes(profile.id)
+  return `
+    <section class="today-screen creator-today-screen">
+      <header class="creator-today-header">
+        <button type="button" class="creator-today-back" data-action="close-creator-today" aria-label="Back to Community">${icon('back')}</button>
+        <span class="creator-today-avatar">${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : escapeHtml(initial)}</span>
+        <div><h1>${escapeHtml(firstName)}’s Today</h1><p>@${escapeHtml(profile.username)} · Read only</p></div>
+        <button type="button" class="creator-today-mute" data-mute-creator="${profile.id}" aria-pressed="${muted}">${muted ? 'Unmute alerts' : 'Mute alerts'}</button>
+      </header>
+      <div class="creator-today-progress" aria-label="${completed} of ${total} shared tasks complete">
+        <div><strong>${state.status === 'loading' ? 'Opening today…' : `${completed}/${total} shared tasks complete`}</strong><span>${state.status === 'ready' ? 'Only tasks marked Followers or Public are shown.' : 'Getting the safe, shared part of this list.'}</span></div>
+        <i style="--creator-progress:${total ? Math.round(completed / total * 100) : 0}%"><b></b></i>
+      </div>
+      <div class="task-list creator-task-list">
+        ${state.status === 'loading' ? '<div class="planner-empty"><strong>Opening today…</strong><p>This will only take a moment.</p></div>' : ''}
+        ${state.status === 'failed' ? '<div class="planner-empty"><strong>Today could not open.</strong><p>Your own tasks are safe. Please try again.</p><button data-action="retry-creator-today">Try again</button></div>' : ''}
+        ${state.status === 'ready' && !total ? `<div class="planner-empty"><strong>Nothing shared today.</strong><p>${escapeHtml(firstName)} has not shared a task with you yet.</p></div>` : ''}
+        ${state.status === 'ready' ? state.tasks.map(renderSharedCreatorTask).join('') : ''}
+      </div>
+    </section>
+  `
+}
+
+function renderSharedCreatorTask(task: SharedCreatorTask) {
+  const completed = Boolean(task.completedAt)
+  return `
+    <div class="task-row creator-task-row ${completed ? 'completed' : ''}">
+      <span class="checkbox" aria-hidden="true">
+        <span class="completion-badge"><svg viewBox="0 0 24 24">${completed
+          ? `<path class="completion-seal" d="M12 1.8c1.2 0 1.8 1.3 2.9 1.6 1.1.3 2.2-.6 3.1.1.9.7.4 2.1 1.1 3 .7.9 2.2.8 2.6 1.9.4 1.1-.8 2-.8 3.2s1.2 2.1.8 3.2c-.4 1.1-1.9 1-2.6 1.9-.7.9-.2 2.3-1.1 3-.9.7-2-.2-3.1.1-1.1.3-1.7 1.6-2.9 1.6s-1.8-1.3-2.9-1.6c-1.1-.3-2.2.6-3.1-.1-.9-.7-.4-2.1-1.1-3-.7-.9-2.2-.8-2.6-1.9-.4-1.1.8-2 .8-3.2s-1.2-2.1-.8-3.2c.4-1.1 1.9-1 2.6-1.9.7-.9.2-2.3 1.1-3 .9-.7 2-.2 3.1-.1C10.2 3.1 10.8 1.8 12 1.8Z"/><path class="completion-check" d="m7.4 12.1 3 2.9 6.2-6.2"/>`
+          : '<circle class="completion-ring" cx="12" cy="12" r="8.4"/>'}</svg></span>
+      </span>
+      <span class="task-text">
+        <strong>${escapeHtml(task.title)}</strong>
+        <small>${task.time ? `<span>${icon('calendar')}${formatTaskTime(task.time)}</span>` : ''}<span class="task-visibility task-visibility--${task.visibility}">${visibilityLabels[task.visibility]}</span></small>
+      </span>
+    </div>
+  `
+}
+
+function renderNotificationSettings() {
+  if (!notificationSettingsOpen) return ''
+  const mutedProfiles = communityProfiles.filter(profile => notificationPreferences.mutedCreatorIds.includes(profile.id))
+  return `
+    <div class="profile-popover notification-popover" role="presentation">
+      <button type="button" class="profile-popover-backdrop" data-action="close-notification-settings" aria-label="Close notification settings"></button>
+      <section class="profile-popover-card notification-card" role="dialog" aria-modal="true" aria-labelledby="notification-settings-title">
+        <button type="button" class="profile-popover-close" data-action="close-notification-settings" aria-label="Close notification settings">×</button>
+        <p class="notification-eyebrow">Shotcount Island</p>
+        <h2 id="notification-settings-title">Notification settings</h2>
+        <p class="notification-intro">Choose when the little completion pill can say hello.</p>
+        <form class="notification-form" data-notification-form>
+          <label class="notification-switch-row">
+            <span><strong>Completion alerts</strong><small>Show when people you follow finish today.</small></span>
+            <input type="checkbox" name="completionAlerts" ${notificationPreferences.completionAlerts ? 'checked' : ''} />
+          </label>
+          <label class="notification-switch-row">
+            <span><strong>Quiet hours</strong><small>Keep the Island hidden while you rest or focus.</small></span>
+            <input type="checkbox" name="quietHoursEnabled" ${notificationPreferences.quietHoursEnabled ? 'checked' : ''} />
+          </label>
+          <div class="quiet-hours-fields">
+            <label><span>From</span><input type="time" name="quietStart" value="${escapeHtml(notificationPreferences.quietStart)}" /></label>
+            <span aria-hidden="true">→</span>
+            <label><span>Until</span><input type="time" name="quietEnd" value="${escapeHtml(notificationPreferences.quietEnd)}" /></label>
+          </div>
+          <section class="muted-creators">
+            <div><strong>Muted creators</strong><small>They stay followed. Their completion pills stay quiet.</small></div>
+            ${mutedProfiles.length ? mutedProfiles.map(profile => `<div class="muted-creator-row"><span>${escapeHtml(profile.name)} <small>@${escapeHtml(profile.username)}</small></span><button type="button" data-unmute-creator="${profile.id}">Unmute</button></div>`).join('') : '<p>No one is muted.</p>'}
+          </section>
+          <p class="profile-form-error" role="alert">${escapeHtml(notificationSettingsError)}</p>
+          <div class="notification-actions">
+            <button type="button" data-action="close-notification-settings">Cancel</button>
+            <button type="submit" ${notificationSettingsBusy ? 'disabled' : ''}>${notificationSettingsBusy ? 'Saving…' : 'Save settings'}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `
 }
 
 function renderSyncStatus() {
@@ -914,6 +1191,7 @@ async function verifyAuthSession() {
     if (communityResult.ok) applyCommunityDirectory(communityResult.value)
     else communityState = 'failed'
     authState = 'authenticated'
+    void startNotificationSystem()
   } catch {
     authState = 'error'
   }
@@ -922,6 +1200,8 @@ async function verifyAuthSession() {
 
 async function signOut() {
   try {
+    completionSubscription?.()
+    completionSubscription = null
     plannerRepository?.destroy()
     plannerRepository = null
     activeUser = null
@@ -995,16 +1275,6 @@ async function refreshCommunityDirectory() {
   render()
 }
 
-function openCreatorLink(profile: CommunityProfile) {
-  rememberCreatorIntent(profile.username)
-  const url = new URL(window.location.href)
-  url.pathname = `/${profile.username}`
-  url.searchParams.delete(creatorQueryKey)
-  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
-  resolveCreatorIntent()
-  render()
-}
-
 async function updateCreatorFollowing(profile: CommunityProfile, following: boolean) {
   if (communityBusyIds.has(profile.id)) return false
   communityBusyIds.add(profile.id)
@@ -1036,6 +1306,7 @@ function renderMobileTopbar() {
     <header class="mobile-topbar">
       <div class="mobile-brand"><strong>Shotcount</strong></div>
       <div class="mobile-topbar-actions">
+        <button type="button" class="mobile-alert-button" data-action="notification-settings" aria-label="Notification settings">${icon('bell')}</button>
         <button type="button" class="mobile-profile-button" data-action="settings" aria-label="Profile">
           ${profilePhoto ? `<img src="${escapeHtml(profilePhoto)}" alt="" />` : `<span>${escapeHtml(profileInitial)}</span>`}
         </button>
@@ -1128,6 +1399,7 @@ function renderSidebar() {
       </section>
 
       <div class="sidebar-bottom">
+        <button class="side-row" data-action="notification-settings">${icon('bell')}<span>Alerts</span></button>
         <button class="side-row" data-action="settings">${icon('settings')}<span>Settings</span></button>
         <button class="side-row" data-action="signout">${icon('logout')}<span>Sign out</span></button>
       </div>
@@ -1958,6 +2230,39 @@ function scheduleTask(taskId: string, date: string, time = '09:00') {
 
 app.addEventListener('submit', async event => {
   const target = event.target as HTMLElement
+  const notificationForm = target.closest<HTMLFormElement>('[data-notification-form]')
+  if (notificationForm) {
+    event.preventDefault()
+    const data = new FormData(notificationForm)
+    notificationPreferences = {
+      ...notificationPreferences,
+      completionAlerts: data.get('completionAlerts') === 'on',
+      quietHoursEnabled: data.get('quietHoursEnabled') === 'on',
+      quietStart: String(data.get('quietStart') ?? '22:00'),
+      quietEnd: String(data.get('quietEnd') ?? '08:00'),
+    }
+    notificationSettingsBusy = true
+    notificationSettingsError = ''
+    render()
+    try {
+      if (!showDemoData) await saveNotificationPreferences(notificationPreferences, creatorProfile?.timezone ?? profileDraft.timezone)
+      notificationSettingsBusy = false
+      notificationSettingsOpen = false
+      if (!notificationPreferences.completionAlerts) clearIsland()
+      toast = 'Notification settings saved'
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 1400)
+    } catch (error) {
+      notificationSettingsBusy = false
+      notificationSettingsError = error instanceof Error ? error.message : 'Notification settings could not be saved.'
+      render()
+    }
+    return
+  }
+
   const profileForm = target.closest<HTMLFormElement>('[data-profile-form]')
   if (profileForm) {
     event.preventDefault()
@@ -2157,6 +2462,30 @@ app.addEventListener('change', event => {
 
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
+  const muteCreatorId = target.closest<HTMLElement>('[data-mute-creator]')?.dataset.muteCreator
+  const unmuteCreatorId = target.closest<HTMLElement>('[data-unmute-creator]')?.dataset.unmuteCreator
+  const creatorMuteId = muteCreatorId || unmuteCreatorId
+  if (creatorMuteId) {
+    const muted = muteCreatorId ? !notificationPreferences.mutedCreatorIds.includes(creatorMuteId) : false
+    try {
+      if (!showDemoData) await setCreatorMuted(creatorMuteId, muted)
+      notificationPreferences.mutedCreatorIds = muted
+        ? [...new Set([...notificationPreferences.mutedCreatorIds, creatorMuteId])]
+        : notificationPreferences.mutedCreatorIds.filter(id => id !== creatorMuteId)
+      if (muted && islandCompletions.some(item => item.creatorId === creatorMuteId)) clearIsland()
+      toast = muted ? 'Creator alerts muted' : 'Creator alerts unmuted'
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 1400)
+    } catch (error) {
+      toast = error instanceof Error ? error.message : 'That alert could not be changed.'
+      render()
+    }
+    return
+  }
+
   const subtaskId = target.closest<HTMLInputElement>('[data-subtask]')?.dataset.subtask
   if (subtaskId) {
     const task = selectedTask()
@@ -2186,6 +2515,7 @@ app.addEventListener('click', async event => {
 
   const nextView = target.closest<HTMLElement>('[data-view]')?.dataset.view as View | undefined
   if (nextView) {
+    creatorTodayState = null
     mobileInspectorOpen = false
     if (nextView !== 'calendar') {
       calendarComposer = null
@@ -2234,7 +2564,7 @@ app.addEventListener('click', async event => {
   const communityId = target.closest<HTMLElement>('[data-community]')?.dataset.community
   if (communityId) {
     const profile = communityProfiles.find(item => item.id === communityId)
-    if (profile) openCreatorLink(profile)
+    if (profile) await openCreatorToday(profile)
     return
   }
 
@@ -2288,6 +2618,33 @@ app.addEventListener('click', async event => {
   }
 
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (action === 'open-island') {
+    const first = islandCompletions[0]
+    const profile = first && communityProfiles.find(item => item.id === first.creatorId)
+    if (profile) await openCreatorToday(profile)
+    return
+  }
+  if (action === 'close-creator-today') {
+    closeCreatorToday()
+    return
+  }
+  if (action === 'retry-creator-today' && creatorTodayState) {
+    await openCreatorToday(creatorTodayState.profile)
+    return
+  }
+  if (action === 'notification-settings') {
+    notificationSettingsError = ''
+    notificationSettingsOpen = true
+    render()
+    return
+  }
+  if (action === 'close-notification-settings') {
+    notificationSettingsBusy = false
+    notificationSettingsError = ''
+    notificationSettingsOpen = false
+    render()
+    return
+  }
   if (action === 'continue-google') {
     window.location.assign('https://shotcount.app/?auth=signin')
     return
@@ -2583,11 +2940,31 @@ document.addEventListener('keydown', event => {
 
 rememberCreatorIntent(creatorSlugFromLocation())
 if (!authRequired) resolveCreatorIntent()
+if (notificationPreview) notificationSettingsOpen = true
+const previewCompletion = (name: string, id: string, completedCount = 6, taskTitle = 'Approve the onboarding flow'): CreatorCompletion => ({
+  id: `preview-${id}`,
+  creatorId: id,
+  username: id,
+  displayName: name,
+  avatarUrl: '',
+  completedCount,
+  totalCount: completedCount,
+  completedAt: new Date().toISOString(),
+  taskTitle,
+})
+islandHook.__shotcountShowCompletion = (items = [previewCompletion('Amara Okafor', 'amara')]) => queueCompletionAlerts(items, true)
+if (islandPreview === 'single') islandCompletions = [previewCompletion('Amara Okafor', 'amara')]
+if (islandPreview === 'batch') islandCompletions = [
+  previewCompletion('Amara Okafor', 'amara'),
+  previewCompletion('Kenji Watanabe', 'kenji', 4, 'Send the campaign boards'),
+  previewCompletion('Maya Raman', 'maya', 3, 'Ship the homepage revision'),
+]
 render()
 if (authRequired) void verifyAuthSession()
 scheduleDateRefresh()
 window.addEventListener('popstate', () => {
   rememberCreatorIntent(creatorSlugFromLocation())
+  if (!creatorSlugFromLocation()) creatorTodayState = null
   resolveCreatorIntent()
   render()
 })
@@ -2597,6 +2974,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     void plannerRepository?.refresh()
     void refreshSignedInProfile()
+    void checkForCompletionAlerts()
   }
 })
 dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {

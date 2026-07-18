@@ -466,15 +466,82 @@ describe('reference screens', () => {
 
     document.querySelector<HTMLButtonElement>('[data-community="maya"]')!.click()
     expect(document.querySelector('.creator-follow-card')).toBeNull()
-    expect(document.querySelector('.spotlight-card.creator-link-target h3')?.textContent).toBe('Maya Raman')
-    expect(document.querySelector('.spotlight-card .spotlight-role')?.textContent).toContain('@maya')
+    expect(document.querySelector('.creator-today-header h1')?.textContent).toBe('Maya’s Today')
+    expect(document.querySelector('.creator-today-header')?.textContent).toContain('@maya · Read only')
+    expect(document.querySelectorAll('.creator-task-row')).toHaveLength(3)
+    expect(document.querySelector('.creator-today-screen [data-action="add-task"]')).toBeNull()
+    expect(document.querySelector('.creator-task-row button')).toBeNull()
     expect(window.location.pathname).toBe('/maya')
 
-    document.querySelector<HTMLButtonElement>('.spotlight-card [data-follow="maya"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-follow="maya"]')!.click()
     await vi.waitFor(() => {
       expect(document.querySelector('[data-follow="maya"]')?.getAttribute('aria-pressed')).toBe('true')
-      expect(window.location.pathname).toBe('/')
     })
+  })
+
+  it('shows one Shotcount Island and opens its creator’s read-only Today screen', () => {
+    const hook = window as Window & { __shotcountShowCompletion?: (items?: Array<Record<string, unknown>>) => void }
+    hook.__shotcountShowCompletion?.([{
+      id: 'amara-complete',
+      creatorId: 'amara',
+      username: 'amara',
+      displayName: 'Amara Okafor',
+      avatarUrl: '',
+      completedCount: 6,
+      totalCount: 6,
+      completedAt: new Date().toISOString(),
+      taskTitle: 'Approve the onboarding flow',
+    }])
+
+    expect(document.querySelectorAll('.shotcount-island')).toHaveLength(1)
+    expect(document.querySelector('.island-identity strong')?.textContent).toBe('Amara Okafor')
+    expect(document.querySelector('.island-task strong')?.textContent).toBe('Approve the onboarding flow')
+    expect(document.querySelector('.island-portrait .community-portrait-art')).not.toBeNull()
+    expect(document.querySelector('.shotcount-island')?.textContent).toContain('6/6')
+    document.querySelector<HTMLButtonElement>('.shotcount-island')!.click()
+    expect(document.querySelector('.creator-today-header h1')?.textContent).toBe('Amara’s Today')
+    expect(document.querySelector('.shotcount-island')).toBeNull()
+    document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
+  })
+
+  it('combines several completion alerts into one Island', () => {
+    const hook = window as Window & { __shotcountShowCompletion?: (items?: Array<Record<string, unknown>>) => void }
+    hook.__shotcountShowCompletion?.([
+      { id: 'batch-amara', creatorId: 'amara', username: 'amara', displayName: 'Amara Okafor', avatarUrl: '', completedCount: 6, totalCount: 6, completedAt: new Date().toISOString() },
+      { id: 'batch-kenji', creatorId: 'kenji', username: 'kenji', displayName: 'Kenji Watanabe', avatarUrl: '', completedCount: 4, totalCount: 4, completedAt: new Date().toISOString() },
+      { id: 'batch-maya', creatorId: 'maya', username: 'maya', displayName: 'Maya Raman', avatarUrl: '', completedCount: 3, totalCount: 3, completedAt: new Date().toISOString() },
+    ])
+
+    expect(document.querySelectorAll('.shotcount-island')).toHaveLength(1)
+    expect(document.querySelector('.shotcount-island')?.textContent).toContain('Amara and 2 others completed today')
+    expect(document.querySelector('.island-result strong')?.textContent).toBe('3')
+    expect(document.querySelector('.island-result small')?.textContent).toBe('PEOPLE')
+    document.querySelector<HTMLButtonElement>('.shotcount-island')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
+  })
+
+  it('saves completion alerts, quiet hours, and creator mute controls', () => {
+    document.querySelector<HTMLButtonElement>('[data-action="notification-settings"]')!.click()
+    const form = document.querySelector<HTMLFormElement>('[data-notification-form]')!
+    expect(document.querySelector('[role="dialog"] h2')?.textContent).toBe('Notification settings')
+    expect(form.querySelector<HTMLInputElement>('[name="completionAlerts"]')!.checked).toBe(true)
+    const quietEnabled = form.querySelector<HTMLInputElement>('[name="quietHoursEnabled"]')!
+    quietEnabled.checked = true
+    form.querySelector<HTMLInputElement>('[name="quietStart"]')!.value = '21:30'
+    form.querySelector<HTMLInputElement>('[name="quietEnd"]')!.value = '07:15'
+    form.requestSubmit()
+    expect(document.querySelector('[data-notification-form]')).toBeNull()
+
+    document.querySelector<HTMLButtonElement>('[data-community="amara"]')!.click()
+    const mute = document.querySelector<HTMLButtonElement>('[data-mute-creator="amara"]')!
+    expect(mute.getAttribute('aria-pressed')).toBe('false')
+    mute.click()
+    expect(document.querySelector('[data-mute-creator="amara"]')?.getAttribute('aria-pressed')).toBe('true')
+    document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="notification-settings"]')!.click()
+    expect(document.querySelector('[data-unmute-creator="amara"]')).not.toBeNull()
+    document.querySelector<HTMLButtonElement>('[data-action="close-notification-settings"]')!.click()
   })
 
   it('toggles dark mode and remembers it', () => {
