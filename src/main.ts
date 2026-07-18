@@ -12,6 +12,13 @@ import {
   type CreatorProfileField,
   type CreatorProfileInput,
 } from './data/profile'
+import {
+  formatFollowerCount,
+  loadCreatorDirectory,
+  normalizeCreatorSlug,
+  setCreatorFollowing,
+  type CommunityCreator,
+} from './data/community'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
@@ -55,6 +62,7 @@ let profilePhotoPreview = ''
 let profilePromptDismissed = false
 type CommunityProfile = {
   id: string
+  username: string
   name: string
   role: string
   category: string
@@ -64,6 +72,10 @@ type CommunityProfile = {
   portraitColumn: number
   portraitRow: number
   bioLines: string[]
+  avatarUrl: string
+  followerCount: number
+  followed: boolean
+  isDemo: boolean
 }
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -72,6 +84,7 @@ const viewStorageKey = `${storagePrefix}active-view`
 const plannerStorageKey = `${storagePrefix}planner`
 const goalsStorageKey = `${storagePrefix}goals`
 const themeStorageKey = `${storagePrefix}theme`
+const creatorQueryKey = 'creator'
 const dateStateHook = window as Window & { __shotcountRefreshDateState?: (reference?: Date) => void }
 
 function readStoredValue(storage: Storage, key: string) {
@@ -315,9 +328,10 @@ let calendarComposer: { date: string; time: string; taskId?: string } | null = n
 let calendarSearch = ''
 let draggingCalendarTaskId: string | null = null
 const hiddenCalendarGoalIds = new Set<string>()
-const communityProfiles: CommunityProfile[] = [
+const demoCommunityProfiles: CommunityProfile[] = [
   {
     id: 'amara',
+    username: 'amara',
     name: 'Amara Okafor',
     role: 'Product founder',
     category: 'Building & creating',
@@ -327,9 +341,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 0,
     portraitRow: 0,
     bioLines: ['CTO, Bumpa', 'Research intern, EPFL', 'Content creator with 18k followers'],
+    avatarUrl: '',
+    followerCount: 12_800,
+    followed: true,
+    isDemo: true,
   },
   {
     id: 'kenji',
+    username: 'kenji',
     name: 'Kenji Watanabe',
     role: 'Creative director',
     category: 'Building & creating',
@@ -339,9 +358,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 1,
     portraitRow: 0,
     bioLines: ['Creative director, independent brands', 'Systems thinker', 'Designing in public'],
+    avatarUrl: '',
+    followerCount: 9_400,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'maya',
+    username: 'maya',
     name: 'Maya Raman',
     role: 'Research scientist',
     category: 'Building & creating',
@@ -351,9 +375,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 2,
     portraitRow: 0,
     bioLines: ['Research scientist, EPFL', 'Writes about deep work', '6k newsletter subscribers'],
+    avatarUrl: '',
+    followerCount: 7_200,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'malik',
+    username: 'malik',
     name: 'Malik Thompson',
     role: 'Endurance athlete',
     category: 'Research & performance',
@@ -363,9 +392,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 0,
     portraitRow: 1,
     bioLines: ['Endurance athlete', 'Coach and builder', '18.1k followers'],
+    avatarUrl: '',
+    followerCount: 18_100,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'sofia',
+    username: 'sofia',
     name: 'Sofía Reyes',
     role: 'Independent filmmaker',
     category: 'Research & performance',
@@ -375,9 +409,14 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 1,
     portraitRow: 1,
     bioLines: ['Independent filmmaker', 'Storytelling coach', '11.6k members'],
+    avatarUrl: '',
+    followerCount: 11_600,
+    followed: false,
+    isDemo: true,
   },
   {
     id: 'theo',
+    username: 'theo',
     name: 'Theo Bennett',
     role: 'Bestselling author',
     category: 'Research & performance',
@@ -387,9 +426,19 @@ const communityProfiles: CommunityProfile[] = [
     portraitColumn: 2,
     portraitRow: 1,
     bioLines: ['Bestselling author', 'Writes daily in public', '15.3k readers'],
+    avatarUrl: '',
+    followerCount: 15_300,
+    followed: false,
+    isDemo: true,
   },
 ]
-const followedCommunityIds = new Set<string>(['amara'])
+let communityProfiles: CommunityProfile[] = showDemoData ? demoCommunityProfiles.map(profile => ({ ...profile })) : []
+let communityState: 'loading' | 'ready' | 'failed' = showDemoData ? 'ready' : 'loading'
+const communityBusyIds = new Set<string>()
+let pendingCreatorSlug = ''
+let creatorFollowPrompt: CommunityProfile | null = null
+let creatorFollowBusy = false
+let creatorFollowError = ''
 
 const icons: Record<string, string> = {
   menu: '<path d="M5 7h14M5 12h14M5 17h14"/>',
@@ -412,6 +461,51 @@ function icon(name: string) {
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
+}
+
+function creatorSlugFromLocation() {
+  const querySlug = normalizeCreatorSlug(new URLSearchParams(window.location.search).get(creatorQueryKey))
+  if (querySlug) return querySlug
+  return creatorSlugFromPathname(window.location.pathname)
+}
+
+function creatorSlugFromPathname(pathname: string) {
+  const pathSlug = normalizeCreatorSlug(pathname.split('/').filter(Boolean)[0])
+  return pathSlug && !['app', 'workspace'].includes(pathSlug) ? pathSlug : ''
+}
+
+function rememberCreatorIntent(slug: string) {
+  pendingCreatorSlug = normalizeCreatorSlug(slug)
+}
+
+function clearCreatorIntentFromUrl() {
+  pendingCreatorSlug = ''
+  const url = new URL(window.location.href)
+  url.searchParams.delete(creatorQueryKey)
+  if (creatorSlugFromPathname(url.pathname)) url.pathname = '/'
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+function mapCommunityCreator(profile: CommunityCreator, index: number): CommunityProfile {
+  const count = Math.max(0, profile.followerCount)
+  const role = profile.bio.split('·')[0]?.trim() || 'Shotcount creator'
+  return {
+    id: profile.id,
+    username: profile.username,
+    name: profile.displayName,
+    role,
+    category: 'Shotcount creator',
+    members: formatFollowerCount(count),
+    tasksToday: 0,
+    latest: profile.bio,
+    portraitColumn: index % 3,
+    portraitRow: Math.floor(index / 3) % 2,
+    bioLines: [profile.bio],
+    avatarUrl: profile.avatarUrl,
+    followerCount: count,
+    followed: profile.followedByMe,
+    isDemo: false,
+  }
 }
 
 function defaultTaskVisibility() {
@@ -590,6 +684,7 @@ function render() {
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
     ${renderProfileModal()}
+    ${renderCreatorFollowPrompt()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
 }
@@ -744,6 +839,34 @@ function renderProfileModal() {
   `
 }
 
+function renderCreatorFollowPrompt() {
+  const profile = creatorFollowPrompt
+  if (!profile || profileModalOpen) return ''
+  const firstName = profile.name.trim().split(/\s+/)[0] || profile.name
+  return `
+    <div class="profile-popover creator-follow-popover" role="presentation">
+      <button type="button" class="profile-popover-backdrop" data-action="cancel-creator-follow" aria-label="Close follow confirmation"></button>
+      <section class="profile-popover-card creator-follow-card" role="dialog" aria-modal="true" aria-labelledby="creator-follow-title">
+        <button type="button" class="profile-popover-close" data-action="cancel-creator-follow" aria-label="Close follow confirmation">×</button>
+        <div class="creator-follow-identity">
+          <div class="creator-follow-avatar" aria-hidden="true">
+            ${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : `<span>${escapeHtml(profile.name.charAt(0).toUpperCase())}</span>`}
+          </div>
+          <div><small>CREATOR LINK</small><strong>@${escapeHtml(profile.username)}</strong></div>
+        </div>
+        <h2 id="creator-follow-title">Follow ${escapeHtml(profile.name)}?</h2>
+        <p class="creator-follow-copy">You opened ${escapeHtml(profile.name)}’s personal Shotcount link. Follow them to see the tasks they choose to share with followers.</p>
+        <p class="creator-follow-privacy">Private tasks always stay private.</p>
+        <p class="profile-form-error" role="alert">${escapeHtml(creatorFollowError)}</p>
+        <div class="profile-form-actions creator-follow-actions">
+          <button type="button" data-action="cancel-creator-follow">Not now</button>
+          <button type="button" data-action="confirm-creator-follow" ${creatorFollowBusy ? 'disabled' : ''}>${creatorFollowBusy ? 'Following…' : `Follow ${escapeHtml(firstName)}`}</button>
+        </div>
+      </section>
+    </div>
+  `
+}
+
 function replacePlannerWorkspace(workspace: { tasks: Task[]; goals: Goal[] }) {
   tasks.splice(0, tasks.length, ...workspace.tasks.map(task => normalizeTask(task)))
   goals.splice(0, goals.length, ...workspace.goals.map(goal => normalizeGoal(goal)))
@@ -779,7 +902,10 @@ async function verifyAuthSession() {
     if (!cloudEnabled) throw new Error('Cloud accounts are not configured')
     const [user, client] = await Promise.all([currentUser(), getCloudClient()])
     if (!user) {
-      window.location.replace('https://shotcount.app/?auth=signin')
+      const signInUrl = new URL('https://shotcount.app/')
+      signInUrl.searchParams.set('auth', 'signin')
+      if (pendingCreatorSlug) signInUrl.searchParams.set(creatorQueryKey, pendingCreatorSlug)
+      window.location.replace(signInUrl.toString())
       return
     }
     if (!client) throw new Error('Cloud accounts are not configured')
@@ -798,11 +924,14 @@ async function verifyAuthSession() {
       },
     })
     activeUser = user
-    const [workspace, profileResult] = await Promise.all([
+    const [workspace, profileResult, communityResult] = await Promise.all([
       plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] }),
       loadCreatorProfile(user)
         .then(value => ({ ok: true as const, value }))
         .catch(() => ({ ok: false as const, value: null })),
+      loadCreatorDirectory()
+        .then(value => ({ ok: true as const, value }))
+        .catch(() => ({ ok: false as const, value: [] as CommunityCreator[] })),
     ])
     replacePlannerWorkspace(workspace)
     if (profileResult.ok) {
@@ -812,6 +941,8 @@ async function verifyAuthSession() {
       profileModalOpen = !isCreatorProfileComplete(profileDraft)
       resetTodayComposerDraft()
     }
+    if (communityResult.ok) applyCommunityDirectory(communityResult.value)
+    else communityState = 'failed'
     authState = 'authenticated'
   } catch {
     authState = 'error'
@@ -844,6 +975,86 @@ async function refreshSignedInProfile() {
     render()
   } catch {
     // A temporary profile check must never block the task workspace.
+  }
+}
+
+function resolveCreatorIntent() {
+  if (!pendingCreatorSlug) return
+  const target = communityProfiles.find(profile => profile.username === pendingCreatorSlug)
+  if (!target) {
+    if (communityState === 'ready') {
+      toast = `We could not find @${pendingCreatorSlug}.`
+      clearCreatorIntentFromUrl()
+    }
+    return
+  }
+  if (target.id === activeUser?.id) {
+    toast = 'This is your creator link.'
+    clearCreatorIntentFromUrl()
+    return
+  }
+  if (target.followed) {
+    rememberView('sticky')
+    toast = `You already follow ${target.name}.`
+    clearCreatorIntentFromUrl()
+    return
+  }
+  creatorFollowError = ''
+  creatorFollowPrompt = target
+}
+
+function applyCommunityDirectory(directory: CommunityCreator[]) {
+  communityProfiles = directory.map(mapCommunityCreator)
+  communityState = 'ready'
+  resolveCreatorIntent()
+}
+
+async function refreshCommunityDirectory() {
+  if (showDemoData) {
+    communityState = 'ready'
+    resolveCreatorIntent()
+    return
+  }
+  communityState = 'loading'
+  render()
+  try {
+    applyCommunityDirectory(await loadCreatorDirectory())
+  } catch {
+    communityState = 'failed'
+  }
+  render()
+}
+
+function openCreatorLink(profile: CommunityProfile) {
+  rememberCreatorIntent(profile.username)
+  const url = new URL(window.location.href)
+  url.pathname = `/${profile.username}`
+  url.searchParams.delete(creatorQueryKey)
+  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  resolveCreatorIntent()
+  render()
+}
+
+async function updateCreatorFollowing(profile: CommunityProfile, following: boolean) {
+  if (communityBusyIds.has(profile.id)) return false
+  communityBusyIds.add(profile.id)
+  creatorFollowError = ''
+  render()
+  try {
+    if (!profile.isDemo) {
+      if (!activeUser) throw new Error('Sign in before following a creator.')
+      await setCreatorFollowing(profile.id, following)
+    }
+    profile.followed = following
+    profile.followerCount = Math.max(0, profile.followerCount + (following ? 1 : -1))
+    profile.members = formatFollowerCount(profile.followerCount)
+    return true
+  } catch (error) {
+    creatorFollowError = error instanceof Error ? error.message : 'We could not update this follow.'
+    return false
+  } finally {
+    communityBusyIds.delete(profile.id)
+    render()
   }
 }
 
@@ -1568,7 +1779,7 @@ function formatRecurrence(recurrence: Recurrence) {
 }
 
 function renderStickyWall() {
-  const spotlight = communityProfiles[0]!
+  const spotlight = communityProfiles[0]
   return `
     <section class="sticky-screen community-screen">
       <header class="sticky-title community-title">
@@ -1579,6 +1790,10 @@ function renderStickyWall() {
         <button class="community-discover" data-action="discover-people">Discover people</button>
       </header>
       <div class="community-content">
+        ${communityState === 'loading' ? `<div class="community-state"><strong>Finding creators…</strong><p>Bringing the Community up to date.</p></div>` : ''}
+        ${communityState === 'failed' ? `<div class="community-state"><strong>Community could not load.</strong><p>Your tasks are safe. Try again when your connection is steadier.</p><button data-action="retry-community">Try again</button></div>` : ''}
+        ${communityState === 'ready' && !spotlight ? `<div class="community-state"><strong>No creators are public yet.</strong><p>Complete your profile to become one of the first.</p><button data-action="settings">Complete profile</button></div>` : ''}
+        ${spotlight ? `
         <section class="spotlight-section" aria-labelledby="spotlight-title">
           <div class="community-section-heading">
             <div><h2 id="spotlight-title">This week’s spotlight</h2><p>Step inside the working rhythm of someone exceptional.</p></div>
@@ -1587,7 +1802,7 @@ function renderStickyWall() {
           ${renderSpotlight(spotlight)}
         </section>
 
-        <section class="explore-section" aria-labelledby="explore-title">
+        ${communityProfiles.length > 1 ? `<section class="explore-section" aria-labelledby="explore-title">
           <div class="community-section-heading">
             <div><h2 id="explore-title">Explore communities</h2><p>Find a person whose way of working helps you move.</p></div>
             <button data-action="discover-people">View all</button>
@@ -1595,42 +1810,36 @@ function renderStickyWall() {
           <div class="community-grid explore-grid">
             ${communityProfiles.slice(1).map(renderCommunityCard).join('')}
           </div>
-        </section>
+        </section>` : ''}
+        ` : ''}
       </div>
     </section>
   `
 }
 
 function renderSpotlight(profile: CommunityProfile) {
-  const followed = followedCommunityIds.has(profile.id)
+  const busy = communityBusyIds.has(profile.id)
   return `
     <article class="spotlight-card">
-      <div class="community-launch-popover spotlight-launch-popover" aria-hidden="true">
-        <p class="community-launch-label">Public launch page</p>
-        <h4>${escapeHtml(profile.name)}</h4>
-        <ul>
-          ${profile.bioLines.map(line => `<li>${escapeHtml(line)}</li>`).join('')}
-        </ul>
-        <button class="community-launch-subscribe">Subscribe with Plus</button>
-      </div>
+      ${renderLaunchPopover(profile, true)}
       <div class="spotlight-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
-        <div class="community-portrait-art" aria-hidden="true"></div>
-        <span class="spotlight-members">${profile.members} people learning alongside her</span>
+        ${renderCommunityPortrait(profile)}
+        <span class="spotlight-members">${profile.members} ${profile.isDemo ? 'people learning alongside her' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
       </div>
       <div class="spotlight-body">
-        <p class="spotlight-role">${escapeHtml(profile.role)} · Lagos</p>
+        <p class="spotlight-role">${profile.isDemo ? `${escapeHtml(profile.role)} · Lagos` : `@${escapeHtml(profile.username)}`}</p>
         <h3>${escapeHtml(profile.name)}</h3>
-        <p class="spotlight-intro">Building useful products without losing the quiet routines that make ambitious work possible.</p>
-        <div class="spotlight-tasks">
+        <p class="spotlight-intro">${escapeHtml(profile.isDemo ? 'Building useful products without losing the quiet routines that make ambitious work possible.' : profile.latest)}</p>
+        ${profile.isDemo ? `<div class="spotlight-tasks">
           <div class="spotlight-tasks-heading"><strong>Today’s focus</strong><span>${profile.tasksToday} tasks · 3 complete</span></div>
           <div><i class="done">✓</i><span>Review the launch brief</span><time>8:40</time></div>
           <div><i class="done">✓</i><span>Approve the onboarding flow</span><time>10:15</time></div>
           <div><i></i><span>Founder interviews</span><time>14:00</time></div>
-        </div>
+        </div>` : `<div class="creator-profile-facts"><strong>${profile.members}</strong><span>${profile.followerCount === 1 ? 'follower' : 'followers'}</span><small>Only tasks marked Followers or Public can be shared.</small></div>`}
         <div class="spotlight-actions">
-          <button class="spotlight-open" data-community="${profile.id}">Enter Amara’s community ${icon('chevron')}</button>
-          <button class="spotlight-follow ${followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${followed}">
-            ${followed ? 'Following' : 'Follow'}
+          <button class="spotlight-open" data-community="${profile.id}">${profile.isDemo ? 'Enter Amara’s community' : 'Open creator link'} ${icon('chevron')}</button>
+          <button class="spotlight-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
+            ${busy ? 'Saving…' : profile.followed ? 'Following' : 'Follow'}
           </button>
         </div>
       </div>
@@ -1639,41 +1848,46 @@ function renderSpotlight(profile: CommunityProfile) {
 }
 
 function renderCommunityCard(profile: CommunityProfile) {
-  const followed = followedCommunityIds.has(profile.id)
+  const busy = communityBusyIds.has(profile.id)
   return `
     <article class="community-card">
       ${renderLaunchPopover(profile)}
       <div class="community-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
-        <div class="community-portrait-art" aria-hidden="true"></div>
-        <span>${profile.members} members</span>
-        <button class="community-follow ${followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-label="${followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${followed}">
-          ${followed ? '✓' : icon('plus')}
+        ${renderCommunityPortrait(profile)}
+        <span>${profile.members} ${profile.isDemo ? 'members' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
+        <button class="community-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-label="${profile.followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
+          ${busy ? '…' : profile.followed ? '✓' : icon('plus')}
         </button>
       </div>
       <div class="community-card-body">
-        <p class="community-role">${escapeHtml(profile.role)}</p>
+        <p class="community-role">${profile.isDemo ? escapeHtml(profile.role) : `@${escapeHtml(profile.username)}`}</p>
         <h3>${escapeHtml(profile.name)}</h3>
         <div class="community-activity">
-          <span><b>${profile.tasksToday}</b> tasks today</span>
+          <span>${profile.isDemo ? `<b>${profile.tasksToday}</b> tasks today` : `<b>${profile.members}</b> ${profile.followerCount === 1 ? 'follower' : 'followers'}`}</span>
           <span class="activity-dot"></span>
-          <span>Active now</span>
+          <span>${profile.isDemo ? 'Active now' : 'Public profile'}</span>
         </div>
-        <p class="community-latest"><span>✓</span>${escapeHtml(profile.latest)}</p>
-        <button class="community-open" data-community="${profile.id}">View community ${icon('chevron')}</button>
+        <p class="community-latest">${profile.isDemo ? '<span>✓</span>' : ''}${escapeHtml(profile.latest)}</p>
+        <button class="community-open" data-community="${profile.id}">${profile.isDemo ? 'View community' : 'Open creator link'} ${icon('chevron')}</button>
       </div>
     </article>
   `
 }
 
-function renderLaunchPopover(profile: CommunityProfile) {
+function renderCommunityPortrait(profile: CommunityProfile) {
+  return profile.avatarUrl
+    ? `<img class="community-profile-avatar" src="${escapeHtml(profile.avatarUrl)}" alt="" />`
+    : '<div class="community-portrait-art" aria-hidden="true"></div>'
+}
+
+function renderLaunchPopover(profile: CommunityProfile, spotlight = false) {
   return `
-    <div class="community-launch-popover" aria-hidden="true">
-      <p class="community-launch-label">Public launch page</p>
+    <div class="community-launch-popover ${spotlight ? 'spotlight-launch-popover' : ''}" aria-hidden="true">
+      <p class="community-launch-label">${profile.isDemo ? 'Public launch page' : 'Personal creator link'}</p>
       <h4>${escapeHtml(profile.name)}</h4>
-      <ul>
+      ${profile.isDemo ? `<ul>
         ${profile.bioLines.map(line => `<li>${escapeHtml(line)}</li>`).join('')}
-      </ul>
-      <button class="community-launch-subscribe">Subscribe with Plus</button>
+      </ul><button class="community-launch-subscribe">Subscribe with Plus</button>` : `<p class="community-launch-bio">${escapeHtml(profile.latest)}</p><small class="community-launch-link">app.shotcount.app/${escapeHtml(profile.username)}</small>`}
     </div>
   `
 }
@@ -1793,6 +2007,7 @@ app.addEventListener('submit', async event => {
       resetTodayComposerDraft()
       toast = 'Profile saved'
       render()
+      void refreshCommunityDirectory()
       window.setTimeout(() => {
         toast = ''
         render()
@@ -2022,21 +2237,24 @@ app.addEventListener('click', async event => {
 
   const followId = target.closest<HTMLElement>('[data-follow]')?.dataset.follow
   if (followId) {
-    if (followedCommunityIds.has(followId)) followedCommunityIds.delete(followId)
-    else followedCommunityIds.add(followId)
-    render()
+    const profile = communityProfiles.find(item => item.id === followId)
+    if (!profile) return
+    const following = !profile.followed
+    if (await updateCreatorFollowing(profile, following)) {
+      toast = following ? `Following ${profile.name}` : `Unfollowed ${profile.name}`
+      render()
+      window.setTimeout(() => {
+        toast = ''
+        render()
+      }, 1400)
+    }
     return
   }
 
   const communityId = target.closest<HTMLElement>('[data-community]')?.dataset.community
   if (communityId) {
     const profile = communityProfiles.find(item => item.id === communityId)
-    toast = profile ? `Opening ${profile.name}'s community` : ''
-    render()
-    window.setTimeout(() => {
-      toast = ''
-      render()
-    }, 1400)
+    if (profile) openCreatorLink(profile)
     return
   }
 
@@ -2099,6 +2317,41 @@ app.addEventListener('click', async event => {
     return
   }
   if (!action) return
+  if (action === 'retry-community') {
+    await refreshCommunityDirectory()
+    return
+  }
+  if (action === 'cancel-creator-follow') {
+    creatorFollowPrompt = null
+    creatorFollowBusy = false
+    creatorFollowError = ''
+    clearCreatorIntentFromUrl()
+    render()
+    return
+  }
+  if (action === 'confirm-creator-follow') {
+    const profile = creatorFollowPrompt
+    if (!profile || creatorFollowBusy) return
+    creatorFollowBusy = true
+    creatorFollowError = ''
+    render()
+    const followed = await updateCreatorFollowing(profile, true)
+    creatorFollowBusy = false
+    if (!followed) {
+      render()
+      return
+    }
+    creatorFollowPrompt = null
+    rememberView('sticky')
+    clearCreatorIntentFromUrl()
+    toast = `Following ${profile.name}`
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1400)
+    return
+  }
   if (action === 'close-profile') {
     captureProfileDraft()
     profilePromptDismissed = true
@@ -2353,6 +2606,14 @@ document.addEventListener('keydown', event => {
     render()
     return
   }
+  if (event.key === 'Escape' && creatorFollowPrompt) {
+    creatorFollowPrompt = null
+    creatorFollowBusy = false
+    creatorFollowError = ''
+    clearCreatorIntentFromUrl()
+    render()
+    return
+  }
   if (event.key === 'Escape' && mobileInspectorOpen) {
     mobileInspectorOpen = false
     render()
@@ -2379,10 +2640,16 @@ document.addEventListener('keydown', event => {
   render()
 })
 
+rememberCreatorIntent(creatorSlugFromLocation())
+if (!authRequired) resolveCreatorIntent()
 render()
 if (authRequired) void verifyAuthSession()
 scheduleDateRefresh()
-window.addEventListener('popstate', render)
+window.addEventListener('popstate', () => {
+  rememberCreatorIntent(creatorSlugFromLocation())
+  resolveCreatorIntent()
+  render()
+})
 window.addEventListener('online', () => void plannerRepository?.syncNow())
 window.addEventListener('offline', () => void plannerRepository?.syncNow())
 document.addEventListener('visibilitychange', () => {

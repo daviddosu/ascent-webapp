@@ -451,7 +451,7 @@ describe('reference screens', () => {
     expect(matchingEvents).toHaveLength(2)
   })
 
-  it('opens Community and can follow a profile', () => {
+  it('opens Community and can follow a profile', async () => {
     document.querySelector<HTMLButtonElement>('[data-view="sticky"]')!.click()
     expect(document.querySelector('.community-title h1')?.textContent).toBe('Community')
     expect(document.querySelectorAll('.spotlight-card')).toHaveLength(1)
@@ -463,6 +463,23 @@ describe('reference screens', () => {
     expect(follow.getAttribute('aria-pressed')).toBe('false')
     follow.click()
     expect(document.querySelector('[data-follow="kenji"]')?.getAttribute('aria-pressed')).toBe('true')
+
+    document.querySelector<HTMLButtonElement>('[data-community="maya"]')!.click()
+    expect(document.querySelector('.creator-follow-card h2')?.textContent).toBe('Follow Maya Raman?')
+    expect(document.querySelector('.creator-follow-copy')?.textContent).toContain('personal Shotcount link')
+    expect(document.querySelector('.creator-follow-privacy')?.textContent).toBe('Private tasks always stay private.')
+    expect(window.location.pathname).toBe('/maya')
+    document.querySelector<HTMLButtonElement>('[data-action="cancel-creator-follow"]')!.click()
+    expect(document.querySelector('.creator-follow-card')).toBeNull()
+    expect(window.location.pathname).toBe('/')
+
+    document.querySelector<HTMLButtonElement>('[data-community="maya"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-action="confirm-creator-follow"]')!.click()
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-follow="maya"]')?.getAttribute('aria-pressed')).toBe('true')
+      expect(document.querySelector('.creator-follow-card')).toBeNull()
+      expect(window.location.pathname).toBe('/')
+    })
   })
 
   it('toggles dark mode and remembers it', () => {
