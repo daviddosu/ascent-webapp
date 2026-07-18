@@ -67,6 +67,11 @@ export function formatFollowerCount(count: number) {
   return `${(count / 1_000_000).toFixed(count < 10_000_000 ? 1 : 0).replace(/\.0$/, '')}m`
 }
 
+export function formatFollowerLabel(count: number) {
+  if (count <= 0) return ''
+  return `${formatFollowerCount(count)} ${count === 1 ? 'follower' : 'followers'}`
+}
+
 export async function loadCreatorDirectory(username?: string) {
   const client = await getCloudClient()
   if (!client) throw new Error('Shotcount Community is not configured.')

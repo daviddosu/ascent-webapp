@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatFollowerCount, normalizeCreatorSlug } from './data/community'
+import { formatFollowerCount, formatFollowerLabel, normalizeCreatorSlug } from './data/community'
 
 describe('creator links', () => {
   it('accepts small safe usernames and removes a leading at sign', () => {
@@ -14,5 +14,11 @@ describe('creator links', () => {
     expect(formatFollowerCount(1_250)).toBe('1.3k')
     expect(formatFollowerCount(15_300)).toBe('15k')
     expect(formatFollowerCount(2_400_000)).toBe('2.4m')
+  })
+
+  it('hides an empty follower count instead of showing zero', () => {
+    expect(formatFollowerLabel(0)).toBe('')
+    expect(formatFollowerLabel(1)).toBe('1 follower')
+    expect(formatFollowerLabel(1_250)).toBe('1.3k followers')
   })
 })

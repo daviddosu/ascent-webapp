@@ -15,6 +15,7 @@ import {
 import {
   formatFollowerCount,
   loadCreatorDirectory,
+  formatFollowerLabel,
   normalizeCreatorSlug,
   setCreatorFollowing,
   type CommunityCreator,
@@ -2081,23 +2082,24 @@ function renderSpotlight(profile: CommunityProfile) {
   const busy = communityBusyIds.has(profile.id)
   const isCreatorLinkTarget = creatorLinkTargetId === profile.id
   const firstName = profile.name.trim().split(/\s+/)[0] || profile.name
+  const followerLabel = formatFollowerLabel(profile.followerCount)
   return `
     <article class="spotlight-card ${isCreatorLinkTarget ? 'creator-link-target' : ''}">
       ${renderLaunchPopover(profile, true)}
       <div class="spotlight-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
         ${renderCommunityPortrait(profile)}
-        <span class="spotlight-members">${profile.members} ${profile.isDemo ? 'people learning alongside them' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
+        ${profile.isDemo ? `<span class="spotlight-members">${profile.members} people learning alongside them</span>` : followerLabel ? `<span class="spotlight-members">${followerLabel}</span>` : ''}
       </div>
       <div class="spotlight-body">
         <p class="spotlight-role">${isCreatorLinkTarget ? `CREATOR LINK · @${escapeHtml(profile.username)}` : profile.isDemo ? `${escapeHtml(profile.role)} · Lagos` : `@${escapeHtml(profile.username)}`}</p>
         <h3>${escapeHtml(profile.name)}</h3>
-        <p class="spotlight-intro">${escapeHtml(profile.isDemo ? 'Building useful products without losing the quiet routines that make ambitious work possible.' : profile.latest)}</p>
+        ${profile.isDemo || profile.latest ? `<p class="spotlight-intro">${escapeHtml(profile.isDemo ? 'Building useful products without losing the quiet routines that make ambitious work possible.' : profile.latest)}</p>` : ''}
         ${profile.isDemo ? `<div class="spotlight-tasks">
           <div class="spotlight-tasks-heading"><strong>Today’s focus</strong><span>${profile.tasksToday} tasks · 3 complete</span></div>
           <div><i class="done">✓</i><span>Review the launch brief</span><time>8:40</time></div>
           <div><i class="done">✓</i><span>Approve the onboarding flow</span><time>10:15</time></div>
           <div><i></i><span>Founder interviews</span><time>14:00</time></div>
-        </div>` : `<div class="creator-profile-facts"><strong>${profile.members}</strong><span>${profile.followerCount === 1 ? 'follower' : 'followers'}</span><small>Only tasks marked Followers or Public can be shared.</small></div>`}
+        </div>` : `<div class="creator-profile-facts">${followerLabel ? `<strong>${escapeHtml(followerLabel)}</strong>` : ''}<small>Only tasks marked Followers or Public can be shared.</small></div>`}
         <div class="spotlight-actions">
           <button class="spotlight-open" data-community="${profile.id}">${profile.isDemo ? `Enter ${escapeHtml(firstName)}’s community` : 'Open creator link'} ${icon('chevron')}</button>
           <button class="spotlight-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
@@ -2111,12 +2113,13 @@ function renderSpotlight(profile: CommunityProfile) {
 
 function renderCommunityCard(profile: CommunityProfile) {
   const busy = communityBusyIds.has(profile.id)
+  const followerLabel = formatFollowerLabel(profile.followerCount)
   return `
     <article class="community-card">
       ${renderLaunchPopover(profile)}
       <div class="community-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
         ${renderCommunityPortrait(profile)}
-        <span>${profile.members} ${profile.isDemo ? 'members' : profile.followerCount === 1 ? 'follower' : 'followers'}</span>
+        ${profile.isDemo ? `<span>${profile.members} members</span>` : followerLabel ? `<span>${followerLabel}</span>` : ''}
         <button class="community-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-label="${profile.followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
           ${busy ? '…' : profile.followed ? '✓' : icon('plus')}
         </button>
@@ -2125,11 +2128,9 @@ function renderCommunityCard(profile: CommunityProfile) {
         <p class="community-role">${profile.isDemo ? escapeHtml(profile.role) : `@${escapeHtml(profile.username)}`}</p>
         <h3>${escapeHtml(profile.name)}</h3>
         <div class="community-activity">
-          <span>${profile.isDemo ? `<b>${profile.tasksToday}</b> tasks today` : `<b>${profile.members}</b> ${profile.followerCount === 1 ? 'follower' : 'followers'}`}</span>
-          <span class="activity-dot"></span>
-          <span>${profile.isDemo ? 'Active now' : 'Public profile'}</span>
+          ${profile.isDemo ? `<span><b>${profile.tasksToday}</b> tasks today</span><span class="activity-dot"></span><span>Active now</span>` : `${followerLabel ? `<span><b>${escapeHtml(followerLabel)}</b></span><span class="activity-dot"></span>` : ''}<span>Public profile</span>`}
         </div>
-        <p class="community-latest">${profile.isDemo ? '<span>✓</span>' : ''}${escapeHtml(profile.latest)}</p>
+        ${profile.latest ? `<p class="community-latest">${profile.isDemo ? '<span>✓</span>' : ''}${escapeHtml(profile.latest)}</p>` : ''}
         <button class="community-open" data-community="${profile.id}">${profile.isDemo ? 'View community' : 'Open creator link'} ${icon('chevron')}</button>
       </div>
     </article>
