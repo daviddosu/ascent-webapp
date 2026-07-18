@@ -80,7 +80,15 @@ export async function continueWithGoogle() {
   if (!client) return { error: new Error('Shotcount accounts are not connected yet.') }
   const { error } = await client.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: workspaceAuthUrl() },
+    options: {
+      redirectTo: workspaceAuthUrl(),
+      scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+      queryParams: {
+        access_type: 'offline',
+        include_granted_scopes: 'true',
+        prompt: 'consent',
+      },
+    },
   })
   return { error }
 }
