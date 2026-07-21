@@ -114,16 +114,15 @@ describe('cloud planner contract', () => {
   })
 })
 
-describe('Google Calendar account upgrade contract', () => {
-  it('automatically upgrades existing Google accounts without looping OAuth', () => {
+describe('Google Calendar connection contract', () => {
+  it('only requests Calendar access after a user explicitly asks to connect', () => {
     const main = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
     const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
-    expect(cloud).toContain('export function hasGoogleIdentity')
-    expect(cloud).toContain("identity.provider === 'google'")
-    expect(main).toContain('populateGoogleCalendarForExistingUser')
-    expect(main).toContain('claimGoogleCalendarConsentAttempt')
-    expect(main).toContain('window.sessionStorage.getItem(key)')
-    expect(main).toContain("nextView === 'calendar'")
+    expect(main).toContain("data-action=\"connect-google-calendar\"")
+    expect(main).toContain("if (action === 'connect-google-calendar')")
+    expect(main).not.toContain('populateGoogleCalendarForExistingUser')
+    expect(main).not.toContain('claimGoogleCalendarConsentAttempt')
+    expect(cloud).toContain("scopes: 'https://www.googleapis.com/auth/calendar.readonly'")
   })
 
   it('captures the short-lived provider token during the OAuth callback', () => {

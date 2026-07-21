@@ -92,13 +92,6 @@ export async function connectGoogleCalendar() {
   return { error }
 }
 
-export function hasGoogleIdentity(user: User) {
-  const providers = user.app_metadata?.providers
-  return user.app_metadata?.provider === 'google' ||
-    (Array.isArray(providers) && providers.includes('google')) ||
-    Boolean(user.identities?.some(identity => identity.provider === 'google'))
-}
-
 export async function deleteCloudAccount() {
   const client = await ensureCloud()
   if (!client) throw new Error('Cloud accounts are not configured.')

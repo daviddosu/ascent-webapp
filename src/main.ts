@@ -1,5 +1,5 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
-import { cloudEnabled, connectGoogleCalendar, currentUser, getCloudClient, hasGoogleIdentity, signOut as signOutCloud } from './data/cloud'
+import { cloudEnabled, connectGoogleCalendar, currentUser, getCloudClient, signOut as signOutCloud } from './data/cloud'
 import {
   loadGoogleCalendarEvents,
   loadGoogleCalendarSyncState,
@@ -112,7 +112,6 @@ type CommunityProfile = {
 const app = document.querySelector<HTMLDivElement>('#app')!
 const storagePrefix = 'shotcount-workspace-current-v1:'
 const viewStorageKey = `${storagePrefix}active-view`
-const googleCalendarConsentKey = `${storagePrefix}google-calendar-consent-v2`
 const plannerStorageKey = `${storagePrefix}planner`
 const goalsStorageKey = `${storagePrefix}goals`
 const themeStorageKey = `${storagePrefix}theme`
@@ -1363,30 +1362,8 @@ async function refreshGoogleCalendar(runRemoteSync = false) {
   } finally {
     googleCalendarBusy = false
     scheduleGoogleCalendarSync()
-    if (view === 'calendar') {
-      render()
-      void populateGoogleCalendarForExistingUser()
-    }
+    if (view === 'calendar') render()
   }
-}
-
-function claimGoogleCalendarConsentAttempt(userId: string) {
-  try {
-    const key = `${googleCalendarConsentKey}:${userId}`
-    if (window.sessionStorage.getItem(key)) return false
-    window.sessionStorage.setItem(key, new Date().toISOString())
-    return true
-  } catch {
-    // Without storage we cannot prevent an OAuth redirect loop, so keep the manual button.
-    return false
-  }
-}
-
-async function populateGoogleCalendarForExistingUser() {
-  if (!activeUser || view !== 'calendar' || profileModalOpen || googleCalendarBusy) return
-  if (googleCalendarState.status !== 'needs_permission' || !hasGoogleIdentity(activeUser)) return
-  if (!claimGoogleCalendarConsentAttempt(activeUser.id)) return
-  await beginGoogleCalendarConnection()
 }
 
 async function beginGoogleCalendarConnection() {
@@ -2872,7 +2849,6 @@ app.addEventListener('click', async event => {
     }
     rememberView(nextView)
     render()
-    if (nextView === 'calendar') void populateGoogleCalendarForExistingUser()
     return
   }
 
@@ -3093,7 +3069,6 @@ app.addEventListener('click', async event => {
     profileError = ''
     clearProfilePhotoPreview()
     render()
-    if (view === 'calendar') void populateGoogleCalendarForExistingUser()
     return
   }
   if (action === 'settings') {
