@@ -82,12 +82,9 @@ export async function continueWithGoogle() {
     provider: 'google',
     options: {
       redirectTo: workspaceAuthUrl(),
-      scopes: 'https://www.googleapis.com/auth/calendar.readonly',
-      queryParams: {
-        access_type: 'offline',
-        include_granted_scopes: 'true',
-        prompt: 'consent',
-      },
+      // Sign-in only needs identity. Keeping this explicit prevents future
+      // provider changes from silently requesting access to Google user data.
+      scopes: 'openid email profile',
     },
   })
   return { error }
