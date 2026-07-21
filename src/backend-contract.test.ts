@@ -10,6 +10,7 @@ const profileMigration = readFileSync(resolve(root, 'supabase/migrations/2026071
 const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_creator_directory.sql'), 'utf8')
 const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
 const webPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607180005_web_push.sql'), 'utf8')
+const scheduledPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607210001_scheduled_reminder_pushes.sql'), 'utf8')
 const googleCalendarMigration = readFileSync(resolve(root, 'supabase/migrations/202607180006_google_calendar_sync.sql'), 'utf8')
 
 const privateTables = [
@@ -268,11 +269,21 @@ describe('web push contract', () => {
 
   it('keeps VAPID private keys inside the server sender', () => {
     const sender = readFileSync(resolve(root, 'supabase/functions/send-completion-push/index.ts'), 'utf8')
+    const scheduledSender = readFileSync(resolve(root, 'supabase/functions/send-scheduled-reminders/index.ts'), 'utf8')
     const browser = readFileSync(resolve(root, 'src/data/notifications.ts'), 'utf8')
     expect(sender).toContain("Deno.env.get('VAPID_PRIVATE_KEY')")
     expect(sender).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')")
     expect(sender).toContain('push_deliveries')
+    expect(scheduledSender).toContain("Deno.env.get('REMINDER_CRON_SECRET')")
+    expect(scheduledSender).toContain('scheduled_push_deliveries')
+    expect(scheduledSender).toContain("Deno.env.get('VAPID_PRIVATE_KEY')")
     expect(browser).not.toContain('VAPID_PRIVATE_KEY')
+  })
+
+  it('records scheduled reminder delivery per browser so cron retries are safe', () => {
+    expect(scheduledPushMigration).toContain('create table if not exists public.scheduled_push_deliveries')
+    expect(scheduledPushMigration).toContain('primary key (delivery_key, push_subscription_id)')
+    expect(scheduledPushMigration).toContain('enable row level security')
   })
 })
 
