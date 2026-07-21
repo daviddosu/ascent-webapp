@@ -45,6 +45,7 @@ import {
 import {
   DEFAULT_TASK_REMINDER_MINUTES,
   isTaskReminderDue,
+  shouldPromptForToday,
   shouldPromptForTomorrow,
   taskReminderDeliveryKey,
 } from './data/reminders'
@@ -115,6 +116,7 @@ const googleCalendarConsentKey = `${storagePrefix}google-calendar-consent-v2`
 const plannerStorageKey = `${storagePrefix}planner`
 const goalsStorageKey = `${storagePrefix}goals`
 const themeStorageKey = `${storagePrefix}theme`
+const todayPromptStorageKey = `${storagePrefix}today-prompt-date`
 const tomorrowPromptStorageKey = `${storagePrefix}tomorrow-prompt-date`
 const reminderDeliveryStorageKey = `${storagePrefix}reminder-deliveries`
 const creatorQueryKey = 'creator'
@@ -133,7 +135,7 @@ function readTheme(): Theme {
 }
 
 let theme: Theme = readTheme()
-let tomorrowPlanningPromptOpen = false
+let dailyPlanningPrompt: 'today' | 'tomorrow' | null = null
 
 function applyTheme() {
   document.documentElement.dataset.theme = theme
@@ -189,6 +191,7 @@ function formatTaskTime(value: string) {
 }
 
 function readStoredView(): View {
+  if (previewParams.get('plan') === 'today') return 'today'
   if (previewParams.get('plan') === 'tomorrow') return 'upcoming'
   if (previewView === 'today' || previewView === 'upcoming' || previewView === 'calendar' || previewView === 'sticky') {
     return previewView
@@ -344,7 +347,7 @@ const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
 let plannerDraftGroup: UpcomingGroup | null = previewParams.get('plan') === 'tomorrow' ? 'tomorrow' : null
-let todayComposerOpen = false
+let todayComposerOpen = previewParams.get('plan') === 'today'
 let todayGoalCreatorOpen = false
 let goalComposerOpen = false
 let activeGoalId: string | null = null
@@ -929,23 +932,24 @@ function render() {
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
     ${renderShotcountIsland()}
-    ${renderTomorrowPlanningPrompt()}
+    ${renderDailyPlanningPrompt()}
     ${renderProfileModal()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
 }
 
-function renderTomorrowPlanningPrompt() {
-  if (!tomorrowPlanningPromptOpen) return ''
+function renderDailyPlanningPrompt() {
+  if (!dailyPlanningPrompt) return ''
+  const isToday = dailyPlanningPrompt === 'today'
   return `
     <div class="tomorrow-planning-prompt" role="presentation">
-      <section role="dialog" aria-modal="true" aria-labelledby="tomorrow-planning-title">
-        <span aria-hidden="true">6:30</span>
-        <h2 id="tomorrow-planning-title">Set up tomorrow</h2>
-        <p>Take two minutes to decide what matters before the day ends.</p>
+      <section role="dialog" aria-modal="true" aria-labelledby="daily-planning-title">
+        <span aria-hidden="true">${isToday ? '7:30' : '6:30'}</span>
+        <h2 id="daily-planning-title">${isToday ? 'Make today’s list' : 'Set up tomorrow'}</h2>
+        <p>${isToday ? 'Take two minutes to choose what matters today.' : 'Take two minutes to decide what matters before the day ends.'}</p>
         <div>
-          <button type="button" data-action="dismiss-tomorrow-plan">Not now</button>
-          <button type="button" class="primary" data-action="plan-tomorrow">Make tomorrow’s list</button>
+          <button type="button" data-action="dismiss-daily-plan">Not now</button>
+          <button type="button" class="primary" data-action="plan-${dailyPlanningPrompt}">${isToday ? 'Make today’s list' : 'Make tomorrow’s list'}</button>
         </div>
       </section>
     </div>
@@ -1559,16 +1563,33 @@ function saveReminderDeliveries(deliveries: Set<string>) {
 function checkPlanningAndTaskReminders(reference = new Date()) {
   if (authState !== 'authenticated') return
   let shouldRender = false
+  let lastTodayPromptDate = ''
   let lastPromptDate = ''
   try {
+    lastTodayPromptDate = window.localStorage.getItem(todayPromptStorageKey) ?? ''
     lastPromptDate = window.localStorage.getItem(tomorrowPromptStorageKey) ?? ''
   } catch {
     // The in-app prompt can still appear for this visit.
   }
 
-  if (shouldPromptForTomorrow(reference, lastPromptDate)) {
+  if (shouldPromptForToday(reference, lastTodayPromptDate)) {
     const promptDate = dateKey(reference)
-    tomorrowPlanningPromptOpen = true
+    dailyPlanningPrompt = 'today'
+    shouldRender = true
+    try {
+      window.localStorage.setItem(todayPromptStorageKey, promptDate)
+    } catch {
+      // Keep the visible prompt even when storage is unavailable.
+    }
+    void showLocalReminder(
+      'Make today’s list in Shotcount',
+      'Take two minutes to choose today’s tasks.',
+      `shotcount-plan-today-${promptDate}`,
+      '/?plan=today',
+    ).catch(() => undefined)
+  } else if (shouldPromptForTomorrow(reference, lastPromptDate)) {
+    const promptDate = dateKey(reference)
+    dailyPlanningPrompt = 'tomorrow'
     shouldRender = true
     try {
       window.localStorage.setItem(tomorrowPromptStorageKey, promptDate)
@@ -1913,6 +1934,13 @@ function completionCountForDate(day: Date) {
   return (showDemoData ? demoCompletionCount(day) : 0) + saved
 }
 
+function completedTasksForDate(day: Date) {
+  const key = dateKey(day)
+  return tasks
+    .filter(task => task.completedAt && dateKey(new Date(task.completedAt)) === key)
+    .sort((first, second) => new Date(first.completedAt!).getTime() - new Date(second.completedAt!).getTime())
+}
+
 function activityLevel(value: number, max: number) {
   if (!value || !max) return 0
   return Math.max(1, Math.min(4, Math.ceil(value / max * 4)))
@@ -1945,6 +1973,10 @@ function renderActivityGraph() {
     let value = dailyCounts[index] ?? 0
     let level = activityLevel(value, maxDaily)
     let label = `${value} task${value === 1 ? '' : 's'} completed on ${day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    const completedTasks = completedTasksForDate(day)
+    if (completedTasks.length) {
+      label += `\n${completedTasks.map(task => `• ${task.title}`).join('\n')}`
+    }
     if (activityMode === 'weekly') {
       value = weeklyCounts[column] ?? 0
       const filledRows = Math.ceil(value / maxWeekly * 7)
@@ -1956,7 +1988,7 @@ function renderActivityGraph() {
       level = row >= 7 - filledRows ? 3 : 0
       label = `${value} tasks completed by ${day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     }
-    return `<span class="activity-cell level-${isFuture ? 0 : level} ${isFuture ? 'is-future' : ''}" role="img" style="--column:${column + 1};--row:${row + 1}" title="${label}" aria-label="${label}"></span>`
+    return `<span class="activity-cell level-${isFuture ? 0 : level} ${isFuture ? 'is-future' : ''}" role="img" data-activity-date="${dateKey(day)}" style="--column:${column + 1};--row:${row + 1}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`
   }).join('')
 
   return `
@@ -3017,15 +3049,24 @@ app.addEventListener('click', async event => {
     return
   }
   if (action === 'plan-tomorrow') {
-    tomorrowPlanningPromptOpen = false
+    dailyPlanningPrompt = null
     rememberView('upcoming')
     plannerDraftGroup = 'tomorrow'
     render()
     queueMicrotask(() => document.querySelector<HTMLInputElement>('[data-planner-form="tomorrow"] input[name="title"]')?.focus())
     return
   }
-  if (action === 'dismiss-tomorrow-plan') {
-    tomorrowPlanningPromptOpen = false
+  if (action === 'plan-today') {
+    dailyPlanningPrompt = null
+    rememberView('today')
+    resetTodayComposerDraft()
+    todayComposerOpen = true
+    render()
+    queueMicrotask(() => document.querySelector<HTMLInputElement>('[data-today-form] input[name="title"]')?.focus())
+    return
+  }
+  if (action === 'dismiss-daily-plan') {
+    dailyPlanningPrompt = null
     render()
     return
   }

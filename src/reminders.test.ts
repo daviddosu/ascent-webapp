@@ -3,11 +3,22 @@ import {
   DEFAULT_TASK_REMINDER_MINUTES,
   isTaskReminderDue,
   nextTomorrowPlanningTime,
+  shouldPromptForToday,
   shouldPromptForTomorrow,
   taskReminderAt,
 } from './data/reminders'
 
 describe('daily planning and task reminders', () => {
+  it('prompts once from 7:30 AM until the evening planning window', () => {
+    const before = new Date(2026, 6, 21, 7, 29)
+    const onTime = new Date(2026, 6, 21, 7, 30)
+    const evening = new Date(2026, 6, 21, 18, 30)
+    expect(shouldPromptForToday(before, '')).toBe(false)
+    expect(shouldPromptForToday(onTime, '')).toBe(true)
+    expect(shouldPromptForToday(onTime, '2026-07-21')).toBe(false)
+    expect(shouldPromptForToday(evening, '')).toBe(false)
+  })
+
   it('prompts once at or after 6:30 PM local time', () => {
     const before = new Date(2026, 6, 21, 18, 29)
     const onTime = new Date(2026, 6, 21, 18, 30)

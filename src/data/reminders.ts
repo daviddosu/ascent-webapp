@@ -1,6 +1,8 @@
 import type { Task } from './planner-model'
 
 export const DEFAULT_TASK_REMINDER_MINUTES = 15
+export const TODAY_PLANNING_HOUR = 7
+export const TODAY_PLANNING_MINUTE = 30
 export const TOMORROW_PLANNING_HOUR = 18
 export const TOMORROW_PLANNING_MINUTE = 30
 
@@ -33,6 +35,14 @@ export function shouldPromptForTomorrow(reference = new Date(), lastPromptDate =
   const today = localDateKey(reference)
   const minutes = reference.getHours() * 60 + reference.getMinutes()
   return lastPromptDate !== today && minutes >= TOMORROW_PLANNING_HOUR * 60 + TOMORROW_PLANNING_MINUTE
+}
+
+export function shouldPromptForToday(reference = new Date(), lastPromptDate = '') {
+  const today = localDateKey(reference)
+  const minutes = reference.getHours() * 60 + reference.getMinutes()
+  const todayPromptTime = TODAY_PLANNING_HOUR * 60 + TODAY_PLANNING_MINUTE
+  const tomorrowPromptTime = TOMORROW_PLANNING_HOUR * 60 + TOMORROW_PLANNING_MINUTE
+  return lastPromptDate !== today && minutes >= todayPromptTime && minutes < tomorrowPromptTime
 }
 
 export function nextTomorrowPlanningTime(reference = new Date()) {

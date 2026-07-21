@@ -205,6 +205,10 @@ describe('reference screens', () => {
   })
 
   it('opens Upcoming with Tomorrow, This Week, and all activity modes', () => {
+    document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    const taskRow = document.querySelector<HTMLElement>('.task-row:not(.completed)')!
+    const completedTitle = taskRow.querySelector('strong')!.textContent!
+    taskRow.querySelector<HTMLButtonElement>('[data-complete]')!.click()
     document.querySelector<HTMLButtonElement>('[data-view="upcoming"]')!.click()
     expect(document.querySelector('.screen-title h1')?.textContent).toBe('Upcoming')
     expect(document.querySelector('.screen-count')?.getAttribute('data-count')).toBe('5')
@@ -215,6 +219,14 @@ describe('reference screens', () => {
     ])
     expect(document.querySelectorAll('.activity-cell')).toHaveLength(371)
     expect([...document.querySelectorAll('[data-activity-mode]')].map(node => node.textContent)).toEqual(['Daily', 'Weekly', 'Cumulative'])
+    const todayActivity = document.querySelector(`[data-activity-date="${testDateKey()}"]`)
+    expect(todayActivity?.getAttribute('title')).toContain(completedTitle)
+    expect(todayActivity?.getAttribute('aria-label')).toContain(completedTitle)
+
+    document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    const completedRow = [...document.querySelectorAll<HTMLElement>('.task-row')]
+      .find(row => row.querySelector('strong')?.textContent === completedTitle)!
+    completedRow.querySelector<HTMLButtonElement>('[data-complete]')!.click()
   })
 
   it('routes a future-dated task from Today into This Week', () => {
