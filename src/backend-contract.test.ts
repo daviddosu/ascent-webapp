@@ -11,7 +11,6 @@ const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migration
 const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
 const webPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607180005_web_push.sql'), 'utf8')
 const scheduledPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607210001_scheduled_reminder_pushes.sql'), 'utf8')
-const googleCalendarMigration = readFileSync(resolve(root, 'supabase/migrations/202607180006_google_calendar_sync.sql'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -114,25 +113,13 @@ describe('cloud planner contract', () => {
   })
 })
 
-describe('Google Calendar connection contract', () => {
-  it('only requests Calendar access after a user explicitly asks to connect', () => {
+describe('Google Calendar removal contract', () => {
+  it('does not retain an unverified Calendar OAuth path', () => {
     const main = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
     const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
-    expect(main).toContain("data-action=\"connect-google-calendar\"")
-    expect(main).toContain("if (action === 'connect-google-calendar')")
-    expect(main).not.toContain('populateGoogleCalendarForExistingUser')
-    expect(main).not.toContain('claimGoogleCalendarConsentAttempt')
-    expect(cloud).toContain("scopes: 'https://www.googleapis.com/auth/calendar.readonly'")
-  })
-
-  it('captures the short-lived provider token during the OAuth callback', () => {
-    const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
-    const calendar = readFileSync(resolve(root, 'src/data/google-calendar.ts'), 'utf8')
-    expect(cloud).toContain('client.auth.onAuthStateChange')
-    expect(cloud).toContain('captureGoogleProviderToken(session)')
-    expect(cloud).toContain('export async function currentGoogleProviderToken')
-    expect(calendar).toContain('await currentGoogleProviderToken()')
-    expect(calendar).not.toContain('session?.provider_token')
+    expect(main).not.toContain('connect-google-calendar')
+    expect(main).not.toContain('googleCalendar')
+    expect(cloud).not.toContain('calendar.readonly')
   })
 
   it('shares one authentication client across concurrent startup requests', () => {
@@ -202,29 +189,6 @@ describe('secret isolation', () => {
     const coachFunction = readFileSync(resolve(root, 'supabase/functions/ai-coach/index.ts'), 'utf8')
     expect(deleteFunction).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')")
     expect(coachFunction).toContain("Deno.env.get('OPENAI_API_KEY')")
-  })
-})
-
-describe('Google Calendar sync contract', () => {
-  it('keeps imported events private to their signed-in owner', () => {
-    expect(googleCalendarMigration).toContain('alter table public.google_calendar_events enable row level security')
-    expect(googleCalendarMigration).toContain('user_id = (select auth.uid())')
-    expect(googleCalendarMigration).toContain('google_calendar_events_owner')
-    expect(googleCalendarMigration).toContain('unique (user_id, calendar_id, google_event_id)')
-  })
-
-  it('stores sync health separately from calendar content', () => {
-    expect(googleCalendarMigration).toContain('create table if not exists public.google_calendar_sync_state')
-    expect(googleCalendarMigration).toContain("'needs_permission'")
-    expect(googleCalendarMigration).toContain('last_synced_at timestamptz')
-  })
-
-  it('requests read-only access and never ships a Google client secret', () => {
-    const cloud = readFileSync(resolve(root, 'src/data/cloud.ts'), 'utf8')
-    const sync = readFileSync(resolve(root, 'src/data/google-calendar.ts'), 'utf8')
-    expect(cloud).toContain('https://www.googleapis.com/auth/calendar.readonly')
-    expect(sync).toContain('https://www.googleapis.com/calendar/v3')
-    expect(sync).not.toContain('GOOGLE_CLIENT_SECRET')
   })
 })
 

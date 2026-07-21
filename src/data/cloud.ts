@@ -1,4 +1,4 @@
-import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -6,11 +6,6 @@ const publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 export const cloudEnabled = Boolean(url && publicKey)
 export let cloud: SupabaseClient | null = null
 let cloudPromise: Promise<SupabaseClient | null> | null = null
-let googleProviderToken: string | null = null
-
-function captureGoogleProviderToken(session: Session | null) {
-  if (session?.provider_token) googleProviderToken = session.provider_token
-}
 
 async function ensureCloud() {
   if (!cloudEnabled) return null
@@ -24,7 +19,6 @@ async function ensureCloud() {
         detectSessionInUrl: true,
       },
     })
-    client.auth.onAuthStateChange((_event, session) => captureGoogleProviderToken(session))
     cloud = client
     return client
   }).catch(error => {
@@ -36,14 +30,6 @@ async function ensureCloud() {
 
 export async function getCloudClient() {
   return ensureCloud()
-}
-
-export async function currentGoogleProviderToken() {
-  const client = await ensureCloud()
-  if (!client) return null
-  const { data } = await client.auth.getSession()
-  captureGoogleProviderToken(data.session)
-  return googleProviderToken
 }
 
 export async function currentUser(): Promise<User | null> {
@@ -72,24 +58,6 @@ export async function signOut() {
   const client = await ensureCloud()
   if (!client) return
   await client.auth.signOut()
-}
-
-export async function connectGoogleCalendar() {
-  const client = await ensureCloud()
-  if (!client) return { error: new Error('Cloud accounts are not configured.') }
-  const { error } = await client.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/`,
-      scopes: 'https://www.googleapis.com/auth/calendar.readonly',
-      queryParams: {
-        access_type: 'offline',
-        include_granted_scopes: 'true',
-        prompt: 'consent',
-      },
-    },
-  })
-  return { error }
 }
 
 export async function deleteCloudAccount() {

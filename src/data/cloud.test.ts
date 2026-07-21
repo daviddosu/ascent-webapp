@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { connectGoogleCalendar } from './cloud'
+import { cloudEnabled } from './cloud'
 
-describe('Google Calendar connection', () => {
-  it('is available as an explicit action rather than an automatic account upgrade', () => {
-    expect(typeof connectGoogleCalendar).toBe('function')
+describe('cloud setup', () => {
+  it('exposes whether cloud accounts are configured', () => {
+    expect(typeof cloudEnabled).toBe('boolean')
   })
 })
