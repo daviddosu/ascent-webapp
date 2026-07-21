@@ -9,14 +9,17 @@ import {
 } from './data/reminders'
 
 describe('daily planning and task reminders', () => {
-  it('prompts once from 7:30 AM until the evening planning window', () => {
+  it('prompts only at 7:30 AM local time when Today is empty', () => {
     const before = new Date(2026, 6, 21, 7, 29)
     const onTime = new Date(2026, 6, 21, 7, 30)
-    const evening = new Date(2026, 6, 21, 18, 30)
+    const after = new Date(2026, 6, 21, 7, 31)
+    const afternoon = new Date(2026, 6, 21, 16, 49)
     expect(shouldPromptForToday(before, '')).toBe(false)
     expect(shouldPromptForToday(onTime, '')).toBe(true)
     expect(shouldPromptForToday(onTime, '2026-07-21')).toBe(false)
-    expect(shouldPromptForToday(evening, '')).toBe(false)
+    expect(shouldPromptForToday(onTime, '', true)).toBe(false)
+    expect(shouldPromptForToday(after, '')).toBe(false)
+    expect(shouldPromptForToday(afternoon, '')).toBe(false)
   })
 
   it('prompts once at or after 6:30 PM local time', () => {

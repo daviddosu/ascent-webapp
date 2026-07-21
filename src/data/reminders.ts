@@ -37,12 +37,12 @@ export function shouldPromptForTomorrow(reference = new Date(), lastPromptDate =
   return lastPromptDate !== today && minutes >= TOMORROW_PLANNING_HOUR * 60 + TOMORROW_PLANNING_MINUTE
 }
 
-export function shouldPromptForToday(reference = new Date(), lastPromptDate = '') {
+export function shouldPromptForToday(reference = new Date(), lastPromptDate = '', hasTodayTasks = false) {
   const today = localDateKey(reference)
-  const minutes = reference.getHours() * 60 + reference.getMinutes()
-  const todayPromptTime = TODAY_PLANNING_HOUR * 60 + TODAY_PLANNING_MINUTE
-  const tomorrowPromptTime = TOMORROW_PLANNING_HOUR * 60 + TOMORROW_PLANNING_MINUTE
-  return lastPromptDate !== today && minutes >= todayPromptTime && minutes < tomorrowPromptTime
+  return !hasTodayTasks &&
+    lastPromptDate !== today &&
+    reference.getHours() === TODAY_PLANNING_HOUR &&
+    reference.getMinutes() === TODAY_PLANNING_MINUTE
 }
 
 export function nextTomorrowPlanningTime(reference = new Date()) {

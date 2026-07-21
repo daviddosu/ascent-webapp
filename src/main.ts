@@ -777,13 +777,15 @@ function taskMatchesGoal(task: Task) {
   return !activeGoalId || task.goalId === activeGoalId
 }
 
+function belongsOnTodayList(task: Task) {
+  if (!task.due || task.due > todayKey) return false
+  if (!task.completedAt) return true
+  const completedDate = new Date(task.completedAt)
+  return !Number.isNaN(completedDate.getTime()) && dateKey(completedDate) === todayKey
+}
+
 function tasksForToday() {
-  return tasks.filter(task => {
-    if (!task.due || task.due > todayKey || !taskMatchesGoal(task)) return false
-    if (!task.completedAt) return true
-    const completedDate = new Date(task.completedAt)
-    return !Number.isNaN(completedDate.getTime()) && dateKey(completedDate) === todayKey
-  })
+  return tasks.filter(task => belongsOnTodayList(task) && taskMatchesGoal(task))
 }
 
 function tasksForUpcoming(group: UpcomingGroup) {
@@ -1572,7 +1574,7 @@ function checkPlanningAndTaskReminders(reference = new Date()) {
     // The in-app prompt can still appear for this visit.
   }
 
-  if (shouldPromptForToday(reference, lastTodayPromptDate)) {
+  if (shouldPromptForToday(reference, lastTodayPromptDate, tasks.some(belongsOnTodayList))) {
     const promptDate = dateKey(reference)
     dailyPlanningPrompt = 'today'
     shouldRender = true
