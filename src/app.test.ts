@@ -154,10 +154,12 @@ describe('reference screens', () => {
 
   it('marks a task done from its checkbox', () => {
     vibrate.mockClear()
+    const countBefore = Number(document.querySelector('.screen-count')?.getAttribute('data-count'))
     const checkbox = document.querySelector<HTMLButtonElement>('[data-complete="database"]')!
     checkbox.click()
     expect(document.querySelector('[data-complete="database"]')?.closest('.task-row')?.classList.contains('completed')).toBe(true)
     expect(document.querySelector('[data-complete="database"]')?.getAttribute('aria-pressed')).toBe('true')
+    expect(Number(document.querySelector('.screen-count')?.getAttribute('data-count'))).toBe(countBefore - 1)
     expect(vibrate).toHaveBeenCalledWith(65)
   })
 
@@ -244,6 +246,7 @@ describe('reference screens', () => {
     const tomorrowSection = document.querySelector('[data-upcoming-section="tomorrow"]')!
     expect([...tomorrowSection.querySelectorAll('.task-row strong')].some(node => node.textContent === 'Prepare tomorrow brief')).toBe(true)
     expect(window.localStorage.getItem('shotcount-workspace-current-v1:planner')).toContain('"time":"09:15"')
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:planner')).toContain('"reminder":15')
   })
 
   it('requires and saves a date for a This Week task', () => {
@@ -289,6 +292,13 @@ describe('reference screens', () => {
     expect(due.value).toBe(testDateKey(nextDay))
     expect(due.min).toBe(testDateKey(nextDay))
     expect(due.max).toBe(testDateKey(addTestDays(nextDay, 7)))
+
+    form.querySelector<HTMLButtonElement>('[data-action="close-today-composer"]')!.click()
+    const carriedGroup = document.querySelector('.carried-task-group')
+    expect(carriedGroup?.textContent).toContain('Research content ideas')
+    expect(document.querySelector('.today-rollover-divider')?.textContent).toContain('Today')
+    expect(document.querySelector('.today-screen')?.textContent).toContain('Create job posting for SEO specialist')
+    expect(document.querySelector('.today-screen')?.textContent).not.toContain('Create a database of guest authors')
 
     refreshAppDate()
   })

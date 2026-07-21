@@ -90,6 +90,22 @@ export function isCreatorProfileComplete(input: CreatorProfileInput | CreatorPro
   return missingCreatorProfileFields(input).length === 0
 }
 
+export function profileSaveState(input: CreatorProfileInput) {
+  const username = normalizeUsername(input.username)
+  const normalized: CreatorProfileInput = {
+    ...input,
+    username: /^[a-z0-9_]{3,30}$/.test(username) ? username : '',
+    displayName: input.displayName.trim().slice(0, 80),
+    bio: input.bio.trim().slice(0, 140),
+    avatarUrl: highResolutionAvatarUrl(input.avatarUrl),
+    timezone: input.timezone.trim() || detectedTimezone(),
+    defaultTaskVisibility: ['private', 'followers', 'public'].includes(input.defaultTaskVisibility)
+      ? input.defaultTaskVisibility
+      : 'private',
+  }
+  return { input: normalized, complete: isCreatorProfileComplete(normalized) }
+}
+
 export function profileDefaults(user?: User | null): CreatorProfileInput {
   const metadataName = String(user?.user_metadata?.display_name ?? user?.user_metadata?.full_name ?? '').trim()
   const displayName = metadataName
@@ -131,24 +147,19 @@ export async function loadCreatorProfile(user: User) {
 export async function saveCreatorProfile(user: User, input: CreatorProfileInput) {
   const client = await getCloudClient()
   if (!client) throw new Error('Cloud profiles are not configured.')
-  const username = normalizeUsername(input.username)
-  const missing = missingCreatorProfileFields({ ...input, username })
-  if (missing.length) {
-    const labels = missing.map(field => creatorProfileFieldLabels[field])
-    throw new Error(`Complete ${labels.join(', ')}.`)
-  }
+  const saved = profileSaveState(input)
 
   const { data, error } = await client
     .from('profiles')
     .upsert({
       id: user.id,
-      username,
-      display_name: input.displayName.trim().slice(0, 80),
-      bio: input.bio.trim().slice(0, 140),
-      avatar_url: highResolutionAvatarUrl(input.avatarUrl),
-      timezone: input.timezone || 'UTC',
-      default_task_visibility: input.defaultTaskVisibility,
-      onboarding_completed: true,
+      username: saved.input.username || null,
+      display_name: saved.input.displayName,
+      bio: saved.input.bio,
+      avatar_url: saved.input.avatarUrl,
+      timezone: saved.input.timezone,
+      default_task_visibility: saved.input.defaultTaskVisibility,
+      onboarding_completed: saved.complete,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' })
     .select('id,username,display_name,bio,avatar_url,timezone,default_task_visibility,onboarding_completed')

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { highResolutionAvatarUrl, isCreatorProfileComplete, missingCreatorProfileFields, normalizeUsername, profileDefaults } from './data/profile'
+import { highResolutionAvatarUrl, isCreatorProfileComplete, missingCreatorProfileFields, normalizeUsername, profileDefaults, profileSaveState } from './data/profile'
 
 describe('creator profile helpers', () => {
   it('keeps usernames short, simple, and link-safe', () => {
@@ -25,6 +25,13 @@ describe('creator profile helpers', () => {
 
   it('names the exact details an email-only account still needs', () => {
     expect(missingCreatorProfileFields(profileDefaults())).toEqual(['avatarUrl', 'displayName', 'username', 'bio'])
+  })
+
+  it('allows incomplete profile details to be saved without marking onboarding complete', () => {
+    const saved = profileSaveState({ ...profileDefaults(), displayName: 'David' })
+    expect(saved.input.displayName).toBe('David')
+    expect(saved.input.username).toBe('')
+    expect(saved.complete).toBe(false)
   })
 
   it('accepts account details from a completed Google profile', () => {
