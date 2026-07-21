@@ -1728,6 +1728,15 @@ body[data-signed-in='false'] #app {
   text-decoration: underline;
 }
 
+.simple-auth-code-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simple-auth-code-actions .simple-auth-back { margin: 0; }
+.simple-auth-notice { min-height: 20px; color: #267044; font-size: 13px; }
+
 .google-auth-card.simple-auth-card .google-auth-error {
   min-height: 20px;
   margin: 14px 0 0;

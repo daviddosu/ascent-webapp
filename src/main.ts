@@ -80,6 +80,7 @@ let authError = new URLSearchParams(window.location.search).get('error') ?? ''
 let authStep: 'email' | 'code' = 'email'
 let authEmail = ''
 let authBusy = false
+let authNotice = ''
 let workspaceNavigationScheduled = false
 
 function isolateCurrentAppStorage() {
@@ -412,7 +413,7 @@ app.addEventListener('click', (event) => {
   }
 
   if (action === 'signin') {
-    showLoadingThenOpenWorkspace()
+    openAuthModal()
     return
   }
 
@@ -430,7 +431,13 @@ app.addEventListener('click', (event) => {
     authStep = 'email'
     authEmail = ''
     authError = ''
+    authNotice = ''
     render()
+    return
+  }
+
+  if (action === 'resend-email-code') {
+    if (authEmail) void sendEmailCode(authEmail, true)
     return
   }
 
@@ -528,6 +535,17 @@ app.addEventListener('input', (event) => {
   if (target.id === 'task-draft') {
     state.draftValue = target.value
     persist()
+  }
+
+  if (target.id === 'auth-email') {
+    authEmail = target.value
+    return
+  }
+
+  if (target.id === 'email-code') {
+    const code = target.value.replace(/\D/g, '').slice(0, 6)
+    if (target.value !== code) target.value = code
+    if (code.length === 6 && !authBusy) target.form?.requestSubmit()
   }
 })
 
@@ -755,11 +773,24 @@ function showLoadingThenOpenWorkspace(replace = false) {
   })
 }
 
+function openAuthModal(error = '') {
+  authModalOpen = true
+  authError = error
+  authNotice = ''
+  const url = new URL(window.location.href)
+  url.searchParams.set('auth', 'signin')
+  if (error) url.searchParams.set('error', error)
+  else url.searchParams.delete('error')
+  window.history.replaceState({}, '', url)
+  render()
+}
+
 function closeAuthModal() {
   authModalOpen = false
   authError = ''
   authStep = 'email'
   authEmail = ''
+  authNotice = ''
   const url = new URL(window.location.href)
   url.searchParams.delete('auth')
   url.searchParams.delete('error')
@@ -769,17 +800,33 @@ function closeAuthModal() {
 
 async function requestEmailCode(form: HTMLFormElement) {
   const email = String(new FormData(form).get('email') ?? '').trim().toLowerCase()
+  await sendEmailCode(email)
+}
+
+function friendlyEmailAuthError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : ''
+  const lower = message.toLowerCase()
+  if (lower.includes('rate') || lower.includes('too many')) return 'Too many attempts. Wait a minute, then try again.'
+  if (lower.includes('expired')) return 'That code has expired. Send a new code and try again.'
+  if (lower.includes('invalid') || lower.includes('token')) return 'That code is not correct. Check the email and try again.'
+  return message || fallback
+}
+
+async function sendEmailCode(email: string, resend = false) {
+  email = email.trim().toLowerCase()
   if (!email || authBusy) return
+  authEmail = email
   authBusy = true
   authError = ''
+  authNotice = ''
   render()
   try {
     const { error } = await requestCloudEmailCode(email)
     if (error) throw error
-    authEmail = email
     authStep = 'code'
+    if (resend) authNotice = 'A fresh code is on its way.'
   } catch (error) {
-    authError = error instanceof Error ? error.message : 'We could not send the code.'
+    authError = friendlyEmailAuthError(error, 'We could not send the code. Check the address and try again.')
   } finally {
     authBusy = false
     render()
@@ -796,6 +843,7 @@ async function verifyEmailCode(form: HTMLFormElement) {
   }
   authBusy = true
   authError = ''
+  authNotice = ''
   render()
   try {
     const { data, error } = await verifyCloudEmailCode(authEmail, code)
@@ -803,7 +851,7 @@ async function verifyEmailCode(form: HTMLFormElement) {
     openWorkspaceWithSession(data.session)
   } catch (error) {
     authBusy = false
-    authError = error instanceof Error ? error.message : 'That code did not work.'
+    authError = friendlyEmailAuthError(error, 'That code did not work. Send a new one and try again.')
     render()
   }
 }
@@ -839,7 +887,7 @@ function renderGoogleAuthModal() {
         ${emailStep ? `
           <form class="simple-auth-form" id="email-auth-form">
             <label for="auth-email">Email</label>
-            <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+            <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com" value="${escapeHtml(authEmail)}" required />
             <button type="submit" ${authBusy ? 'disabled' : ''}>${authBusy ? 'Sending…' : 'Continue with email'}</button>
           </form>
           <div class="simple-auth-divider"><span>or continue with</span></div>
@@ -852,8 +900,12 @@ function renderGoogleAuthModal() {
             <input id="email-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required />
             <button type="submit" ${authBusy ? 'disabled' : ''}>${authBusy ? 'Checking…' : 'Open Shotcount'}</button>
           </form>
-          <button type="button" class="simple-auth-back" data-action="change-auth-email">Use a different email</button>
+          <div class="simple-auth-code-actions">
+            <button type="button" class="simple-auth-back" data-action="change-auth-email">Use a different email</button>
+            <button type="button" class="simple-auth-back" data-action="resend-email-code" ${authBusy ? 'disabled' : ''}>Send a new code</button>
+          </div>
         `}
+        <p class="simple-auth-notice" role="status">${escapeHtml(authNotice)}</p>
         <p class="google-auth-error" data-auth-error role="alert">${escapeHtml(errorMessage)}</p>
         <small>By continuing, you agree to the Shotcount Terms &amp; Conditions and Privacy Policy.</small>
       </section>

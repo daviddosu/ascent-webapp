@@ -22,4 +22,12 @@ describe('Shotcount sign-in pop-over', () => {
     expect(document.querySelector('[role="dialog"]')).toBeNull()
     expect(window.location.search).toBe('')
   })
+
+  it('opens email sign-in immediately instead of bouncing through the workspace', () => {
+    document.querySelector<HTMLButtonElement>('[data-action="signin"]')!.click()
+
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(document.querySelector<HTMLInputElement>('#auth-email')).not.toBeNull()
+    expect(window.location.search).toBe('?auth=signin')
+  })
 })
