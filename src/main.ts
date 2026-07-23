@@ -67,6 +67,7 @@ type CalendarMode = 'day' | 'week' | 'month'
 type Theme = 'light' | 'dark'
 const previewParams = new URLSearchParams(window.location.search)
 const previewView = previewParams.get('previewView')
+const previewAgentState = previewParams.get('previewAgent')
 const previewGoogleCalendar = previewParams.has('previewGoogleCalendar')
 const isPreviewMode = previewParams.has('previewView')
 const showDemoData = isPreviewMode || import.meta.env.MODE === 'test'
@@ -332,6 +333,14 @@ let view: View = readStoredView()
 let selectedTaskId = showDemoData && tasks.some(task => task.id === 'license') ? 'license' : tasks[0]?.id ?? ''
 let mobileInspectorOpen = false
 const agentRuns = readAgentRuns()
+let agentHelperDismissed = (() => {
+  if (isPreviewMode) return false
+  try {
+    return window.sessionStorage.getItem(`${storagePrefix}agent-helper-dismissed`) === 'yes'
+  } catch {
+    return false
+  }
+})()
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
@@ -526,6 +535,13 @@ const icons: Record<string, string> = {
 
 function icon(name: string) {
   return `<svg aria-hidden="true" viewBox="0 0 24 24">${icons[name]}</svg>`
+}
+
+function agentSparkleIcon() {
+  return `<svg class="agent-sparkle-icon" aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M8.2 2.7c.65 3.72 2.14 5.2 5.85 5.86-3.71.66-5.2 2.14-5.85 5.86-.66-3.72-2.15-5.2-5.86-5.86C6.05 7.9 7.54 6.42 8.2 2.7Z"/>
+    <path d="M16.55 11.25c.43 2.48 1.42 3.47 3.9 3.91-2.48.44-3.47 1.43-3.9 3.91-.44-2.48-1.43-3.47-3.91-3.91 2.48-.44 3.47-1.43 3.91-3.91Z"/>
+  </svg>`
 }
 
 function escapeHtml(value: string) {
@@ -758,11 +774,16 @@ function persistAgentRuns() {
 }
 
 const agentProgressLabels = [
-  'Understanding your task',
-  'Identifying the right approach',
-  'Researching and gathering material',
-  'Comparing the strongest options',
-  'Preparing your result',
+  'Opened the task context',
+  'Extracting key sections',
+  'Summarizing main points',
+  'Identifying key takeaways',
+]
+const agentPreviewProgressLabels = [
+  'Opened the report',
+  'Extracting key sections',
+  'Summarizing main points',
+  'Identifying key takeaways',
 ]
 
 async function startAgentRun(task: Task, context = '') {
@@ -1674,14 +1695,28 @@ function renderToday() {
   return `
     <section class="today-screen">
       <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} tasks">${screenCounts.today}</span></header>
-      ${todayComposerOpen ? renderTodayComposer() : `<button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>`}
+      ${todayComposerOpen ? renderTodayComposer() : `<div class="today-command-row">
+        <button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>
+        <button class="ask-shotcount-button" data-action="add-task"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask ShotCount</button>
+      </div>`}
       <div class="task-list">
         ${todayTasks.length
           ? todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')
           : '<div class="planner-empty"><strong>Your day is clear.</strong><p>Add your first task when you are ready.</p></div>'}
       </div>
+      ${renderAgentHelper()}
     </section>
   `
+}
+
+function renderAgentHelper() {
+  if (agentHelperDismissed) return ''
+  return `<aside class="shotcount-agent-helper">
+    <span class="shotcount-agent-helper__mark">${agentSparkleIcon()}</span>
+    <p><strong>ShotCount can help move your tasks forward.</strong><span>Try asking or delegating a task to AI.</span></p>
+    <button type="button" data-action="add-task">How it works</button>
+    <button type="button" class="shotcount-agent-helper__dismiss" data-action="dismiss-agent-helper">Dismiss</button>
+  </aside>`
 }
 
 function renderTodayComposer() {
@@ -1813,13 +1848,18 @@ function renderTaskRow(task: Task, selected = false) {
 
 function renderAgentPill(task: Task) {
   const run = agentRuns.get(task.id)
+  const displayStatus = isPreviewMode && previewAgentState !== 'error' && run?.status === 'failed' ? 'running' : run?.status
   const label =
-    run?.status === 'completed' ? 'Ready to review' :
-      run?.status === 'running' ? 'In progress' :
-        run?.status === 'needs_context' ? 'Needs context' :
-          run?.status === 'failed' ? 'Try again' :
+    displayStatus === 'completed' ? 'Ready to review' :
+      displayStatus === 'running' ? 'In progress' :
+        displayStatus === 'needs_context' ? 'Needs context' :
+          displayStatus === 'failed' ? 'Needs attention' :
             'AI available'
-  return `<button type="button" class="task-agent-pill task-agent-pill--${run?.status ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}"><span aria-hidden="true">${run?.status === 'running' ? '◔' : run?.status === 'completed' ? '✓' : '✦'}</span>${label}</button>`
+  const mark = displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
+    displayStatus === 'completed' ? '<span aria-hidden="true">✓</span>' :
+      displayStatus === 'failed' ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
+      `<span class="agent-icon-wrap">${agentSparkleIcon()}</span>`
+  return `<button type="button" class="task-agent-pill task-agent-pill--${displayStatus ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}">${mark}${label}</button>`
 }
 
 function safeAgentUrl(value: string) {
@@ -1831,19 +1871,46 @@ function safeAgentUrl(value: string) {
   }
 }
 
+function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder = false) {
+  const progressLabels = placeholder ? agentPreviewProgressLabels : agentProgressLabels
+  return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">◔</i> In progress</em></header>
+    <p>${placeholder ? 'I’m reading and summarizing the report for you.' : 'I’m reading and summarizing the material for you.'}</p>
+    <div class="task-agent-progress">
+      ${progressLabels.map((label, index) => `<div class="${index < progressIndex ? 'done' : index === progressIndex ? 'active' : ''}"><i>${index < progressIndex ? '✓' : index === progressIndex ? '◔' : ''}</i><span>${label}</span></div>`).join('')}
+    </div>
+    <footer><button type="button" data-action="view-agent-progress" data-task-id="${task.id}">View progress</button><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
+  </section>
+  <aside class="task-agent-notification">${icon('bell')}<span>You’ll be notified when this is ready.</span></aside>`
+}
+
+function renderAgentErrorPanel(task: Task, error: string) {
+  const needsSignIn = error.toLowerCase().includes('sign in')
+  return `<section class="task-agent-card task-agent-card--error" role="alert">
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">!</i> Needs attention</em></header>
+    <p>I couldn’t start this task.</p>
+    <div class="task-agent-error-detail">
+      <span aria-hidden="true">!</span>
+      <div><strong>${needsSignIn ? 'Sign in required' : 'Something interrupted the task'}</strong><p>${escapeHtml(error)}</p></div>
+    </div>
+    <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Dismiss</button><button class="agent-primary" type="button" data-action="delegate-task" data-task-id="${task.id}">Try again</button></footer>
+  </section>
+  <aside class="task-agent-notification task-agent-notification--error">${icon('bell')}<span>No task changes were made. You can safely try again.</span></aside>`
+}
+
 function renderAgentPanel(task: Task) {
   const run = agentRuns.get(task.id)
   if (!run || run.status === 'cancelled') {
     return `<section class="task-agent-card task-agent-card--delegate">
-      <span class="task-agent-mark" aria-hidden="true">✦</span>
+      <span class="task-agent-mark">${agentSparkleIcon()}</span>
       <div><strong>Let Shotcount move this forward</strong><p>Delegate research or drafting. You review the result before anything goes anywhere.</p></div>
       <button type="button" data-action="delegate-task" data-task-id="${task.id}">Delegate</button>
     </section>`
   }
 
   if (run.status === 'needs_context') {
-    return `<section class="task-agent-card">
-      <header><strong><span>✦</span> Shotcount Assistant</strong><em>Needs context</em></header>
+    return `<section class="task-agent-card task-agent-card--context">
+      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Shotcount Assistant</strong><em>Needs context</em></header>
       <p>What outcome would make this task complete? One sentence is enough.</p>
       <textarea class="task-agent-context" aria-label="Additional context for Shotcount" placeholder="For example: compare five options and recommend the strongest two.">${escapeHtml(run.context)}</textarea>
       <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="${task.id}">Start task</button></footer>
@@ -1852,7 +1919,7 @@ function renderAgentPanel(task: Task) {
 
   if (run.status === 'completed' && run.result) {
     return `<section class="task-agent-card task-agent-card--result">
-      <header><strong><span>✦</span> Shotcount Assistant</strong><em>Ready to review</em></header>
+      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Shotcount Assistant</strong><em>Ready to review</em></header>
       <p>${escapeHtml(run.result.summary)}</p>
       <div class="task-agent-result">
         ${run.result.sections.map(section => `<article><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.body)}</p></article>`).join('')}
@@ -1865,21 +1932,11 @@ function renderAgentPanel(task: Task) {
   }
 
   if (run.status === 'failed') {
-    return `<section class="task-agent-card task-agent-card--failed">
-      <header><strong><span>✦</span> Shotcount Assistant</strong><em>Needs attention</em></header>
-      <p>${escapeHtml(run.error ?? 'Shotcount could not complete this task.')}</p>
-      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Dismiss</button><button class="agent-primary" type="button" data-action="delegate-task" data-task-id="${task.id}">Try again</button></footer>
-    </section>`
+    if (isPreviewMode && previewAgentState !== 'error') return renderAgentProgressPanel(task, 2, true)
+    return renderAgentErrorPanel(task, run.error ?? 'ShotCount could not complete this task.')
   }
 
-  return `<section class="task-agent-card">
-    <header><strong><span>✦</span> Shotcount Assistant</strong><em>In progress</em></header>
-    <p>I’m moving this task forward and preparing a private result for your review.</p>
-    <div class="task-agent-progress">
-      ${agentProgressLabels.map((label, index) => `<div class="${index < run.progressIndex ? 'done' : index === run.progressIndex ? 'active' : ''}"><i>${index < run.progressIndex ? '✓' : index === run.progressIndex ? '◔' : ''}</i><span>${label}</span></div>`).join('')}
-    </div>
-    <footer><small>You’ll be notified when this is ready.</small><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
-  </section>`
+  return renderAgentProgressPanel(task, run.progressIndex)
 }
 
 function renderInspector(task: Task) {
@@ -2827,6 +2884,16 @@ app.addEventListener('change', event => {
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (action === 'dismiss-agent-helper') {
+    agentHelperDismissed = true
+    try {
+      window.sessionStorage.setItem(`${storagePrefix}agent-helper-dismissed`, 'yes')
+    } catch {
+      // The helper can still be dismissed for this render when storage is unavailable.
+    }
+    render()
+    return
+  }
   const muteCreatorId = target.closest<HTMLElement>('[data-mute-creator]')?.dataset.muteCreator
   const unmuteCreatorId = target.closest<HTMLElement>('[data-unmute-creator]')?.dataset.unmuteCreator
   const creatorMuteId = muteCreatorId || unmuteCreatorId
@@ -3017,6 +3084,16 @@ app.addEventListener('click', async event => {
   if (action === 'cancel-agent') {
     const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
     if (taskId) cancelAgentRun(taskId)
+    return
+  }
+
+  if (action === 'view-agent-progress') {
+    toast = 'Shotcount is working through this task'
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1400)
     return
   }
 
