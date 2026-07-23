@@ -30,4 +30,11 @@ describe('Shotcount sign-in pop-over', () => {
     expect(document.querySelector<HTMLInputElement>('#auth-email')).not.toBeNull()
     expect(window.location.search).toBe('?auth=signin')
   })
+
+  it('always offers identity-only Google sign-in alongside email', () => {
+    const googleButton = document.querySelector<HTMLButtonElement>('[data-action="continue-google"]')
+
+    expect(googleButton).not.toBeNull()
+    expect(googleButton?.textContent).toContain('Continue with Google')
+  })
 })
