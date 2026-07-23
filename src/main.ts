@@ -44,6 +44,7 @@ import {
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
+import { createAgentRun, executeAgentRun, type AgentRun } from './data/agent'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.png'
 import peopleCollage from './assets/shotcount-people-collage.png'
@@ -108,6 +109,7 @@ const googleCalendarConsentKey = `${storagePrefix}google-calendar-consent-v2`
 const plannerStorageKey = `${storagePrefix}planner`
 const goalsStorageKey = `${storagePrefix}goals`
 const themeStorageKey = `${storagePrefix}theme`
+const agentRunsStorageKey = `${storagePrefix}agent-runs`
 const creatorQueryKey = 'creator'
 const dateStateHook = window as Window & { __shotcountRefreshDateState?: (reference?: Date) => void }
 
@@ -329,6 +331,7 @@ const tasks: Task[] = readPlannerTasks()
 let view: View = readStoredView()
 let selectedTaskId = showDemoData && tasks.some(task => task.id === 'license') ? 'license' : tasks[0]?.id ?? ''
 let mobileInspectorOpen = false
+const agentRuns = readAgentRuns()
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
@@ -732,6 +735,103 @@ function closeCreatorToday() {
   if (creatorSlugFromPathname(url.pathname)) url.pathname = '/'
   window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
   rememberView('sticky')
+  render()
+}
+
+function readAgentRuns() {
+  try {
+    const stored = window.localStorage.getItem(agentRunsStorageKey)
+    if (!stored) return new Map<string, AgentRun>()
+    const parsed = JSON.parse(stored) as AgentRun[]
+    return new Map(parsed.map(run => [run.taskId, run]))
+  } catch {
+    return new Map<string, AgentRun>()
+  }
+}
+
+function persistAgentRuns() {
+  try {
+    window.localStorage.setItem(agentRunsStorageKey, JSON.stringify([...agentRuns.values()]))
+  } catch {
+    // Agent state remains available for this visit if private storage is unavailable.
+  }
+}
+
+const agentProgressLabels = [
+  'Understanding your task',
+  'Identifying the right approach',
+  'Researching and gathering material',
+  'Comparing the strongest options',
+  'Preparing your result',
+]
+
+async function startAgentRun(task: Task, context = '') {
+  const run = createAgentRun(task, context)
+  agentRuns.set(task.id, run)
+  selectedTaskId = task.id
+  mobileInspectorOpen = true
+  persistAgentRuns()
+  render()
+  if (run.status === 'needs_context') return
+
+  run.status = 'running'
+  run.progressIndex = 0
+  persistAgentRuns()
+  render()
+  const progressTimer = window.setInterval(() => {
+    if (run.status !== 'running') return
+    run.progressIndex = Math.min(agentProgressLabels.length - 1, run.progressIndex + 1)
+    run.updatedAt = new Date().toISOString()
+    persistAgentRuns()
+    render()
+  }, 1800)
+
+  try {
+    const completed = await executeAgentRun(task, run)
+    if (agentRuns.get(task.id)?.status === 'cancelled') return
+    agentRuns.set(task.id, completed)
+    toast = 'Shotcount finished your task'
+  } catch (error) {
+    if (agentRuns.get(task.id)?.status === 'cancelled') return
+    run.status = 'failed'
+    run.error = error instanceof Error ? error.message : 'Shotcount could not complete this task.'
+    run.updatedAt = new Date().toISOString()
+    toast = run.error
+  } finally {
+    window.clearInterval(progressTimer)
+    persistAgentRuns()
+    render()
+  }
+}
+
+function cancelAgentRun(taskId: string) {
+  const run = agentRuns.get(taskId)
+  if (!run) return
+  run.status = 'cancelled'
+  run.updatedAt = new Date().toISOString()
+  persistAgentRuns()
+  render()
+}
+
+function addAgentFollowUps(task: Task) {
+  const run = agentRuns.get(task.id)
+  const followUps = run?.result?.followUps ?? []
+  const existing = new Set(tasks.map(item => item.title.toLocaleLowerCase()))
+  const created = followUps
+    .filter(title => !existing.has(title.toLocaleLowerCase()))
+    .map(title => normalizeTask({
+      id: crypto.randomUUID(),
+      title,
+      description: `Suggested by Shotcount from “${task.title}”.`,
+      due: todayKey,
+      goalId: task.goalId,
+      visibility: 'private',
+      subtaskItems: [],
+    }))
+  tasks.push(...created)
+  persistPlanner()
+  refreshCounts()
+  toast = `${created.length} follow-up task${created.length === 1 ? '' : 's'} added`
   render()
 }
 
@@ -1705,9 +1805,81 @@ function renderTaskRow(task: Task, selected = false) {
           <span class="task-visibility task-visibility--${normalizeTaskVisibility(task.visibility)}">${visibilityLabels[normalizeTaskVisibility(task.visibility)]}</span>
         </small>
       </button>
+      ${renderAgentPill(task)}
       <button class="task-chevron" data-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
     </div>
   `
+}
+
+function renderAgentPill(task: Task) {
+  const run = agentRuns.get(task.id)
+  const label =
+    run?.status === 'completed' ? 'Ready to review' :
+      run?.status === 'running' ? 'In progress' :
+        run?.status === 'needs_context' ? 'Needs context' :
+          run?.status === 'failed' ? 'Try again' :
+            'AI available'
+  return `<button type="button" class="task-agent-pill task-agent-pill--${run?.status ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}"><span aria-hidden="true">${run?.status === 'running' ? '◔' : run?.status === 'completed' ? '✓' : '✦'}</span>${label}</button>`
+}
+
+function safeAgentUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:' ? escapeHtml(url.toString()) : '#'
+  } catch {
+    return '#'
+  }
+}
+
+function renderAgentPanel(task: Task) {
+  const run = agentRuns.get(task.id)
+  if (!run || run.status === 'cancelled') {
+    return `<section class="task-agent-card task-agent-card--delegate">
+      <span class="task-agent-mark" aria-hidden="true">✦</span>
+      <div><strong>Let Shotcount move this forward</strong><p>Delegate research or drafting. You review the result before anything goes anywhere.</p></div>
+      <button type="button" data-action="delegate-task" data-task-id="${task.id}">Delegate</button>
+    </section>`
+  }
+
+  if (run.status === 'needs_context') {
+    return `<section class="task-agent-card">
+      <header><strong><span>✦</span> Shotcount Assistant</strong><em>Needs context</em></header>
+      <p>What outcome would make this task complete? One sentence is enough.</p>
+      <textarea class="task-agent-context" aria-label="Additional context for Shotcount" placeholder="For example: compare five options and recommend the strongest two.">${escapeHtml(run.context)}</textarea>
+      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="${task.id}">Start task</button></footer>
+    </section>`
+  }
+
+  if (run.status === 'completed' && run.result) {
+    return `<section class="task-agent-card task-agent-card--result">
+      <header><strong><span>✦</span> Shotcount Assistant</strong><em>Ready to review</em></header>
+      <p>${escapeHtml(run.result.summary)}</p>
+      <div class="task-agent-result">
+        ${run.result.sections.map(section => `<article><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.body)}</p></article>`).join('')}
+        ${run.result.drafts.map(draft => `<article class="agent-draft"><strong>${escapeHtml(draft.title)}</strong><p>${escapeHtml(draft.body).replaceAll('\n', '<br>')}</p></article>`).join('')}
+      </div>
+      ${run.result.sources.length ? `<div class="agent-sources"><strong>Sources</strong>${run.result.sources.map(source => `<a href="${safeAgentUrl(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)} ↗</a>`).join('')}</div>` : ''}
+      ${run.result.followUps.length ? `<div class="agent-followups"><strong>Suggested next actions</strong>${run.result.followUps.map(title => `<span>＋ ${escapeHtml(title)}</span>`).join('')}</div><button class="agent-add-followups" type="button" data-action="add-agent-followups" data-task-id="${task.id}">Add follow-up tasks</button>` : ''}
+      <small>Private to you · Agent context and output never appear in the community feed.</small>
+    </section>`
+  }
+
+  if (run.status === 'failed') {
+    return `<section class="task-agent-card task-agent-card--failed">
+      <header><strong><span>✦</span> Shotcount Assistant</strong><em>Needs attention</em></header>
+      <p>${escapeHtml(run.error ?? 'Shotcount could not complete this task.')}</p>
+      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Dismiss</button><button class="agent-primary" type="button" data-action="delegate-task" data-task-id="${task.id}">Try again</button></footer>
+    </section>`
+  }
+
+  return `<section class="task-agent-card">
+    <header><strong><span>✦</span> Shotcount Assistant</strong><em>In progress</em></header>
+    <p>I’m moving this task forward and preparing a private result for your review.</p>
+    <div class="task-agent-progress">
+      ${agentProgressLabels.map((label, index) => `<div class="${index < run.progressIndex ? 'done' : index === run.progressIndex ? 'active' : ''}"><i>${index < run.progressIndex ? '✓' : index === run.progressIndex ? '◔' : ''}</i><span>${label}</span></div>`).join('')}
+    </div>
+    <footer><small>You’ll be notified when this is ready.</small><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
+  </section>`
 }
 
 function renderInspector(task: Task) {
@@ -1732,6 +1904,8 @@ function renderInspector(task: Task) {
           <label><span>Due time</span><input class="inspector-time" type="time" value="${task.time ?? ''}" aria-label="Due time, optional" /></label>
           <label><span>Visibility</span><select class="inspector-visibility" data-task-visibility="${task.id}" aria-label="Task visibility" required>${renderVisibilityOptions(task.visibility)}</select></label>
         </div>
+
+        ${renderAgentPanel(task)}
 
         <h3>Subtasks:</h3>
         <button class="add-subtask" data-action="add-subtask">${icon('plus')}<span>Add New Subtask</span></button>
@@ -2774,6 +2948,18 @@ app.addEventListener('click', async event => {
     return
   }
 
+  const agentTaskId = target.closest<HTMLElement>('[data-agent-task]')?.dataset.agentTask
+  if (agentTaskId) {
+    const task = tasks.find(item => item.id === agentTaskId)
+    if (!task) return
+    selectedTaskId = task.id
+    mobileInspectorOpen = true
+    const run = agentRuns.get(task.id)
+    if (!run || run.status === 'failed' || run.status === 'cancelled') void startAgentRun(task)
+    else render()
+    return
+  }
+
   const taskId = target.closest<HTMLElement>('[data-task]')?.dataset.task
   if (taskId) {
     selectedTaskId = taskId
@@ -2810,6 +2996,33 @@ app.addEventListener('click', async event => {
 
   if (action === 'connect-google-calendar') {
     void beginGoogleCalendarConnection()
+    return
+  }
+
+  if (action === 'delegate-task') {
+    persistInspectorDraft()
+    const task = tasks.find(item => item.id === target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId)
+    if (task) void startAgentRun(task)
+    return
+  }
+
+  if (action === 'submit-agent-context') {
+    const task = tasks.find(item => item.id === target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId)
+    const context = document.querySelector<HTMLTextAreaElement>('.task-agent-context')?.value.trim() ?? ''
+    if (!task || !context) return
+    void startAgentRun(task, context)
+    return
+  }
+
+  if (action === 'cancel-agent') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    if (taskId) cancelAgentRun(taskId)
+    return
+  }
+
+  if (action === 'add-agent-followups') {
+    const task = tasks.find(item => item.id === target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId)
+    if (task) addAgentFollowUps(task)
     return
   }
 
