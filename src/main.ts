@@ -2004,7 +2004,10 @@ function renderUpcoming() {
 
 function renderUpcomingComposer(group: UpcomingGroup) {
   if (plannerDraftGroup !== group) {
-    return `<button class="add-task-row" data-action="open-planner" data-task-group="${group}">${icon('plus')}<span>Add New Task</span></button>`
+    return `<div class="upcoming-command-row">
+      <button class="add-task-row" data-action="open-planner" data-task-group="${group}">${icon('plus')}<span>Add New Task</span></button>
+      <button class="ask-shotcount-button" data-action="open-planner" data-task-group="${group}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask ShotCount</button>
+    </div>`
   }
   const isWeek = group === 'week'
   return `

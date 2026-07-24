@@ -1146,6 +1146,14 @@ body[data-theme='dark'] .task-agent-error-detail p { color: #bdbdbd; }
 .upcoming-screen { padding: 37px 24px 48px; }
 .upcoming-screen .screen-title { height: 82px; border: 0; align-items: flex-start; }
 .upcoming-screen h2 { margin: 0; height: 63px; padding-top: 18px; border-bottom: 1px solid #ededed; font-size: 20px; }
+.upcoming-command-row { position: relative; }
+.upcoming-command-row .add-task-row { padding-right: 138px; }
+.upcoming-command-row .ask-shotcount-button {
+  right: 4px;
+  min-height: 30px;
+  padding-inline: 9px;
+  font-size: 8px;
+}
 .upcoming-columns {
   min-height: 340px;
   display: grid;
