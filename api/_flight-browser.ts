@@ -327,11 +327,20 @@ async function activateFlightCard(
   item: ReturnType<Page['locator']>,
   expectedText: string,
 ) {
-  const selectLink = item.getByRole('link', { name: /Select flight/i })
-  if (await selectLink.count()) {
-    await selectLink.first().evaluate(element => (element as HTMLElement).click())
+  const selectLink = item.locator(
+    '[role="link"][aria-label*="Select flight" i]:visible',
+  )
+  const cardAction = item.locator(
+    '[jsname="BXUrOb"][jsaction*="O1htCb"]:visible',
+  )
+  if (await cardAction.count()) {
+    // The current Google Flights card places a non-native role=link overlay
+    // behind the visible card contents. Click the card's own action surface so
+    // the trusted pointer event reaches the O1htCb selection handler.
+    await cardAction.first().click({ force: true })
   }
-  else await item.click()
+  else if (await selectLink.count()) await selectLink.first().click({ force: true })
+  else await item.click({ force: true })
   const ready = (text: string) =>
     text === 'Booking options'
       ? window.location.pathname.startsWith('/travel/flights/booking')
@@ -340,22 +349,27 @@ async function activateFlightCard(
     await page.waitForFunction(
       ready,
       expectedText,
-      { timeout: 5_000 },
+      { timeout: 15_000 },
     )
     return
   } catch {
-    const select = page.locator('button[aria-label="Select flight"]')
+    // Google renders the itinerary action as a role=link overlay on a div,
+    // rather than a native anchor. Prefer the latest visible accessible
+    // control, which belongs to the card the user just selected.
+    const select = page.locator(
+      '[role="link"][aria-label*="Select flight" i]:visible',
+    )
     if (!await select.count()) {
       throw new BrowserExecutionError(
         'flight_selection_failed',
         'Google Flights did not expose a selectable itinerary.',
       )
     }
-    await select.first().evaluate(element => (element as HTMLElement).click())
+    await select.last().press('Enter')
     await page.waitForFunction(
       ready,
       expectedText,
-      { timeout: 20_000 },
+      { timeout: 35_000 },
     )
   }
 }
