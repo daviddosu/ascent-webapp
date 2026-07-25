@@ -15,6 +15,16 @@ type OAuthStateRow = {
   used_at: string | null
 }
 
+function fallbackAppOrigin() {
+  const origins = (Deno.env.get('SHOTCOUNT_APP_ORIGINS') ?? '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+  return origins.find(origin => origin === 'https://app.shotcount.app') ??
+    origins[0] ??
+    'https://app.shotcount.app'
+}
+
 function redirectWith(returnTo: string, status: 'connected' | 'error', reason = '') {
   const url = new URL(returnTo)
   url.searchParams.set('google', status)
@@ -33,7 +43,7 @@ Deno.serve(async request => {
   const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID')
   const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')
   const redirectUri = Deno.env.get('GOOGLE_OAUTH_REDIRECT_URI')
-  const fallback = (Deno.env.get('SHOTCOUNT_APP_ORIGINS') ?? 'https://app.shotcount.app').split(',')[0]!
+  const fallback = fallbackAppOrigin()
   if (!url || !serviceKey || !clientId || !clientSecret || !redirectUri || !state) {
     return redirectWith(fallback, 'error', 'configuration')
   }

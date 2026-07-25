@@ -38,7 +38,10 @@ function response(request: Request, body: unknown, status = 200) {
 
 function safeReturnTo(request: Request, value: unknown) {
   const origins = configuredOrigins()
-  const fallback = origins[0] ?? allowedOrigin(request)
+  const fallback = allowedOrigin(request) ||
+    origins.find(origin => origin === 'https://app.shotcount.app') ||
+    origins[0] ||
+    'https://app.shotcount.app'
   if (typeof value !== 'string') return fallback
   try {
     const url = new URL(value)

@@ -287,6 +287,8 @@ describe('agent execution security contract', () => {
     expect(googleOAuthCallbackFunction).toContain(".gt('expires_at', claimedAt)")
     expect(googleOAuthCallbackFunction).toContain("grant_type: 'authorization_code'")
     expect(googleOAuthCallbackFunction).toContain('code_verifier:')
+    expect(googleOAuthStartFunction).toContain("origin === 'https://app.shotcount.app'")
+    expect(googleOAuthCallbackFunction).toContain("origin === 'https://app.shotcount.app'")
   })
 
   it('does not report Google connected after partial consent', () => {
