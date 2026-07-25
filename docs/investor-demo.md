@@ -14,9 +14,7 @@
 pnpm check
 pnpm check:cloud
 pnpm test:e2e:ui
-npx --yes deno test --allow-env supabase/functions/_shared/agent-tools_test.ts
-npx --yes deno test --allow-env supabase/functions/_shared/google_test.ts
-npx --yes deno test supabase/functions/_shared/google-scopes_test.ts
+npx --yes deno test supabase/functions/_shared/*_test.ts
 npx --yes deno check \
   supabase/functions/task-agent/index.ts \
   supabase/functions/google-oauth-start/index.ts \
@@ -86,7 +84,7 @@ Expected flow:
 4. Choose one.
 5. ShotCount rechecks the option and resumes the same durable browser session.
 6. The task stops at Ready for you.
-7. Continue to payment opens Google Flights’ verified booking page.
+7. Continue to payment opens the verified airline handoff or Google Flights booking page.
 8. Point out that ShotCount has not clicked a provider purchase button and the original task is not falsely marked booked.
 
 Live fares can change. A changed or sold-out option should produce a calm recoverable message, not a false success.

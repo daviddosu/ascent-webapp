@@ -62,7 +62,7 @@ The Chromium process may be fresh after a serverless restart, but the task-owned
 Supabase Edge Function secrets:
 
 ```text
-SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=www.google.com,example-public-form.com
+SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=www.google.com,app.shotcount.app
 SHOTCOUNT_BROWSER_WORKER_URL=https://<deployment>/api/browser-worker
 SHOTCOUNT_BROWSER_WORKER_TOKEN=<random shared token>
 ```

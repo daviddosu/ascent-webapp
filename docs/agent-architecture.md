@@ -93,9 +93,7 @@ between a provider accepting an action and ShotCount recording its response.
 ```bash
 pnpm test
 pnpm build
-npx --yes deno test --allow-env supabase/functions/_shared/agent-tools_test.ts
-npx --yes deno test --allow-env supabase/functions/_shared/google_test.ts
-npx --yes deno test supabase/functions/_shared/google-scopes_test.ts
+npx --yes deno test supabase/functions/_shared/*_test.ts
 npx --yes deno check \
   supabase/functions/task-agent/index.ts \
   supabase/functions/google-oauth-start/index.ts \
