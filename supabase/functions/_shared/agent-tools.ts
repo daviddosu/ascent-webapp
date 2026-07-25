@@ -34,6 +34,14 @@ export type AgentCompletionEvidence = {
   providerConfirmedTools: string[]
 }
 
+export function openAIToolName(toolName: string) {
+  return toolName.replaceAll('.', '__')
+}
+
+export function internalAgentToolName(openAIName: string) {
+  return openAIName.replaceAll('__', '.')
+}
+
 const calendarWriteTools = new Set([
   'calendar.create_event',
   'calendar.update_event',

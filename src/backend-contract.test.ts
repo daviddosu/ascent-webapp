@@ -262,6 +262,18 @@ describe('agent execution security contract', () => {
       .toBeLessThan(taskAgentFunction.lastIndexOf("if (!openaiKey)"))
   })
 
+  it('loads reusable timezone context from the deployed profile table', () => {
+    expect(taskAgentFunction).toContain(".from('profiles')")
+    expect(taskAgentFunction).not.toContain(".from('creator_profiles')")
+  })
+
+  it('maps internal dotted tool names to the OpenAI-safe wire format', () => {
+    expect(taskAgentFunction).toContain('name: openAIToolName(tool.name)')
+    expect(taskAgentFunction).toContain(
+      'internalAgentToolName(safeString(call.name, 120))',
+    )
+  })
+
   it('uses expiring, single-use OAuth state with PKCE and controlled returns', () => {
     expect(googleOAuthStartFunction).toContain("authorizationUrl.searchParams.set('code_challenge_method', 'S256')")
     expect(googleOAuthStartFunction).toContain('state_hash: await sha256Hex(state)')

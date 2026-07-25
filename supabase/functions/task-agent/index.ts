@@ -3,6 +3,8 @@ import {
   agentCompletionEvidenceSatisfied,
   agentExecutionDateContext,
   agentToolDefinitions,
+  internalAgentToolName,
+  openAIToolName,
   policyForAgentTool,
   validateAgentToolArguments,
 } from '../_shared/agent-tools.ts'
@@ -237,7 +239,7 @@ async function loadReusableAgentContext(
       .eq('user_id', userId)
       .maybeSingle(),
     admin
-      .from('creator_profiles')
+      .from('profiles')
       .select('timezone')
       .eq('id', userId)
       .maybeSingle(),
@@ -1029,10 +1031,10 @@ function agentInstructions() {
     'Read actions and private preparation may proceed. Sending email, changing a calendar, and externally visible browser submissions require approval.',
     'Never purchase, enter payment data, or claim a purchase without observed provider confirmation.',
     'Ask only one concise context question when a genuinely required fact is missing.',
-    'After sending scheduling outreach, call gmail.wait_for_reply with the confirmed thread and sent message IDs so this same AgentRun can resume when the person replies.',
-    'For flights, start a www.google.com task-owned session and use browser.search_flights with exact structured trip constraints. Never use generic browser actions for flight search.',
+    'After sending scheduling outreach, call gmail__wait_for_reply with the confirmed thread and sent message IDs so this same AgentRun can resume when the person replies.',
+    'For flights, start a www.google.com task-owned session and use browser__search_flights with exact structured trip constraints. Never use generic browser actions for flight search.',
     'Return only live browser results. Flight selection and payment handoff are resumed by the application from the exact persisted option ID.',
-    'Call agent.complete only when the task_completion_policy is satisfied by verified tool evidence.',
+    'Call agent__complete only when the task_completion_policy is satisfied by verified tool evidence.',
     'Do not expose hidden reasoning. Keep tool arguments minimal and scoped to the objective.',
   ].join(' ')
 }
@@ -1042,7 +1044,10 @@ async function callOpenAI(
   run: AgentRunRow,
   history: OpenAIOutputItem[],
 ) {
-  const tools: Array<Record<string, unknown>> = [...agentToolDefinitions]
+  const tools: Array<Record<string, unknown>> = agentToolDefinitions.map(tool => ({
+    ...tool,
+    name: openAIToolName(tool.name),
+  }))
   if (['research', 'research_draft'].includes(run.capability)) {
     tools.push({ type: 'web_search', search_context_size: 'medium' })
   }
@@ -1910,7 +1915,7 @@ async function advanceRun(
       continue
     }
 
-    const toolName = safeString(call.name, 120)
+    const toolName = internalAgentToolName(safeString(call.name, 120))
     let argumentsValue: Record<string, unknown>
     try {
       argumentsValue = JSON.parse(safeString(call.arguments, 100_000)) as Record<string, unknown>

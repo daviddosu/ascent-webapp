@@ -1,10 +1,21 @@
 import {
   agentCompletionEvidenceSatisfied,
   agentExecutionDateContext,
+  agentToolDefinitions,
+  internalAgentToolName,
+  openAIToolName,
   policyForAgentTool,
   validateAgentToolArguments,
 } from './agent-tools.ts'
 import { assertEquals } from 'jsr:@std/assert@1'
+
+Deno.test('OpenAI tool names use a reversible API-safe wire format', () => {
+  for (const tool of agentToolDefinitions) {
+    const wireName = openAIToolName(tool.name)
+    assertEquals(/^[a-zA-Z0-9_-]+$/.test(wireName), true)
+    assertEquals(internalAgentToolName(wireName), tool.name)
+  }
+})
 
 Deno.test('completion requires provider-confirmed evidence for real-world outcomes', () => {
   const base = {
