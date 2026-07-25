@@ -378,12 +378,76 @@ function normalizedEmails(value: string) {
     .sort()
 }
 
+function canonicalEmailBody(value: unknown) {
+  return String(value ?? '').replace(/\r\n?/g, '\n')
+}
+
+async function preparedDraftRecord(
+  admin: AdminClient,
+  userId: string,
+  draftId: string,
+) {
+  const { data, error } = await admin
+    .from('agent_actions')
+    .select('arguments,output')
+    .eq('user_id', userId)
+    .eq('tool_name', 'gmail.create_draft')
+    .eq('status', 'succeeded')
+    .eq('output->>draft_id', draftId)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) {
+    throw new GoogleIntegrationError(
+      'gmail_draft_record_failed',
+      'ShotCount could not verify the prepared Gmail draft.',
+    )
+  }
+  return data as {
+    arguments?: Record<string, unknown>
+    output?: Record<string, unknown>
+  } | null
+}
+
+async function sentMessageForPreparedDraft(
+  admin: AdminClient,
+  userId: string,
+  draftRecord: Awaited<ReturnType<typeof preparedDraftRecord>>,
+) {
+  const messageIdHeader = String(draftRecord?.output?.message_id_header ?? '')
+  if (!messageIdHeader) return null
+  const existing = await gmailSearch(
+    admin,
+    userId,
+    `in:sent rfc822msgid:${messageIdHeader}`,
+    1,
+  )
+  return existing.messages[0] ?? null
+}
+
 async function gmailSendDraft(
   admin: AdminClient,
   userId: string,
   argumentsValue: Record<string, unknown>,
 ) {
   const draftId = String(argumentsValue.draft_id)
+  const draftRecord = await preparedDraftRecord(admin, userId, draftId)
+  if (!draftRecord?.arguments || !draftRecord.output) {
+    throw new GoogleIntegrationError(
+      'gmail_draft_record_missing',
+      'The prepared Gmail draft is no longer available. Prepare it again.',
+      false,
+    )
+  }
+  const alreadySent = await sentMessageForPreparedDraft(admin, userId, draftRecord)
+  if (alreadySent?.id) {
+    return {
+      message_id: alreadySent.id,
+      thread_id: alreadySent.thread_id,
+      already_sent: true,
+    }
+  }
+
   const draft = await googleRequest<{ id?: string; message?: GmailMessage }>(
     admin,
     userId,
@@ -394,7 +458,13 @@ async function gmailSendDraft(
   const expectedTo = (argumentsValue.expected_to as string[]).map(value => value.toLocaleLowerCase()).sort()
   const actualSubject = headerValue(draft.message, 'Subject')
   const expectedSubject = String(argumentsValue.expected_subject)
-  if (JSON.stringify(actualTo) !== JSON.stringify(expectedTo) || actualSubject !== expectedSubject) {
+  const preparedBody = canonicalEmailBody(draftRecord.arguments.body_text)
+  const actualBody = canonicalEmailBody(plainTextFromPart(draft.message.payload))
+  if (
+    JSON.stringify(actualTo) !== JSON.stringify(expectedTo) ||
+    actualSubject !== expectedSubject ||
+    actualBody !== preparedBody
+  ) {
     throw new GoogleIntegrationError('gmail_draft_changed', 'The Gmail draft changed after approval. Review it again.', false)
   }
 

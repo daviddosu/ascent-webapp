@@ -110,6 +110,30 @@ try {
   if (plannerDeleteError) throw new Error(plannerDeleteError.message)
   plannerRecordId = undefined
 
+  const { error: agentReadError } = await client
+    .from('agent_runs')
+    .select('id')
+    .limit(1)
+  if (agentReadError) throw new Error(agentReadError.message)
+  console.log('✓ Owner can read private AgentRuns')
+
+  const bypassAttempt = await client
+    .from('agent_runs')
+    .insert({
+      user_id: session.user.id,
+      task_id: crypto.randomUUID(),
+      status: 'planning',
+      objective: 'Direct client mutation must be denied',
+      capability: 'research',
+    })
+    .select('id')
+    .maybeSingle()
+  if (!bypassAttempt.error && bypassAttempt.data?.id) {
+    await client.from('agent_runs').delete().eq('id', bypassAttempt.data.id)
+    throw new Error('Authenticated clients can bypass the server AgentRun harness.')
+  }
+  console.log('✓ Direct AgentRun mutation denied')
+
   if ((env.SHOTCOUNT_TEST_AI ?? env[`${previousEnvPrefix}_TEST_AI`]) === 'true') {
     const { data, error } = await client.functions.invoke('ai-coach', { method: 'POST' })
     if (error || !data?.title || !data?.detail || !Array.isArray(data?.actions)) {

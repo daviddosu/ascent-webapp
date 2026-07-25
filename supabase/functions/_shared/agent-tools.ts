@@ -25,6 +25,44 @@ export type AgentExecutionDateContext = {
   }>
 }
 
+export type AgentCompletionEvidence = {
+  taskCompletionPolicy: 'prepared_result' | 'external_change' | 'payment_handoff'
+  capability: string
+  preparedResult: boolean
+  externalChangeConfirmed: boolean
+  purchaseConfirmed: boolean
+  providerConfirmedTools: string[]
+}
+
+const calendarWriteTools = new Set([
+  'calendar.create_event',
+  'calendar.update_event',
+  'calendar.delete_event',
+])
+
+export function agentCompletionEvidenceSatisfied(
+  evidence: AgentCompletionEvidence,
+) {
+  if (evidence.taskCompletionPolicy === 'prepared_result') {
+    return evidence.preparedResult
+  }
+  if (evidence.taskCompletionPolicy === 'payment_handoff') {
+    // The MVP deliberately stops at the user-controlled payment boundary.
+    // A model assertion alone can never prove that a purchase happened.
+    return false
+  }
+  if (!evidence.externalChangeConfirmed) return false
+
+  const confirmedTools = new Set(evidence.providerConfirmedTools)
+  if (evidence.capability === 'gmail') {
+    return confirmedTools.has('gmail.send_message')
+  }
+  if (evidence.capability === 'calendar' || evidence.capability === 'scheduling') {
+    return [...calendarWriteTools].some(tool => confirmedTools.has(tool))
+  }
+  return evidence.providerConfirmedTools.length > 0
+}
+
 const weekdayIndexes: Record<string, number> = {
   sunday: 0,
   monday: 1,

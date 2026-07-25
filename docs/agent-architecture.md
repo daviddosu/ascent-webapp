@@ -42,6 +42,9 @@ Related private tables:
 Each new run also receives the owner’s reusable execution context from `agent_user_preferences`: timezone, home airport when known, normal meeting length, working hours, cabin, and currency. ShotCount falls back to the existing private creator-profile timezone and safe defaults, so users do not have to restate routine constraints in every task.
 
 All user-readable tables use row-level security. Model continuation state and OAuth state are service-role only. Private agent output is separate from task visibility and never enters Community payloads.
+AgentRuns, actions, approvals, events, and browser sessions are read-only to
+the owning client. All execution mutations and approval decisions go through
+the server harness; there is no client-callable approval RPC.
 
 ## Completion policy
 
@@ -53,9 +56,16 @@ The initial intent classifier assigns one outcome:
 
 The model cannot override this policy. The database completion function also emits `task_completed_by_agent`.
 
+Completion is evidence-gated twice. The Edge Function checks persisted,
+provider-confirmed tool actions before accepting a model completion request,
+and the database function repeats that check while holding the AgentRun row
+lock. Gmail work requires a confirmed `gmail.send_message`; Calendar and
+scheduling work require a confirmed Calendar create/update/delete. A payment
+handoff never counts as a confirmed purchase.
+
 ## Approval and idempotency
 
-Read and preparation tools run automatically after the relevant integration is connected. Gmail send, Calendar create/update/delete, and externally visible browser submissions require an exact approval. A changed recipient, body, event, or target produces a different hash and requires a new approval.
+Read and preparation tools run automatically after the relevant integration is connected. Gmail send, Calendar create/update/delete, and externally visible browser submissions require an exact approval. A changed recipient, body, event, or target produces a different hash and requires a new approval. The approval row is claimed with its pending status and version in one database update, so concurrent clicks cannot execute the same decision twice.
 
 Consequential actions use:
 
@@ -83,6 +93,7 @@ pnpm test
 pnpm build
 npx --yes deno test --allow-env supabase/functions/_shared/agent-tools_test.ts
 npx --yes deno test --allow-env supabase/functions/_shared/google_test.ts
+npx --yes deno test supabase/functions/_shared/google-scopes_test.ts
 npx --yes deno check \
   supabase/functions/task-agent/index.ts \
   supabase/functions/google-oauth-start/index.ts \

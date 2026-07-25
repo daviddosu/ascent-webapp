@@ -4,6 +4,7 @@ import {
   encryptSecret,
   sha256Hex,
 } from '../_shared/crypto.ts'
+import { missingGoogleExecutionScopes } from '../_shared/google-scopes.ts'
 
 type OAuthStateRow = {
   state_hash: string
@@ -79,6 +80,11 @@ Deno.serve(async request => {
     }
     if (!tokenResponse.ok || !token.access_token) throw new Error(token.error || 'token_exchange_failed')
 
+    const grantedScopes = (token.scope ?? '').split(' ').filter(Boolean)
+    if (missingGoogleExecutionScopes(grantedScopes).length) {
+      throw new Error('required_scopes_missing')
+    }
+
     const userInfoResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
       headers: { Authorization: `Bearer ${token.access_token}` },
     })
@@ -102,7 +108,7 @@ Deno.serve(async request => {
       status: 'connected',
       provider_user_id: userInfo.sub,
       account_email: userInfo.email ?? '',
-      scopes: (token.scope ?? '').split(' ').filter(Boolean),
+      scopes: grantedScopes,
       access_token_ciphertext: await encryptSecret(token.access_token),
       refresh_token_ciphertext: encryptedRefreshToken,
       token_expires_at: new Date(Date.now() + Math.max(60, token.expires_in ?? 3600) * 1000).toISOString(),

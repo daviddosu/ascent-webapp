@@ -1,9 +1,56 @@
 import {
+  agentCompletionEvidenceSatisfied,
   agentExecutionDateContext,
   policyForAgentTool,
   validateAgentToolArguments,
 } from './agent-tools.ts'
 import { assertEquals } from 'jsr:@std/assert@1'
+
+Deno.test('completion requires provider-confirmed evidence for real-world outcomes', () => {
+  const base = {
+    taskCompletionPolicy: 'external_change' as const,
+    preparedResult: false,
+    externalChangeConfirmed: true,
+    purchaseConfirmed: false,
+  }
+
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'gmail',
+    providerConfirmedTools: [],
+  }), false)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'gmail',
+    providerConfirmedTools: ['gmail.send_message'],
+  }), true)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'scheduling',
+    providerConfirmedTools: ['gmail.send_message'],
+  }), false)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'scheduling',
+    providerConfirmedTools: ['gmail.send_message', 'calendar.create_event'],
+  }), true)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'calendar',
+    providerConfirmedTools: ['calendar.get_availability'],
+  }), false)
+})
+
+Deno.test('payment handoff cannot be mistaken for a confirmed purchase', () => {
+  assertEquals(agentCompletionEvidenceSatisfied({
+    taskCompletionPolicy: 'payment_handoff',
+    capability: 'flight_search',
+    preparedResult: false,
+    externalChangeConfirmed: false,
+    purchaseConfirmed: true,
+    providerConfirmedTools: ['browser.select_flight'],
+  }), false)
+})
 
 Deno.test('external writes require approval and payment remains forbidden', () => {
   assertEquals(policyForAgentTool('gmail.send_message'), {

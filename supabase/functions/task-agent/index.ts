@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
+  agentCompletionEvidenceSatisfied,
   agentExecutionDateContext,
   agentToolDefinitions,
   policyForAgentTool,
@@ -367,16 +368,28 @@ async function approvalPayload(
       .maybeSingle()
     const draftArguments = draftResult.data?.arguments as Record<string, unknown> | undefined
     const draftOutput = draftResult.data?.output as Record<string, unknown> | undefined
+    if (!draftArguments || !draftOutput) {
+      throw new Error('The prepared Gmail draft is unavailable. Prepare it again.')
+    }
+    if (safeString(draftOutput.draft_id, 256) !== safeString(argumentsValue.draft_id, 256)) {
+      throw new Error('The Gmail draft does not match this send action.')
+    }
+    const preparedRecipients = Array.isArray(draftArguments.to)
+      ? draftArguments.to.map(value => safeString(value, 320).toLocaleLowerCase()).sort()
+      : []
+    const expectedRecipients = Array.isArray(argumentsValue.expected_to)
+      ? argumentsValue.expected_to.map(value => safeString(value, 320).toLocaleLowerCase()).sort()
+      : []
     if (
-      draftArguments &&
-      draftOutput &&
-      safeString(draftOutput.draft_id, 256) === safeString(argumentsValue.draft_id, 256)
+      JSON.stringify(preparedRecipients) !== JSON.stringify(expectedRecipients) ||
+      safeString(draftArguments.subject, 998) !== safeString(argumentsValue.expected_subject, 998)
     ) {
-      payload.preview = {
-        to: draftArguments.to,
-        subject: draftArguments.subject,
-        body_text: draftArguments.body_text,
-      }
+      throw new Error('The send action changed after the Gmail draft was prepared.')
+    }
+    payload.preview = {
+      to: draftArguments.to,
+      subject: draftArguments.subject,
+      body_text: draftArguments.body_text,
     }
   } else {
     payload.preview = argumentsValue
@@ -533,8 +546,8 @@ async function pauseForApproval(
   argumentsValue: Record<string, unknown>,
 ) {
   const action = await recordAction(admin, run, toolName, modelCallId, argumentsValue, 'awaiting_approval')
-  const payloadHash = await hashValue({ toolName, argumentsValue })
   const payload = await approvalPayload(admin, run, toolName, argumentsValue)
+  const payloadHash = await hashValue(payload)
   const policy = policyForAgentTool(toolName)
   const { error } = await admin.from('agent_approvals').upsert({
     run_id: run.id,
@@ -923,10 +936,33 @@ async function executeProviderTool(
   }
 }
 
-function completionSatisfied(run: AgentRunRow, argumentsValue: Record<string, unknown>) {
-  if (run.task_completion_policy === 'prepared_result') return argumentsValue.prepared_result === true
-  if (run.task_completion_policy === 'external_change') return argumentsValue.external_change_confirmed === true
-  return argumentsValue.purchase_confirmed === true
+async function completionSatisfied(
+  admin: AdminClient,
+  run: AgentRunRow,
+  argumentsValue: Record<string, unknown>,
+) {
+  const actions = run.task_completion_policy === 'external_change'
+    ? await admin
+      .from('agent_actions')
+      .select('tool_name,provider_action_id')
+      .eq('run_id', run.id)
+      .eq('user_id', run.user_id)
+      .eq('status', 'succeeded')
+      .not('provider_action_id', 'is', null)
+    : { data: [], error: null }
+  if (actions.error) throw new Error(actions.error.message)
+
+  return agentCompletionEvidenceSatisfied({
+    taskCompletionPolicy: run.task_completion_policy,
+    capability: run.capability,
+    preparedResult: argumentsValue.prepared_result === true,
+    externalChangeConfirmed: argumentsValue.external_change_confirmed === true,
+    purchaseConfirmed: argumentsValue.purchase_confirmed === true,
+    providerConfirmedTools: (actions.data ?? [])
+      .filter(action => safeString(action.provider_action_id, 500).trim())
+      .map(action => safeString(action.tool_name, 120))
+      .filter(Boolean),
+  })
 }
 
 function completionResult(argumentsValue: Record<string, unknown>) {
@@ -950,7 +986,7 @@ async function completeRun(
   run: AgentRunRow,
   argumentsValue: Record<string, unknown>,
 ) {
-  if (!completionSatisfied(run, argumentsValue)) {
+  if (!await completionSatisfied(admin, run, argumentsValue)) {
     return updateRun(admin, run, {
       status: 'waiting_for_user',
       waiting_reason: run.task_completion_policy === 'payment_handoff'
@@ -1276,10 +1312,6 @@ async function pollBrowserExecutionRun(
         throw new Error(completed.error?.message ?? 'Could not complete the flight search.')
       }
       const completedRun = completed.data as AgentRunRow
-      await addEvent(admin, completedRun, 'agent_completed', completedRun.status, result.summary, {
-        browser_session_id: session.id,
-        live_result_count: options.length,
-      })
       return completedRun
     }
     const waiting = await updateRun(admin, run, {
@@ -1524,7 +1556,7 @@ async function recoverStalledRun(
     }
     await admin.from('agent_actions').update({
       status: 'succeeded',
-      output: { accepted: completionSatisfied(run, argumentsValue) },
+      output: { accepted: await completionSatisfied(admin, run, argumentsValue) },
       public_summary: safeString(argumentsValue.summary, 1200),
       completed_at: new Date().toISOString(),
     }).eq('id', completionAction.data.id)
@@ -1916,7 +1948,7 @@ async function advanceRun(
     if (toolName === 'agent.complete') {
       await admin.from('agent_actions').update({
         status: 'succeeded',
-        output: { accepted: completionSatisfied(current, argumentsValue) },
+        output: { accepted: await completionSatisfied(admin, current, argumentsValue) },
         public_summary: safeString(argumentsValue.summary, 1200),
         completed_at: new Date().toISOString(),
       }).eq('id', action.id)
@@ -2031,17 +2063,32 @@ async function approveOrReject(
   const actionResult = await admin.from('agent_actions').select('*').eq('id', approval.action_id).eq('user_id', userId).single()
   const action = actionResult.data
   if (actionResult.error || !action) throw new Error('The approved action is unavailable.')
-  const expectedHash = await hashValue({ toolName: action.tool_name, argumentsValue: action.arguments })
+  let run = await loadOwnedRun(admin, userId, approval.run_id)
+  if (!run) throw new Error('Agent run not found.')
+  const expectedPayload = await approvalPayload(
+    admin,
+    run,
+    action.tool_name,
+    action.arguments,
+  )
+  const expectedHash = await hashValue(expectedPayload)
   if (expectedHash !== approval.payload_hash) throw new Error('The action changed after approval was requested.')
 
-  await admin.from('agent_approvals').update({
+  const decisionClaim = await admin.from('agent_approvals').update({
     status: decision,
     decided_at: new Date().toISOString(),
     version: approval.version + 1,
-  }).eq('id', approval.id).eq('version', approval.version)
+  })
+    .eq('id', approval.id)
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .eq('version', approval.version)
+    .select('id')
+    .maybeSingle()
+  if (decisionClaim.error || !decisionClaim.data) {
+    throw new Error('This approval was already decided. Refresh the task.')
+  }
 
-  let run = await loadOwnedRun(admin, userId, approval.run_id)
-  if (!run) throw new Error('Agent run not found.')
   if (decision === 'rejected') {
     await admin.from('agent_actions').update({ status: 'cancelled', completed_at: new Date().toISOString() }).eq('id', action.id)
     run = await updateRun(admin, run, {
@@ -2097,6 +2144,11 @@ async function approveOrReject(
   })
   run = await updateRun(admin, run, { current_step: run.current_step + 1 })
   await saveModelHistory(admin, run, history)
+  await addEvent(admin, run, 'agent_tool_called', run.status, execution.publicSummary, {
+    tool_name: action.tool_name,
+    action_id: action.id,
+    approved: true,
+  })
   return advanceRun(admin, run, openaiKey)
 }
 
@@ -2112,7 +2164,13 @@ Deno.serve(async request => {
   const publicKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const openaiKey = Deno.env.get('OPENAI_API_KEY')
-  if (!url || !publicKey || !serviceKey || !openaiKey) {
+  const configuredInternalToken = Deno.env.get('SHOTCOUNT_INTERNAL_WORKER_TOKEN') ?? ''
+  const suppliedInternalToken = request.headers.get('X-ShotCount-Internal-Worker') ?? ''
+  const internalPoll = secureStringEqual(suppliedInternalToken, configuredInternalToken)
+  if (!internalPoll && !authorization) {
+    return jsonResponse(request, { error: 'Unauthorized' }, 401)
+  }
+  if (!url || !publicKey || !serviceKey) {
     return jsonResponse(request, { error: 'Server configuration is incomplete' }, 500)
   }
   let body: RequestBody
@@ -2123,10 +2181,10 @@ Deno.serve(async request => {
   }
 
   const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
-  const configuredInternalToken = Deno.env.get('SHOTCOUNT_INTERNAL_WORKER_TOKEN') ?? ''
-  const suppliedInternalToken = request.headers.get('X-ShotCount-Internal-Worker') ?? ''
-  const internalPoll = secureStringEqual(suppliedInternalToken, configuredInternalToken)
   if (internalPoll) {
+    if (!openaiKey) {
+      return jsonResponse(request, { error: 'Server configuration is incomplete' }, 500)
+    }
     if (body.action !== 'poll' || !body.runId) {
       return jsonResponse(request, { error: 'Internal workers may only poll a specific run' }, 400)
     }
@@ -2159,6 +2217,9 @@ Deno.serve(async request => {
   const userClient = createClient(url, publicKey, { global: { headers: { Authorization: authorization } } })
   const { data: { user }, error: userError } = await userClient.auth.getUser()
   if (userError || !user) return jsonResponse(request, { error: 'Unauthorized' }, 401)
+  if (!openaiKey) {
+    return jsonResponse(request, { error: 'Server configuration is incomplete' }, 500)
+  }
   let run: AgentRunRow | null = null
 
   try {

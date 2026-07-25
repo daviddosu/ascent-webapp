@@ -8,6 +8,7 @@ import {
   type AgentIntent,
   type AgentRunState,
 } from './agent-runtime'
+import { agentCompletionEvidenceSatisfied } from '../../supabase/functions/_shared/agent-tools'
 
 type ToolResult = Record<string, unknown>
 
@@ -121,7 +122,15 @@ class AgentFlow {
     paymentBoundaryReached?: boolean
     purchaseConfirmed?: boolean
   }) {
-    if (!outcomeCompletesTask(this.intent, result)) return false
+    const policySatisfied = agentCompletionEvidenceSatisfied({
+      taskCompletionPolicy: this.intent.outcomeType,
+      capability: this.intent.capability,
+      preparedResult: result.preparedResult === true,
+      externalChangeConfirmed: result.externalChangeConfirmed === true,
+      purchaseConfirmed: result.purchaseConfirmed === true,
+      providerConfirmedTools: this.provider.calls.map(call => call.tool),
+    })
+    if (!outcomeCompletesTask(this.intent, result) || !policySatisfied) return false
     this.state = transitionAgentRun(this.state, 'completed')
     this.events.push('task_completed_by_agent')
     return true
@@ -203,6 +212,7 @@ describe('mocked AgentRun integration journeys', () => {
     expect(flow.state.status).toBe('waiting_external')
     flow.resume()
     expect(flow.events).toContain('agent_resumed')
+    expect(flow.complete({ externalChangeConfirmed: true })).toBe(false)
     flow.execute('calendar.create_event', {
       calendar_id: 'primary',
       summary: 'ShotCount launch',

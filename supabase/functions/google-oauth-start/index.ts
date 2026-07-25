@@ -5,17 +5,7 @@ import {
   sha256Base64Url,
   sha256Hex,
 } from '../_shared/crypto.ts'
-
-const googleScopes = [
-  'openid',
-  'email',
-  'profile',
-  'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/gmail.compose',
-  'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/calendar.events.freebusy',
-  'https://www.googleapis.com/auth/contacts.readonly',
-]
+import { googleExecutionScopes } from '../_shared/google-scopes.ts'
 
 function configuredOrigins() {
   return (Deno.env.get('SHOTCOUNT_APP_ORIGINS') ?? '')
@@ -98,7 +88,7 @@ Deno.serve(async request => {
   authorizationUrl.searchParams.set('client_id', clientId)
   authorizationUrl.searchParams.set('redirect_uri', redirectUri)
   authorizationUrl.searchParams.set('response_type', 'code')
-  authorizationUrl.searchParams.set('scope', googleScopes.join(' '))
+  authorizationUrl.searchParams.set('scope', googleExecutionScopes.join(' '))
   authorizationUrl.searchParams.set('access_type', 'offline')
   authorizationUrl.searchParams.set('include_granted_scopes', 'true')
   authorizationUrl.searchParams.set('prompt', 'consent')

@@ -9,6 +9,9 @@ The existing Google web client keeps the normal Supabase callback and also allow
 `https://bhhutexqrxzbbhatepmh.supabase.co/functions/v1/google-oauth-callback`
 
 The app calls authenticated `google-oauth-start`. It creates a short-lived, hashed OAuth state and requests incremental offline access. Google returns to the public callback function, which validates and consumes state, exchanges the code server-side, encrypts tokens with AES-GCM, and redirects to the originating ShotCount route.
+The callback verifies the complete required scope set before recording the
+integration as connected; partial consent returns a reconnectable error rather
+than a false Connected state.
 
 Requested scopes:
 
@@ -21,7 +24,10 @@ Requested scopes:
 - `calendar.events.freebusy`
 - `contacts.readonly`
 
-The Google app is External and In production. Gmail and Calendar APIs are enabled. Google People API and any sensitive/restricted scope changes must be accepted by the account owner in Google Cloud.
+The existing Google app is External and In production. Gmail, Calendar, and
+People APIs are enabled. The production consent screen still needs either
+Google’s sensitive/restricted-scope verification evidence or a separate
+development project before the execution scopes can be saved.
 
 ## Server secrets
 
@@ -46,7 +52,12 @@ Never prefix them with `VITE_`. Never reuse a credential exposed in chat or sour
 - Send the exact approved draft after rechecking recipients and subject.
 - Watch the confirmed sent message’s thread for a reply.
 
-Draft creation is preparation. Sending always requires approval. The send path verifies that the draft still matches the approved envelope and checks Sent mail by RFC message ID before retrying.
+Draft creation is preparation. Sending always requires approval. The approval
+hash covers the exact preview, including recipients, subject, and body. The send
+path rereads the live Gmail draft and rejects any changed field. If a worker
+restarts after Gmail accepted the send, ShotCount resolves the original draft’s
+stable RFC message ID from its private action record and checks Sent mail before
+retrying. Concurrent approval clicks are claimed atomically.
 
 ## Calendar and contacts tools
 

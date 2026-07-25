@@ -15,9 +15,12 @@ const initialAgentMigration = readFileSync(resolve(root, 'supabase/migrations/20
 const agentFoundationMigration = readFileSync(resolve(root, 'supabase/migrations/202607240001_agent_execution_foundation.sql'), 'utf8')
 const agentGoogleMigration = readFileSync(resolve(root, 'supabase/migrations/202607240002_google_agent_integrations.sql'), 'utf8')
 const agentCompletionMigration = readFileSync(resolve(root, 'supabase/migrations/202607240003_agent_completion_analytics.sql'), 'utf8')
+const agentCompletionEvidenceMigration = readFileSync(resolve(root, 'supabase/migrations/202607250001_agent_completion_evidence.sql'), 'utf8')
+const agentMutationLockMigration = readFileSync(resolve(root, 'supabase/migrations/202607250002_lock_agent_run_mutations.sql'), 'utf8')
 const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
 const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
 const googleOAuthCallbackFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-callback/index.ts'), 'utf8')
+const googleScopes = readFileSync(resolve(root, 'supabase/functions/_shared/google-scopes.ts'), 'utf8')
 const googleToolFunction = readFileSync(resolve(root, 'supabase/functions/_shared/google.ts'), 'utf8')
 const agentWatchSweepFunction = readFileSync(resolve(root, 'supabase/functions/agent-watch-sweep/index.ts'), 'utf8')
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
@@ -227,6 +230,21 @@ describe('agent execution security contract', () => {
     expect(agentGoogleMigration).toContain('user_id = (select auth.uid())')
   })
 
+  it('keeps AgentRun and approval mutations behind the server harness', () => {
+    expect(agentMutationLockMigration).toContain(
+      'on public.agent_runs for select to authenticated',
+    )
+    expect(agentMutationLockMigration).toContain(
+      'revoke insert, update, delete, truncate, references, trigger',
+    )
+    expect(agentMutationLockMigration).toContain(
+      'drop function if exists public.decide_agent_approval',
+    )
+    expect(agentMutationLockMigration).toContain(
+      'grant select on public.agent_runs to authenticated',
+    )
+  })
+
   it('keeps model history, OAuth state, provider tokens, and reply watches server-only', () => {
     expect(agentFoundationMigration).toContain('revoke all on public.agent_model_state from anon, authenticated')
     expect(agentGoogleMigration).toContain(
@@ -235,6 +253,13 @@ describe('agent execution security contract', () => {
     expect(agentGoogleMigration).toContain('refresh_token_ciphertext text')
     expect(googleToolFunction).toContain("Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')")
     expect(googleOAuthCallbackFunction).toContain('refresh_token_ciphertext: encryptedRefreshToken')
+  })
+
+  it('rejects unauthenticated agent calls before reporting secret health', () => {
+    expect(taskAgentFunction.indexOf("if (!internalPoll && !authorization)"))
+      .toBeLessThan(taskAgentFunction.indexOf("if (!url || !publicKey || !serviceKey)"))
+    expect(taskAgentFunction.indexOf('if (userError || !user)'))
+      .toBeLessThan(taskAgentFunction.lastIndexOf("if (!openaiKey)"))
   })
 
   it('uses expiring, single-use OAuth state with PKCE and controlled returns', () => {
@@ -249,6 +274,15 @@ describe('agent execution security contract', () => {
     expect(googleOAuthCallbackFunction).toContain('code_verifier:')
   })
 
+  it('does not report Google connected after partial consent', () => {
+    expect(googleScopes).toContain('googleExecutionScopes')
+    expect(googleScopes).toContain('gmail.compose')
+    expect(googleScopes).toContain('calendar.events.freebusy')
+    expect(googleScopes).toContain('contacts.readonly')
+    expect(googleOAuthCallbackFunction).toContain('missingGoogleExecutionScopes')
+    expect(googleOAuthCallbackFunction).toContain("'required_scopes_missing'")
+  })
+
   it('requires exact approval and idempotency before external writes', () => {
     expect(agentFoundationMigration).toContain('unique (user_id, tool_name, idempotency_key)')
     expect(agentFoundationMigration).toContain('payload_hash text not null')
@@ -257,7 +291,13 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('pauseForApproval')
     expect(taskAgentFunction).toContain('actionIdempotencyKey')
     expect(taskAgentFunction).toContain('expectedHash !== approval.payload_hash')
+    expect(taskAgentFunction).toContain('const payloadHash = await hashValue(payload)')
+    expect(taskAgentFunction).toContain(".eq('status', 'pending')")
+    expect(taskAgentFunction).toContain("'This approval was already decided. Refresh the task.'")
     expect(googleToolFunction).toContain('existingGmailDraft')
+    expect(googleToolFunction).toContain('preparedDraftRecord')
+    expect(googleToolFunction).toContain('sentMessageForPreparedDraft')
+    expect(googleToolFunction).toContain('actualBody !== preparedBody')
     expect(googleToolFunction).toContain('already_created: true')
     expect(googleToolFunction).toContain('already_updated: true')
     expect(googleToolFunction).toContain('already_deleted: true')
@@ -291,6 +331,20 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("run.task_completion_policy === 'external_change'")
     expect(taskAgentFunction).toContain("run.task_completion_policy === 'payment_handoff'")
     expect(taskAgentFunction).toContain('purchase_confirmed === true')
+  })
+
+  it('requires provider-confirmed evidence before a real-world task becomes done', () => {
+    expect(agentCompletionEvidenceMigration).toContain('for update')
+    expect(agentCompletionEvidenceMigration).toContain("action.status = 'succeeded'")
+    expect(agentCompletionEvidenceMigration).toContain("nullif(action.provider_action_id, '') is not null")
+    expect(agentCompletionEvidenceMigration).toContain("action.tool_name = 'gmail.send_message'")
+    expect(agentCompletionEvidenceMigration).toContain("'calendar.create_event'")
+    expect(agentCompletionEvidenceMigration).toContain(
+      "raise exception 'A payment handoff cannot confirm that a purchase occurred'",
+    )
+    expect(taskAgentFunction).toContain('agentCompletionEvidenceSatisfied')
+    expect(taskAgentFunction).toContain(".not('provider_action_id', 'is', null)")
+    expect(taskAgentFunction).not.toMatch(/addEvent\([^)]*'agent_completed'/s)
   })
 
   it('keeps browser control structured and stops before payment', () => {

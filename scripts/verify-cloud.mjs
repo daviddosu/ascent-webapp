@@ -34,7 +34,7 @@ const headers = { apikey: key, Authorization: `Bearer ${key}` }
 async function check(label, request, expected = response => response.ok) {
   try {
     const response = await fetch(request.url, request.options)
-    if (!expected(response)) throw new Error(`HTTP ${response.status}`)
+    if (!await expected(response.clone())) throw new Error(`HTTP ${response.status}`)
     console.log(`✓ ${label}`)
   } catch (error) {
     console.error(`✗ ${label}: ${error instanceof Error ? error.message : 'unknown error'}`)
@@ -54,6 +54,14 @@ await check('Conflict-safe planner migration', {
   url: `${base}/rest/v1/planner_records?select=record_id&limit=1`,
   options: { headers },
 })
+await check('Private AgentRun migration hides all rows from anonymous access', {
+  url: `${base}/rest/v1/agent_runs?select=id&limit=1`,
+  options: { headers },
+}, async response => {
+  if (!response.ok) return response.status === 401 || response.status === 403
+  const body = await response.json().catch(() => null)
+  return Array.isArray(body) && body.length === 0
+})
 await check('Account deletion function deployed', {
   url: `${base}/functions/v1/delete-account`,
   options: { method: 'OPTIONS', headers },
@@ -62,5 +70,13 @@ await check('AI coach function deployed', {
   url: `${base}/functions/v1/ai-coach`,
   options: { method: 'OPTIONS', headers },
 })
+await check('Task agent rejects an anonymous execution request', {
+  url: `${base}/functions/v1/task-agent`,
+  options: {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'poll', runId: crypto.randomUUID() }),
+  },
+}, response => response.status === 401)
 
 if (!process.exitCode) console.log('Cloud surface is reachable. Signed-in journeys still require a test account.')
