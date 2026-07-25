@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { agentCapability, createAgentRun, needsAgentContext } from './agent'
+import {
+  agentCapability,
+  createAgentRun,
+  needsAgentContext,
+  resolveAgentFunctionError,
+} from './agent'
 
 describe('task agent model', () => {
   it('classifies the supported MVP capabilities', () => {
@@ -22,5 +27,18 @@ describe('task agent model', () => {
     expect(run.context).toBe('Focus on Europe.')
     expect(run.intent.strategy).toBe('structured')
     expect(run.result).toBeNull()
+  })
+
+  it('surfaces the server error returned by an Edge Function', async () => {
+    const error = Object.assign(new Error('Edge Function returned a non-2xx status code'), {
+      context: new Response(JSON.stringify({ error: 'OpenAI request failed with 429.' }), {
+        status: 502,
+        headers: { 'content-type': 'application/json' },
+      }),
+    })
+
+    await expect(resolveAgentFunctionError(error, 'Fallback')).resolves.toBe(
+      'OpenAI request failed with 429.',
+    )
   })
 })

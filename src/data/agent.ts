@@ -180,6 +180,28 @@ export function createAgentRun(task: Task, context = ''): AgentRun {
   }
 }
 
+export async function resolveAgentFunctionError(
+  error: unknown,
+  fallback: string,
+) {
+  const context = (error as { context?: unknown } | null)?.context
+  if (context instanceof Response) {
+    try {
+      const payload = await context.clone().json() as { error?: unknown }
+      if (typeof payload.error === 'string' && payload.error.trim()) return payload.error.trim()
+    } catch {
+      try {
+        const message = await context.clone().text()
+        if (message.trim()) return message.trim()
+      } catch {
+        // Fall through to the SDK error below.
+      }
+    }
+  }
+  if (error instanceof Error && error.message.trim()) return error.message.trim()
+  return fallback
+}
+
 export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentRun> {
   const client = await getCloudClient()
   const user = await currentUser()
@@ -199,7 +221,9 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     },
   })
-  if (error || !data) throw new Error(error?.message ?? 'Shotcount could not complete this task.')
+  if (error || !data) {
+    throw new Error(await resolveAgentFunctionError(error, 'Shotcount could not complete this task.'))
+  }
   return { ...data, durable: true }
 }
 
@@ -248,7 +272,7 @@ async function invokeRunAction(
     method: 'POST',
     body,
   })
-  if (error || !data) throw new Error(error?.message ?? fallback)
+  if (error || !data) throw new Error(await resolveAgentFunctionError(error, fallback))
   return { ...data, durable: true }
 }
 
