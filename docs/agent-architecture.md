@@ -71,12 +71,18 @@ Browser operations persist their pending and completed operation in `browser_exe
 
 Supabase Cron invokes the protected `agent-watch-sweep` Edge Function every five minutes. The cron credential lives in Supabase Vault and is checked again against the Edge Function secret. The sweep can only call the internal `poll` action with a separate worker token, while the Supabase gateway still receives the server key. This lets Gmail replies and completed browser jobs resume while the app is closed. It cannot start tasks, approve writes, or make user-facing decisions.
 
+The same sweep also reclaims `planning` or `running` work that has not updated for
+three minutes. It resumes the saved model call and action, reusing the exact
+approval and idempotency key. This covers an Edge Function or worker restart
+between a provider accepting an action and ShotCount recording its response.
+
 ## Verification
 
 ```bash
 pnpm test
 pnpm build
 npx --yes deno test --allow-env supabase/functions/_shared/agent-tools_test.ts
+npx --yes deno test --allow-env supabase/functions/_shared/google_test.ts
 npx --yes deno check \
   supabase/functions/task-agent/index.ts \
   supabase/functions/google-oauth-start/index.ts \
@@ -88,3 +94,8 @@ npx --yes deno check \
 Calendar, reply-resume, and flight-payment-boundary journeys through the same
 deterministic policy, state transition, idempotency, and completion helpers used
 by the app.
+
+Before Calendar create or reschedule, the Google tool rechecks the exact approved
+time window and pauses on a newly introduced conflict. Gmail drafts, Gmail sends,
+Calendar creates, Calendar updates, and Calendar deletes each recover safely if
+the worker loses its response after the provider already applied the action.

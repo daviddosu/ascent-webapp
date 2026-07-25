@@ -39,18 +39,29 @@ Deno.serve(async request => {
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-  const runsResult = await admin
+  const waitingResult = await admin
     .from('agent_runs')
     .select('id')
     .eq('status', 'waiting_external')
     .order('updated_at', { ascending: true })
     .limit(8)
-  if (runsResult.error) {
+  const staleCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+  const stalledResult = await admin
+    .from('agent_runs')
+    .select('id')
+    .in('status', ['planning', 'running'])
+    .lt('updated_at', staleCutoff)
+    .order('updated_at', { ascending: true })
+    .limit(8)
+  if (waitingResult.error || stalledResult.error) {
     return jsonResponse({ error: 'Could not load waiting runs' }, 502)
   }
 
   const taskAgentEndpoint = `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/task-agent`
-  const runIds = (runsResult.data ?? []).map(run => String(run.id))
+  const runIds = [...new Set([
+    ...(waitingResult.data ?? []).map(run => String(run.id)),
+    ...(stalledResult.data ?? []).map(run => String(run.id)),
+  ])].slice(0, 8)
   let continued = 0
   let unchanged = 0
   let failed = 0
@@ -70,7 +81,9 @@ Deno.serve(async request => {
         })
         if (!result.ok) return 'failed'
         const payload = await result.json() as { status?: string }
-        return payload.status === 'waiting_external' ? 'unchanged' : 'continued'
+        return ['waiting_external', 'planning', 'running'].includes(payload.status ?? '')
+          ? 'unchanged'
+          : 'continued'
       } catch {
         return 'failed'
       }

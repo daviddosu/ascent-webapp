@@ -39,22 +39,20 @@ Deno.serve(async request => {
 
   const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
   const stateHash = await sha256Hex(state)
+  const claimedAt = new Date().toISOString()
   const stateResult = await admin
     .from('agent_oauth_states')
-    .select('state_hash,user_id,code_verifier_ciphertext,return_to,expires_at,used_at')
+    .update({ used_at: claimedAt })
     .eq('state_hash', stateHash)
+    .is('used_at', null)
+    .gt('expires_at', claimedAt)
+    .select('state_hash,user_id,code_verifier_ciphertext,return_to,expires_at,used_at')
     .maybeSingle()
   const oauthState = stateResult.data as OAuthStateRow | null
-  if (
-    stateResult.error ||
-    !oauthState ||
-    oauthState.used_at ||
-    Date.parse(oauthState.expires_at) <= Date.now()
-  ) {
+  if (stateResult.error || !oauthState) {
     return redirectWith(fallback, 'error', 'invalid_state')
   }
   if (oauthError || !code) {
-    await admin.from('agent_oauth_states').update({ used_at: new Date().toISOString() }).eq('state_hash', stateHash)
     return redirectWith(oauthState.return_to, 'error', oauthError || 'missing_code')
   }
 
@@ -112,10 +110,8 @@ Deno.serve(async request => {
       last_error: '',
     }, { onConflict: 'user_id,provider' })
     if (saveError) throw new Error('integration_save_failed')
-    await admin.from('agent_oauth_states').update({ used_at: new Date().toISOString() }).eq('state_hash', stateHash)
     return redirectWith(oauthState.return_to, 'connected')
   } catch (error) {
-    await admin.from('agent_oauth_states').update({ used_at: new Date().toISOString() }).eq('state_hash', stateHash)
     const reason = error instanceof Error ? error.message : 'oauth_failed'
     return redirectWith(oauthState.return_to, 'error', reason)
   }

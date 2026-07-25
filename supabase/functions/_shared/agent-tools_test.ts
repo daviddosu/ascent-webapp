@@ -1,4 +1,5 @@
 import {
+  agentExecutionDateContext,
   policyForAgentTool,
   validateAgentToolArguments,
 } from './agent-tools.ts'
@@ -73,6 +74,33 @@ Deno.test('calendar reads require a bounded forward time window and at least one
     calendar_ids: [],
     timezone: 'Africa/Lagos',
   }), false)
+})
+
+Deno.test('relative dates are anchored to the user timezone and ordered flight legs', () => {
+  const context = agentExecutionDateContext(
+    'Find a flight next Thursday, returning Sunday',
+    'Africa/Lagos',
+    new Date('2026-07-25T23:30:00.000Z'),
+  )
+  assertEquals(context.local_date, '2026-07-26')
+  assertEquals(context.timezone, 'Africa/Lagos')
+  assertEquals(context.relative_dates, [
+    { phrase: 'next thursday', date: '2026-07-30' },
+    { phrase: 'returning sunday', date: '2026-08-02' },
+  ])
+})
+
+Deno.test('next week uses the next Monday-through-Sunday window', () => {
+  const context = agentExecutionDateContext(
+    'Set up a meeting with Blessing next week',
+    'Africa/Lagos',
+    new Date('2026-07-25T09:00:00.000Z'),
+  )
+  assertEquals(context.relative_dates, [{
+    phrase: 'next week',
+    start_date: '2026-07-27',
+    end_date: '2026-08-02',
+  }])
 })
 
 Deno.test('completion output is deeply validated', () => {

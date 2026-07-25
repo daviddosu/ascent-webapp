@@ -13,6 +13,118 @@ type ToolPolicy = {
   approvalKind: 'send_email' | 'calendar_write' | 'browser_submit' | null
 }
 
+export type AgentExecutionDateContext = {
+  utc_time: string
+  timezone: string
+  local_date: string
+  relative_dates: Array<{
+    phrase: string
+    date?: string
+    start_date?: string
+    end_date?: string
+  }>
+}
+
+const weekdayIndexes: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+}
+
+function validExecutionTimezone(value: string) {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value }).format()
+    return value
+  } catch {
+    return 'UTC'
+  }
+}
+
+function localDateInTimezone(now: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find(item => item.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function addDateDays(value: string, days: number) {
+  const date = new Date(`${value}T12:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function nextWeekday(value: string, targetWeekday: number) {
+  const currentWeekday = new Date(`${value}T12:00:00Z`).getUTCDay()
+  const distance = (targetWeekday - currentWeekday + 7) % 7 || 7
+  return addDateDays(value, distance)
+}
+
+export function agentExecutionDateContext(
+  objective: string,
+  requestedTimezone: string,
+  now = new Date(),
+): AgentExecutionDateContext {
+  const timezone = validExecutionTimezone(requestedTimezone)
+  const localDate = localDateInTimezone(now, timezone)
+  const normalized = objective.toLocaleLowerCase()
+  const relativeDates: AgentExecutionDateContext['relative_dates'] = []
+
+  if (/\bnext week\b/.test(normalized)) {
+    const currentWeekday = new Date(`${localDate}T12:00:00Z`).getUTCDay()
+    const daysUntilNextMonday = (8 - currentWeekday) % 7 || 7
+    const startDate = addDateDays(localDate, daysUntilNextMonday)
+    relativeDates.push({
+      phrase: 'next week',
+      start_date: startDate,
+      end_date: addDateDays(startDate, 6),
+    })
+  }
+  if (/\btomorrow\b/.test(normalized)) {
+    relativeDates.push({ phrase: 'tomorrow', date: addDateDays(localDate, 1) })
+  }
+  if (/\btoday\b/.test(normalized)) {
+    relativeDates.push({ phrase: 'today', date: localDate })
+  }
+
+  const nextDayMatch = normalized.match(
+    /\bnext\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/,
+  )
+  let outboundDate = ''
+  if (nextDayMatch?.[1]) {
+    outboundDate = nextWeekday(localDate, weekdayIndexes[nextDayMatch[1]]!)
+    relativeDates.push({
+      phrase: `next ${nextDayMatch[1]}`,
+      date: outboundDate,
+    })
+  }
+
+  const returnDayMatch = normalized.match(
+    /\breturn(?:ing)?(?:\s+on)?\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/,
+  )
+  if (returnDayMatch?.[1] && outboundDate) {
+    relativeDates.push({
+      phrase: `returning ${returnDayMatch[1]}`,
+      date: nextWeekday(outboundDate, weekdayIndexes[returnDayMatch[1]]!),
+    })
+  }
+
+  return {
+    utc_time: now.toISOString(),
+    timezone,
+    local_date: localDate,
+    relative_dates: relativeDates,
+  }
+}
+
 const objectSchema = (
   properties: Record<string, unknown>,
   required: string[],

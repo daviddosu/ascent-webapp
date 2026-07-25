@@ -19,6 +19,7 @@ const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-ag
 const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
 const googleOAuthCallbackFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-callback/index.ts'), 'utf8')
 const googleToolFunction = readFileSync(resolve(root, 'supabase/functions/_shared/google.ts'), 'utf8')
+const agentWatchSweepFunction = readFileSync(resolve(root, 'supabase/functions/agent-watch-sweep/index.ts'), 'utf8')
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
 const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf8')
 
@@ -241,8 +242,9 @@ describe('agent execution security contract', () => {
     expect(googleOAuthStartFunction).toContain('state_hash: await sha256Hex(state)')
     expect(googleOAuthStartFunction).toContain('expires_at:')
     expect(googleOAuthStartFunction).toContain('origins.includes(url.origin)')
-    expect(googleOAuthCallbackFunction).toContain('oauthState.used_at')
-    expect(googleOAuthCallbackFunction).toContain('Date.parse(oauthState.expires_at) <= Date.now()')
+    expect(googleOAuthCallbackFunction).toContain('.update({ used_at: claimedAt })')
+    expect(googleOAuthCallbackFunction).toContain(".is('used_at', null)")
+    expect(googleOAuthCallbackFunction).toContain(".gt('expires_at', claimedAt)")
     expect(googleOAuthCallbackFunction).toContain("grant_type: 'authorization_code'")
     expect(googleOAuthCallbackFunction).toContain('code_verifier:')
   })
@@ -255,6 +257,28 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('pauseForApproval')
     expect(taskAgentFunction).toContain('actionIdempotencyKey')
     expect(taskAgentFunction).toContain('expectedHash !== approval.payload_hash')
+    expect(googleToolFunction).toContain('existingGmailDraft')
+    expect(googleToolFunction).toContain('already_created: true')
+    expect(googleToolFunction).toContain('already_updated: true')
+    expect(googleToolFunction).toContain('already_deleted: true')
+    expect(googleToolFunction).toContain('shotcount_idempotency_key: idempotencyKey')
+  })
+
+  it('rechecks approved Calendar times before creating or rescheduling', () => {
+    expect(googleToolFunction).toContain('assertCalendarWindowAvailable')
+    expect(googleToolFunction).toContain("'calendar_conflict'")
+    expect(googleToolFunction).toContain('excludedEventId')
+    expect(googleToolFunction).toContain("event.transparency !== 'transparent'")
+  })
+
+  it('reclaims stalled workers through the same saved action', () => {
+    expect(agentWatchSweepFunction).toContain(".in('status', ['planning', 'running'])")
+    expect(agentWatchSweepFunction).toContain('staleCutoff')
+    expect(taskAgentFunction).toContain('recoverStalledRun')
+    expect(taskAgentFunction).toContain('retryWaitingProviderAction')
+    expect(taskAgentFunction).toContain("tool_name', 'agent.complete'")
+    expect(taskAgentFunction).toContain('action.idempotency_key')
+    expect(taskAgentFunction).toContain("status: 'succeeded'")
   })
 
   it('atomically completes only the real policy outcome and emits analytics', () => {

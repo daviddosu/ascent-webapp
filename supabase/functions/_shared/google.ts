@@ -182,6 +182,11 @@ type GmailMessage = {
   payload?: GmailPart & { headers?: GmailHeader[] }
 }
 
+type GmailDraft = {
+  id?: string
+  message?: GmailMessage
+}
+
 function headerValue(message: GmailMessage, name: string) {
   return message.payload?.headers?.find(header => header.name?.toLocaleLowerCase() === name.toLocaleLowerCase())?.value ?? ''
 }
@@ -278,6 +283,28 @@ async function replyHeaders(
   }
 }
 
+async function existingGmailDraft(
+  admin: AdminClient,
+  userId: string,
+  messageIdHeader: string,
+) {
+  const url = new URL('https://gmail.googleapis.com/gmail/v1/users/me/drafts')
+  url.searchParams.set('q', `rfc822msgid:${messageIdHeader}`)
+  url.searchParams.set('maxResults', '10')
+  const result = await googleRequest<{ drafts?: GmailDraft[] }>(
+    admin,
+    userId,
+    url.toString(),
+  )
+  const draftId = result.drafts?.[0]?.id
+  if (!draftId) return null
+  return googleRequest<GmailDraft>(
+    admin,
+    userId,
+    `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`,
+  )
+}
+
 async function gmailCreateDraft(
   admin: AdminClient,
   userId: string,
@@ -290,6 +317,20 @@ async function gmailCreateDraft(
   const threadId = argumentsValue.thread_id as string | null
   const reply = await replyHeaders(admin, userId, argumentsValue.in_reply_to_message_id as string | null)
   const messageIdHeader = `<${idempotencyKey.replace(/[^a-zA-Z0-9._-]/g, '.')}@shotcount.app>`
+  const existingDraft = await existingGmailDraft(admin, userId, messageIdHeader)
+  if (existingDraft?.id && existingDraft.message) {
+    const existingMessage = compactMessage(existingDraft.message)
+    return {
+      draft_id: existingDraft.id,
+      message_id: existingDraft.message.id ?? '',
+      thread_id: existingDraft.message.threadId ?? threadId ?? '',
+      message_id_header: messageIdHeader,
+      to: normalizedEmails(existingMessage.to),
+      subject: existingMessage.subject,
+      body_text: existingMessage.body_text,
+      already_created: true,
+    }
+  }
   const headers = [
     `To: ${to.join(', ')}`,
     `Subject: ${encodeHeader(subject)}`,
@@ -324,6 +365,7 @@ async function gmailCreateDraft(
     to,
     subject,
     body_text: bodyText,
+    already_created: false,
   }
 }
 
@@ -413,6 +455,99 @@ async function calendarAvailability(admin: AdminClient, userId: string, argument
   )
 }
 
+type GoogleCalendarEvent = {
+  id?: string
+  status?: string
+  transparency?: string
+  start?: { dateTime?: string; date?: string; timeZone?: string }
+  end?: { dateTime?: string; date?: string; timeZone?: string }
+  extendedProperties?: { private?: Record<string, string> }
+}
+
+export function calendarEventBlocksTime(
+  event: GoogleCalendarEvent,
+  excludedEventId = '',
+) {
+  return Boolean(
+    event.id &&
+    event.id !== excludedEventId &&
+    event.status !== 'cancelled' &&
+    event.transparency !== 'transparent'
+  )
+}
+
+async function calendarEvent(
+  admin: AdminClient,
+  userId: string,
+  calendarId: string,
+  eventId: string,
+) {
+  try {
+    return await googleRequest<GoogleCalendarEvent>(
+      admin,
+      userId,
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+    )
+  } catch (error) {
+    if (
+      error instanceof GoogleIntegrationError &&
+      ['google_404', 'google_410'].includes(error.code)
+    ) return null
+    throw error
+  }
+}
+
+async function blockingCalendarEvents(
+  admin: AdminClient,
+  userId: string,
+  calendarId: string,
+  start: string,
+  end: string,
+  excludedEventId = '',
+) {
+  const url = new URL(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+  )
+  url.searchParams.set('timeMin', start)
+  url.searchParams.set('timeMax', end)
+  url.searchParams.set('maxResults', '20')
+  url.searchParams.set('singleEvents', 'true')
+  url.searchParams.set('showDeleted', 'false')
+  const result = await googleRequest<{ items?: GoogleCalendarEvent[] }>(
+    admin,
+    userId,
+    url.toString(),
+  )
+  return (result.items ?? []).filter(event =>
+    calendarEventBlocksTime(event, excludedEventId)
+  )
+}
+
+async function assertCalendarWindowAvailable(
+  admin: AdminClient,
+  userId: string,
+  calendarId: string,
+  start: string,
+  end: string,
+  excludedEventId = '',
+) {
+  const conflicts = await blockingCalendarEvents(
+    admin,
+    userId,
+    calendarId,
+    start,
+    end,
+    excludedEventId,
+  )
+  if (conflicts.length) {
+    throw new GoogleIntegrationError(
+      'calendar_conflict',
+      'That time is no longer available. Review another conflict-free time.',
+      false,
+    )
+  }
+}
+
 async function existingCalendarEvent(
   admin: AdminClient,
   userId: string,
@@ -448,6 +583,14 @@ async function calendarCreateEvent(
   )
   if (existing) return { ...existing, already_created: true }
 
+  await assertCalendarWindowAvailable(
+    admin,
+    userId,
+    calendarId,
+    String(argumentsValue.start),
+    String(argumentsValue.end),
+  )
+
   const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`)
   url.searchParams.set('sendUpdates', 'all')
   if (argumentsValue.add_google_meet) url.searchParams.set('conferenceDataVersion', '1')
@@ -468,12 +611,64 @@ async function calendarCreateEvent(
   return { ...event, already_created: false }
 }
 
-async function calendarUpdateEvent(admin: AdminClient, userId: string, argumentsValue: Record<string, unknown>) {
+async function calendarUpdateEvent(
+  admin: AdminClient,
+  userId: string,
+  argumentsValue: Record<string, unknown>,
+  idempotencyKey: string,
+) {
+  const calendarId = String(argumentsValue.calendar_id)
+  const eventId = String(argumentsValue.event_id)
+  const current = await calendarEvent(admin, userId, calendarId, eventId)
+  if (!current) {
+    throw new GoogleIntegrationError(
+      'calendar_event_missing',
+      'That Calendar event no longer exists. Review the task before trying again.',
+      false,
+    )
+  }
+  if (
+    current.extendedProperties?.private?.shotcount_idempotency_key === idempotencyKey
+  ) {
+    return { ...current, already_updated: true }
+  }
+
+  const effectiveStart = argumentsValue.start === null
+    ? current.start?.dateTime ?? ''
+    : String(argumentsValue.start)
+  const effectiveEnd = argumentsValue.end === null
+    ? current.end?.dateTime ?? ''
+    : String(argumentsValue.end)
+  if ((argumentsValue.start !== null || argumentsValue.end !== null) && (!effectiveStart || !effectiveEnd)) {
+    throw new GoogleIntegrationError(
+      'calendar_event_time_missing',
+      'The existing event time could not be verified.',
+      false,
+    )
+  }
+  if (argumentsValue.start !== null || argumentsValue.end !== null) {
+    await assertCalendarWindowAvailable(
+      admin,
+      userId,
+      calendarId,
+      effectiveStart,
+      effectiveEnd,
+      eventId,
+    )
+  }
+
   const url = new URL(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(String(argumentsValue.calendar_id))}/events/${encodeURIComponent(String(argumentsValue.event_id))}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
   )
   url.searchParams.set('sendUpdates', 'all')
-  const patch: Record<string, unknown> = {}
+  const patch: Record<string, unknown> = {
+    extendedProperties: {
+      private: {
+        ...(current.extendedProperties?.private ?? {}),
+        shotcount_idempotency_key: idempotencyKey,
+      },
+    },
+  }
   if (argumentsValue.summary !== null) patch.summary = argumentsValue.summary
   if (argumentsValue.description !== null) patch.description = argumentsValue.description
   if (argumentsValue.start !== null) {
@@ -482,19 +677,30 @@ async function calendarUpdateEvent(admin: AdminClient, userId: string, arguments
   if (argumentsValue.end !== null) {
     patch.end = { dateTime: argumentsValue.end, timeZone: argumentsValue.timezone ?? undefined }
   }
-  return googleRequest<Record<string, unknown>>(admin, userId, url.toString(), {
+  const updated = await googleRequest<Record<string, unknown>>(admin, userId, url.toString(), {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
+  return { ...updated, already_updated: false }
 }
 
-async function calendarDeleteEvent(admin: AdminClient, userId: string, argumentsValue: Record<string, unknown>) {
+async function calendarDeleteEvent(
+  admin: AdminClient,
+  userId: string,
+  argumentsValue: Record<string, unknown>,
+) {
+  const calendarId = String(argumentsValue.calendar_id)
+  const eventId = String(argumentsValue.event_id)
+  const existing = await calendarEvent(admin, userId, calendarId, eventId)
+  if (!existing) {
+    return { deleted: true, event_id: eventId, already_deleted: true }
+  }
   const url = new URL(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(String(argumentsValue.calendar_id))}/events/${encodeURIComponent(String(argumentsValue.event_id))}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
   )
   url.searchParams.set('sendUpdates', argumentsValue.notify_attendees ? 'all' : 'none')
   await googleRequest<Record<string, unknown>>(admin, userId, url.toString(), { method: 'DELETE' })
-  return { deleted: true, event_id: argumentsValue.event_id }
+  return { deleted: true, event_id: eventId, already_deleted: false }
 }
 
 async function contactsFind(admin: AdminClient, userId: string, argumentsValue: Record<string, unknown>) {
@@ -575,7 +781,7 @@ export async function executeGoogleTool(
       }
     }
     case 'calendar.update_event': {
-      const value = await calendarUpdateEvent(admin, userId, argumentsValue)
+      const value = await calendarUpdateEvent(admin, userId, argumentsValue, idempotencyKey)
       return {
         value,
         providerActionId: String(value.id ?? argumentsValue.event_id),

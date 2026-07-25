@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
+  agentExecutionDateContext,
   agentToolDefinitions,
   policyForAgentTool,
   validateAgentToolArguments,
@@ -1347,6 +1348,194 @@ async function pollBrowserExecutionRun(
   return waiting
 }
 
+async function retryWaitingProviderAction(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  const actionResult = await admin
+    .from('agent_actions')
+    .select('*')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .in('status', ['failed', 'running'])
+    .eq('retryable', true)
+    .order('step_index', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (actionResult.error) throw new Error(actionResult.error.message)
+  const action = actionResult.data
+  const toolName = safeString(action?.tool_name, 120)
+  if (
+    !action ||
+    toolName === 'agent.complete' ||
+    policyForAgentTool(toolName).risk === 'financial'
+  ) return null
+  const policy = policyForAgentTool(toolName)
+  if (policy.approvalKind) {
+    const approval = await admin
+      .from('agent_approvals')
+      .select('id')
+      .eq('action_id', action.id)
+      .eq('user_id', run.user_id)
+      .eq('status', 'approved')
+      .maybeSingle()
+    if (approval.error) throw new Error(approval.error.message)
+    if (!approval.data) return null
+  }
+
+  const lastStartedAt = safeString(action.started_at, 80)
+  if (
+    action.status === 'running' &&
+    lastStartedAt &&
+    Date.parse(lastStartedAt) > Date.now() - 2 * 60 * 1000
+  ) return run
+
+  let retryClaimQuery = admin.from('agent_actions').update({
+    status: 'running',
+    started_at: new Date().toISOString(),
+    error_code: null,
+    error_message: null,
+  }).eq('id', action.id).eq('status', action.status)
+  retryClaimQuery = lastStartedAt
+    ? retryClaimQuery.eq('started_at', lastStartedAt)
+    : retryClaimQuery.is('started_at', null)
+  const retryClaim = await retryClaimQuery.select('id').maybeSingle()
+  if (retryClaim.error) throw new Error(retryClaim.error.message)
+  if (!retryClaim.data) return await loadOwnedRun(admin, run.user_id, run.id) ?? run
+
+  const execution = await executeProviderTool(
+    admin,
+    run,
+    toolName,
+    action.arguments as Record<string, unknown>,
+    String(action.idempotency_key),
+  )
+  if (execution.kind === 'pause') {
+    const actionSucceeded = execution.actionSucceeded ||
+      execution.status === 'needs_context'
+    const actionStatus = execution.actionStatus ??
+      (actionSucceeded ? 'succeeded' : 'failed')
+    const advanceStep = execution.advanceStep ?? actionSucceeded
+    await admin.from('agent_actions').update({
+      status: actionStatus,
+      output: execution.value,
+      public_summary: execution.message,
+      error_code: execution.code,
+      error_message: execution.message,
+      retryable: execution.status === 'waiting_external' && !actionSucceeded,
+      completed_at: actionStatus === 'running' ? null : new Date().toISOString(),
+    }).eq('id', action.id)
+    const waiting = await updateRun(admin, run, {
+      status: execution.status,
+      waiting_reason: execution.message,
+      ...(advanceStep
+        ? {
+            current_step: run.current_step + 1,
+            progress: [
+              ...(Array.isArray(run.progress) ? run.progress : []),
+              execution.message,
+            ],
+          }
+        : {}),
+      ...(execution.runPatch ?? {}),
+      error_code: execution.status === 'waiting_for_user' ? execution.code : null,
+      error: execution.status === 'waiting_for_user' ? execution.message : null,
+      retryable: execution.status === 'waiting_external' && !actionSucceeded,
+      lease_owner: null,
+      lease_expires_at: null,
+    })
+    await addEvent(
+      admin,
+      waiting,
+      execution.status === 'waiting_external'
+        ? 'agent_waiting_external'
+        : 'agent_waiting_for_user',
+      waiting.status,
+      execution.message,
+      { tool_name: toolName, action_id: action.id, retried: true },
+    )
+    return waiting
+  }
+
+  await admin.from('agent_actions').update({
+    status: 'succeeded',
+    output: execution.value,
+    public_summary: execution.publicSummary,
+    provider_action_id: execution.providerActionId ?? null,
+    error_code: null,
+    error_message: null,
+    retryable: false,
+    completed_at: new Date().toISOString(),
+  }).eq('id', action.id)
+  let history = await loadModelHistory(admin, run)
+  const callId = safeString(action.model_call_id, 256)
+  if (callId && !historyHasToolOutput(history, callId)) {
+    history = [...history, {
+      type: 'function_call_output',
+      call_id: callId,
+      output: JSON.stringify(execution.value),
+    }]
+  }
+  const resumed = await updateRun(admin, run, {
+    status: 'running',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    current_step: run.current_step + 1,
+    progress: [
+      ...(Array.isArray(run.progress) ? run.progress : []),
+      execution.publicSummary,
+    ],
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await saveModelHistory(admin, resumed, history)
+  await addEvent(admin, resumed, 'agent_resumed', resumed.status, execution.publicSummary, {
+    tool_name: toolName,
+    action_id: action.id,
+    retried: true,
+  })
+  return advanceRun(admin, resumed, openaiKey)
+}
+
+async function recoverStalledRun(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  if (!['planning', 'running'].includes(run.status)) return run
+  const completionAction = await admin
+    .from('agent_actions')
+    .select('*')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('tool_name', 'agent.complete')
+    .in('status', ['running', 'succeeded'])
+    .order('step_index', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (completionAction.error) throw new Error(completionAction.error.message)
+  if (completionAction.data) {
+    const argumentsValue = completionAction.data.arguments as Record<string, unknown>
+    if (!validateAgentToolArguments('agent.complete', argumentsValue)) {
+      throw new Error('The saved completion action is invalid.')
+    }
+    await admin.from('agent_actions').update({
+      status: 'succeeded',
+      output: { accepted: completionSatisfied(run, argumentsValue) },
+      public_summary: safeString(argumentsValue.summary, 1200),
+      completed_at: new Date().toISOString(),
+    }).eq('id', completionAction.data.id)
+    return completeRun(admin, run, argumentsValue)
+  }
+
+  const retried = await retryWaitingProviderAction(admin, run, openaiKey)
+  if (retried) return retried
+  return advanceRun(admin, run, openaiKey)
+}
+
 async function pollWaitingExternalRun(
   admin: AdminClient,
   run: AgentRunRow,
@@ -1354,6 +1543,8 @@ async function pollWaitingExternalRun(
 ) {
   if (run.status !== 'waiting_external') return run
   if (run.browser_session_id) return pollBrowserExecutionRun(admin, run)
+  const providerRetry = await retryWaitingProviderAction(admin, run, openaiKey)
+  if (providerRetry) return providerRetry
   const watchResult = await admin
     .from('agent_email_watches')
     .select('*')
@@ -1943,7 +2134,7 @@ Deno.serve(async request => {
       .from('agent_runs')
       .select('*')
       .eq('id', body.runId)
-      .eq('status', 'waiting_external')
+      .in('status', ['waiting_external', 'planning', 'running'])
       .maybeSingle()
     if (internalRunResult.error) {
       return jsonResponse(request, { error: internalRunResult.error.message }, 502)
@@ -1952,11 +2143,10 @@ Deno.serve(async request => {
       return jsonResponse(request, { ok: true, status: 'not_waiting' })
     }
     try {
-      const polled = await pollWaitingExternalRun(
-        admin,
-        internalRunResult.data as AgentRunRow,
-        openaiKey,
-      )
+      const internalRun = internalRunResult.data as AgentRunRow
+      const polled = internalRun.status === 'waiting_external'
+        ? await pollWaitingExternalRun(admin, internalRun, openaiKey)
+        : await recoverStalledRun(admin, internalRun, openaiKey)
       return jsonResponse(request, { ok: true, runId: polled.id, status: polled.status })
     } catch (error) {
       return jsonResponse(request, {
@@ -1989,6 +2179,10 @@ Deno.serve(async request => {
         user.id,
         body.timezone ?? '',
       )
+      const executionDateContext = agentExecutionDateContext(
+        `${title} ${description}`,
+        reusableContext.timezone,
+      )
       const { data, error } = await admin.from('agent_runs').insert({
         user_id: user.id,
         task_id: taskId,
@@ -2004,6 +2198,7 @@ Deno.serve(async request => {
           goal_id: body.goalId ?? null,
           due: body.due ?? null,
           timezone: reusableContext.timezone,
+          execution_date_context: executionDateContext,
           user_preferences: reusableContext,
         },
         plan: [],
