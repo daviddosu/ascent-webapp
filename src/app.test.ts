@@ -82,6 +82,20 @@ describe('reference screens', () => {
     expect(document.querySelector('.inspector-title')?.getAttribute('value')).toBe("Renew driver's license")
   })
 
+  it('keeps manual creation separate from the Ask Roon planner', () => {
+    const commandRow = document.querySelector('.today-command-row')!
+    expect(commandRow.querySelector('[data-action="add-task"]')?.textContent).toContain('Add New Task')
+    expect(commandRow.querySelector('[data-action="open-roon-planner"]')?.textContent).toContain('Ask Roon')
+    expect(document.querySelector('.shotcount-agent-helper')).toBeNull()
+
+    commandRow.querySelector<HTMLButtonElement>('[data-action="open-roon-planner"]')!.click()
+    expect(document.querySelector('[role="dialog"] h2')?.textContent).toBe('Ask Roon')
+    expect(document.querySelector('[data-roon-goal-form] label')?.textContent).toBe('What are you trying to get done?')
+    expect(document.querySelector('[data-today-form]')).toBeNull()
+    document.querySelector<HTMLButtonElement>('[data-action="close-roon-planner"]')!.click()
+    expect(document.querySelector('.roon-planner-popover')).toBeNull()
+  })
+
   it('adds a task on Today and advances the count wheel', () => {
     document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
     vibrate.mockClear()

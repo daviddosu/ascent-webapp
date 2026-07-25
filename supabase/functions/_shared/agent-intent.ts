@@ -5,22 +5,22 @@ export type SharedAgentIntent = {
 }
 
 export function classifySharedAgentIntent(title: string, description = ''): SharedAgentIntent {
-  const titleValue = title.toLocaleLowerCase()
   const value = `${title} ${description}`.toLocaleLowerCase()
   const hasEmail = /\b(email|mail|gmail|reply|follow[\s-]?up|message|outreach)\b/.test(value)
   const hasCalendar = /\b(meeting|meet|calendar|schedule|reschedule|availability|appointment|invite|cancel.+(?:call|meeting))\b/.test(value)
   const coordinatesWithSomeone =
-    /\b(?:set\s*up|arrange|coordinate|organize|schedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(titleValue)
+    /\b(?:set\s*up|arrange|coordinate|organize|schedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(value) ||
+    /\b(?:meet|meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/.test(value)
   const wantsEmailWrite =
-    /\b(?:send|respond|follow[\s-]?up|outreach|draft|write)\b/.test(titleValue) ||
-    /^(?:email|message|reply)\s+\S+/.test(titleValue.trim()) ||
-    /\breply\s+to\b/.test(titleValue)
+    /\b(?:send|respond|follow[\s-]?up|outreach|draft|write)\b/.test(value) ||
+    /^(?:email|message|reply)\s+\S+/.test(value.trim()) ||
+    /\breply\s+to\b/.test(value)
   const wantsCalendarWrite =
-    /\b(?:set\s*up|schedule|reschedule|arrange|coordinate|organize|create|add|book|cancel|delete|move)\b/.test(titleValue)
+    /\b(?:set\s*up|schedule|reschedule|arrange|coordinate|organize|create|add|book|cancel|delete|move)\b/.test(value)
   const hasFlight = /\b(flight|fly|airfare|airline|airport|return trip|round trip|one-way)\b/.test(value)
-  const wantsBooking = /\b(book|booking|buy|purchase|reserve)\b/.test(titleValue)
-  const wantsBrowserWrite = /\b(?:submit|register|sign[\s-]?up|apply|post|publish|upload)\b/.test(titleValue) ||
-    /\b(?:fill|complete)\b[\s\S]{0,40}\bform\b/.test(titleValue)
+  const wantsBooking = /\b(book|booking|buy|purchase|reserve)\b/.test(value)
+  const wantsBrowserWrite = /\b(?:submit|register|sign[\s-]?up|apply|post|publish|upload)\b/.test(value) ||
+    /\b(?:fill|complete)\b[\s\S]{0,40}\bform\b/.test(value)
   const research = /\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b/.test(value)
   const draft = /\b(draft|write|outline|proposal|application|polish|document)\b/.test(value)
 
@@ -59,4 +59,23 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
     strategy: research ? 'structured' : 'browser',
     outcomeType: wantsBrowserWrite ? 'external_change' : 'prepared_result',
   }
+}
+
+export function needsSharedAgentContext(title: string, description = '', context = '') {
+  if (description.trim() || context.trim()) return false
+
+  const value = title.trim().toLocaleLowerCase()
+  const words = value.match(/[\p{L}\p{N}]+/gu) ?? []
+  const intent = classifySharedAgentIntent(title)
+
+  if (intent.capability === 'flight_search') {
+    const hasTravelDate = /\b(today|tomorrow|tonight|next|this|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}[\s./-](?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{1,2}))\b/i.test(value)
+    const hasDestination = /\b(?:to|for)\s+[\p{L}][\p{L}\s-]{1,40}/iu.test(value) || /\b[\p{L}][\p{L}-]+\s+flight\b/iu.test(value)
+    return !hasTravelDate || !hasDestination
+  }
+
+  // Very short instructions such as “Book flight” or “Send email” do not
+  // contain an outcome Roon can safely infer. More specific connected tasks,
+  // such as “Reply to Sarah's email”, continue without requiring Description.
+  return words.length < 3
 }

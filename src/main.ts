@@ -54,6 +54,7 @@ import {
   createAgentRun,
   decideAgentApproval,
   executeAgentRun,
+  generateRoonPlan,
   loadAgentApprovals,
   loadAgentRuns,
   pollAgentRun,
@@ -63,6 +64,7 @@ import {
   subscribeToAgentRuns,
   type AgentApproval,
   type AgentRun,
+  type RoonPlanTask,
 } from './data/agent'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.png'
@@ -82,6 +84,8 @@ type TodayComposerDraft = {
   time: string
   visibility: TaskVisibility
 }
+type RoonPlannerStage = 'goal' | 'loading' | 'clarification' | 'preview'
+type RoonPlanDraftTask = RoonPlanTask & { id: string }
 type CalendarMode = 'day' | 'week' | 'month'
 type Theme = 'light' | 'dark'
 const previewParams = new URLSearchParams(window.location.search)
@@ -360,19 +364,19 @@ const agentApprovals = new Map<string, AgentApproval>()
 const agentDecisionBusy = new Set<string>()
 let agentPollingTimer = 0
 let agentPollBusy = false
-let agentHelperDismissed = (() => {
-  if (isPreviewMode) return false
-  try {
-    return window.sessionStorage.getItem(`${storagePrefix}agent-helper-dismissed`) === 'yes'
-  } catch {
-    return false
-  }
-})()
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
 let plannerDraftGroup: UpcomingGroup | null = null
 let todayComposerOpen = false
+let roonPlannerOpen = false
+let roonPlannerStage: RoonPlannerStage = 'goal'
+let roonPlannerGoal = ''
+let roonPlannerQuestion = ''
+let roonPlannerClarification = ''
+let roonPlannerError = ''
+let roonPlannerTargetDue = todayKey
+let roonPlanTasks: RoonPlanDraftTask[] = []
 let todayGoalCreatorOpen = false
 let goalComposerOpen = false
 let activeGoalId: string | null = null
@@ -1238,8 +1242,138 @@ function render() {
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
     ${renderAgentIsland() || renderShotcountIsland()}
     ${renderProfileModal()}
+    ${renderRoonPlanner()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function resetRoonPlanner(targetDue = todayKey) {
+  roonPlannerStage = 'goal'
+  roonPlannerGoal = ''
+  roonPlannerQuestion = ''
+  roonPlannerClarification = ''
+  roonPlannerError = ''
+  roonPlannerTargetDue = targetDue
+  roonPlanTasks = []
+}
+
+function captureRoonPlanDraft() {
+  const items = document.querySelectorAll<HTMLElement>('[data-roon-plan-item]')
+  for (const item of items) {
+    const draft = roonPlanTasks.find(task => task.id === item.dataset.roonPlanItem)
+    if (!draft) continue
+    draft.title = item.querySelector<HTMLInputElement>('input[name="title"]')?.value.trim() ?? draft.title
+    draft.description = item.querySelector<HTMLTextAreaElement>('textarea[name="description"]')?.value.trim() ?? draft.description
+  }
+}
+
+async function requestRoonPlan() {
+  if (!roonPlannerGoal.trim()) return
+  roonPlannerStage = 'loading'
+  roonPlannerError = ''
+  render()
+  try {
+    const plan = await generateRoonPlan(roonPlannerGoal.trim(), roonPlannerClarification.trim())
+    if (plan.tasks.length) {
+      roonPlanTasks = plan.tasks.map(task => ({ ...task, id: crypto.randomUUID() }))
+      roonPlannerQuestion = ''
+      roonPlannerStage = 'preview'
+    } else if (plan.clarification.trim()) {
+      roonPlannerQuestion = plan.clarification.trim()
+      roonPlannerStage = 'clarification'
+    } else {
+      throw new Error('Roon could not turn that outcome into tasks.')
+    }
+  } catch (error) {
+    roonPlannerStage = roonPlannerClarification ? 'clarification' : 'goal'
+    roonPlannerError = error instanceof Error ? error.message : 'Roon could not prepare that plan.'
+  }
+  render()
+}
+
+function createRoonPlanTasks() {
+  captureRoonPlanDraft()
+  const created = roonPlanTasks
+    .filter(task => task.title.trim() && task.description.trim())
+    .map(task => normalizeTask({
+      id: crypto.randomUUID(),
+      title: task.title.trim(),
+      description: task.description.trim(),
+      goalId: activeGoalId ?? undefined,
+      due: roonPlannerTargetDue,
+      visibility: defaultTaskVisibility(),
+      subtaskItems: [],
+    }))
+  if (!created.length) return
+  tasks.unshift(...created)
+  selectedTaskId = created[0]!.id
+  mobileInspectorOpen = false
+  roonPlannerOpen = false
+  persistPlanner()
+  refreshCounts()
+  triggerHaptic([35, 30, 60])
+  toast = `${created.length} task${created.length === 1 ? '' : 's'} created`
+  resetRoonPlanner()
+  render()
+  window.setTimeout(() => {
+    toast = ''
+    render()
+  }, 1600)
+}
+
+function renderRoonPlanner() {
+  if (!roonPlannerOpen) return ''
+  const loading = roonPlannerStage === 'loading'
+  return `
+    <div class="roon-planner-popover" role="presentation">
+      <button type="button" class="roon-planner-backdrop" data-action="close-roon-planner" aria-label="Close Ask Roon"></button>
+      <section class="roon-planner-card" role="dialog" aria-modal="true" aria-labelledby="roon-planner-title">
+        <button type="button" class="roon-planner-close" data-action="close-roon-planner" aria-label="Close Ask Roon">×</button>
+        <header>
+          <span class="agent-icon-wrap">${agentSparkleIcon()}</span>
+          <div><h2 id="roon-planner-title">Ask Roon</h2><p>Turn an outcome into tasks.</p></div>
+        </header>
+        ${roonPlannerStage === 'goal' || loading ? `
+          <form class="roon-goal-form" data-roon-goal-form>
+            <label for="roon-goal">What are you trying to get done?</label>
+            <textarea id="roon-goal" name="goal" maxlength="2000" placeholder="I want to win a fully funded scholarship to study abroad." ${loading ? 'disabled' : ''}>${escapeHtml(roonPlannerGoal)}</textarea>
+            ${roonPlannerError ? `<p class="roon-planner-error" role="alert">${escapeHtml(roonPlannerError)}</p>` : ''}
+            <button type="submit" ${loading ? 'disabled' : ''}>${loading ? 'Making a plan…' : 'Generate tasks'}</button>
+          </form>
+        ` : roonPlannerStage === 'clarification' ? `
+          <form class="roon-clarification-form" data-roon-clarification-form>
+            <p>${escapeHtml(roonPlannerQuestion)}</p>
+            <input name="clarification" maxlength="1000" value="${escapeHtml(roonPlannerClarification)}" autocomplete="off" required />
+            ${roonPlannerError ? `<p class="roon-planner-error" role="alert">${escapeHtml(roonPlannerError)}</p>` : ''}
+            <button type="submit">Generate tasks</button>
+          </form>
+        ` : `
+          <form class="roon-plan-form" data-roon-plan-form>
+            <div class="roon-plan-heading"><strong>Your plan</strong><span>Edit or remove anything before creating it.</span></div>
+            <div class="roon-plan-list">
+              ${roonPlanTasks.map((task, index) => `
+                <article class="roon-plan-item" data-roon-plan-item="${task.id}">
+                  <span>${index + 1}</span>
+                  <div>
+                    <input name="title" aria-label="Task ${index + 1} title" maxlength="90" value="${escapeHtml(task.title)}" required />
+                    <details>
+                      <summary>Description</summary>
+                      <textarea name="description" aria-label="Task ${index + 1} description" maxlength="1200" required>${escapeHtml(task.description)}</textarea>
+                    </details>
+                  </div>
+                  <button type="button" data-action="remove-roon-plan-task" data-plan-task-id="${task.id}" aria-label="Remove ${escapeHtml(task.title)}">×</button>
+                </article>
+              `).join('')}
+            </div>
+            <div class="roon-plan-actions">
+              <button type="button" data-action="restart-roon-planner">Back</button>
+              <button type="submit" ${roonPlanTasks.length ? '' : 'disabled'}>Create Tasks</button>
+            </div>
+          </form>
+        `}
+      </section>
+    </div>
+  `
 }
 
 function renderNotificationBell() {
@@ -2030,26 +2164,15 @@ function renderToday() {
       <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} tasks">${screenCounts.today}</span></header>
       ${todayComposerOpen ? renderTodayComposer() : `<div class="today-command-row">
         <button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>
-        <button class="ask-shotcount-button" data-action="add-task"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
+        <button class="ask-shotcount-button" data-action="open-roon-planner"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
       </div>`}
       <div class="task-list">
         ${todayTasks.length
           ? todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')
           : '<div class="planner-empty"><strong>Your day is clear.</strong><p>Add your first task when you are ready.</p></div>'}
       </div>
-      ${renderAgentHelper()}
     </section>
   `
-}
-
-function renderAgentHelper() {
-  if (agentHelperDismissed) return ''
-  return `<aside class="shotcount-agent-helper">
-    <span class="shotcount-agent-helper__mark">${agentSparkleIcon()}</span>
-    <p><strong>Roon can help move your tasks forward.</strong><span>Try asking Roon or delegating a task.</span></p>
-    <button type="button" data-action="add-task">How it works</button>
-    <button type="button" class="shotcount-agent-helper__dismiss" data-action="dismiss-agent-helper">Dismiss</button>
-  </aside>`
 }
 
 function renderTodayComposer() {
@@ -2375,9 +2498,8 @@ function renderAgentPanel(task: Task) {
   if (run.status === 'needs_context') {
     return `<section class="task-agent-card task-agent-card--context">
       <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>Needs context</em></header>
-      <p>What outcome would make this task complete? One sentence is enough.</p>
-      <textarea class="task-agent-context" aria-label="Additional context for Roon" placeholder="For example: compare five options and recommend the strongest two.">${escapeHtml(run.context)}</textarea>
-      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="${task.id}">Start task</button></footer>
+      <p>I need a little more context before I can handle this.</p>
+      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button><button class="agent-primary" type="button" data-action="focus-task-description" data-task-id="${task.id}">Add details</button></footer>
     </section>`
   }
 
@@ -2481,7 +2603,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
   if (plannerDraftGroup !== group) {
     return `<div class="upcoming-command-row">
       <button class="add-task-row" data-action="open-planner" data-task-group="${group}">${icon('plus')}<span>Add New Task</span></button>
-      <button class="ask-shotcount-button" data-action="open-planner" data-task-group="${group}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
+      <button class="ask-shotcount-button" data-action="open-roon-planner" data-task-group="${group}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
     </div>`
   }
   const isWeek = group === 'week'
@@ -3162,6 +3284,26 @@ function scheduleTask(taskId: string, date: string, time = '09:00') {
 
 app.addEventListener('submit', async event => {
   const target = event.target as HTMLElement
+  const roonGoalForm = target.closest<HTMLFormElement>('[data-roon-goal-form]')
+  if (roonGoalForm) {
+    event.preventDefault()
+    roonPlannerGoal = String(new FormData(roonGoalForm).get('goal') ?? '').trim()
+    await requestRoonPlan()
+    return
+  }
+  const roonClarificationForm = target.closest<HTMLFormElement>('[data-roon-clarification-form]')
+  if (roonClarificationForm) {
+    event.preventDefault()
+    roonPlannerClarification = String(new FormData(roonClarificationForm).get('clarification') ?? '').trim()
+    await requestRoonPlan()
+    return
+  }
+  const roonPlanForm = target.closest<HTMLFormElement>('[data-roon-plan-form]')
+  if (roonPlanForm) {
+    event.preventDefault()
+    createRoonPlanTasks()
+    return
+  }
   const profileForm = target.closest<HTMLFormElement>('[data-profile-form]')
   if (profileForm) {
     event.preventDefault()
@@ -3362,13 +3504,25 @@ app.addEventListener('change', event => {
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
-  if (action === 'dismiss-agent-helper') {
-    agentHelperDismissed = true
-    try {
-      window.sessionStorage.setItem(`${storagePrefix}agent-helper-dismissed`, 'yes')
-    } catch {
-      // The helper can still be dismissed for this render when storage is unavailable.
-    }
+  if (action === 'close-roon-planner') {
+    roonPlannerOpen = false
+    resetRoonPlanner()
+    render()
+    return
+  }
+  if (action === 'restart-roon-planner') {
+    const goal = roonPlannerGoal
+    const due = roonPlannerTargetDue
+    resetRoonPlanner(due)
+    roonPlannerGoal = goal
+    render()
+    document.querySelector<HTMLTextAreaElement>('[data-roon-goal-form] textarea')?.focus()
+    return
+  }
+  if (action === 'remove-roon-plan-task') {
+    captureRoonPlanDraft()
+    const taskId = target.closest<HTMLElement>('[data-plan-task-id]')?.dataset.planTaskId
+    roonPlanTasks = roonPlanTasks.filter(task => task.id !== taskId)
     render()
     return
   }
@@ -3563,6 +3717,13 @@ app.addEventListener('click', async event => {
     const context = document.querySelector<HTMLTextAreaElement>('.task-agent-context')?.value.trim() ?? ''
     if (!task || !context) return
     void startAgentRun(task, context)
+    return
+  }
+
+  if (action === 'focus-task-description') {
+    const description = document.querySelector<HTMLTextAreaElement>('.inspector textarea[aria-label="Description"]')
+    description?.focus()
+    description?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     return
   }
 
@@ -3796,6 +3957,19 @@ app.addEventListener('click', async event => {
     document.querySelector<HTMLInputElement>('[data-planner-form] input[name="title"]')?.focus()
     return
   }
+  if (action === 'open-roon-planner') {
+    const group = target.closest<HTMLElement>('[data-task-group]')?.dataset.taskGroup as UpcomingGroup | undefined
+    const targetDue = group === 'tomorrow'
+      ? tomorrowKey
+      : group === 'week'
+        ? dateKey(addDays(now, 2))
+        : todayKey
+    resetRoonPlanner(targetDue)
+    roonPlannerOpen = true
+    render()
+    document.querySelector<HTMLTextAreaElement>('[data-roon-goal-form] textarea')?.focus()
+    return
+  }
   if (action === 'close-planner') {
     plannerDraftGroup = null
     render()
@@ -3873,6 +4047,13 @@ app.addEventListener('click', async event => {
   }
   if (action === 'save-task') {
     persistInspectorDraft()
+    const task = selectedTask()
+    const run = task ? agentRuns.get(task.id) : undefined
+    if (task && run?.status === 'needs_context' && task.description?.trim()) {
+      toast = 'Details saved'
+      void startAgentRun(task, task.description)
+      return
+    }
     toast = 'Changes saved'
     mobileInspectorOpen = false
   } else if (action === 'delete-task') {
@@ -4004,6 +4185,12 @@ app.addEventListener('drop', event => {
 document.addEventListener('keydown', event => {
   const target = event.target as HTMLElement
   const isTyping = target.matches('input, textarea, select') || target.isContentEditable
+  if (event.key === 'Escape' && roonPlannerOpen) {
+    roonPlannerOpen = false
+    resetRoonPlanner()
+    render()
+    return
+  }
   if (event.key === 'Escape' && profileModalOpen) {
     captureProfileDraft()
     profileModalOpen = false

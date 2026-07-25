@@ -4784,6 +4784,208 @@ body[data-theme='dark'] .profile-popover select optgroup {
   color: #eef1f4;
 }
 
+/* Ask Roon stays a small planning moment inside the existing workspace. */
+.roon-planner-popover {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.roon-planner-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgb(17 21 22 / 18%);
+  backdrop-filter: blur(3px);
+}
+
+.roon-planner-card {
+  position: relative;
+  width: min(540px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid #dedfdf;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(17 21 22 / 18%);
+  padding: 24px;
+  animation: profile-popover-in .18s ease-out both;
+}
+
+.roon-planner-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #777;
+  font-size: 21px;
+}
+
+.roon-planner-close:hover { background: #f1f2f2; color: #111; }
+
+.roon-planner-card > header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-right: 38px;
+  margin-bottom: 24px;
+}
+
+.roon-planner-card > header .agent-icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #dedfdf;
+  border-radius: 50%;
+}
+
+.roon-planner-card h2 { margin: 0 0 2px; font-size: 20px; }
+.roon-planner-card header p,
+.roon-plan-heading span { margin: 0; color: #777; font-size: 12px; }
+
+.roon-goal-form,
+.roon-clarification-form,
+.roon-plan-form { display: grid; gap: 14px; }
+
+.roon-goal-form label,
+.roon-plan-heading strong { color: #202323; font-size: 15px; font-weight: 650; }
+
+.roon-goal-form textarea,
+.roon-clarification-form input,
+.roon-plan-item input,
+.roon-plan-item textarea {
+  width: 100%;
+  border: 1px solid #d9dbdb;
+  border-radius: 10px;
+  background: #fff;
+  color: #171919;
+  font: inherit;
+  outline: none;
+}
+
+.roon-goal-form textarea {
+  min-height: 122px;
+  resize: vertical;
+  padding: 13px 14px;
+  line-height: 1.5;
+}
+
+.roon-goal-form textarea:focus,
+.roon-clarification-form input:focus,
+.roon-plan-item input:focus,
+.roon-plan-item textarea:focus { border-color: #777; box-shadow: 0 0 0 3px rgb(17 21 22 / 6%); }
+
+.roon-goal-form > button,
+.roon-clarification-form > button,
+.roon-plan-actions > button:last-child {
+  justify-self: end;
+  min-width: 124px;
+  height: 40px;
+  border-radius: 9px;
+  background: #111516;
+  color: #fff;
+  font-weight: 650;
+}
+
+.roon-goal-form > button:disabled { opacity: .55; }
+.roon-clarification-form p { margin: 0; color: #202323; font-size: 15px; line-height: 1.55; }
+.roon-clarification-form input { height: 42px; padding: 0 12px; }
+.roon-planner-error { margin: -4px 0 0; color: #9d3f3f; font-size: 12px; }
+
+.roon-plan-heading { display: grid; gap: 3px; }
+.roon-plan-list { display: grid; gap: 8px; }
+.roon-plan-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 28px;
+  align-items: start;
+  gap: 9px;
+  border-bottom: 1px solid #eceeee;
+  padding: 9px 0 12px;
+}
+
+.roon-plan-item > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: #f0f1f1;
+  color: #666;
+  font-size: 10px;
+}
+
+.roon-plan-item > div { min-width: 0; }
+.roon-plan-item input { height: 38px; border-color: transparent; padding: 0 8px; font-weight: 600; }
+.roon-plan-item input:hover { border-color: #e0e2e2; }
+.roon-plan-item > button { width: 28px; height: 28px; margin-top: 5px; border-radius: 50%; color: #858585; font-size: 18px; }
+.roon-plan-item > button:hover { background: #f1f2f2; color: #111; }
+.roon-plan-item details { margin: 1px 8px 0; }
+.roon-plan-item summary { width: max-content; cursor: pointer; color: #8a8a8a; font-size: 11px; }
+.roon-plan-item textarea { min-height: 76px; margin-top: 8px; padding: 9px; resize: vertical; font-size: 12px; line-height: 1.5; }
+
+.roon-plan-actions {
+  position: sticky;
+  z-index: 3;
+  bottom: -24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -24px -24px;
+  padding: 14px 24px 24px;
+  border-top: 1px solid #eceeee;
+  background: rgb(255 255 255 / 96%);
+  backdrop-filter: blur(16px);
+}
+
+.roon-plan-actions > button:first-child { color: #777; }
+
+body[data-theme='dark'] .roon-planner-card {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+  color: var(--dark-text);
+  box-shadow: 0 26px 80px rgb(0 0 0 / 45%);
+}
+
+body[data-theme='dark'] .roon-planner-card h2,
+body[data-theme='dark'] .roon-goal-form label,
+body[data-theme='dark'] .roon-plan-heading strong,
+body[data-theme='dark'] .roon-clarification-form p { color: var(--dark-text); }
+
+body[data-theme='dark'] .roon-goal-form textarea,
+body[data-theme='dark'] .roon-clarification-form input,
+body[data-theme='dark'] .roon-plan-item input,
+body[data-theme='dark'] .roon-plan-item textarea {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: var(--dark-text);
+}
+
+body[data-theme='dark'] .roon-plan-item { border-color: var(--dark-border); }
+body[data-theme='dark'] .roon-plan-actions { border-color: var(--dark-border); background: rgb(24 27 30 / 96%); }
+body[data-theme='dark'] .roon-plan-item > span,
+body[data-theme='dark'] .roon-planner-close:hover,
+body[data-theme='dark'] .roon-plan-item > button:hover { background: var(--dark-hover); color: var(--dark-text); }
+
+@media (max-width: 620px) {
+  .roon-planner-popover { align-items: end; padding: 0; }
+  .roon-planner-card {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    border-radius: 20px 20px 0 0;
+    padding: 22px 18px max(22px, env(safe-area-inset-bottom));
+  }
+  .roon-plan-actions { bottom: calc(-1 * max(22px, env(safe-area-inset-bottom))); margin-inline: -18px; padding-inline: 18px; }
+}
+
 body[data-theme='dark'] .reference-app select option:disabled,
 body[data-theme='dark'] .profile-popover select option:disabled {
   color: #7f8991;

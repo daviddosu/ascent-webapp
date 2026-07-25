@@ -17,6 +17,7 @@ const agentGoogleMigration = readFileSync(resolve(root, 'supabase/migrations/202
 const agentCompletionMigration = readFileSync(resolve(root, 'supabase/migrations/202607240003_agent_completion_analytics.sql'), 'utf8')
 const agentCompletionEvidenceMigration = readFileSync(resolve(root, 'supabase/migrations/202607250001_agent_completion_evidence.sql'), 'utf8')
 const agentMutationLockMigration = readFileSync(resolve(root, 'supabase/migrations/202607250002_lock_agent_run_mutations.sql'), 'utf8')
+const taskDescriptionPrivacyMigration = readFileSync(resolve(root, 'supabase/migrations/202607250003_keep_task_descriptions_private.sql'), 'utf8')
 const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
 const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
 const googleOAuthCallbackFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-callback/index.ts'), 'utf8')
@@ -109,13 +110,15 @@ describe('cloud planner contract', () => {
     expect(visibilityMigration).toContain('Task visibility must be private, followers, or public')
   })
 
-  it('lets the server reveal tasks only to the allowed audience', () => {
+  it('lets the creator RPC reveal only the allowed task projection', () => {
     expect(visibilityMigration).toContain('alter table public.follows enable row level security;')
     expect(visibilityMigration).toContain('create or replace function public.can_read_planner_task')
     expect(visibilityMigration).toContain('task.visibility = \'public\'')
     expect(visibilityMigration).toContain("task.visibility = 'followers'")
-    expect(visibilityMigration).toContain('create policy "planner_records_shared_task_read"')
-    expect(visibilityMigration).toContain('public.can_read_planner_task(user_id, parent_id)')
+    expect(creatorTodayMigration).toContain("'title', task.data ->> 'title'")
+    expect(creatorTodayMigration).not.toContain("'description', task.data ->> 'description'")
+    expect(taskDescriptionPrivacyMigration).toContain('drop policy if exists "planner_records_shared_task_read"')
+    expect(taskDescriptionPrivacyMigration).toContain('revoke select on public.planner_records from anon')
   })
 
   it('uses the shared planner model and no longer replaces whole workspaces', () => {
@@ -275,6 +278,14 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain(
       'internalAgentToolName(safeString(call.name, 120))',
     )
+  })
+
+  it('keeps Ask Roon limited to concise title-and-description task planning', () => {
+    expect(taskAgentFunction).toContain("action === 'plan_tasks'")
+    expect(taskAgentFunction).toContain("name: 'shotcount_task_plan'")
+    expect(taskAgentFunction).toContain('Every title must be a concise action of at most 8 words')
+    expect(taskAgentFunction).toContain("required: ['title', 'description']")
+    expect(taskAgentFunction).toContain('Do not include explanations, categories, dependencies, scores, or scheduling.')
   })
 
   it('uses expiring, single-use OAuth state with PKCE and controlled returns', () => {

@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { classifySharedAgentIntent } from './agent-intent.ts'
+import { classifySharedAgentIntent, needsSharedAgentContext } from './agent-intent.ts'
 
 Deno.test('read-only Gmail and Calendar tasks use prepared-result completion', () => {
   assertEquals(
@@ -10,6 +10,21 @@ Deno.test('read-only Gmail and Calendar tasks use prepared-result completion', (
     classifySharedAgentIntent('Check my Calendar availability next week'),
     { capability: 'calendar', strategy: 'structured', outcomeType: 'prepared_result' },
   )
+})
+
+Deno.test('short titles use Description for intent and only ask when context is genuinely missing', () => {
+  assertEquals(
+    classifySharedAgentIntent('Book London flight', 'Return trip from Lagos next Thursday, returning Sunday. Economy.'),
+    { capability: 'flight_search', strategy: 'browser', outcomeType: 'payment_handoff' },
+  )
+  assertEquals(
+    classifySharedAgentIntent('Meet with Blessing', 'Set up a one-hour meeting next week. Prefer afternoons.'),
+    { capability: 'scheduling', strategy: 'hybrid', outcomeType: 'external_change' },
+  )
+  assertEquals(needsSharedAgentContext('Book flight'), true)
+  assertEquals(needsSharedAgentContext('Book London flight'), true)
+  assertEquals(needsSharedAgentContext('Book London flight', 'Return trip from Lagos next Thursday.'), false)
+  assertEquals(needsSharedAgentContext("Reply to Sarah's email"), false)
 })
 
 Deno.test('provider writes and meeting coordination keep external-change completion', () => {

@@ -6,6 +6,7 @@ import {
   type AgentIntent,
   type DurableAgentRunStatus,
 } from './agent-runtime'
+import { needsSharedAgentContext } from '../../supabase/functions/_shared/agent-intent'
 import type { Task } from './planner-model'
 
 export type AgentRunStatus = DurableAgentRunStatus
@@ -79,6 +80,16 @@ export type AgentApproval = {
   payload: Record<string, unknown>
   version: number
   expiresAt: string | null
+}
+
+export type RoonPlanTask = {
+  title: string
+  description: string
+}
+
+export type RoonPlanResponse = {
+  clarification: string
+  tasks: RoonPlanTask[]
 }
 
 type AgentRunRow = {
@@ -161,7 +172,38 @@ export function agentCapability(task: Task): AgentRun['capability'] {
 }
 
 export function needsAgentContext(task: Task) {
-  return task.title.trim().split(/\s+/).length < 4 && !task.description?.trim()
+  return needsSharedAgentContext(task.title, task.description)
+}
+
+const scholarshipPlanFixture: RoonPlanTask[] = [
+  { title: 'Find scholarships', description: 'Find fully funded study opportunities in Europe that fit the user’s background and accept international applicants. Capture eligibility, funding, deadlines, and application requirements.' },
+  { title: 'Shortlist programmes', description: 'Compare the strongest eligible programmes and create a practical shortlist based on academic fit, funding, location, and deadlines.' },
+  { title: 'Prepare academic CV', description: 'Prepare an academic CV for the shortlisted applications, emphasizing relevant education, research, technical work, and achievements.' },
+  { title: 'Draft personal statement', description: 'Draft a focused personal statement that connects the user’s background, goals, and fit with the shortlisted programmes.' },
+  { title: 'Request references', description: 'Identify suitable referees and prepare the information needed to request strong references before the application deadlines.' },
+  { title: 'Gather documents', description: 'Collect the transcripts, certificates, identification, test results, and other documents required by the shortlisted programmes.' },
+  { title: 'Submit applications', description: 'Complete and submit each shortlisted scholarship application before its deadline, checking every required field and attachment.' },
+]
+
+export async function generateRoonPlan(goal: string, clarification = ''): Promise<RoonPlanResponse> {
+  if (agentE2EFixtureEnabled) return { clarification: '', tasks: scholarshipPlanFixture }
+
+  const client = await getCloudClient()
+  const user = await currentUser()
+  if (!client || !user) throw new Error('Sign in to ask Roon for a plan.')
+
+  const { data, error } = await client.functions.invoke<RoonPlanResponse>('task-agent', {
+    method: 'POST',
+    body: {
+      action: 'plan_tasks',
+      goal,
+      clarification: clarification || undefined,
+    },
+  })
+  if (error || !data) {
+    throw new Error(await resolveAgentFunctionError(error, 'Roon could not prepare that plan.'))
+  }
+  return data
 }
 
 export function createAgentRun(task: Task, context = ''): AgentRun {

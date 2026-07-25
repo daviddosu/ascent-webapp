@@ -129,8 +129,10 @@ try {
     waitUntil: 'networkidle',
   })
   await assertVisible(page, '.task-agent-card--progress', 'Today did not show inline agent progress.')
-  await assertVisible(page, '.shotcount-agent-helper', 'Today did not show the base helper.')
   await assertVisible(page, '.shotcount-agent-island', 'The Dynamic Island did not show agent state.')
+  if (await page.locator('.shotcount-agent-helper').count()) {
+    throw new Error('The persistent Roon banner still appears on Today.')
+  }
   if (await page.locator('.ask-shotcount-sparkles').count()) {
     throw new Error('The removed standalone sparkle control returned.')
   }
@@ -141,13 +143,39 @@ try {
   if (iconChannels.length !== 3 || iconChannels.some(channel => channel > 40)) {
     throw new Error(`The agent icon is not black: ${iconColor}`)
   }
-  const defaultShadow = await page.locator('.shotcount-agent-helper')
-    .evaluate(element => getComputedStyle(element).boxShadow)
-  await page.locator('.shotcount-agent-helper').hover()
-  const hoverShadow = await page.locator('.shotcount-agent-helper')
-    .evaluate(element => getComputedStyle(element).boxShadow)
-  if (defaultShadow !== 'none' || hoverShadow === 'none') {
-    throw new Error('The Today helper glass treatment is not hover-only.')
+
+  await page.goto(`${baseUrl}/?previewView=today`, { waitUntil: 'networkidle' })
+  const manualTaskButton = page.locator('.today-command-row .add-task-row')
+  if (await manualTaskButton.innerText() !== 'Add New Task') {
+    throw new Error('Manual Create Task changed during the Roon refinement.')
+  }
+
+  await page.locator('.today-command-row .ask-shotcount-button').click()
+  await assertVisible(page, '.roon-planner-card', 'Ask Roon did not open in the workspace.')
+  if (await page.locator('[data-today-form]').count()) {
+    throw new Error('Ask Roon incorrectly opened the manual task composer.')
+  }
+  await page.locator('[data-roon-goal-form] textarea').fill('I want to win a fully funded scholarship to study in Europe.')
+  await page.locator('[data-roon-goal-form]').evaluate(form => form.requestSubmit())
+  await assertVisible(page, '.roon-plan-list', 'Ask Roon did not return a task plan.')
+  const plannedTitles = await page.locator('.roon-plan-item input[name="title"]')
+    .evaluateAll(inputs => inputs.map(input => input.value))
+  if (plannedTitles.length !== 7 || plannedTitles.some(title => title.trim().split(/\s+/).length > 8)) {
+    throw new Error(`Ask Roon did not return seven concise task titles: ${plannedTitles.join(', ')}`)
+  }
+  const firstDescription = await page.locator('.roon-plan-item textarea[name="description"]').first().inputValue()
+  if (!firstDescription.includes('fully funded')) {
+    throw new Error('Ask Roon did not generate useful task descriptions.')
+  }
+  await page.locator('.roon-plan-item input[name="title"]').first().fill('Research scholarships')
+  await page.locator('[data-action="remove-roon-plan-task"]').nth(1).click()
+  await page.locator('[data-roon-plan-form]').evaluate(form => form.requestSubmit())
+  await page.locator('.task-text', { hasText: 'Research scholarships' }).click()
+  if (!await page.locator('.inspector textarea[aria-label="Description"]').inputValue().then(value => value.includes('fully funded'))) {
+    throw new Error('A Roon-created task did not retain its Description.')
+  }
+  if (await page.locator('.task-text', { hasText: 'Shortlist programmes' }).count()) {
+    throw new Error('A task removed from the Roon preview was still created.')
   }
 
   await page.locator('[data-view="upcoming"]').click()
@@ -182,8 +210,8 @@ try {
 
   await createTodayTask(
     page,
-    'Follow up with everyone I emailed about ShotCount last week',
-    'Use the controlled test inbox and exclude threads that already received a reply.',
+    'Follow up with investors',
+    'Follow up with everyone I emailed about ShotCount last week who has not replied. Keep it concise and use the controlled test inbox.',
   )
   await delegateSelectedTask(page)
   await assertVisible(page, '.task-agent-card--approval', 'Gmail follow-up did not reach exact approval.')
@@ -199,8 +227,8 @@ try {
 
   await createTodayTask(
     page,
-    'Set up a meeting with Blessing next week to discuss the ShotCount launch',
-    'Use 30 minutes and the controlled development contact.',
+    'Meet with Blessing',
+    'Set up a 30-minute meeting next week to discuss the ShotCount launch. Prefer afternoons and use the controlled development contact.',
   )
   await delegateSelectedTask(page)
   await assertVisible(page, '.task-agent-card--approval', 'Scheduling outreach did not request approval.')
@@ -222,10 +250,21 @@ try {
     throw new Error('Scheduling completion was not provider-confirmed in the UI.')
   }
 
+  await createTodayTask(page, 'Book flight')
+  await delegateSelectedTask(page)
+  await assertVisible(page, '.task-agent-card--context', 'A vague flight task did not ask for context.')
+  await page.locator('[data-action="focus-task-description"]').click()
+  const descriptionField = page.locator('.inspector textarea[aria-label="Description"]')
+  if (!await descriptionField.evaluate(element => element === document.activeElement)) {
+    throw new Error('Add details did not focus the existing Description field.')
+  }
+  await page.locator('[data-action="cancel-agent"]').click()
+  await page.locator('[data-action="delete-task"]').click()
+
   await createTodayTask(
     page,
-    'Find me a return flight from Lagos to London next Thursday returning Sunday',
-    'Economy, maximum one stop, preferably under $1,000.',
+    'Book London flight',
+    'Return trip from Lagos. Depart next Thursday and return Sunday. Economy. Maximum one stop, preferably under $1,000.',
   )
   await delegateSelectedTask(page)
   await assertVisible(page, '.task-agent-flight-options', 'Flight search did not return options into ShotCount.')
@@ -246,7 +285,7 @@ try {
   if (pageErrors.length) {
     throw new Error(`Browser console errors:\n${pageErrors.join('\n')}`)
   }
-  console.log('Agent UI E2E passed: Today, Upcoming, Gmail approval, reply resume, Calendar confirmation, live-flight handoff UI, Dynamic Island, hover glass, and error recovery.')
+  console.log('Agent UI E2E passed: manual task creation, Ask Roon planning, description-aware delegation, missing context, Gmail approval, reply resume, Calendar confirmation, flight handoff, Dynamic Island, and error recovery.')
 } finally {
   await browser?.close().catch(() => undefined)
   server.kill('SIGTERM')

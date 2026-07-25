@@ -18,6 +18,9 @@ describe('task agent model', () => {
   it('asks for context progressively only when the task is too vague', () => {
     expect(needsAgentContext({ id: '1', title: 'Research' })).toBe(true)
     expect(needsAgentContext({ id: '2', title: 'Research', description: 'Compare three particle physics programs.' })).toBe(false)
+    expect(needsAgentContext({ id: '3', title: 'Book flight' })).toBe(true)
+    expect(needsAgentContext({ id: '4', title: 'Book London flight', description: 'Return from Lagos next Thursday and come back Sunday.' })).toBe(false)
+    expect(needsAgentContext({ id: '5', title: "Reply to Sarah's email" })).toBe(false)
   })
 
   it('creates a private task-linked run without hidden reasoning', () => {
