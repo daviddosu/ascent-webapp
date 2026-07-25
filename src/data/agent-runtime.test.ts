@@ -73,6 +73,16 @@ describe('agent intent and completion semantics', () => {
       strategy: 'hybrid',
       outcomeType: 'external_change',
     })
+    expect(classifyAgentIntent('Summarize the subject and sender of my latest Gmail message')).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'prepared_result',
+    })
+    expect(classifyAgentIntent('Check my Calendar availability next week')).toEqual({
+      capability: 'calendar',
+      strategy: 'structured',
+      outcomeType: 'prepared_result',
+    })
     expect(classifyAgentIntent('Find a return flight from Lagos to London')).toEqual({
       capability: 'flight_search',
       strategy: 'browser',

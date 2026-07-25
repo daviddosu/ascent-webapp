@@ -12,6 +12,7 @@ import {
   executeGoogleTool,
   GoogleIntegrationError,
 } from '../_shared/google.ts'
+import { classifySharedAgentIntent } from '../_shared/agent-intent.ts'
 
 type RequestBody = {
   action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'cancel' | 'select_flight' | 'simulate_reply'
@@ -160,43 +161,6 @@ function jsonResponse(request: Request, body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders(request), 'Content-Type': 'application/json' },
   })
-}
-
-function classifyIntent(title: string, description = ''): AgentIntent {
-  const value = `${title} ${description}`.toLocaleLowerCase()
-  const hasEmail = /\b(email|mail|gmail|reply|follow[\s-]?up|message|outreach)\b/.test(value)
-  const hasCalendar = /\b(meeting|meet|calendar|schedule|reschedule|availability|appointment|invite|cancel.+(?:call|meeting))\b/.test(value)
-  const hasFlight = /\b(flight|fly|airfare|airline|airport|return trip|round trip|one-way)\b/.test(value)
-  const wantsBooking = /\b(book|booking|buy|purchase|reserve)\b/.test(value)
-  const research = /\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b/.test(value)
-  const draft = /\b(draft|write|outline|proposal|application|polish|document)\b/.test(value)
-  if (hasFlight) {
-    return {
-      capability: 'flight_search',
-      strategy: 'browser',
-      outcomeType: wantsBooking ? 'payment_handoff' : 'prepared_result',
-    }
-  }
-  if (hasCalendar && hasEmail) {
-    return { capability: 'scheduling', strategy: 'hybrid', outcomeType: 'external_change' }
-  }
-  if (hasCalendar) {
-    return { capability: 'calendar', strategy: 'structured', outcomeType: 'external_change' }
-  }
-  if (hasEmail) {
-    return { capability: 'gmail', strategy: 'structured', outcomeType: 'external_change' }
-  }
-  if (research && draft) {
-    return { capability: 'research_draft', strategy: 'structured', outcomeType: 'prepared_result' }
-  }
-  if (draft) {
-    return { capability: 'draft', strategy: 'structured', outcomeType: 'prepared_result' }
-  }
-  return {
-    capability: research ? 'research' : 'browser',
-    strategy: research ? 'structured' : 'browser',
-    outcomeType: 'prepared_result',
-  }
 }
 
 function needsContext(title: string, description: string, context: string) {
@@ -2238,7 +2202,7 @@ Deno.serve(async request => {
       if (!title || title.length > 1000 || !taskId || taskId.length > 500) {
         return jsonResponse(request, { error: 'Valid task title and task ID are required' }, 400)
       }
-      const intent = classifyIntent(title, description)
+      const intent = classifySharedAgentIntent(title, description)
       const initialStatus = needsContext(title, description, context) ? 'needs_context' : 'planning'
       const reusableContext = await loadReusableAgentContext(
         admin,
