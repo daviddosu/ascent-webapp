@@ -10,6 +10,7 @@ const profileMigration = readFileSync(resolve(root, 'supabase/migrations/2026071
 const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migrations/202607180001_creator_directory.sql'), 'utf8')
 const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
 const webPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607180005_web_push.sql'), 'utf8')
+const scheduledReminderMigration = readFileSync(resolve(root, 'supabase/migrations/202607210001_scheduled_reminder_pushes.sql'), 'utf8')
 const googleCalendarMigration = readFileSync(resolve(root, 'supabase/migrations/202607180006_google_calendar_sync.sql'), 'utf8')
 const initialAgentMigration = readFileSync(resolve(root, 'supabase/migrations/202607230001_agent_runs.sql'), 'utf8')
 const agentFoundationMigration = readFileSync(resolve(root, 'supabase/migrations/202607240001_agent_execution_foundation.sql'), 'utf8')
@@ -24,6 +25,7 @@ const googleOAuthCallbackFunction = readFileSync(resolve(root, 'supabase/functio
 const googleScopes = readFileSync(resolve(root, 'supabase/functions/_shared/google-scopes.ts'), 'utf8')
 const googleToolFunction = readFileSync(resolve(root, 'supabase/functions/_shared/google.ts'), 'utf8')
 const agentWatchSweepFunction = readFileSync(resolve(root, 'supabase/functions/agent-watch-sweep/index.ts'), 'utf8')
+const scheduledReminderFunction = readFileSync(resolve(root, 'supabase/functions/send-scheduled-reminders/index.ts'), 'utf8')
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
 const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf8')
 const publicBrowser = readFileSync(resolve(root, 'api/_public-browser.ts'), 'utf8')
@@ -130,6 +132,21 @@ describe('cloud planner contract', () => {
     expect(sync).not.toContain("from('task_tags').delete().eq('user_id'")
     expect(main).not.toContain('name="tags"')
     expect(sync).not.toContain("recordType: 'task_tag'")
+  })
+})
+
+describe('scheduled reminder contract', () => {
+  it('deduplicates closed-app reminders per device', () => {
+    expect(scheduledReminderMigration).toContain('primary key (delivery_key, push_subscription_id)')
+    expect(scheduledReminderMigration).toContain('enable row level security')
+    expect(scheduledReminderFunction).toContain('scheduled_push_deliveries')
+  })
+
+  it('uses each profile timezone and skips completed tasks', () => {
+    expect(scheduledReminderFunction).toContain('validTimezone(profile.timezone)')
+    expect(scheduledReminderFunction).toContain('if (!due || !time || task.data.completedAt) return null')
+    expect(scheduledReminderFunction).toContain("url: '/app?plan=today'")
+    expect(scheduledReminderFunction).toContain("url: '/app?plan=tomorrow'")
   })
 })
 

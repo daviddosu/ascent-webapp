@@ -174,10 +174,12 @@ describe('reference screens', () => {
 
   it('marks a task done from its checkbox', () => {
     vibrate.mockClear()
+    const countBefore = Number(document.querySelector('.screen-count')?.getAttribute('data-count'))
     const checkbox = document.querySelector<HTMLButtonElement>('[data-complete="database"]')!
     checkbox.click()
     expect(document.querySelector('[data-complete="database"]')?.closest('.task-row')?.classList.contains('completed')).toBe(true)
     expect(document.querySelector('[data-complete="database"]')?.getAttribute('aria-pressed')).toBe('true')
+    expect(Number(document.querySelector('.screen-count')?.getAttribute('data-count'))).toBe(countBefore - 1)
     expect(vibrate).toHaveBeenCalledWith(65)
   })
 
@@ -251,6 +253,8 @@ describe('reference screens', () => {
     expect(document.querySelectorAll('.upcoming-command-row .agent-sparkle-icon')).toHaveLength(2)
     expect(document.querySelectorAll('.activity-cell')).toHaveLength(371)
     expect([...document.querySelectorAll('[data-activity-mode]')].map(node => node.textContent)).toEqual(['Daily', 'Weekly', 'Cumulative'])
+    const todayActivity = document.querySelector(`[data-activity-date="${testDateKey()}"]`)
+    expect(todayActivity?.getAttribute('title')).toContain('Create a database of guest authors')
   })
 
   it('opens the existing task inspector for Upcoming tasks', () => {
@@ -332,6 +336,7 @@ describe('reference screens', () => {
     refreshAppDate(nextDay)
 
     document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    expect([...document.querySelectorAll('.today-screen .task-row strong')].some(node => node.textContent === 'Create a database of guest authors')).toBe(false)
     document.querySelector<HTMLButtonElement>('[data-action="add-task"]')!.click()
 
     const form = document.querySelector<HTMLFormElement>('[data-today-form]')!

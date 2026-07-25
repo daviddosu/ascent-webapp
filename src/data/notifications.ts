@@ -215,6 +215,20 @@ export async function disableWebPush(): Promise<WebPushStatus> {
   return Notification.permission === 'denied' ? 'blocked' : 'available'
 }
 
+export async function showLocalReminder(title: string, body: string, tag: string, url = '/app') {
+  if (!pushSupported() || Notification.permission !== 'granted') return false
+  const registration = await navigator.serviceWorker.getRegistration() ?? await navigator.serviceWorker.register('/sw.js')
+  await registration.showNotification(title, {
+    body,
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    tag,
+    data: { url },
+    silent: false,
+  })
+  return true
+}
+
 export async function showWebPushTest() {
   if (!pushSupported() || Notification.permission !== 'granted') throw new Error('Enable browser alerts first.')
   const registration = await navigator.serviceWorker.ready

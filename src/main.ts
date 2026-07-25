@@ -40,12 +40,20 @@ import {
   loadCreatorToday,
   loadNotificationPreferences,
   setCreatorMuted,
+  showLocalReminder,
   subscribeToCompletionAlerts,
   webPushStatus,
   type CreatorCompletion,
   type SharedCreatorTask,
   type WebPushStatus,
 } from './data/notifications'
+import {
+  DEFAULT_TASK_REMINDER_MINUTES,
+  isTaskReminderDue,
+  shouldPromptForToday,
+  shouldPromptForTomorrow,
+  taskReminderDeliveryKey,
+} from './data/reminders'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
@@ -138,6 +146,9 @@ const plannerStorageKey = `${storagePrefix}planner`
 const goalsStorageKey = `${storagePrefix}goals`
 const themeStorageKey = `${storagePrefix}theme`
 const agentRunsStorageKey = `${storagePrefix}agent-runs`
+const todayPromptStorageKey = `${storagePrefix}today-prompt-date`
+const tomorrowPromptStorageKey = `${storagePrefix}tomorrow-prompt-date`
+const reminderDeliveryStorageKey = `${storagePrefix}reminder-deliveries`
 const creatorQueryKey = 'creator'
 const dateStateHook = window as Window & { __shotcountRefreshDateState?: (reference?: Date) => void }
 
@@ -209,6 +220,8 @@ function formatTaskTime(value: string) {
 }
 
 function readStoredView(): View {
+  if (previewParams.get('plan') === 'today') return 'today'
+  if (previewParams.get('plan') === 'tomorrow') return 'upcoming'
   if (previewView === 'today' || previewView === 'upcoming' || previewView === 'calendar' || previewView === 'sticky') {
     return previewView
   }
@@ -367,8 +380,9 @@ let agentPollBusy = false
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
-let plannerDraftGroup: UpcomingGroup | null = null
-let todayComposerOpen = false
+let plannerDraftGroup: UpcomingGroup | null = previewParams.get('plan') === 'tomorrow' ? 'tomorrow' : null
+let todayComposerOpen = previewParams.get('plan') === 'today'
+let dailyPlanningPrompt: 'today' | 'tomorrow' | null = null
 let subtaskComposerTaskId: string | null = null
 let editingSubtaskId: string | null = null
 let roonPlannerOpen = false
@@ -1087,8 +1101,15 @@ function taskMatchesGoal(task: Task) {
   return !activeGoalId || task.goalId === activeGoalId
 }
 
+function belongsOnTodayList(task: Task) {
+  if (!task.due || task.due > todayKey) return false
+  if (!task.completedAt) return true
+  const completedDate = new Date(task.completedAt)
+  return !Number.isNaN(completedDate.getTime()) && dateKey(completedDate) === todayKey
+}
+
 function tasksForToday() {
-  return tasks.filter(task => task.due && task.due <= todayKey && taskMatchesGoal(task))
+  return tasks.filter(task => belongsOnTodayList(task) && taskMatchesGoal(task))
 }
 
 function tasksForUpcoming(group: UpcomingGroup) {
@@ -1108,7 +1129,7 @@ function sortTasks(items: Task[]) {
 }
 
 function refreshCounts() {
-  screenCounts.today = tasksForToday().length
+  screenCounts.today = tasksForToday().filter(task => !completedTaskIds.has(task.id)).length
   screenCounts.upcoming = tasksForUpcoming('tomorrow').length + tasksForUpcoming('week').length
 }
 
@@ -1216,7 +1237,13 @@ function render() {
   }
   refreshDateContext(now)
   refreshCounts()
-  const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
+  const todaySelection = tasksForToday()
+  if (view === 'today' && !todaySelection.some(task => task.id === selectedTaskId)) {
+    selectedTaskId = todaySelection[0]?.id ?? ''
+  }
+  const selected = view === 'today'
+    ? todaySelection.find(task => task.id === selectedTaskId) ?? todaySelection[0]
+    : tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
   const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
   const selectedInView = Boolean(selected) && (
     view === 'today'
@@ -1246,10 +1273,29 @@ function render() {
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
     ${renderAgentIsland() || renderShotcountIsland()}
+    ${renderDailyPlanningPrompt()}
     ${renderProfileModal()}
     ${renderRoonPlanner()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+}
+
+function renderDailyPlanningPrompt() {
+  if (!dailyPlanningPrompt) return ''
+  const isToday = dailyPlanningPrompt === 'today'
+  return `
+    <div class="tomorrow-planning-prompt" role="presentation">
+      <section role="dialog" aria-modal="true" aria-labelledby="daily-planning-title">
+        <span aria-hidden="true">${isToday ? '7:30' : '6:30'}</span>
+        <h2 id="daily-planning-title">${isToday ? 'Make today’s list' : 'Set up tomorrow'}</h2>
+        <p>${isToday ? 'Take two minutes to choose what matters today.' : 'Take two minutes to decide what matters before the day ends.'}</p>
+        <div>
+          <button type="button" data-action="dismiss-daily-plan">Not now</button>
+          <button type="button" class="primary" data-action="plan-${dailyPlanningPrompt}">${isToday ? 'Make today’s list' : 'Make tomorrow’s list'}</button>
+        </div>
+      </section>
+    </div>
+  `
 }
 
 function resetRoonPlanner(targetDue = todayKey) {
@@ -1687,13 +1733,13 @@ function renderProfileModal() {
           <div class="profile-form-grid">
             <label class="${fieldState('displayName')}" data-profile-field="displayName">
               <span>Name ${required('displayName')}</span>
-              <input name="displayName" autocomplete="name" maxlength="80" value="${escapeHtml(profileDraft.displayName)}" required />
+              <input name="displayName" autocomplete="name" maxlength="80" value="${escapeHtml(profileDraft.displayName)}" />
             </label>
             <label class="${fieldState('username')}" data-profile-field="username">
               <span>Username ${required('username')}</span>
               <div class="profile-username">
                 <i>@</i>
-                <input name="username" autocomplete="username" minlength="3" maxlength="30" pattern="[a-z0-9_]{3,30}" value="${escapeHtml(profileDraft.username)}" aria-describedby="profile-username-tip" required />
+                <input name="username" autocomplete="username" minlength="3" maxlength="30" pattern="[a-z0-9_]{3,30}" value="${escapeHtml(profileDraft.username)}" aria-describedby="profile-username-tip" />
                 <button type="button" class="profile-info-tip" aria-label="Username help" aria-describedby="profile-username-tip">
                   <span aria-hidden="true">i</span>
                   <small class="profile-info-tooltip" id="profile-username-tip" role="tooltip">We suggested this from your name. You can change it.</small>
@@ -1703,7 +1749,7 @@ function renderProfileModal() {
             <label class="profile-form-wide${fieldState('bio')}" data-profile-field="bio">
               <span>Short bio ${required('bio')}</span>
               <div class="profile-textarea">
-                <textarea name="bio" maxlength="140" rows="2" placeholder="What are you building?" aria-describedby="profile-bio-tip" required>${escapeHtml(profileDraft.bio)}</textarea>
+                <textarea name="bio" maxlength="140" rows="2" placeholder="What are you building?" aria-describedby="profile-bio-tip">${escapeHtml(profileDraft.bio)}</textarea>
                 <button type="button" class="profile-info-tip" aria-label="Short bio help" aria-describedby="profile-bio-tip">
                   <span aria-hidden="true">i</span>
                   <small class="profile-info-tooltip" id="profile-bio-tip" role="tooltip">Example: “Designer at Kuda · 8k followers on X · Building tools for creators.”</small>
@@ -1712,7 +1758,7 @@ function renderProfileModal() {
             </label>
             <label class="${fieldState('timezone')}" data-profile-field="timezone">
               <span>Timezone ${required('timezone')}</span>
-              <input name="timezone" autocomplete="off" value="${escapeHtml(profileDraft.timezone)}" required />
+              <input name="timezone" autocomplete="off" value="${escapeHtml(profileDraft.timezone)}" />
             </label>
             <label class="${fieldState('defaultTaskVisibility')}" data-profile-field="defaultTaskVisibility">
               <span>New tasks ${required('defaultTaskVisibility')}</span>
@@ -2087,9 +2133,92 @@ function scheduleDateRefresh() {
   window.setTimeout(() => {
     const previousTodayKey = todayKey
     refreshDateContext()
-    if (todayKey !== previousTodayKey) render()
+    if (todayKey !== previousTodayKey) {
+      refreshCounts()
+      checkPlanningAndTaskReminders()
+      render()
+    }
     scheduleDateRefresh()
   }, Math.max(1_000, nextMidnight.getTime() - Date.now()))
+}
+
+function readReminderDeliveries() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(reminderDeliveryStorageKey) ?? '[]')
+    return new Set(Array.isArray(stored) ? stored.map(String) : [])
+  } catch {
+    return new Set<string>()
+  }
+}
+
+function saveReminderDeliveries(deliveries: Set<string>) {
+  try {
+    window.localStorage.setItem(reminderDeliveryStorageKey, JSON.stringify([...deliveries].slice(-250)))
+  } catch {
+    // Reminders still work for this visit when storage is unavailable.
+  }
+}
+
+function checkPlanningAndTaskReminders(reference = new Date()) {
+  if (authState !== 'authenticated') return
+  let shouldRender = false
+  let lastTodayPromptDate = ''
+  let lastTomorrowPromptDate = ''
+  try {
+    lastTodayPromptDate = window.localStorage.getItem(todayPromptStorageKey) ?? ''
+    lastTomorrowPromptDate = window.localStorage.getItem(tomorrowPromptStorageKey) ?? ''
+  } catch {
+    // The in-app prompt can still appear for this visit.
+  }
+
+  if (shouldPromptForToday(reference, lastTodayPromptDate, tasks.some(belongsOnTodayList))) {
+    const promptDate = dateKey(reference)
+    dailyPlanningPrompt = 'today'
+    shouldRender = true
+    try {
+      window.localStorage.setItem(todayPromptStorageKey, promptDate)
+    } catch {
+      // Keep the visible prompt even when storage is unavailable.
+    }
+    void showLocalReminder(
+      'Make today’s list in Shotcount',
+      'Take two minutes to choose today’s tasks.',
+      `shotcount-plan-today-${promptDate}`,
+      '/app?plan=today',
+    ).catch(() => undefined)
+  } else if (shouldPromptForTomorrow(reference, lastTomorrowPromptDate)) {
+    const promptDate = dateKey(reference)
+    dailyPlanningPrompt = 'tomorrow'
+    shouldRender = true
+    try {
+      window.localStorage.setItem(tomorrowPromptStorageKey, promptDate)
+    } catch {
+      // Keep the visible prompt even when storage is unavailable.
+    }
+    void showLocalReminder(
+      'Plan tomorrow in Shotcount',
+      'Take two minutes to choose tomorrow’s tasks.',
+      `shotcount-plan-tomorrow-${promptDate}`,
+      '/app?plan=tomorrow',
+    ).catch(() => undefined)
+  }
+
+  const delivered = readReminderDeliveries()
+  for (const task of tasks) {
+    const deliveryKey = taskReminderDeliveryKey(task)
+    if (delivered.has(deliveryKey) || !isTaskReminderDue(task, reference)) continue
+    delivered.add(deliveryKey)
+    toast = `${task.title} is due at ${formatTaskTime(task.time!)}`
+    shouldRender = true
+    void showLocalReminder(
+      task.title,
+      `Due at ${formatTaskTime(task.time!)} · ${task.reminder ?? DEFAULT_TASK_REMINDER_MINUTES} minute reminder`,
+      `shotcount-task-${deliveryKey}`,
+      '/app?plan=today',
+    ).catch(() => undefined)
+  }
+  saveReminderDeliveries(delivered)
+  if (shouldRender) render()
 }
 
 function triggerHaptic(pattern: number | number[]) {
@@ -2163,12 +2292,13 @@ function renderGoalComposer() {
 }
 
 function renderToday() {
-  const carriedOverTasks = sortTasks(tasksForToday().filter(task => task.due! < todayKey))
-  const todayTasks = sortTasks(tasksForToday().filter(task => task.due === todayKey))
-  const hasTasks = carriedOverTasks.length || todayTasks.length
+  const allTodayTasks = sortTasks(tasksForToday())
+  const carriedOverTasks = allTodayTasks.filter(task => !completedTaskIds.has(task.id) && task.due! < todayKey)
+  const todayTasks = allTodayTasks.filter(task => !carriedOverTasks.includes(task))
+  const hasTasks = allTodayTasks.length > 0
   return `
     <section class="today-screen">
-      <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} tasks">${screenCounts.today}</span></header>
+      <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} open tasks">${screenCounts.today}</span></header>
       ${todayComposerOpen ? renderTodayComposer() : `<div class="today-command-row">
         <button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>
         <button class="ask-shotcount-button" data-action="open-roon-planner"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
@@ -2229,7 +2359,7 @@ function renderTodayComposer() {
           <input name="due" type="date" value="${escapeHtml(todayComposerDraft.due)}" min="${todayKey}" max="${weekEndKey}" required />
         </label>
         <label class="today-field">
-          <span>Due time <small>Optional</small></span>
+          <span>Due time <small>Optional · reminder 15 min before</small></span>
           <input name="time" type="time" value="${escapeHtml(todayComposerDraft.time)}" />
         </label>
         <label class="today-field">
@@ -2577,7 +2707,7 @@ function renderInspector(task: Task) {
         <div class="inspector-fields">
           <label><span>Goal</span><button data-action="cycle-goal">${escapeHtml(goal?.name ?? goals[0]?.name ?? 'No goal')} ${icon('down')}</button></label>
           <label><span>Due date</span><input class="inspector-date" type="date" value="${task.due ?? ''}" aria-label="Due date" /></label>
-          <label><span>Due time</span><input class="inspector-time" type="time" value="${task.time ?? ''}" aria-label="Due time, optional" /></label>
+          <label><span>Due time · reminds 15 min before</span><input class="inspector-time" type="time" value="${task.time ?? ''}" aria-label="Due time, optional; reminder 15 minutes before" /></label>
           <label><span>Visibility</span><select class="inspector-visibility" data-task-visibility="${task.id}" aria-label="Task visibility" required>${renderVisibilityOptions(task.visibility)}</select></label>
         </div>
 
@@ -2652,7 +2782,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
     <form class="planner-composer" data-planner-form="${group}">
       <input name="title" aria-label="Task name" placeholder="What needs doing?" autocomplete="off" required />
       ${isWeek ? `<input name="due" aria-label="Task date" type="date" min="${dateKey(addDays(now, 2))}" max="${weekEndKey}" value="${dateKey(addDays(now, 2))}" required />` : `<span class="planner-date">${formatTaskDate(tomorrowKey)}</span>`}
-      <input name="time" aria-label="Task time, optional" type="time" />
+      <input name="time" aria-label="Task time, optional; reminder 15 minutes before" title="Adds a reminder 15 minutes before" type="time" />
       <select name="goalId" aria-label="Goal">${renderGoalOptions(activeGoalId ?? goals[0]?.id)}</select>
       <select name="visibility" aria-label="Task visibility" required>${renderVisibilityOptions(defaultTaskVisibility())}</select>
       <button type="submit">Add</button>
@@ -2678,6 +2808,13 @@ function completionCountForDate(day: Date) {
   const key = dateKey(day)
   const saved = tasks.filter(task => task.completedAt && dateKey(new Date(task.completedAt)) === key).length
   return (showDemoData ? demoCompletionCount(day) : 0) + saved
+}
+
+function completedTasksForDate(day: Date) {
+  const key = dateKey(day)
+  return tasks
+    .filter(task => task.completedAt && dateKey(new Date(task.completedAt)) === key)
+    .sort((first, second) => new Date(first.completedAt!).getTime() - new Date(second.completedAt!).getTime())
 }
 
 function activityLevel(value: number, max: number) {
@@ -2712,6 +2849,8 @@ function renderActivityGraph() {
     let value = dailyCounts[index] ?? 0
     let level = activityLevel(value, maxDaily)
     let label = `${value} task${value === 1 ? '' : 's'} completed on ${day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    const completedTasks = completedTasksForDate(day)
+    if (completedTasks.length) label += `\n${completedTasks.map(task => `• ${task.title}`).join('\n')}`
     if (activityMode === 'weekly') {
       value = weeklyCounts[column] ?? 0
       const filledRows = Math.ceil(value / maxWeekly * 7)
@@ -2723,7 +2862,7 @@ function renderActivityGraph() {
       level = row >= 7 - filledRows ? 3 : 0
       label = `${value} tasks completed by ${day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     }
-    return `<span class="activity-cell level-${isFuture ? 0 : level} ${isFuture ? 'is-future' : ''}" role="img" style="--column:${column + 1};--row:${row + 1}" title="${label}" aria-label="${label}"></span>`
+    return `<span class="activity-cell level-${isFuture ? 0 : level} ${isFuture ? 'is-future' : ''}" role="img" data-activity-date="${dateKey(day)}" style="--column:${column + 1};--row:${row + 1}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`
   }).join('')
 
   return `
@@ -3247,7 +3386,10 @@ function persistInspectorDraft() {
   if (title) task.title = title
   if (description !== undefined) task.description = description
   if (due !== undefined) task.due = due || undefined
-  if (time !== undefined) task.time = time || undefined
+  if (time !== undefined) {
+    task.time = time || undefined
+    task.reminder = time ? task.reminder ?? DEFAULT_TASK_REMINDER_MINUTES : undefined
+  }
   if (visibility !== undefined) task.visibility = normalizeTaskVisibility(visibility)
   persistPlanner()
 }
@@ -3310,6 +3452,7 @@ function scheduleTask(taskId: string, date: string, time = '09:00') {
   if (!task) return
   task.due = date
   task.time = time
+  task.reminder = task.reminder ?? DEFAULT_TASK_REMINDER_MINUTES
   task.duration = task.duration ?? 30
   task.recurrence = task.recurrence ?? 'none'
   selectedTaskId = task.id
@@ -3362,10 +3505,11 @@ app.addEventListener('submit', async event => {
       creatorProfile = await saveCreatorProfile(activeUser, profileDraft)
       profileDraft = profileInput(creatorProfile)
       profileModalOpen = false
+      profilePromptDismissed = false
       profileBusy = false
       clearProfilePhotoPreview()
       resetTodayComposerDraft()
-      toast = 'Profile saved'
+      toast = creatorProfile.onboardingCompleted ? 'Profile saved' : 'Profile saved — finish the remaining details next time'
       render()
       void refreshCommunityDirectory()
       window.setTimeout(() => {
@@ -3410,13 +3554,15 @@ app.addEventListener('submit', async event => {
     const due = String(data.get('due') ?? todayKey)
     const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
     if (!title || !due) return
+    const time = String(data.get('time') ?? '').trim()
     const newTask: Task = normalizeTask({
       id: crypto.randomUUID(),
       title,
       description: String(data.get('description') ?? '').trim(),
       goalId: goalId || undefined,
       due,
-      time: String(data.get('time') ?? '') || undefined,
+      time: time || undefined,
+      reminder: time ? DEFAULT_TASK_REMINDER_MINUTES : undefined,
       visibility: normalizeTaskVisibility(data.get('visibility')),
       subtaskItems: [],
     })
@@ -3508,6 +3654,7 @@ app.addEventListener('submit', async event => {
     title,
     due,
     time: time || undefined,
+    reminder: time ? DEFAULT_TASK_REMINDER_MINUTES : undefined,
     goalId: goalId || undefined,
     visibility: normalizeTaskVisibility(data.get('visibility')),
     subtaskItems: [],
@@ -3590,6 +3737,28 @@ app.addEventListener('change', event => {
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (action === 'plan-tomorrow') {
+    dailyPlanningPrompt = null
+    rememberView('upcoming')
+    plannerDraftGroup = 'tomorrow'
+    render()
+    queueMicrotask(() => document.querySelector<HTMLInputElement>('[data-planner-form="tomorrow"] input[name="title"]')?.focus())
+    return
+  }
+  if (action === 'plan-today') {
+    dailyPlanningPrompt = null
+    rememberView('today')
+    resetTodayComposerDraft()
+    todayComposerOpen = true
+    render()
+    queueMicrotask(() => document.querySelector<HTMLInputElement>('[data-today-form] input[name="title"]')?.focus())
+    return
+  }
+  if (action === 'dismiss-daily-plan') {
+    dailyPlanningPrompt = null
+    render()
+    return
+  }
   if (action === 'close-roon-planner') {
     roonPlannerOpen = false
     resetRoonPlanner()
@@ -3659,6 +3828,7 @@ app.addEventListener('click', async event => {
       triggerHaptic(65)
     }
     persistPlanner()
+    refreshCounts()
     if (!wasCompleted) {
       const todayTasks = tasksForToday()
       if (todayTasks.length && todayTasks.every(item => completedTaskIds.has(item.id))) {
@@ -4380,6 +4550,10 @@ if (googleAgentOAuthStatus) {
 render()
 if (authRequired) void verifyAuthSession()
 scheduleDateRefresh()
+if (import.meta.env.MODE !== 'test') {
+  window.setInterval(() => checkPlanningAndTaskReminders(), 30_000)
+  queueMicrotask(() => checkPlanningAndTaskReminders())
+}
 window.addEventListener('popstate', () => {
   rememberCreatorIntent(creatorSlugFromLocation())
   if (!creatorSlugFromLocation()) creatorTodayState = null
@@ -4390,6 +4564,10 @@ window.addEventListener('online', () => void plannerRepository?.syncNow())
 window.addEventListener('offline', () => void plannerRepository?.syncNow())
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
+    const previousTodayKey = todayKey
+    refreshDateContext()
+    if (todayKey !== previousTodayKey) refreshCounts()
+    checkPlanningAndTaskReminders()
     void plannerRepository?.refresh()
     void refreshSignedInProfile()
     const lastGoogleSync = googleCalendarState.lastSyncedAt ? new Date(googleCalendarState.lastSyncedAt).getTime() : 0
@@ -4402,5 +4580,6 @@ document.addEventListener('visibilitychange', () => {
 dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {
   refreshDateContext(reference)
   calendarDate = new Date(reference)
+  refreshCounts()
   render()
 }
