@@ -2786,6 +2786,14 @@ body[data-theme='dark'] .task-agent-approval-detail blockquote {
   .activity-header { align-items: flex-start; flex-direction: column; }
 }
 
+@media (min-width: 901px) and (max-width: 1400px) {
+  .reference-app.with-inspector .upcoming-columns { grid-template-columns: 1fr; }
+  .reference-app.with-inspector .upcoming-columns > section + section {
+    border-left: 0;
+    border-top: 1px solid #ededed;
+  }
+}
+
 @media (max-width: 620px) {
   .reference-app, .reference-app.with-inspector { display: block; min-width: 0; overflow: visible; }
   .sidebar {

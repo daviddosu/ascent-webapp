@@ -24,6 +24,7 @@ const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/
 const googleOAuthCallbackFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-callback/index.ts'), 'utf8')
 const googleScopes = readFileSync(resolve(root, 'supabase/functions/_shared/google-scopes.ts'), 'utf8')
 const googleToolFunction = readFileSync(resolve(root, 'supabase/functions/_shared/google.ts'), 'utf8')
+const agentTools = readFileSync(resolve(root, 'supabase/functions/_shared/agent-tools.ts'), 'utf8')
 const agentWatchSweepFunction = readFileSync(resolve(root, 'supabase/functions/agent-watch-sweep/index.ts'), 'utf8')
 const scheduledReminderFunction = readFileSync(resolve(root, 'supabase/functions/send-scheduled-reminders/index.ts'), 'utf8')
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
@@ -300,9 +301,16 @@ describe('agent execution security contract', () => {
   it('keeps Ask Roon limited to concise title-and-description task planning', () => {
     expect(taskAgentFunction).toContain("action === 'plan_tasks'")
     expect(taskAgentFunction).toContain("name: 'shotcount_task_plan'")
-    expect(taskAgentFunction).toContain('Every title must be a concise action of at most 8 words')
+    expect(taskAgentFunction).toContain('Every title must be a plain, concise action of at most 5 words')
+    expect(taskAgentFunction).toContain('Prefer 5 decisive tasks over a long checklist')
     expect(taskAgentFunction).toContain("required: ['title', 'description']")
     expect(taskAgentFunction).toContain('Do not include explanations, categories, dependencies, scores, or scheduling.')
+  })
+
+  it('resolves named scheduling contacts before asking the user for an email address', () => {
+    expect(taskAgentFunction).toContain('call contacts__find_contact before asking the user for an email address')
+    expect(taskAgentFunction).toContain('Never call agent__request_context to ask permission or approval')
+    expect(agentTools).toContain("name: 'contacts.find_contact'")
   })
 
   it('uses expiring, single-use OAuth state with PKCE and controlled returns', () => {

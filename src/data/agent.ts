@@ -178,11 +178,9 @@ export function needsAgentContext(task: Task) {
 const scholarshipPlanFixture: RoonPlanTask[] = [
   { title: 'Find scholarships', description: 'Find fully funded study opportunities in Europe that fit the user’s background and accept international applicants. Capture eligibility, funding, deadlines, and application requirements.' },
   { title: 'Shortlist programmes', description: 'Compare the strongest eligible programmes and create a practical shortlist based on academic fit, funding, location, and deadlines.' },
-  { title: 'Prepare academic CV', description: 'Prepare an academic CV for the shortlisted applications, emphasizing relevant education, research, technical work, and achievements.' },
-  { title: 'Draft personal statement', description: 'Draft a focused personal statement that connects the user’s background, goals, and fit with the shortlisted programmes.' },
-  { title: 'Request references', description: 'Identify suitable referees and prepare the information needed to request strong references before the application deadlines.' },
-  { title: 'Gather documents', description: 'Collect the transcripts, certificates, identification, test results, and other documents required by the shortlisted programmes.' },
-  { title: 'Submit applications', description: 'Complete and submit each shortlisted scholarship application before its deadline, checking every required field and attachment.' },
+  { title: 'Build application pack', description: 'Prepare an academic CV, achievement inventory, transcripts, certificates, identification, and test results for the shortlisted applications.' },
+  { title: 'Write tailored statements', description: 'Draft focused statements that connect the user’s background and goals to each programme, then obtain a critical review.' },
+  { title: 'Secure references and submit', description: 'Brief suitable referees early, complete every required field and attachment, and submit each application before its deadline.' },
 ]
 
 export async function generateRoonPlan(goal: string, clarification = ''): Promise<RoonPlanResponse> {

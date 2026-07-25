@@ -897,6 +897,16 @@ const agentPreviewProgressLabels = [
   'Identifying key takeaways',
 ]
 
+function agentUpdateToast(run: AgentRun) {
+  if (run.status === 'completed') return 'Roon finished your task'
+  if (run.status === 'needs_approval') return 'Ready for your approval'
+  if (run.status === 'needs_context') return 'Add the requested details to continue'
+  if (run.status === 'waiting_external') return 'Roon will continue when the expected update arrives'
+  if (run.status === 'waiting_for_user') return 'Roon needs your next step'
+  if (run.status === 'failed') return run.error ?? 'Roon needs attention'
+  return 'Roon is working through this task'
+}
+
 async function startAgentRun(task: Task, context = '') {
   const existing = agentRuns.get(task.id)
   if (context && existing?.status === 'needs_context' && existing.durable && activeUser) {
@@ -910,7 +920,7 @@ async function startAgentRun(task: Task, context = '') {
       const resumed = await resumeAgentRun(existing.id, context)
       agentRuns.set(task.id, resumed)
       await syncAgentApproval(resumed)
-      toast = resumed.status === 'failed' ? resumed.error ?? 'Roon needs attention.' : 'Roon resumed the task'
+      toast = agentUpdateToast(resumed)
     } catch (error) {
       existing.status = 'failed'
       existing.error = error instanceof Error ? error.message : 'Roon could not resume this task.'
@@ -941,7 +951,7 @@ async function startAgentRun(task: Task, context = '') {
     if (agentRuns.get(task.id)?.status === 'cancelled') return
     agentRuns.set(task.id, completed)
     await syncAgentApproval(completed)
-    toast = 'Roon finished your task'
+    toast = agentUpdateToast(completed)
   } catch (error) {
     if (agentRuns.get(task.id)?.status === 'cancelled') return
     run.status = 'failed'
@@ -1004,7 +1014,7 @@ async function retryAgentRun(taskId: string) {
     const updated = await resumeAgentRun(run.id)
     agentRuns.set(taskId, updated)
     await syncAgentApproval(updated)
-    toast = 'Roon resumed the task'
+    toast = agentUpdateToast(updated)
   } catch (error) {
     toast = error instanceof Error ? error.message : 'Roon could not resume this task.'
   } finally {
@@ -1023,7 +1033,7 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
     const updated = await selectAgentFlight(run.id, optionId)
     agentRuns.set(taskId, updated)
     await syncAgentApproval(updated)
-    toast = 'Roon is preparing that flight'
+    toast = updated.result?.paymentHandoffUrl ? 'Flight ready for you' : agentUpdateToast(updated)
   } catch (error) {
     toast = error instanceof Error ? error.message : 'Roon could not continue with this flight.'
   } finally {
@@ -2648,9 +2658,11 @@ function renderAgentPanel(task: Task) {
   }
 
   if (run.status === 'needs_context') {
+    const contextPrompt = run.waitingReason.trim() || 'Add the missing details to the task Description.'
     return `<section class="task-agent-card task-agent-card--context">
       <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>Needs context</em></header>
-      <p>I need a little more context before I can handle this.</p>
+      <p>${escapeHtml(contextPrompt)}</p>
+      <small>Add the answer in Description, then save. Roon will continue this same task.</small>
       <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button><button class="agent-primary" type="button" data-action="focus-task-description" data-task-id="${task.id}">Add details</button></footer>
     </section>`
   }

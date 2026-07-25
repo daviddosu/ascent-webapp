@@ -160,8 +160,8 @@ try {
   await assertVisible(page, '.roon-plan-list', 'Ask Roon did not return a task plan.')
   const plannedTitles = await page.locator('.roon-plan-item input[name="title"]')
     .evaluateAll(inputs => inputs.map(input => input.value))
-  if (plannedTitles.length !== 7 || plannedTitles.some(title => title.trim().split(/\s+/).length > 8)) {
-    throw new Error(`Ask Roon did not return seven concise task titles: ${plannedTitles.join(', ')}`)
+  if (plannedTitles.length !== 5 || plannedTitles.some(title => title.trim().split(/\s+/).length > 5)) {
+    throw new Error(`Ask Roon did not return five concise task titles: ${plannedTitles.join(', ')}`)
   }
   const firstDescription = await page.locator('.roon-plan-item textarea[name="description"]').first().inputValue()
   if (!firstDescription.includes('fully funded')) {
