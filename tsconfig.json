@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/main.ts"]
+  "include": ["src/main.ts", "api/_flight-browser.ts", "api/browser-worker.ts"]
 }

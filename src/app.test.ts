@@ -211,8 +211,22 @@ describe('reference screens', () => {
       'This Week',
       'Task activity',
     ])
+    expect(document.querySelectorAll('.upcoming-command-row .ask-shotcount-button')).toHaveLength(2)
+    expect(document.querySelectorAll('.upcoming-command-row .agent-sparkle-icon')).toHaveLength(2)
     expect(document.querySelectorAll('.activity-cell')).toHaveLength(371)
     expect([...document.querySelectorAll('[data-activity-mode]')].map(node => node.textContent)).toEqual(['Daily', 'Weekly', 'Cumulative'])
+  })
+
+  it('opens the existing task inspector for Upcoming tasks', () => {
+    document.querySelector<HTMLButtonElement>('[data-view="upcoming"]')!.click()
+    const section = document.querySelector('[data-upcoming-section="tomorrow"]')!
+    const taskButton = section.querySelector<HTMLButtonElement>('[data-task]')!
+    const expectedTitle = taskButton.querySelector('strong')?.textContent
+    taskButton.click()
+    expect(document.querySelector('.reference-app')?.classList.contains('with-inspector')).toBe(true)
+    expect(document.querySelector<HTMLInputElement>('.inspector-title')?.value).toBe(expectedTitle)
+    expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-row.selected')).not.toBeNull()
+    expect(document.querySelector('.inspector .task-agent-card')).not.toBeNull()
   })
 
   it('routes a future-dated task from Today into This Week', () => {

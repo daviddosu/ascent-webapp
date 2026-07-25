@@ -1,0 +1,13 @@
+project_id = "shotcount"
+
+[functions.google-oauth-callback]
+verify_jwt = false
+
+[functions.google-oauth-start]
+verify_jwt = true
+
+[functions.task-agent]
+verify_jwt = true
+
+[functions.agent-watch-sweep]
+verify_jwt = false

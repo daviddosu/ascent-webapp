@@ -8,6 +8,11 @@ import {
   type GoogleCalendarSyncState,
 } from './data/google-calendar'
 import {
+  beginGoogleAgentConnection,
+  loadGoogleAgentConnection,
+  type GoogleAgentConnection,
+} from './data/google-agent'
+import {
   loadCreatorProfile,
   isCreatorProfileComplete,
   missingCreatorProfileFields,
@@ -44,7 +49,20 @@ import {
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
-import { createAgentRun, executeAgentRun, type AgentRun } from './data/agent'
+import {
+  cancelAgentRunRemote,
+  createAgentRun,
+  decideAgentApproval,
+  executeAgentRun,
+  loadAgentApprovals,
+  loadAgentRuns,
+  pollAgentRun,
+  resumeAgentRun,
+  selectAgentFlight,
+  subscribeToAgentRuns,
+  type AgentApproval,
+  type AgentRun,
+} from './data/agent'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.png'
 import peopleCollage from './assets/shotcount-people-collage.png'
@@ -69,6 +87,7 @@ const previewParams = new URLSearchParams(window.location.search)
 const previewView = previewParams.get('previewView')
 const previewAgentState = previewParams.get('previewAgent')
 const previewGoogleCalendar = previewParams.has('previewGoogleCalendar')
+const googleAgentOAuthStatus = previewParams.get('google')
 const isPreviewMode = previewParams.has('previewView')
 const showDemoData = isPreviewMode || import.meta.env.MODE === 'test'
 type AuthState = 'checking' | 'authenticated' | 'unauthenticated' | 'error'
@@ -85,6 +104,8 @@ let profileError = ''
 let profilePhotoFile: File | null = null
 let profilePhotoPreview = ''
 let profilePromptDismissed = false
+let googleAgentConnection: GoogleAgentConnection | null = null
+let googleAgentConnectionBusy = false
 type CommunityProfile = {
   id: string
   username: string
@@ -333,6 +354,10 @@ let view: View = readStoredView()
 let selectedTaskId = showDemoData && tasks.some(task => task.id === 'license') ? 'license' : tasks[0]?.id ?? ''
 let mobileInspectorOpen = false
 const agentRuns = readAgentRuns()
+const agentApprovals = new Map<string, AgentApproval>()
+const agentDecisionBusy = new Set<string>()
+let agentPollingTimer = 0
+let agentPollBusy = false
 let agentHelperDismissed = (() => {
   if (isPreviewMode) return false
   try {
@@ -357,7 +382,11 @@ let todayComposerDraft: TodayComposerDraft = {
   time: '',
   visibility: 'private',
 }
-let toast = ''
+let toast = googleAgentOAuthStatus === 'connected'
+  ? 'Google is connected to ShotCount'
+  : googleAgentOAuthStatus === 'error'
+    ? 'Google could not be connected. Please try again.'
+    : ''
 let calendarMode: CalendarMode = 'month'
 let calendarDate = new Date(now)
 let calendarComposer: { date: string; time: string; taskId?: string } | null = null
@@ -509,6 +538,7 @@ let queuedCompletions: CreatorCompletion[] = []
 let completionBatchTimer = 0
 let islandDismissTimer = 0
 let completionSubscription: (() => void) | null = null
+let agentRunSubscription: (() => void) | null = null
 let lastCompletionCheck = new Date(Date.now() - 15_000).toISOString()
 let notificationAudioContext: AudioContext | null = null
 const islandPreview = previewParams.get('previewIsland')
@@ -721,6 +751,58 @@ async function startNotificationSystem() {
   }
 }
 
+async function refreshAgentRuns() {
+  if (!activeUser) return
+  try {
+    const durableRuns = await loadAgentRuns()
+    const pendingApprovals = (await Promise.all(
+      durableRuns
+        .filter(run => run.status === 'needs_approval')
+        .map(run => loadAgentApprovals(run.id)),
+    )).flat().filter(approval => approval.status === 'pending')
+    agentRuns.clear()
+    durableRuns.forEach(run => agentRuns.set(run.taskId, run))
+    agentApprovals.clear()
+    pendingApprovals.forEach(approval => agentApprovals.set(approval.runId, approval))
+    persistAgentRuns()
+    render()
+  } catch {
+    // The task workspace remains usable while durable runs reconnect.
+  }
+}
+
+async function pollWaitingAgentRuns() {
+  if (!activeUser || agentPollBusy || document.visibilityState === 'hidden') return
+  const waitingRuns = [...agentRuns.values()].filter(run => run.status === 'waiting_external')
+  if (!waitingRuns.length) return
+  agentPollBusy = true
+  try {
+    const updatedRuns = await Promise.all(waitingRuns.map(run => pollAgentRun(run.id)))
+    for (const run of updatedRuns) agentRuns.set(run.taskId, run)
+    persistAgentRuns()
+    render()
+  } catch {
+    // The next isolated polling pass retries without interrupting the workspace.
+  } finally {
+    agentPollBusy = false
+  }
+}
+
+async function startAgentRunSystem() {
+  agentRunSubscription?.()
+  agentRunSubscription = null
+  window.clearInterval(agentPollingTimer)
+  agentPollingTimer = 0
+  await refreshAgentRuns()
+  try {
+    agentRunSubscription = await subscribeToAgentRuns(() => void refreshAgentRuns())
+  } catch {
+    // A focus refresh can recover if realtime is temporarily unavailable.
+  }
+  void pollWaitingAgentRuns()
+  agentPollingTimer = window.setInterval(() => void pollWaitingAgentRuns(), 30_000)
+}
+
 async function openCreatorToday(profile: CommunityProfile) {
   selectedCreatorTaskId = ''
   mobileInspectorOpen = false
@@ -759,7 +841,11 @@ function readAgentRuns() {
     const stored = window.localStorage.getItem(agentRunsStorageKey)
     if (!stored) return new Map<string, AgentRun>()
     const parsed = JSON.parse(stored) as AgentRun[]
-    return new Map(parsed.map(run => [run.taskId, run]))
+    return new Map(parsed.map(run => [run.taskId, {
+      ...run,
+      progress: Array.isArray(run.progress) ? run.progress : [],
+      durable: Boolean(run.durable),
+    }]))
   } catch {
     return new Map<string, AgentRun>()
   }
@@ -787,6 +873,30 @@ const agentPreviewProgressLabels = [
 ]
 
 async function startAgentRun(task: Task, context = '') {
+  const existing = agentRuns.get(task.id)
+  if (context && existing?.status === 'needs_context' && existing.durable && activeUser) {
+    agentDecisionBusy.add(existing.id)
+    existing.context = context
+    existing.status = 'planning'
+    existing.waitingReason = ''
+    persistAgentRuns()
+    render()
+    try {
+      const resumed = await resumeAgentRun(existing.id, context)
+      agentRuns.set(task.id, resumed)
+      toast = resumed.status === 'failed' ? resumed.error ?? 'ShotCount needs attention.' : 'ShotCount resumed the task'
+    } catch (error) {
+      existing.status = 'failed'
+      existing.error = error instanceof Error ? error.message : 'ShotCount could not resume this task.'
+      toast = existing.error
+    } finally {
+      agentDecisionBusy.delete(existing.id)
+      persistAgentRuns()
+      render()
+    }
+    return
+  }
+
   const run = createAgentRun(task, context)
   agentRuns.set(task.id, run)
   selectedTaskId = task.id
@@ -799,13 +909,6 @@ async function startAgentRun(task: Task, context = '') {
   run.progressIndex = 0
   persistAgentRuns()
   render()
-  const progressTimer = window.setInterval(() => {
-    if (run.status !== 'running') return
-    run.progressIndex = Math.min(agentProgressLabels.length - 1, run.progressIndex + 1)
-    run.updatedAt = new Date().toISOString()
-    persistAgentRuns()
-    render()
-  }, 1800)
 
   try {
     const completed = await executeAgentRun(task, run)
@@ -819,7 +922,69 @@ async function startAgentRun(task: Task, context = '') {
     run.updatedAt = new Date().toISOString()
     toast = run.error
   } finally {
-    window.clearInterval(progressTimer)
+    persistAgentRuns()
+    render()
+  }
+}
+
+async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 'reject') {
+  const run = agentRuns.get(taskId)
+  const approval = run ? agentApprovals.get(run.id) : null
+  if (!run || !approval || agentDecisionBusy.has(approval.id)) return
+  agentDecisionBusy.add(approval.id)
+  render()
+  try {
+    const updated = await decideAgentApproval(approval, decision)
+    agentRuns.set(taskId, updated)
+    agentApprovals.delete(run.id)
+    toast = decision === 'approve'
+      ? 'Approved — ShotCount is continuing'
+      : 'Action declined'
+  } catch (error) {
+    toast = error instanceof Error ? error.message : 'ShotCount could not apply that decision.'
+  } finally {
+    agentDecisionBusy.delete(approval.id)
+    persistAgentRuns()
+    render()
+  }
+}
+
+async function retryAgentRun(taskId: string) {
+  const run = agentRuns.get(taskId)
+  if (!run || agentDecisionBusy.has(run.id)) return
+  if (!run.durable) {
+    const task = tasks.find(item => item.id === taskId)
+    if (task) await startAgentRun(task, run.context)
+    return
+  }
+  agentDecisionBusy.add(run.id)
+  render()
+  try {
+    const updated = await resumeAgentRun(run.id)
+    agentRuns.set(taskId, updated)
+    toast = 'ShotCount resumed the task'
+  } catch (error) {
+    toast = error instanceof Error ? error.message : 'ShotCount could not resume this task.'
+  } finally {
+    agentDecisionBusy.delete(run.id)
+    persistAgentRuns()
+    render()
+  }
+}
+
+async function chooseAgentFlight(taskId: string, optionId: string) {
+  const run = agentRuns.get(taskId)
+  if (!run || agentDecisionBusy.has(run.id)) return
+  agentDecisionBusy.add(run.id)
+  render()
+  try {
+    const updated = await selectAgentFlight(run.id, optionId)
+    agentRuns.set(taskId, updated)
+    toast = 'ShotCount is preparing that flight'
+  } catch (error) {
+    toast = error instanceof Error ? error.message : 'ShotCount could not continue with this flight.'
+  } finally {
+    agentDecisionBusy.delete(run.id)
     persistAgentRuns()
     render()
   }
@@ -832,6 +997,15 @@ function cancelAgentRun(taskId: string) {
   run.updatedAt = new Date().toISOString()
   persistAgentRuns()
   render()
+  if (activeUser) {
+    void cancelAgentRunRemote(run.id).then(remoteRun => {
+      agentRuns.set(taskId, remoteRun)
+      persistAgentRuns()
+      render()
+    }).catch(() => {
+      // Realtime or the next refresh will reconcile a temporary network failure.
+    })
+  }
 }
 
 function addAgentFollowUps(task: Task) {
@@ -1015,7 +1189,18 @@ function render() {
   refreshCounts()
   const selected = tasks.find(task => task.id === selectedTaskId) ?? tasks[0]
   const isPhone = window.matchMedia?.('(max-width: 620px)').matches ?? false
-  const showInspector = !creatorTodayState && Boolean(selected) && view === 'today' && !todayComposerOpen && (!isPhone || mobileInspectorOpen)
+  const selectedInView = Boolean(selected) && (
+    view === 'today'
+      ? tasksForToday().some(task => task.id === selected?.id)
+      : view === 'upcoming'
+        ? tasksForUpcoming('tomorrow').some(task => task.id === selected?.id) ||
+          tasksForUpcoming('week').some(task => task.id === selected?.id)
+        : false
+  )
+  const showInspector = !creatorTodayState &&
+    selectedInView &&
+    !todayComposerOpen &&
+    (!isPhone || mobileInspectorOpen)
   const creatorSelected = creatorTodayState?.tasks.find(task => task.id === selectedCreatorTaskId) ?? creatorTodayState?.tasks[0]
   const showCreatorInspector = Boolean(creatorTodayState?.status === 'ready' && creatorSelected && (!isPhone || mobileInspectorOpen))
   app.innerHTML = `
@@ -1031,7 +1216,7 @@ function render() {
       ${showCreatorInspector && creatorSelected ? renderCreatorInspector(creatorSelected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
-    ${renderShotcountIsland()}
+    ${renderAgentIsland() || renderShotcountIsland()}
     ${renderProfileModal()}
   `
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
@@ -1076,6 +1261,85 @@ function renderShotcountIsland() {
       <span class="island-open">View ${escapeHtml(firstName)}’s Today <b aria-hidden="true">↗</b></span>
     </button>
   `
+}
+
+function renderAgentIsland() {
+  if (isPreviewMode && !previewParams.has('previewAgentIsland')) return ''
+  const priority: Partial<Record<AgentRun['status'], number>> = {
+    needs_approval: 0,
+    waiting_for_user: 1,
+    waiting_external: 2,
+    running: 3,
+    planning: 4,
+    completed: 5,
+  }
+  const candidate = [...agentRuns.values()]
+    .filter(run => run.status in priority)
+    .filter(run => run.status !== 'completed' || Date.now() - Date.parse(run.updatedAt) < 5 * 60 * 1000)
+    .sort((left, right) =>
+      (priority[left.status] ?? 99) - (priority[right.status] ?? 99) ||
+      right.updatedAt.localeCompare(left.updatedAt)
+    )[0]
+  if (!candidate) return ''
+  const task = tasks.find(item => item.id === candidate.taskId)
+  if (!task) return ''
+  const labels: Partial<Record<AgentRun['status'], { eyebrow: string; title: string; message: string; mark: string }>> = {
+    needs_approval: {
+      eyebrow: 'APPROVAL NEEDED',
+      title: 'ShotCount needs you',
+      message: candidate.waitingReason || 'Review the prepared action.',
+      mark: '!',
+    },
+    waiting_for_user: {
+      eyebrow: 'ACTION NEEDED',
+      title: 'ShotCount needs you',
+      message: candidate.waitingReason || 'Open the task to continue.',
+      mark: '!',
+    },
+    waiting_external: {
+      eyebrow: 'SHOTCOUNT IS WAITING',
+      title: 'Waiting for a reply',
+      message: candidate.waitingReason || 'I’ll continue automatically.',
+      mark: '…',
+    },
+    planning: {
+      eyebrow: 'SHOTCOUNT IS WORKING',
+      title: 'Planning the task',
+      message: candidate.progress.at(-1) || 'Preparing the next safe step.',
+      mark: '◔',
+    },
+    running: {
+      eyebrow: 'SHOTCOUNT IS WORKING',
+      title: 'Moving your task forward',
+      message: candidate.progress.at(-1) || 'Working through the task.',
+      mark: '◔',
+    },
+    completed: {
+      eyebrow: 'SHOTCOUNT FINISHED',
+      title: 'Done',
+      message: candidate.result?.summary || 'The task reached its intended outcome.',
+      mark: '✓',
+    },
+  }
+  const state = labels[candidate.status]
+  if (!state) return ''
+  return `<button type="button" class="shotcount-island shotcount-agent-island" data-agent-island-task="${task.id}" aria-label="${escapeHtml(state.title)}. Open ${escapeHtml(task.title)}">
+    <span class="island-head">
+      <span class="island-portrait agent-island-mark"><span class="agent-icon-wrap">${agentSparkleIcon()}</span></span>
+      <span class="island-identity">
+        <small>${state.eyebrow}</small>
+        <strong>${escapeHtml(state.title)}</strong>
+        <span>${escapeHtml(task.title)}</span>
+      </span>
+      <span class="island-result"><strong>${state.mark}</strong><small>AGENT</small></span>
+    </span>
+    <span class="island-task">
+      <span class="island-task-check" aria-hidden="true">${state.mark}</span>
+      <span><small>CURRENT STATUS</small><strong>${escapeHtml(state.message)}</strong></span>
+      <span class="island-task-arrow" aria-hidden="true">›</span>
+    </span>
+    <span class="island-open">Open task <b aria-hidden="true">↗</b></span>
+  </button>`
 }
 
 function renderCreatorTodayView(state: CreatorTodayState) {
@@ -1209,7 +1473,31 @@ function openProfileModal() {
   profileError = ''
   profileModalOpen = true
   render()
+  void refreshGoogleAgentConnection()
   queueMicrotask(() => document.querySelector<HTMLInputElement>('[data-profile-form] input[name="displayName"]')?.focus())
+}
+
+async function refreshGoogleAgentConnection() {
+  if (!activeUser) return
+  try {
+    googleAgentConnection = await loadGoogleAgentConnection()
+  } catch {
+    googleAgentConnection = null
+  }
+  render()
+}
+
+async function connectGoogleAgent() {
+  if (googleAgentConnectionBusy) return
+  googleAgentConnectionBusy = true
+  render()
+  try {
+    await beginGoogleAgentConnection()
+  } catch (error) {
+    googleAgentConnectionBusy = false
+    toast = error instanceof Error ? error.message : 'ShotCount could not start the Google connection.'
+    render()
+  }
 }
 
 function renderProfileModal() {
@@ -1281,6 +1569,17 @@ function renderProfileModal() {
               <button type="button" data-action="copy-creator-link" ${creatorLink ? '' : 'disabled'}>Copy</button>
             </div>
           </section>
+          <section class="creator-launch-card agent-google-card" aria-labelledby="agent-google-title">
+            <div>
+              <strong id="agent-google-title">Google execution</strong>
+              <small>${googleAgentConnection?.status === 'connected'
+                ? `Connected as ${escapeHtml(googleAgentConnection.accountEmail || 'your Google account')}`
+                : 'Connect Gmail, Calendar, and Contacts for delegated tasks.'}</small>
+            </div>
+            <button type="button" data-action="connect-agent-google" ${googleAgentConnectionBusy ? 'disabled' : ''}>
+              ${googleAgentConnectionBusy ? 'Opening…' : googleAgentConnection?.status === 'connected' ? 'Reconnect' : 'Connect'}
+            </button>
+          </section>
           <p class="profile-form-error" role="alert">${escapeHtml(profileError)}</p>
           <div class="profile-form-actions">
             <button type="button" data-action="close-profile">Not now</button>
@@ -1349,7 +1648,7 @@ async function verifyAuthSession() {
       },
     })
     activeUser = user
-    const [workspace, profileResult, communityResult, googleEventsResult, googleStateResult] = await Promise.all([
+    const [workspace, profileResult, communityResult, googleEventsResult, googleStateResult, agentRunsResult] = await Promise.all([
       plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] }),
       loadCreatorProfile(user)
         .then(value => ({ ok: true as const, value }))
@@ -1363,6 +1662,9 @@ async function verifyAuthSession() {
       loadGoogleCalendarSyncState(user)
         .then(value => ({ ok: true as const, value }))
         .catch(() => ({ ok: false as const, value: { status: 'idle', lastSyncedAt: null, message: '' } as GoogleCalendarSyncState })),
+      loadAgentRuns()
+        .then(value => ({ ok: true as const, value }))
+        .catch(() => ({ ok: false as const, value: [] as AgentRun[] })),
     ])
     replacePlannerWorkspace(workspace)
     if (profileResult.ok) {
@@ -1376,8 +1678,14 @@ async function verifyAuthSession() {
     else communityState = 'failed'
     if (googleEventsResult.ok) googleCalendarEvents = googleEventsResult.value
     if (googleStateResult.ok) googleCalendarState = googleStateResult.value
+    if (agentRunsResult.ok) {
+      agentRuns.clear()
+      agentRunsResult.value.forEach(run => agentRuns.set(run.taskId, run))
+      persistAgentRuns()
+    }
     authState = 'authenticated'
     void startNotificationSystem()
+    void startAgentRunSystem()
     void refreshGoogleCalendar(true)
   } catch {
     authState = 'error'
@@ -1393,6 +1701,11 @@ async function signOut() {
     googleCalendarState = { status: 'idle', lastSyncedAt: null, message: '' }
     completionSubscription?.()
     completionSubscription = null
+    agentRunSubscription?.()
+    agentRunSubscription = null
+    window.clearInterval(agentPollingTimer)
+    agentPollingTimer = 0
+    agentApprovals.clear()
     plannerRepository?.destroy()
     plannerRepository = null
     activeUser = null
@@ -1850,14 +2163,17 @@ function renderAgentPill(task: Task) {
   const run = agentRuns.get(task.id)
   const displayStatus = isPreviewMode && previewAgentState !== 'error' && run?.status === 'failed' ? 'running' : run?.status
   const label =
-    displayStatus === 'completed' ? 'Ready to review' :
-      displayStatus === 'running' ? 'In progress' :
+    displayStatus === 'completed' ? (run?.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review') :
+      displayStatus === 'planning' || displayStatus === 'running' ? 'In progress' :
+        displayStatus === 'needs_approval' ? 'Approval needed' :
+          displayStatus === 'waiting_external' ? 'Waiting' :
+            displayStatus === 'waiting_for_user' ? 'Needs you' :
         displayStatus === 'needs_context' ? 'Needs context' :
           displayStatus === 'failed' ? 'Needs attention' :
             'AI available'
-  const mark = displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
+  const mark = displayStatus === 'planning' || displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
     displayStatus === 'completed' ? '<span aria-hidden="true">✓</span>' :
-      displayStatus === 'failed' ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
+      ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '') ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
       `<span class="agent-icon-wrap">${agentSparkleIcon()}</span>`
   return `<button type="button" class="task-agent-pill task-agent-pill--${displayStatus ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}">${mark}${label}</button>`
 }
@@ -1871,13 +2187,45 @@ function safeAgentUrl(value: string) {
   }
 }
 
-function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder = false) {
-  const progressLabels = placeholder ? agentPreviewProgressLabels : agentProgressLabels
+function safeAgentHandoffUrl(value: string) {
+  try {
+    const url = new URL(value)
+    const hostname = url.hostname.toLocaleLowerCase()
+    return url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      hostname !== 'localhost' &&
+      /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/i.test(hostname)
+      ? escapeHtml(url.toString())
+      : ''
+  } catch {
+    return ''
+  }
+}
+
+function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder = false, run?: AgentRun) {
+  const completedProgress = run?.progress.filter(Boolean) ?? []
+  const fallbackLabels = placeholder ? agentPreviewProgressLabels : agentProgressLabels
+  const currentLabel = run?.status === 'planning' ? 'Planning the next safe step' : 'Continuing the task'
+  const progressLabels = completedProgress.length
+    ? [...completedProgress.slice(-3), currentLabel]
+    : fallbackLabels
+  const activeIndex = completedProgress.length ? progressLabels.length - 1 : progressIndex
+  const capabilityMessage: Record<string, string> = {
+    gmail: 'I’m reviewing the relevant Gmail threads and preparing the next safe step.',
+    calendar: 'I’m checking your calendar and looking for a conflict-free next step.',
+    scheduling: 'I’m checking availability and preparing the scheduling outreach.',
+    flight_search: 'I’m starting a live flight search and comparing the strongest options.',
+    browser: 'I’m working through the relevant website for you.',
+    draft: 'I’m preparing the requested draft for your review.',
+    research_draft: 'I’m researching and preparing the requested draft.',
+    research: 'I’m reading and summarizing the relevant material for you.',
+  }
   return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
     <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">◔</i> In progress</em></header>
-    <p>${placeholder ? 'I’m reading and summarizing the report for you.' : 'I’m reading and summarizing the material for you.'}</p>
+    <p>${placeholder ? 'I’m reading and summarizing the report for you.' : escapeHtml(capabilityMessage[run?.capability ?? 'research'] ?? capabilityMessage.research)}</p>
     <div class="task-agent-progress">
-      ${progressLabels.map((label, index) => `<div class="${index < progressIndex ? 'done' : index === progressIndex ? 'active' : ''}"><i>${index < progressIndex ? '✓' : index === progressIndex ? '◔' : ''}</i><span>${label}</span></div>`).join('')}
+      ${progressLabels.map((label, index) => `<div class="${index < activeIndex ? 'done' : index === activeIndex ? 'active' : ''}"><i>${index < activeIndex ? '✓' : index === activeIndex ? '◔' : ''}</i><span>${escapeHtml(label)}</span></div>`).join('')}
     </div>
     <footer><button type="button" data-action="view-agent-progress" data-task-id="${task.id}">View progress</button><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
   </section>
@@ -1893,9 +2241,86 @@ function renderAgentErrorPanel(task: Task, error: string) {
       <span aria-hidden="true">!</span>
       <div><strong>${needsSignIn ? 'Sign in required' : 'Something interrupted the task'}</strong><p>${escapeHtml(error)}</p></div>
     </div>
-    <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Dismiss</button><button class="agent-primary" type="button" data-action="delegate-task" data-task-id="${task.id}">Try again</button></footer>
+    <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Dismiss</button><button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${task.id}">Try again</button></footer>
   </section>
   <aside class="task-agent-notification task-agent-notification--error">${icon('bell')}<span>No task changes were made. You can safely try again.</span></aside>`
+}
+
+function approvalPreviewValue(approval: AgentApproval, key: string) {
+  const preview = approval.payload.preview
+  if (!preview || typeof preview !== 'object' || Array.isArray(preview)) return ''
+  return (preview as Record<string, unknown>)[key]
+}
+
+function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
+  const recipients = approvalPreviewValue(approval, 'to')
+  const title = approvalPreviewValue(approval, approval.kind === 'calendar_write' ? 'summary' : 'subject')
+  const body = approvalPreviewValue(approval, approval.kind === 'calendar_write' ? 'description' : 'body_text')
+  const startsAt = approvalPreviewValue(approval, 'start')
+  const endsAt = approvalPreviewValue(approval, 'end')
+  const busy = agentDecisionBusy.has(approval.id)
+  const confirmLabel = approval.kind === 'send_email'
+    ? 'Send'
+    : approval.kind === 'calendar_write'
+      ? 'Confirm'
+      : 'Continue'
+  return `<section class="task-agent-card task-agent-card--approval">
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">!</i> Approval needed</em></header>
+    <p>${escapeHtml(approval.title)}</p>
+    <div class="task-agent-approval-detail">
+      ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
+      ${title ? `<dl><dt>${approval.kind === 'calendar_write' ? 'Event' : 'Subject'}</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
+      ${startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
+      ${body ? `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
+    </div>
+    <small>Only this exact action is approved. Any change requires a new review.</small>
+    <footer>
+      <button type="button" data-action="reject-agent-approval" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>Not now</button>
+      <button class="agent-primary" type="button" data-action="approve-agent-approval" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>${busy ? 'Working…' : confirmLabel}</button>
+    </footer>
+  </section>`
+}
+
+function renderAgentWaitingPanel(task: Task, run: AgentRun) {
+  const external = run.status === 'waiting_external'
+  const busy = agentDecisionBusy.has(run.id)
+  const flightOptions = run.result?.flightOptions ?? []
+  const paymentHandoffUrl = run.result?.paymentHandoffUrl
+    ? safeAgentHandoffUrl(run.result.paymentHandoffUrl)
+    : ''
+  const flightTask = run.capability === 'flight_search'
+  const needsGoogle = run.errorCode?.startsWith('google_') ||
+    /connect google|reconnect google/i.test(run.waitingReason)
+  const title = external ? 'Waiting' : 'ShotCount needs you'
+  const detail = external
+    ? flightTask
+      ? 'The isolated browser worker is continuing this same task. You can leave this screen.'
+      : 'I’ll continue this same task automatically when the expected reply or external update arrives.'
+    : 'Review the message below, then retry when you’re ready.'
+  return `<section class="task-agent-card task-agent-card--waiting">
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em>${external ? 'Waiting' : 'Needs you'}</em></header>
+    <p>${escapeHtml(run.waitingReason || title)}</p>
+    ${flightOptions.length && !paymentHandoffUrl ? `
+      <div class="task-agent-flight-options">
+        ${flightOptions.map(option => `<button type="button" data-action="select-agent-flight" data-task-id="${task.id}" data-flight-option-id="${escapeHtml(option.id)}" ${busy ? 'disabled' : ''}>
+          <span><strong>${escapeHtml(option.label)}</strong><em>${escapeHtml(option.price)}</em></span>
+          <b>${escapeHtml(option.airline)}</b>
+          <small>${escapeHtml(option.route)} · ${escapeHtml(option.stops)} · ${escapeHtml(option.duration)}</small>
+        </button>`).join('')}
+      </div>
+      <small>Live prices can change. ShotCount rechecks the selected option before handing it back.</small>
+    ` : paymentHandoffUrl ? `
+      <div class="task-agent-payment-handoff">
+        <strong>Ready for you</strong>
+        <span>Your itinerary is selected. Payment and the final purchase remain under your control.</span>
+        <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Continue to payment</a>
+      </div>
+    ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(detail)}</span></div>`}
+    <footer>
+      <button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>
+      ${flightOptions.length || paymentHandoffUrl ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Checking…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : 'Try again'}</button>`}
+    </footer>
+  </section>`
 }
 
 function renderAgentPanel(task: Task) {
@@ -1917,9 +2342,20 @@ function renderAgentPanel(task: Task) {
     </section>`
   }
 
+  if (run.status === 'needs_approval') {
+    const approval = agentApprovals.get(run.id)
+    if (approval) return renderAgentApprovalPanel(task, approval)
+    return renderAgentWaitingPanel(task, { ...run, status: 'waiting_for_user', waitingReason: 'Preparing the approval details…' })
+  }
+
+  if (run.status === 'waiting_external' || run.status === 'waiting_for_user') {
+    return renderAgentWaitingPanel(task, run)
+  }
+
   if (run.status === 'completed' && run.result) {
+    const resultLabel = run.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review'
     return `<section class="task-agent-card task-agent-card--result">
-      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Shotcount Assistant</strong><em>Ready to review</em></header>
+      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em>${resultLabel}</em></header>
       <p>${escapeHtml(run.result.summary)}</p>
       <div class="task-agent-result">
         ${run.result.sections.map(section => `<article><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.body)}</p></article>`).join('')}
@@ -1936,7 +2372,7 @@ function renderAgentPanel(task: Task) {
     return renderAgentErrorPanel(task, run.error ?? 'ShotCount could not complete this task.')
   }
 
-  return renderAgentProgressPanel(task, run.progressIndex)
+  return renderAgentProgressPanel(task, run.progressIndex, false, run)
 }
 
 function renderInspector(task: Task) {
@@ -1978,7 +2414,7 @@ function renderInspector(task: Task) {
 
 function renderUpcoming() {
   const renderGroup = (group: UpcomingGroup) => sortTasks(tasksForUpcoming(group))
-    .map(task => renderTaskRow(task))
+    .map(task => renderTaskRow(task, task.id === selectedTaskId))
     .join('')
   const tomorrowTasks = renderGroup('tomorrow')
   const weekTasks = renderGroup('week')
@@ -3030,18 +3466,20 @@ app.addEventListener('click', async event => {
     return
   }
 
+  const agentIslandTaskId = target.closest<HTMLElement>('[data-agent-island-task]')?.dataset.agentIslandTask
+  if (agentIslandTaskId) {
+    const task = tasks.find(item => item.id === agentIslandTaskId)
+    if (!task) return
+    selectedTaskId = task.id
+    mobileInspectorOpen = true
+    rememberView(tasksForToday().some(item => item.id === task.id) ? 'today' : 'upcoming')
+    render()
+    return
+  }
+
   const taskId = target.closest<HTMLElement>('[data-task]')?.dataset.task
   if (taskId) {
     selectedTaskId = taskId
-    if (view === 'upcoming') {
-      toast = 'This task is planned for a future day'
-      render()
-      window.setTimeout(() => {
-        toast = ''
-        render()
-      }, 1400)
-      return
-    }
     mobileInspectorOpen = true
     render()
     return
@@ -3069,6 +3507,11 @@ app.addEventListener('click', async event => {
     return
   }
 
+  if (action === 'connect-agent-google') {
+    void connectGoogleAgent()
+    return
+  }
+
   if (action === 'delegate-task') {
     persistInspectorDraft()
     const task = tasks.find(item => item.id === target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId)
@@ -3081,6 +3524,49 @@ app.addEventListener('click', async event => {
     const context = document.querySelector<HTMLTextAreaElement>('.task-agent-context')?.value.trim() ?? ''
     if (!task || !context) return
     void startAgentRun(task, context)
+    return
+  }
+
+  if (action === 'approve-agent-approval' || action === 'reject-agent-approval') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    if (taskId) {
+      void decidePendingAgentApproval(taskId, action === 'approve-agent-approval' ? 'approve' : 'reject')
+    }
+    return
+  }
+
+  if (action === 'select-agent-flight') {
+    const control = target.closest<HTMLElement>('[data-flight-option-id]')
+    const taskId = control?.dataset.taskId
+    const optionId = control?.dataset.flightOptionId
+    if (taskId && optionId) void chooseAgentFlight(taskId, optionId)
+    return
+  }
+
+  if (action === 'retry-agent') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    if (taskId) void retryAgentRun(taskId)
+    return
+  }
+
+  if (action === 'poll-agent') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const run = taskId ? agentRuns.get(taskId) : null
+    if (!taskId || !run || agentDecisionBusy.has(run.id)) return
+    agentDecisionBusy.add(run.id)
+    render()
+    void pollAgentRun(run.id).then(updated => {
+      agentRuns.set(taskId, updated)
+      toast = updated.status === 'waiting_external'
+        ? 'Still waiting — ShotCount will keep checking'
+        : 'ShotCount continued the task'
+    }).catch(error => {
+      toast = error instanceof Error ? error.message : 'ShotCount could not check the external work.'
+    }).finally(() => {
+      agentDecisionBusy.delete(run.id)
+      persistAgentRuns()
+      render()
+    })
     return
   }
 
@@ -3509,6 +3995,16 @@ if (islandPreview === 'batch') islandCompletions = [
   previewCompletion('Kenji Watanabe', 'kenji', 4, 'Send the campaign boards'),
   previewCompletion('Maya Raman', 'maya', 3, 'Ship the homepage revision'),
 ]
+if (googleAgentOAuthStatus) {
+  const cleanUrl = new URL(window.location.href)
+  cleanUrl.searchParams.delete('google')
+  cleanUrl.searchParams.delete('reason')
+  window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`)
+  window.setTimeout(() => {
+    toast = ''
+    render()
+  }, 2600)
+}
 render()
 if (authRequired) void verifyAuthSession()
 scheduleDateRefresh()
@@ -3527,6 +4023,8 @@ document.addEventListener('visibilitychange', () => {
     const lastGoogleSync = googleCalendarState.lastSyncedAt ? new Date(googleCalendarState.lastSyncedAt).getTime() : 0
     void refreshGoogleCalendar(googleCalendarState.status !== 'needs_permission' && Date.now() - lastGoogleSync > 5 * 60 * 1000)
     void checkForCompletionAlerts()
+    void refreshAgentRuns()
+    void pollWaitingAgentRuns()
   }
 })
 dateStateHook.__shotcountRefreshDateState = (reference = new Date()) => {

@@ -11,6 +11,16 @@ const creatorDirectoryMigration = readFileSync(resolve(root, 'supabase/migration
 const creatorTodayMigration = readFileSync(resolve(root, 'supabase/migrations/202607180002_public_creator_today.sql'), 'utf8')
 const webPushMigration = readFileSync(resolve(root, 'supabase/migrations/202607180005_web_push.sql'), 'utf8')
 const googleCalendarMigration = readFileSync(resolve(root, 'supabase/migrations/202607180006_google_calendar_sync.sql'), 'utf8')
+const initialAgentMigration = readFileSync(resolve(root, 'supabase/migrations/202607230001_agent_runs.sql'), 'utf8')
+const agentFoundationMigration = readFileSync(resolve(root, 'supabase/migrations/202607240001_agent_execution_foundation.sql'), 'utf8')
+const agentGoogleMigration = readFileSync(resolve(root, 'supabase/migrations/202607240002_google_agent_integrations.sql'), 'utf8')
+const agentCompletionMigration = readFileSync(resolve(root, 'supabase/migrations/202607240003_agent_completion_analytics.sql'), 'utf8')
+const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
+const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
+const googleOAuthCallbackFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-callback/index.ts'), 'utf8')
+const googleToolFunction = readFileSync(resolve(root, 'supabase/functions/_shared/google.ts'), 'utf8')
+const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
+const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -202,6 +212,74 @@ describe('secret isolation', () => {
     const coachFunction = readFileSync(resolve(root, 'supabase/functions/ai-coach/index.ts'), 'utf8')
     expect(deleteFunction).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')")
     expect(coachFunction).toContain("Deno.env.get('OPENAI_API_KEY')")
+  })
+})
+
+describe('agent execution security contract', () => {
+  it('keeps every user-readable execution table scoped by row-level security', () => {
+    expect(initialAgentMigration).toContain('alter table public.agent_runs enable row level security')
+    for (const table of ['agent_actions', 'agent_approvals', 'agent_run_events', 'browser_execution_sessions']) {
+      expect(agentFoundationMigration).toContain(`alter table public.${table} enable row level security`)
+      expect(agentFoundationMigration).toMatch(new RegExp(`create policy [\\s\\S]*? on public\\.${table}\\b`, 'i'))
+    }
+    expect(agentGoogleMigration).toContain('alter table public.agent_user_preferences enable row level security')
+    expect(agentGoogleMigration).toContain('user_id = (select auth.uid())')
+  })
+
+  it('keeps model history, OAuth state, provider tokens, and reply watches server-only', () => {
+    expect(agentFoundationMigration).toContain('revoke all on public.agent_model_state from anon, authenticated')
+    expect(agentGoogleMigration).toContain(
+      'revoke all on public.agent_integrations, public.agent_oauth_states, public.agent_email_watches',
+    )
+    expect(agentGoogleMigration).toContain('refresh_token_ciphertext text')
+    expect(googleToolFunction).toContain("Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')")
+    expect(googleOAuthCallbackFunction).toContain('refresh_token_ciphertext: encryptedRefreshToken')
+  })
+
+  it('uses expiring, single-use OAuth state with PKCE and controlled returns', () => {
+    expect(googleOAuthStartFunction).toContain("authorizationUrl.searchParams.set('code_challenge_method', 'S256')")
+    expect(googleOAuthStartFunction).toContain('state_hash: await sha256Hex(state)')
+    expect(googleOAuthStartFunction).toContain('expires_at:')
+    expect(googleOAuthStartFunction).toContain('origins.includes(url.origin)')
+    expect(googleOAuthCallbackFunction).toContain('oauthState.used_at')
+    expect(googleOAuthCallbackFunction).toContain('Date.parse(oauthState.expires_at) <= Date.now()')
+    expect(googleOAuthCallbackFunction).toContain("grant_type: 'authorization_code'")
+    expect(googleOAuthCallbackFunction).toContain('code_verifier:')
+  })
+
+  it('requires exact approval and idempotency before external writes', () => {
+    expect(agentFoundationMigration).toContain('unique (user_id, tool_name, idempotency_key)')
+    expect(agentFoundationMigration).toContain('payload_hash text not null')
+    expect(agentFoundationMigration).toContain('p_expected_version bigint')
+    expect(taskAgentFunction).toContain('policy.approvalKind')
+    expect(taskAgentFunction).toContain('pauseForApproval')
+    expect(taskAgentFunction).toContain('actionIdempotencyKey')
+    expect(taskAgentFunction).toContain('expectedHash !== approval.payload_hash')
+  })
+
+  it('atomically completes only the real policy outcome and emits analytics', () => {
+    expect(agentCompletionMigration).toContain('create or replace function public.complete_agent_run')
+    expect(agentCompletionMigration).toContain('update public.agent_runs')
+    expect(agentCompletionMigration).toContain('returning * into completed_run')
+    expect(agentCompletionMigration).toContain("status in ('planning', 'running', 'waiting_external', 'waiting_for_user')")
+    expect(agentCompletionMigration).toContain('p_expected_version')
+    expect(agentCompletionMigration).toContain("'task_completed_by_agent'")
+    expect(taskAgentFunction).toContain("run.task_completion_policy === 'external_change'")
+    expect(taskAgentFunction).toContain("run.task_completion_policy === 'payment_handoff'")
+    expect(taskAgentFunction).toContain('purchase_confirmed === true')
+  })
+
+  it('keeps browser control structured and stops before payment', () => {
+    expect(browserWorker).toContain("operation.type === 'search_flights'")
+    expect(browserWorker).toContain("type: 'search_flights' | 'select_flight'")
+    expect(browserWorker).toContain('resumeFlightSelection(')
+    expect(browserWorker).toContain("process.env.SHOTCOUNT_BROWSER_WORKER_TOKEN")
+    expect(browserWorker).not.toContain('cookie')
+    expect(flightBrowser).toContain("paymentBoundaryReached: true")
+    expect(flightBrowser).toContain('continueToProviderBooking')
+    expect(flightBrowser).not.toMatch(/card(?:Number|_number)|cvv|securityCode/i)
+    expect(taskAgentFunction).toContain("policy.risk === 'financial'")
+    expect(taskAgentFunction).toContain('Payment must be completed by you.')
   })
 })
 

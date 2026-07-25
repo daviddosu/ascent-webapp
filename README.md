@@ -38,6 +38,13 @@ supabase functions deploy ai-coach
 
 Set `OPENAI_API_KEY` as a server-side Supabase Function secret. It must never be added to a `VITE_` environment variable or shipped to the browser.
 
+The durable execution layer also uses server-only Google OAuth and signed browser-worker values listed in `.env.example`. Internal implementation and demo notes live in:
+
+- [`docs/agent-architecture.md`](docs/agent-architecture.md)
+- [`docs/google-integration.md`](docs/google-integration.md)
+- [`docs/browser-execution.md`](docs/browser-execution.md)
+- [`docs/investor-demo.md`](docs/investor-demo.md)
+
 Cloud mode adds sign-up, sign-in, secure row-level data isolation, cross-device workspace synchronization, and accountability invitation acceptance. The service-role key must never be placed in the frontend.
 
 After deployment, verify the reachable cloud surface without printing credentials:

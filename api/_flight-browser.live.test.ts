@@ -1,0 +1,50 @@
+import { expect, it } from 'vitest'
+import {
+  resumeFlightSelection,
+  runLiveFlightSearch,
+  type FlightSearchInput,
+} from './_flight-browser'
+
+function futureDate(offsetDays: number) {
+  const date = new Date()
+  date.setUTCDate(date.getUTCDate() + offsetDays)
+  return date.toISOString().slice(0, 10)
+}
+
+it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
+  'searches real Google Flights results and stops at the payment handoff',
+  { timeout: 150_000 },
+  async () => {
+    const input: FlightSearchInput = {
+      originCode: 'LOS',
+      destinationCode: 'LON',
+      departureDate: futureDate(14),
+      returnDate: futureDate(18),
+      cabin: 'economy',
+      maxStops: 2,
+      budgetAmount: null,
+      currency: 'USD',
+      preferredAirlines: [],
+    }
+
+    const search = await runLiveFlightSearch(input)
+    expect(search.provider).toBe('Google Flights')
+    expect(search.options.length).toBeGreaterThan(0)
+    expect(search.options.length).toBeLessThanOrEqual(3)
+    expect(search.options.every(option => option.searchUrl.startsWith('https://www.google.com/'))).toBe(true)
+
+    const selection = await resumeFlightSelection(input, search.options, search.options[0]!.id)
+    const handoff = new URL(selection.handoffUrl)
+    expect(handoff.protocol).toBe('https:')
+    expect(selection.handoffStage).toMatch(/^(provider_booking|google_booking_options)$/)
+    if (selection.handoffStage === 'provider_booking') {
+      expect(handoff.hostname).not.toBe('www.google.com')
+      expect(selection.handoffProvider).not.toBe('Google Flights')
+    } else {
+      expect(handoff.hostname).toBe('www.google.com')
+      expect(handoff.pathname).toMatch(/^\/travel\/flights\/booking/)
+    }
+    expect(selection.paymentBoundaryReached).toBe(true)
+    expect(selection.resumable).toBe(true)
+  },
+)

@@ -922,6 +922,148 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   padding-top: 11px;
   border-top: 1px solid rgba(170, 170, 175, .3);
 }
+.task-agent-card--approval,
+.task-agent-card--waiting {
+  min-height: 226px;
+  padding: 15px 17px 14px;
+  gap: 12px;
+}
+.task-agent-card--approval header em i { animation: none; }
+.task-agent-approval-detail {
+  max-height: 214px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  overflow: auto;
+  border: 1px solid rgba(175, 175, 180, .44);
+  border-radius: 8px;
+  background: #fafafa;
+}
+.task-agent-approval-detail dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 7px;
+  color: #3b3b3e;
+  font-size: 9px;
+  line-height: 1.45;
+}
+.task-agent-approval-detail dt { color: #858589; }
+.task-agent-approval-detail dd { margin: 0; overflow-wrap: anywhere; }
+.task-agent-approval-detail blockquote {
+  margin: 2px 0 0;
+  padding: 10px;
+  border-left: 2px solid #2a2a2d;
+  border-radius: 0 6px 6px 0;
+  background: #fff;
+  color: #3f3f42;
+  font-size: 9px;
+  line-height: 1.55;
+}
+.task-agent-approval-detail > p { margin: 0; color: #555559; font-size: 9px; line-height: 1.5; }
+.task-agent-card--approval footer,
+.task-agent-card--waiting footer {
+  margin-top: auto;
+  padding-top: 11px;
+  border-top: 1px solid rgba(170, 170, 175, .3);
+}
+.task-agent-card button:disabled { cursor: wait; opacity: .58; }
+.task-agent-waiting-detail {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(175, 175, 180, .44);
+  border-radius: 8px;
+  background: #fafafa;
+  color: #606064;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.task-agent-waiting-detail svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #3d3d40;
+  stroke-width: 1.7;
+}
+.task-agent-flight-options {
+  display: grid;
+  gap: 7px;
+}
+.task-agent-flight-options > button {
+  width: 100%;
+  min-height: 67px;
+  padding: 10px 11px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid rgba(175, 175, 180, .5);
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: none;
+  color: #202023;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.task-agent-flight-options > button:hover {
+  border-color: rgba(125, 125, 130, .62);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .86), rgba(235, 236, 238, .62));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .98),
+    0 9px 24px rgba(22, 22, 26, .09);
+  transform: translateY(-1px);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+.task-agent-flight-options > button > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.task-agent-flight-options strong,
+.task-agent-flight-options em {
+  color: #202023;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+.task-agent-flight-options b {
+  overflow: hidden;
+  color: #454549;
+  font-size: 9px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-agent-flight-options small {
+  color: #7a7a7f;
+  font-size: 8px;
+}
+.task-agent-payment-handoff {
+  padding: 12px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(160, 160, 165, .5);
+  border-radius: 9px;
+  background: #fafafa;
+}
+.task-agent-payment-handoff strong { color: #202023; font-size: 10px; }
+.task-agent-payment-handoff span { color: #636368; font-size: 9px; line-height: 1.5; }
+.task-agent-payment-handoff .agent-primary {
+  min-height: 30px;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: #171719;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  text-decoration: none;
+}
 .task-agent-notification {
   position: relative;
   overflow: hidden;
@@ -1091,12 +1233,35 @@ body[data-theme='dark'] .agent-sparkle-icon {
   stroke: #f2f2f2;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .32));
 }
-body[data-theme='dark'] .task-agent-error-detail {
+body[data-theme='dark'] .task-agent-error-detail,
+body[data-theme='dark'] .task-agent-approval-detail,
+body[data-theme='dark'] .task-agent-waiting-detail,
+body[data-theme='dark'] .task-agent-flight-options > button,
+body[data-theme='dark'] .task-agent-payment-handoff {
   border-color: rgba(255, 255, 255, .12);
   background: rgba(255, 255, 255, .05);
 }
+body[data-theme='dark'] .task-agent-flight-options > button:hover {
+  background: linear-gradient(145deg, rgba(52, 55, 59, .82), rgba(24, 26, 29, .66));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .14),
+    0 12px 28px rgba(0, 0, 0, .24);
+}
 body[data-theme='dark'] .task-agent-error-detail strong { color: #f2f2f2; }
-body[data-theme='dark'] .task-agent-error-detail p { color: #bdbdbd; }
+body[data-theme='dark'] .task-agent-error-detail p,
+body[data-theme='dark'] .task-agent-approval-detail,
+body[data-theme='dark'] .task-agent-waiting-detail,
+body[data-theme='dark'] .task-agent-flight-options strong,
+body[data-theme='dark'] .task-agent-flight-options em,
+body[data-theme='dark'] .task-agent-payment-handoff strong { color: #f0f0f0; }
+body[data-theme='dark'] .task-agent-flight-options b,
+body[data-theme='dark'] .task-agent-flight-options small,
+body[data-theme='dark'] .task-agent-payment-handoff span { color: #bdbdbd; }
+body[data-theme='dark'] .task-agent-approval-detail blockquote {
+  border-left-color: #efefef;
+  background: rgba(255, 255, 255, .06);
+  color: #dedede;
+}
 
 @media (max-width: 620px) {
   .task-row {
@@ -4011,6 +4176,30 @@ body[data-theme='dark'] .sidebar {
 .creator-link-row button { min-height: 38px; padding: 0 15px; border: 1px solid #111516; border-radius: 9px; background: #111516; color: #fff; font-size: 11px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease; }
 .creator-link-row button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(25, 39, 44, .12); }
 .creator-link-row button:disabled { opacity: .42; cursor: not-allowed; }
+.agent-google-card {
+  min-height: 54px;
+  padding: 10px 11px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #d5dadd;
+  border-radius: 10px;
+  background: #fff;
+}
+.agent-google-card > div { min-width: 0; display: grid; gap: 3px; }
+.agent-google-card strong { color: #303538; font-size: 11px; }
+.agent-google-card small { overflow: hidden; color: #747b7e; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.agent-google-card > button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid #111516;
+  border-radius: 8px;
+  background: #111516;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.agent-google-card > button:disabled { cursor: wait; opacity: .58; }
 
 body[data-theme='dark'] .profile-popover-card {
   border-color: var(--dark-border);
@@ -4041,6 +4230,12 @@ body[data-theme='dark'] .creator-launch-card > strong { color: var(--dark-muted)
 body[data-theme='dark'] .creator-link-row > span,
 body[data-theme='dark'] .creator-link-row button { border-color: var(--dark-border); }
 body[data-theme='dark'] .creator-link-row > span { background: var(--dark-surface); color: var(--dark-text); }
+body[data-theme='dark'] .agent-google-card {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+}
+body[data-theme='dark'] .agent-google-card strong { color: var(--dark-text); }
+body[data-theme='dark'] .agent-google-card small { color: var(--dark-muted); }
 
 body[data-theme='dark'] .profile-required { color: #ff7777 !important; }
 body[data-theme='dark'] .community-state { border-color: var(--dark-border); color: var(--dark-muted); }
@@ -4261,6 +4456,23 @@ body[data-theme='dark'] .notification-bell { border-color: var(--dark-border); b
 }
 .island-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .island-initial { position: relative; z-index: 1; }
+.agent-island-mark {
+  background: rgba(255, 255, 255, .94);
+  color: #151515;
+}
+.agent-island-mark .agent-icon-wrap {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+}
+.agent-island-mark .agent-sparkle-icon {
+  width: 30px;
+  height: 30px;
+  fill: rgba(0, 0, 0, .02);
+  stroke: #121212;
+  stroke-width: 1.45;
+}
 .island-identity { min-width: 0; display: grid; gap: 1px; }
 .island-identity > small,
 .island-task small,
