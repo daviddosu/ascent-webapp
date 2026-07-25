@@ -1587,6 +1587,23 @@ async function retryWaitingProviderAction(
       retryable: execution.status === 'waiting_external' && !actionSucceeded,
       completed_at: actionStatus === 'running' ? null : new Date().toISOString(),
     }).eq('id', action.id)
+    if (actionStatus !== 'running' && execution.status === 'waiting_for_user') {
+      let history = await loadModelHistory(admin, run)
+      const callId = safeString(action.model_call_id, 256)
+      if (callId && !historyHasToolOutput(history, callId)) {
+        history = [...history, {
+          type: 'function_call_output',
+          call_id: callId,
+          output: JSON.stringify({
+            ...execution.value,
+            ok: false,
+            error_code: execution.code,
+            error_message: execution.message,
+          }),
+        }]
+        await saveModelHistory(admin, run, history)
+      }
+    }
     const waiting = await updateRun(admin, run, {
       status: execution.status,
       waiting_reason: execution.message,
@@ -2108,6 +2125,19 @@ async function advanceRun(
         retryable: true,
         completed_at: actionStatus === 'running' ? null : new Date().toISOString(),
       }).eq('id', action.id)
+      if (actionStatus !== 'running' && toolOutput.status === 'waiting_for_user') {
+        history.push({
+          type: 'function_call_output',
+          call_id: safeString(call.call_id, 256),
+          output: JSON.stringify({
+            ...toolOutput.value,
+            ok: false,
+            error_code: toolOutput.code,
+            error_message: toolOutput.message,
+          }),
+        })
+        await saveModelHistory(admin, current, history, response.id)
+      }
       current = await updateRun(admin, current, {
         status: toolOutput.status,
         waiting_reason: toolOutput.message,
@@ -2223,6 +2253,16 @@ async function approveOrReject(
 
   if (decision === 'rejected') {
     await admin.from('agent_actions').update({ status: 'cancelled', completed_at: new Date().toISOString() }).eq('id', action.id)
+    let history = await loadModelHistory(admin, run)
+    const callId = safeString(action.model_call_id, 256)
+    if (callId && !historyHasToolOutput(history, callId)) {
+      history = [...history, {
+        type: 'function_call_output',
+        call_id: callId,
+        output: JSON.stringify({ approved: false, cancelled: true }),
+      }]
+      await saveModelHistory(admin, run, history)
+    }
     run = await updateRun(admin, run, {
       status: 'waiting_for_user',
       waiting_reason: 'You declined this action. Edit the task or try again.',
@@ -2257,6 +2297,23 @@ async function approveOrReject(
       retryable: execution.status === 'waiting_external' && !actionSucceeded,
       completed_at: actionStatus === 'running' ? null : new Date().toISOString(),
     }).eq('id', action.id)
+    if (actionStatus !== 'running' && execution.status === 'waiting_for_user') {
+      let history = await loadModelHistory(admin, run)
+      const callId = safeString(action.model_call_id, 256)
+      if (callId && !historyHasToolOutput(history, callId)) {
+        history = [...history, {
+          type: 'function_call_output',
+          call_id: callId,
+          output: JSON.stringify({
+            ...execution.value,
+            ok: false,
+            error_code: execution.code,
+            error_message: execution.message,
+          }),
+        }]
+        await saveModelHistory(admin, run, history)
+      }
+    }
     run = await updateRun(admin, run, {
       status: execution.status,
       waiting_reason: execution.message,
@@ -2460,6 +2517,7 @@ Deno.serve(async request => {
           await addEvent(admin, run, 'agent_cancelled', run.status, 'Agent run cancelled.')
         }
       } else if (action === 'resume') {
+        let recoverSavedAction = false
         if (run.status === 'needs_context') {
           run = await resumeWithContext(admin, run, body.context ?? '')
         } else if (['failed', 'waiting_for_user'].includes(run.status)) {
@@ -2470,8 +2528,11 @@ Deno.serve(async request => {
             error_code: null,
             retryable: true,
           })
+          recoverSavedAction = true
         }
-        run = await advanceRun(admin, run, openaiKey)
+        run = recoverSavedAction
+          ? await recoverStalledRun(admin, run, openaiKey)
+          : await advanceRun(admin, run, openaiKey)
         await addEvent(admin, run, 'agent_resumed', run.status, 'ShotCount resumed the task.')
       } else if (action === 'poll') {
         run = await pollWaitingExternalRun(admin, run, openaiKey)

@@ -298,6 +298,13 @@ export function pollAgentRun(runId: string) {
   return invokeRunAction({ action: 'poll', runId }, 'ShotCount could not check the external work.')
 }
 
+export function simulateAgentReply(runId: string, simulationReply: string) {
+  return invokeRunAction(
+    { action: 'simulate_reply', runId, simulationReply },
+    'ShotCount could not simulate this development reply.',
+  )
+}
+
 export function selectAgentFlight(runId: string, optionId: string) {
   return invokeRunAction(
     { action: 'select_flight', runId, optionId },

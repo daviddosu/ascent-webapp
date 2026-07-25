@@ -59,6 +59,7 @@ import {
   pollAgentRun,
   resumeAgentRun,
   selectAgentFlight,
+  simulateAgentReply,
   subscribeToAgentRuns,
   type AgentApproval,
   type AgentRun,
@@ -89,6 +90,7 @@ const previewAgentState = previewParams.get('previewAgent')
 const previewGoogleCalendar = previewParams.has('previewGoogleCalendar')
 const googleAgentOAuthStatus = previewParams.get('google')
 const isPreviewMode = previewParams.has('previewView')
+const agentDevMode = previewParams.get('agentDev') === '1'
 const showDemoData = isPreviewMode || import.meta.env.MODE === 'test'
 type AuthState = 'checking' | 'authenticated' | 'unauthenticated' | 'error'
 const authRequired = !isPreviewMode && (window.location.hostname === 'app.shotcount.app' || window.location.hostname.endsWith('.vercel.app'))
@@ -2326,6 +2328,13 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
       ? 'The isolated browser worker is continuing this same task. You can leave this screen.'
       : 'I’ll continue this same task automatically when the expected reply or external update arrives.'
     : 'Review the message below, then retry when you’re ready.'
+  const replySimulation = agentDevMode && external && run.capability === 'scheduling'
+    ? `<div class="task-agent-reply-simulation">
+        <label for="agent-reply-simulation-${escapeHtml(run.id)}">Development reply</label>
+        <textarea id="agent-reply-simulation-${escapeHtml(run.id)}" class="task-agent-simulated-reply" rows="2">Thursday at 2:30 PM works for me.</textarea>
+        <button type="button" data-action="simulate-agent-reply" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>${busy ? 'Resuming…' : 'Simulate reply'}</button>
+      </div>`
+    : ''
   return `<section class="task-agent-card task-agent-card--waiting">
     <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em>${external ? 'Waiting' : 'Needs you'}</em></header>
     <p>${escapeHtml(run.waitingReason || title)}</p>
@@ -2345,6 +2354,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
         <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Continue to payment</a>
       </div>
     ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(detail)}</span></div>`}
+    ${replySimulation}
     <footer>
       <button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>
       ${flightOptions.length || paymentHandoffUrl ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Checking…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : 'Try again'}</button>`}
@@ -3592,6 +3602,30 @@ app.addEventListener('click', async event => {
         : 'ShotCount continued the task'
     }).catch(error => {
       toast = error instanceof Error ? error.message : 'ShotCount could not check the external work.'
+    }).finally(() => {
+      agentDecisionBusy.delete(run.id)
+      persistAgentRuns()
+      render()
+    })
+    return
+  }
+
+  if (action === 'simulate-agent-reply') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const run = taskId ? agentRuns.get(taskId) : null
+    const reply = target
+      .closest<HTMLElement>('.task-agent-reply-simulation')
+      ?.querySelector<HTMLTextAreaElement>('.task-agent-simulated-reply')
+      ?.value.trim() ?? ''
+    if (!taskId || !run || !reply || agentDecisionBusy.has(run.id)) return
+    agentDecisionBusy.add(run.id)
+    render()
+    void simulateAgentReply(run.id, reply).then(updated => {
+      agentRuns.set(taskId, updated)
+      void syncAgentApproval(updated).then(() => render())
+      toast = 'Development reply received — ShotCount resumed the same task'
+    }).catch(error => {
+      toast = error instanceof Error ? error.message : 'ShotCount could not simulate this development reply.'
     }).finally(() => {
       agentDecisionBusy.delete(run.id)
       persistAgentRuns()

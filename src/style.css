@@ -988,6 +988,38 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   stroke: #3d3d40;
   stroke-width: 1.7;
 }
+.task-agent-reply-simulation {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  border: 1px dashed rgba(120, 120, 125, .46);
+  border-radius: 8px;
+  background: #fafafa;
+}
+.task-agent-reply-simulation label {
+  grid-column: 1 / -1;
+  color: #77777b;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.task-agent-reply-simulation textarea {
+  min-height: 44px;
+  padding: 8px;
+  resize: vertical;
+  border: 1px solid rgba(175, 175, 180, .55);
+  border-radius: 7px;
+  background: #fff;
+  color: #333336;
+  font: inherit;
+  line-height: 1.45;
+}
+.task-agent-reply-simulation button {
+  align-self: end;
+  white-space: nowrap;
+}
 .task-agent-flight-options {
   display: grid;
   gap: 7px;
@@ -1236,10 +1268,16 @@ body[data-theme='dark'] .agent-sparkle-icon {
 body[data-theme='dark'] .task-agent-error-detail,
 body[data-theme='dark'] .task-agent-approval-detail,
 body[data-theme='dark'] .task-agent-waiting-detail,
+body[data-theme='dark'] .task-agent-reply-simulation,
 body[data-theme='dark'] .task-agent-flight-options > button,
 body[data-theme='dark'] .task-agent-payment-handoff {
   border-color: rgba(255, 255, 255, .12);
   background: rgba(255, 255, 255, .05);
+}
+body[data-theme='dark'] .task-agent-reply-simulation textarea {
+  border-color: rgba(255, 255, 255, .14);
+  background: rgba(0, 0, 0, .18);
+  color: #f0f0f0;
 }
 body[data-theme='dark'] .task-agent-flight-options > button:hover {
   background: linear-gradient(145deg, rgba(52, 55, 59, .82), rgba(24, 26, 29, .66));

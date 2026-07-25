@@ -26,6 +26,8 @@ const agentWatchSweepFunction = readFileSync(resolve(root, 'supabase/functions/a
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
 const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf8')
 const publicBrowser = readFileSync(resolve(root, 'api/_public-browser.ts'), 'utf8')
+const agentClient = readFileSync(resolve(root, 'src/data/agent.ts'), 'utf8')
+const mainUi = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -334,6 +336,10 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("tool_name', 'agent.complete'")
     expect(taskAgentFunction).toContain('action.idempotency_key')
     expect(taskAgentFunction).toContain("status: 'succeeded'")
+    expect(taskAgentFunction).toContain('historyHasToolOutput(history, callId)')
+    expect(taskAgentFunction).toContain("type: 'function_call_output'")
+    expect(taskAgentFunction).toContain('recoverSavedAction')
+    expect(taskAgentFunction).toContain('? await recoverStalledRun(admin, run, openaiKey)')
   })
 
   it('atomically completes only the real policy outcome and emits analytics', () => {
@@ -380,6 +386,13 @@ describe('agent execution security contract', () => {
     expect(flightBrowser).not.toMatch(/card(?:Number|_number)|cvv|securityCode/i)
     expect(taskAgentFunction).toContain("policy.risk === 'financial'")
     expect(taskAgentFunction).toContain('Payment must be completed by you.')
+  })
+
+  it('keeps delayed-reply simulation behind explicit development gates', () => {
+    expect(taskAgentFunction).toContain("Deno.env.get('SHOTCOUNT_ENABLE_DEMO_REPLY_SIMULATION') !== 'true'")
+    expect(agentClient).toContain("{ action: 'simulate_reply', runId, simulationReply }")
+    expect(mainUi).toContain("previewParams.get('agentDev') === '1'")
+    expect(mainUi).toContain("data-action=\"simulate-agent-reply\"")
   })
 })
 
