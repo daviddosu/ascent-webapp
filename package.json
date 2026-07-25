@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e:ui": "pnpm build && node scripts/agent-ui.e2e.mjs",
+    "test:e2e:ui": "VITE_AGENT_E2E=true pnpm build && node scripts/agent-ui.e2e.mjs",
     "test:flight:live": "SHOTCOUNT_LIVE_FLIGHT_TEST=true vitest run api/_flight-browser.live.test.ts",
     "check": "pnpm test && pnpm build",
     "check:cloud": "node scripts/verify-cloud.mjs",

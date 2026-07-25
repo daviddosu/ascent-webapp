@@ -24,10 +24,16 @@ Requested scopes:
 - `calendar.events.freebusy`
 - `contacts.readonly`
 
-The existing Google app is External and In production. Gmail, Calendar, and
-People APIs are enabled. The production consent screen still needs either
-Google’s sensitive/restricted-scope verification evidence or a separate
-development project before the execution scopes can be saved.
+The investor-demo OAuth client lives in the dedicated
+`shotcount-agent-staging` Google Cloud project. Its consent screen is External
+and in Testing, the ShotCount development account is an explicit test user,
+and Gmail, Calendar, and People APIs are enabled. The complete execution scope
+set has been granted and the development account is connected.
+
+Do not promote this client as the public production OAuth client. Before a
+general release, create or promote a production client and complete Google’s
+verification for the sensitive/restricted scopes. Keep the same controlled
+callback URL and server-only token handling.
 
 ## Server secrets
 

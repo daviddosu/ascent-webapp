@@ -4,9 +4,11 @@
 
 1. Use the ShotCount development account.
 2. Confirm Google execution says Connected in Settings.
-3. Confirm browser alerts are allowed if the demo should show native notifications.
-4. Keep Today selected; Upcoming uses the same task inspector and agent states.
-5. Run:
+3. Confirm the server-side OpenAI project has API credits. A connected Google
+   account alone is not enough for the planner to run.
+4. Confirm browser alerts are allowed if the demo should show native notifications.
+5. Keep Today selected; Upcoming uses the same task inspector and agent states.
+6. Run:
 
 ```bash
 pnpm check
@@ -23,6 +25,28 @@ npx --yes deno check \
 ```
 
 Do not demo with a personal inbox containing unrelated private material.
+
+## Gmail follow-up scenario
+
+Create:
+
+> Follow up with everyone I emailed about ShotCount last week who hasn’t replied.
+
+Use a controlled development inbox containing a small, known set of relevant
+threads. Delegate from the normal task inspector.
+
+Show:
+
+1. ShotCount searches last week’s sent mail and reads only the relevant threads.
+2. Threads with a reply are excluded.
+3. The exact recipients, subjects, and follow-up bodies appear for review.
+4. ShotCount remains at Approval needed; no email has been sent yet.
+5. Approve the exact outreach.
+6. Gmail confirms each send and the original task becomes done.
+
+If the draft changes after the review, ShotCount must request a new approval.
+Do not use this scenario against a personal inbox or a broad unreviewed result
+set.
 
 ## Scheduling scenario
 

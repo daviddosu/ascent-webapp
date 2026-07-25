@@ -70,6 +70,25 @@ async function assertVisible(page, selector, message) {
   if (!await element.count()) throw new Error(message)
 }
 
+async function createTodayTask(page, title, description = '') {
+  await page.locator('.today-command-row .add-task-row').click()
+  await page.locator('[data-today-form] input[name="title"]').fill(title)
+  if (description) {
+    await page.locator('[data-today-form] textarea[name="description"]').fill(description)
+  }
+  await page.locator('[data-today-form]').evaluate(form => form.requestSubmit())
+  await page.locator('.inspector-title').waitFor({ state: 'visible' })
+  const inspectorTitle = await page.locator('.inspector-title').inputValue()
+  if (inspectorTitle !== title) {
+    throw new Error(`Expected inspector for "${title}", received "${inspectorTitle}".`)
+  }
+  await assertVisible(page, '[data-action="delegate-task"]', `The new task "${title}" could not be delegated.`)
+}
+
+async function delegateSelectedTask(page) {
+  await page.locator('[data-action="delegate-task"]').click()
+}
+
 const server = spawn(
   'pnpm',
   ['exec', 'vite', 'preview', '--host', host, '--port', String(port), '--strictPort'],
@@ -161,10 +180,73 @@ try {
     throw new Error('The error state is missing its calm status or recovery action.')
   }
 
+  await createTodayTask(
+    page,
+    'Follow up with everyone I emailed about ShotCount last week',
+    'Use the controlled test inbox and exclude threads that already received a reply.',
+  )
+  await delegateSelectedTask(page)
+  await assertVisible(page, '.task-agent-card--approval', 'Gmail follow-up did not reach exact approval.')
+  const gmailApproval = await page.locator('.task-agent-card--approval').innerText()
+  if (!gmailApproval.includes('investor@example.com') || !gmailApproval.includes('Only this exact action')) {
+    throw new Error('Gmail approval did not expose the exact reviewed action.')
+  }
+  await page.locator('[data-action="approve-agent-approval"]').click()
+  await assertVisible(page, '.task-agent-card--result', 'Approved Gmail follow-up did not complete.')
+  if (!await page.locator('.task-agent-card--result').innerText().then(text => text.includes('Gmail confirmed'))) {
+    throw new Error('Gmail completion was not provider-confirmed in the UI.')
+  }
+
+  await createTodayTask(
+    page,
+    'Set up a meeting with Blessing next week to discuss the ShotCount launch',
+    'Use 30 minutes and the controlled development contact.',
+  )
+  await delegateSelectedTask(page)
+  await assertVisible(page, '.task-agent-card--approval', 'Scheduling outreach did not request approval.')
+  await page.locator('[data-action="approve-agent-approval"]').click()
+  await assertVisible(page, '.task-agent-card--waiting', 'Scheduling did not enter waiting_external.')
+  const waitingText = await page.locator('.task-agent-card--waiting').innerText()
+  if (!waitingText.includes('Waiting for Blessing')) {
+    throw new Error('The external-reply waiting state is missing.')
+  }
+  await page.locator('[data-action="poll-agent"]').click()
+  await assertVisible(page, '.task-agent-card--approval', 'Reply resume did not prepare Calendar approval.')
+  const calendarApproval = await page.locator('.task-agent-card--approval').innerText()
+  if (!calendarApproval.includes('ShotCount launch meeting with Blessing') || !calendarApproval.includes('2026-07-30')) {
+    throw new Error('Calendar approval did not expose the exact event.')
+  }
+  await page.locator('[data-action="approve-agent-approval"]').click()
+  await assertVisible(page, '.task-agent-card--result', 'Calendar confirmation did not complete the AgentRun.')
+  if (!await page.locator('.task-agent-card--result').innerText().then(text => text.includes('Google Calendar confirmed'))) {
+    throw new Error('Scheduling completion was not provider-confirmed in the UI.')
+  }
+
+  await createTodayTask(
+    page,
+    'Find me a return flight from Lagos to London next Thursday returning Sunday',
+    'Economy, maximum one stop, preferably under $1,000.',
+  )
+  await delegateSelectedTask(page)
+  await assertVisible(page, '.task-agent-flight-options', 'Flight search did not return options into ShotCount.')
+  if (await page.locator('.task-agent-flight-options > button').count() !== 3) {
+    throw new Error('Flight search did not return the expected concise set of three options.')
+  }
+  await page.locator('[data-flight-option-id="e2e-flight-best"]').click()
+  await assertVisible(page, '.task-agent-payment-handoff', 'Flight selection did not resume to the payment boundary.')
+  const paymentText = await page.locator('.task-agent-payment-handoff').innerText()
+  if (!paymentText.includes('Payment and the final purchase remain under your control')) {
+    throw new Error('The payment boundary does not clearly preserve user control.')
+  }
+  const paymentLink = await page.locator('.task-agent-payment-handoff a').getAttribute('href')
+  if (paymentLink !== 'https://www.google.com/travel/flights/booking') {
+    throw new Error(`Unexpected payment handoff URL: ${paymentLink}`)
+  }
+
   if (pageErrors.length) {
     throw new Error(`Browser console errors:\n${pageErrors.join('\n')}`)
   }
-  console.log('Agent UI E2E passed: Today, Upcoming, Dynamic Island, hover glass, and error recovery.')
+  console.log('Agent UI E2E passed: Today, Upcoming, Gmail approval, reply resume, Calendar confirmation, live-flight handoff UI, Dynamic Island, hover glass, and error recovery.')
 } finally {
   await browser?.close().catch(() => undefined)
   server.kill('SIGTERM')

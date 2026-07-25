@@ -884,6 +884,7 @@ async function startAgentRun(task: Task, context = '') {
     try {
       const resumed = await resumeAgentRun(existing.id, context)
       agentRuns.set(task.id, resumed)
+      await syncAgentApproval(resumed)
       toast = resumed.status === 'failed' ? resumed.error ?? 'ShotCount needs attention.' : 'ShotCount resumed the task'
     } catch (error) {
       existing.status = 'failed'
@@ -914,6 +915,7 @@ async function startAgentRun(task: Task, context = '') {
     const completed = await executeAgentRun(task, run)
     if (agentRuns.get(task.id)?.status === 'cancelled') return
     agentRuns.set(task.id, completed)
+    await syncAgentApproval(completed)
     toast = 'Shotcount finished your task'
   } catch (error) {
     if (agentRuns.get(task.id)?.status === 'cancelled') return
@@ -927,6 +929,19 @@ async function startAgentRun(task: Task, context = '') {
   }
 }
 
+async function syncAgentApproval(run: AgentRun) {
+  if (run.status !== 'needs_approval') {
+    agentApprovals.delete(run.id)
+    return
+  }
+  try {
+    const pending = (await loadAgentApprovals(run.id)).find(approval => approval.status === 'pending')
+    if (pending) agentApprovals.set(run.id, pending)
+  } catch {
+    // Realtime or the next refresh can recover approval details.
+  }
+}
+
 async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 'reject') {
   const run = agentRuns.get(taskId)
   const approval = run ? agentApprovals.get(run.id) : null
@@ -937,6 +952,7 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
     const updated = await decideAgentApproval(approval, decision)
     agentRuns.set(taskId, updated)
     agentApprovals.delete(run.id)
+    await syncAgentApproval(updated)
     toast = decision === 'approve'
       ? 'Approved — ShotCount is continuing'
       : 'Action declined'
@@ -962,6 +978,7 @@ async function retryAgentRun(taskId: string) {
   try {
     const updated = await resumeAgentRun(run.id)
     agentRuns.set(taskId, updated)
+    await syncAgentApproval(updated)
     toast = 'ShotCount resumed the task'
   } catch (error) {
     toast = error instanceof Error ? error.message : 'ShotCount could not resume this task.'
@@ -980,6 +997,7 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
   try {
     const updated = await selectAgentFlight(run.id, optionId)
     agentRuns.set(taskId, updated)
+    await syncAgentApproval(updated)
     toast = 'ShotCount is preparing that flight'
   } catch (error) {
     toast = error instanceof Error ? error.message : 'ShotCount could not continue with this flight.'
@@ -3557,6 +3575,7 @@ app.addEventListener('click', async event => {
     render()
     void pollAgentRun(run.id).then(updated => {
       agentRuns.set(taskId, updated)
+      void syncAgentApproval(updated).then(() => render())
       toast = updated.status === 'waiting_external'
         ? 'Still waiting — ShotCount will keep checking'
         : 'ShotCount continued the task'

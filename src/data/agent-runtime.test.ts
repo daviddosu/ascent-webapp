@@ -68,6 +68,11 @@ describe('agent intent and completion semantics', () => {
       strategy: 'hybrid',
       outcomeType: 'external_change',
     })
+    expect(classifyAgentIntent('Set up a meeting with Blessing next week to discuss the ShotCount launch')).toEqual({
+      capability: 'scheduling',
+      strategy: 'hybrid',
+      outcomeType: 'external_change',
+    })
     expect(classifyAgentIntent('Find a return flight from Lagos to London')).toEqual({
       capability: 'flight_search',
       strategy: 'browser',

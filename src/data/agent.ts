@@ -112,6 +112,12 @@ type AgentApprovalRow = {
   expires_at: string | null
 }
 
+const agentE2EFixtureEnabled = import.meta.env.VITE_AGENT_E2E === 'true'
+
+async function agentE2EFixture() {
+  return import('./agent-e2e-fixture')
+}
+
 function mapAgentRun(row: AgentRunRow): AgentRun {
   const intent = row.intent ?? classifyAgentIntent(row.objective, row.context?.description)
   return {
@@ -203,6 +209,9 @@ export async function resolveAgentFunctionError(
 }
 
 export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentRun> {
+  if (agentE2EFixtureEnabled) {
+    return (await agentE2EFixture()).startFixtureRun(task, run)
+  }
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) throw new Error('Sign in to delegate this task to Shotcount.')
@@ -228,6 +237,7 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
 }
 
 export async function loadAgentRuns(): Promise<AgentRun[]> {
+  if (agentE2EFixtureEnabled) return (await agentE2EFixture()).fixtureRuns()
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) return []
@@ -247,6 +257,7 @@ export async function loadAgentRuns(): Promise<AgentRun[]> {
 }
 
 export async function loadAgentApprovals(runId: string): Promise<AgentApproval[]> {
+  if (agentE2EFixtureEnabled) return (await agentE2EFixture()).fixtureApprovals(runId)
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) return []
@@ -265,6 +276,9 @@ async function invokeRunAction(
   body: Record<string, unknown>,
   fallback: string,
 ) {
+  if (agentE2EFixtureEnabled) {
+    return (await agentE2EFixture()).invokeFixtureAction(body)
+  }
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) throw new Error('Sign in to continue this ShotCount task.')
