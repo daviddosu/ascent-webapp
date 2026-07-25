@@ -369,6 +369,7 @@ const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task
 let activityMode: ActivityMode = 'daily'
 let plannerDraftGroup: UpcomingGroup | null = null
 let todayComposerOpen = false
+let subtaskComposerTaskId: string | null = null
 let roonPlannerOpen = false
 let roonPlannerStage: RoonPlannerStage = 'goal'
 let roonPlannerGoal = ''
@@ -566,6 +567,8 @@ const icons: Record<string, string> = {
   chevron: '<path d="m9 6 6 6-6 6"/>',
   down: '<path d="m8 10 4 4 4-4"/>',
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.25 2.46 3.4 5.46 3.4 9S14.25 18.54 12 21c-2.25-2.46-3.4-5.46-3.4-9S9.75 5.46 12 3Z"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
 }
 
@@ -1532,7 +1535,7 @@ function renderSharedCreatorTask(task: SharedCreatorTask) {
       </span>
       <button class="task-text" data-creator-task="${task.id}"><strong>${escapeHtml(task.title)}</strong><small>
         ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
-        <span class="task-visibility task-visibility--${task.visibility}">${visibilityLabels[task.visibility]}</span>
+        ${renderVisibilityIndicator(task.visibility)}
       </small></button>
       <button class="task-chevron" data-creator-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
     </div>`
@@ -2158,7 +2161,9 @@ function renderGoalComposer() {
 }
 
 function renderToday() {
-  const todayTasks = sortTasks(tasksForToday())
+  const carriedOverTasks = sortTasks(tasksForToday().filter(task => task.due! < todayKey))
+  const todayTasks = sortTasks(tasksForToday().filter(task => task.due === todayKey))
+  const hasTasks = carriedOverTasks.length || todayTasks.length
   return `
     <section class="today-screen">
       <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} tasks">${screenCounts.today}</span></header>
@@ -2167,8 +2172,17 @@ function renderToday() {
         <button class="ask-shotcount-button" data-action="open-roon-planner"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
       </div>`}
       <div class="task-list">
-        ${todayTasks.length
-          ? todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')
+        ${hasTasks
+          ? `${carriedOverTasks.length ? `<section class="today-task-group today-task-group--carried" aria-labelledby="carried-over-heading">
+              <h2 id="carried-over-heading">Carried over</h2>
+              ${carriedOverTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')}
+            </section>` : ''}
+            <section class="today-task-group today-task-group--today" aria-labelledby="today-tasks-heading">
+              <h2 id="today-tasks-heading"><span>Today</span></h2>
+              ${todayTasks.length
+                ? todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')
+                : '<div class="planner-empty planner-empty--small"><strong>Nothing else for today.</strong><p>Add a task when you are ready.</p></div>'}
+            </section>`
           : '<div class="planner-empty"><strong>Your day is clear.</strong><p>Add your first task when you are ready.</p></div>'}
       </div>
     </section>
@@ -2271,6 +2285,12 @@ function renderVisibilityOptions(selected?: TaskVisibility) {
     .join('')
 }
 
+function renderVisibilityIndicator(visibility?: TaskVisibility) {
+  const current = normalizeTaskVisibility(visibility)
+  const iconName = current === 'public' ? 'globe' : current === 'followers' ? 'plus' : 'lock'
+  return `<span class="task-visibility-icon task-visibility-icon--${current}" aria-label="${visibilityLabels[current]}" title="${visibilityLabels[current]}">${icon(iconName)}</span>`
+}
+
 function renderTaskRow(task: Task, selected = false) {
   const goal = goals.find(item => item.id === task.goalId)
   const completed = completedTaskIds.has(task.id)
@@ -2293,7 +2313,7 @@ function renderTaskRow(task: Task, selected = false) {
           ${task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
           ${goal ? `<span><i class="list-color" style="--list-color:${goal.color}"></i>${escapeHtml(goal.name)}</span>` : ''}
           ${!task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
-          <span class="task-visibility task-visibility--${normalizeTaskVisibility(task.visibility)}">${visibilityLabels[normalizeTaskVisibility(task.visibility)]}</span>
+          ${renderVisibilityIndicator(task.visibility)}
         </small>
       </button>
       ${renderAgentPill(task)}
@@ -2562,7 +2582,13 @@ function renderInspector(task: Task) {
         ${renderAgentPanel(task)}
 
         <h3>Subtasks:</h3>
-        <button class="add-subtask" data-action="add-subtask">${icon('plus')}<span>Add New Subtask</span></button>
+        ${subtaskComposerTaskId === task.id ? `
+          <form class="subtask-composer" data-subtask-form="${task.id}">
+            <input name="title" aria-label="Subtask title" placeholder="What needs doing?" autocomplete="off" required />
+            <button type="submit">Add</button>
+            <button type="button" data-action="cancel-subtask" aria-label="Cancel subtask">Cancel</button>
+          </form>
+        ` : `<button class="add-subtask" data-action="add-subtask">${icon('plus')}<span>Add New Subtask</span></button>`}
         ${subtasks.map(subtask => `<label class="subtask"><input type="checkbox" data-subtask="${subtask.id}" ${subtask.completed ? 'checked' : ''}/><span class="${subtask.completed ? 'completed' : ''}">${escapeHtml(subtask.title)}</span></label>`).join('')}
       </div>
       <div class="inspector-actions">
@@ -3400,6 +3426,30 @@ app.addEventListener('submit', async event => {
     return
   }
 
+  const subtaskForm = target.closest<HTMLFormElement>('[data-subtask-form]')
+  if (subtaskForm) {
+    event.preventDefault()
+    persistInspectorDraft()
+    const task = tasks.find(item => item.id === subtaskForm.dataset.subtaskForm)
+    const title = String(new FormData(subtaskForm).get('title') ?? '').trim()
+    if (!task || !title) return
+    const timestamp = new Date().toISOString()
+    task.subtaskItems = [
+      ...(task.subtaskItems ?? []),
+      { id: crypto.randomUUID(), title, completed: false, createdAt: timestamp, updatedAt: timestamp },
+    ]
+    task.subtasks = task.subtaskItems.length
+    subtaskComposerTaskId = null
+    persistPlanner()
+    toast = 'Subtask added'
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1400)
+    return
+  }
+
   const calendarForm = target.closest<HTMLFormElement>('[data-calendar-form]')
   if (calendarForm) {
     event.preventDefault()
@@ -4065,6 +4115,7 @@ app.addEventListener('click', async event => {
     persistPlanner()
     toast = 'Task deleted'
     mobileInspectorOpen = false
+    subtaskComposerTaskId = null
   } else if (action === 'cycle-goal') {
     persistInspectorDraft()
     const task = selectedTask()
@@ -4077,14 +4128,15 @@ app.addEventListener('click', async event => {
     persistInspectorDraft()
     const task = selectedTask()
     if (task) {
-      const subtaskNumber = (task.subtaskItems?.length ?? 0) + 1
-      task.subtaskItems = [
-        ...(task.subtaskItems ?? []),
-        { id: crypto.randomUUID(), title: subtaskNumber === 1 ? 'Subtask' : `Subtask ${subtaskNumber}`, completed: false },
-      ]
-      task.subtasks = task.subtaskItems.length
+      subtaskComposerTaskId = task.id
+      render()
+      document.querySelector<HTMLInputElement>('[data-subtask-form] input[name="title"]')?.focus()
     }
-    toast = 'New subtask ready'
+    return
+  } else if (action === 'cancel-subtask') {
+    subtaskComposerTaskId = null
+    render()
+    return
   } else if (action === 'add-event') {
     openCalendarComposer(calendarDateKey(), '09:00')
     return

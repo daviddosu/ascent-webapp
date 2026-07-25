@@ -538,18 +538,15 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .task-text small span { display: inline-flex; align-items: center; gap: 5px; }
 .task-text small svg { width: 11px; height: 11px; }
 .task-text small b { padding: 1px 5px; border-radius: 3px; background: #f1f1f1; font-size: 10px; }
-.task-text small .task-visibility {
-  min-height: 20px;
-  padding: 2px 8px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
+.task-text small .task-visibility-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  color: #666;
 }
-.task-visibility--private { border-color: #dedede !important; background: #f2f2f2; color: #5e5e5e; }
-.task-visibility--followers { border-color: #c9d7ff !important; background: #edf2ff; color: #355fba; }
-.task-visibility--public { border-color: #bfe5cc !important; background: #eaf8ef; color: #287541; }
+.task-text small .task-visibility-icon svg { width: 13px; height: 13px; stroke-width: 1.8; }
+.task-text small .task-visibility-icon--followers svg { width: 14px; height: 14px; }
 .task-row.completed .task-text strong { color: #8b8b8b; text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .task-row.completed .task-text small { opacity: .55; }
 
@@ -613,15 +610,41 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .planner-empty p { margin: 0; font-size: 12px; line-height: 1.5; }
 .planner-empty--small { margin: 24px 0; padding: 26px 18px; }
 
+.today-task-group > h2 {
+  margin: 0;
+  color: #696969;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.today-task-group--carried > h2 { padding: 14px 18px 7px; color: #725239; }
+.today-task-group--today > h2 {
+  height: 29px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.today-task-group--today > h2::before,
+.today-task-group--today > h2::after { content: ''; height: 1px; flex: 1; background: #d8d8d8; }
+.today-task-group--today > h2 span { white-space: nowrap; }
+.today-task-group--today:first-child > h2 { margin-top: 5px; }
+
 .inspector {
-  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 0;
+  max-height: 100vh;
   padding: 45px 28px 28px 20px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   border-left: 1px solid #ededed;
   background: #fff;
   view-transition-name: today-inspector;
 }
+.inspector-content { min-height: 0; flex: 1 1 auto; overflow-y: auto; padding-right: 4px; }
 .inspector-content h2 { margin: 0 0 17px; font-size: 20px; }
 .inspector-title,
 .inspector textarea {
@@ -1215,11 +1238,16 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 }
 .inspector-content h3 { margin: 23px 0 9px; font-size: 22px; }
 .add-subtask { width: 100%; height: 42px; padding: 0 11px; display: flex; align-items: center; gap: 12px; color: #777; font-size: 14px; }
+.subtask-composer { min-height: 45px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 7px; border-top: 1px solid #ededed; }
+.subtask-composer input { min-width: 0; height: 34px; padding: 0 9px; border: 1px solid #d8d8d8; border-radius: 5px; outline: 0; font-size: 13px; }
+.subtask-composer input:focus { border-color: #777; box-shadow: 0 0 0 3px rgba(25, 25, 25, .055); }
+.subtask-composer button { height: 32px; padding: 0 9px; border-radius: 5px; color: #686868; font-size: 11px; font-weight: 600; }
+.subtask-composer button[type='submit'] { background: #1b1b1b; color: #fff; }
 .subtask { min-height: 43px; padding: 0 10px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #ededed; font-size: 14px; }
 .subtask input { appearance: none; width: 13px; height: 13px; border: 1px solid #dedede; border-radius: 3px; }
 .subtask input:checked { border-color: #222; background: #222; box-shadow: inset 0 0 0 3px #fff; }
 .subtask span.completed { color: #888; text-decoration: line-through; }
-.inspector-actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.inspector-actions { flex: 0 0 auto; margin-top: 16px; padding-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; border-top: 1px solid #ededed; background: #fff; }
 .inspector-actions button { height: 47px; border: 1px solid #e2e2e2; border-radius: 5px; font-size: 13px; font-weight: 600; }
 .inspector-actions .save { border-color: #111; background: #111; color: #fff; box-shadow: none; }
 
@@ -2912,6 +2940,17 @@ body[data-theme='dark'] .subtask input {
   background: var(--dark-text);
 }
 
+body[data-theme='dark'] .subtask-composer { border-color: var(--dark-border); }
+body[data-theme='dark'] .subtask-composer input {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: var(--dark-text);
+}
+body[data-theme='dark'] .subtask-composer button { color: var(--dark-muted); }
+body[data-theme='dark'] .subtask-composer button[type='submit'] { background: var(--dark-text); color: var(--dark-bg); }
+body[data-theme='dark'] .today-task-group--today > h2::before,
+body[data-theme='dark'] .today-task-group--today > h2::after { background: var(--dark-border); }
+
 body[data-theme='dark'] .completion-ring { fill: var(--dark-bg); stroke: #656b72; }
 
 body[data-theme='dark'] .theme-toggle > i {
@@ -3247,7 +3286,7 @@ body[data-theme='dark'] .month-event {
     height: 100dvh;
     min-height: 0;
     padding: calc(60px + env(safe-area-inset-top)) 18px calc(14px + env(safe-area-inset-bottom));
-    overflow-y: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
     border-left: 0;
     background: #fff;
@@ -3305,9 +3344,8 @@ body[data-theme='dark'] .month-event {
   }
 
   .inspector-actions {
-    position: sticky;
-    bottom: calc(-14px - env(safe-area-inset-bottom));
-    margin: 28px -18px calc(-14px - env(safe-area-inset-bottom));
+    position: static;
+    margin: 12px -18px calc(-14px - env(safe-area-inset-bottom));
     padding: 12px 18px calc(14px + env(safe-area-inset-bottom));
     background: rgba(255, 255, 255, .94);
     border-top: 1px solid #ededed;

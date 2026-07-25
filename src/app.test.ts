@@ -79,6 +79,10 @@ describe('reference screens', () => {
     expect(document.querySelector('.screen-title h1')?.textContent).toBe('Today')
     expect(document.querySelector('.screen-count')?.getAttribute('data-count')).toBe('5')
     expect(document.querySelectorAll('.task-row')).toHaveLength(5)
+    expect(document.querySelector('.today-task-group--carried h2')?.textContent).toBe('Carried over')
+    expect(document.querySelector('.today-task-group--carried .task-row strong')?.textContent).toBe('Research content ideas')
+    expect(document.querySelector('.today-task-group--today h2')?.textContent).toBe('Today')
+    expect(document.querySelectorAll('.today-task-group--today .task-row')).toHaveLength(4)
     expect(document.querySelector('.inspector-title')?.getAttribute('value')).toBe("Renew driver's license")
   })
 
@@ -117,7 +121,9 @@ describe('reference screens', () => {
     expect(document.querySelector<HTMLInputElement>('.inspector-title')?.value).toBe('Plan launch review')
     expect(document.querySelector<HTMLTextAreaElement>('.inspector textarea')?.value).toBe('Gather the launch notes.')
     expect(document.querySelector<HTMLSelectElement>('.inspector-visibility')?.value).toBe('followers')
-    expect(document.querySelector('.task-row.selected .task-visibility')?.textContent).toBe('Followers')
+    expect(document.querySelector('.task-row.selected .task-visibility-icon')?.getAttribute('aria-label')).toBe('Followers')
+    expect(document.querySelector('.task-row.selected .task-visibility-icon svg')).not.toBeNull()
+    expect(document.querySelector('.task-row.selected .task-visibility')).toBeNull()
     expect(vibrate).toHaveBeenCalledWith([35, 30, 60])
   })
 
@@ -196,10 +202,14 @@ describe('reference screens', () => {
     expect(visibility.value).toBe('private')
     visibility.value = 'public'
     visibility.dispatchEvent(new Event('change', { bubbles: true }))
-    expect(document.querySelector('.task-row.selected .task-visibility')?.textContent).toBe('Public')
+    expect(document.querySelector('.task-row.selected .task-visibility-icon')?.getAttribute('aria-label')).toBe('Public')
     expect(window.localStorage.getItem('shotcount-workspace-current-v1:planner')).toContain('"visibility":"public"')
 
     document.querySelector<HTMLButtonElement>('[data-action="add-subtask"]')!.click()
+    const subtaskForm = document.querySelector<HTMLFormElement>('[data-subtask-form]')!
+    subtaskForm.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Check the final links'
+    subtaskForm.requestSubmit()
+    expect(document.querySelector('.subtask span')?.textContent).toBe('Check the final links')
     const subtask = document.querySelector<HTMLInputElement>('[data-subtask]')!
     subtask.click()
     expect(document.querySelector('.subtask span')?.classList.contains('completed')).toBe(true)
