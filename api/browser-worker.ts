@@ -7,6 +7,13 @@ import {
   type FlightOption,
   type FlightSearchInput,
 } from './_flight-browser.js'
+import {
+  actOnPublicPage,
+  navigatePublicPage,
+  submitPublicPage,
+  type PublicBrowserAction,
+  type PublicBrowserState,
+} from './_public-browser.js'
 
 export const maxDuration = 60
 
@@ -24,7 +31,7 @@ type WorkerResponse = {
 
 type BrowserOperation = {
   id: string
-  type: 'search_flights' | 'select_flight'
+  type: 'navigate' | 'act' | 'submit' | 'search_flights' | 'select_flight'
   arguments: Record<string, unknown>
 }
 
@@ -46,6 +53,11 @@ type BrowserCheckpoint = {
     options: FlightOption[]
   }
   selectedFlight?: Record<string, unknown>
+  publicBrowser?: PublicBrowserState
+  submissionAttempted?: {
+    operationId: string
+    attemptedAt: string
+  }
   workerAttempts?: number
   [key: string]: unknown
 }
@@ -150,7 +162,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
   if (
     !operation ||
     operation.id !== operationId ||
-    !['search_flights', 'select_flight'].includes(operation.type)
+    !['navigate', 'act', 'submit', 'search_flights', 'select_flight'].includes(operation.type)
   ) {
     if (
       checkpoint.lastOperation?.id === operationId &&
@@ -162,13 +174,43 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     response.status(409).json({ error: 'Browser operation changed or was already handled' })
     return
   }
-  if (!Array.isArray(session.allowed_domains) || !session.allowed_domains.includes('www.google.com')) {
-    response.status(403).json({ error: 'The flight domain is not allowed for this session' })
+  if (
+    !Array.isArray(session.allowed_domains) ||
+    !session.allowed_domains.length ||
+    ((operation.type === 'search_flights' || operation.type === 'select_flight') &&
+      !session.allowed_domains.includes('www.google.com'))
+  ) {
+    response.status(403).json({ error: 'The requested domain is not allowed for this browser session' })
+    return
+  }
+  if (operation.type === 'submit' && checkpoint.submissionAttempted?.operationId === operation.id) {
+    const uncertainError = {
+      code: 'browser_submission_status_unknown',
+      message: 'The approved form may already have been submitted. ShotCount will not submit it again automatically.',
+      retryable: false,
+    }
+    await admin.from('browser_execution_sessions').update({
+      status: 'failed',
+      checkpoint: {
+        ...checkpoint,
+        pendingOperation: null,
+        lastOperation: {
+          id: operation.id,
+          type: operation.type,
+          status: 'failed',
+          error: uncertainError,
+          completedAt: new Date().toISOString(),
+        },
+      },
+      resumable: false,
+      last_observed_at: new Date().toISOString(),
+    }).eq('id', session.id)
+    response.status(409).json({ error: uncertainError.code })
     return
   }
 
   const workerSessionId = crypto.randomUUID()
-  const claimedCheckpoint: BrowserCheckpoint = {
+  let claimedCheckpoint: BrowserCheckpoint = {
     ...checkpoint,
     workerAttempts: Number(checkpoint.workerAttempts ?? 0) + 1,
   }
@@ -187,6 +229,24 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
   if (claim.error || !claim.data) {
     response.status(202).json({ ok: true, claimedByAnotherWorker: true })
     return
+  }
+
+  if (operation.type === 'submit') {
+    claimedCheckpoint = {
+      ...claimedCheckpoint,
+      submissionAttempted: {
+        operationId: operation.id,
+        attemptedAt: new Date().toISOString(),
+      },
+    }
+    const marked = await admin.from('browser_execution_sessions').update({
+      checkpoint: claimedCheckpoint,
+      last_observed_at: new Date().toISOString(),
+    }).eq('id', session.id).eq('worker_session_id', workerSessionId)
+    if (marked.error) {
+      response.status(500).json({ error: 'browser_submission_checkpoint_failed' })
+      return
+    }
   }
 
   try {
@@ -212,7 +272,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
           completedAt: new Date().toISOString(),
         },
       }
-    } else {
+    } else if (operation.type === 'select_flight') {
       const flightSearch = checkpoint.flightSearch
       const optionId = String(operation.arguments.option_id ?? '')
       if (!flightSearch?.input || !Array.isArray(flightSearch.options)) {
@@ -234,6 +294,81 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
         ...claimedCheckpoint,
         pendingOperation: null,
         selectedFlight: output,
+        lastOperation: {
+          id: operation.id,
+          type: operation.type,
+          status: 'succeeded',
+          output,
+          completedAt: new Date().toISOString(),
+        },
+      }
+    } else if (operation.type === 'navigate') {
+      const state = await navigatePublicPage(String(operation.arguments.url ?? ''), session.allowed_domains)
+      output = { observation: state.observation, resumable: true }
+      currentUrl = state.currentUrl
+      nextCheckpoint = {
+        ...claimedCheckpoint,
+        pendingOperation: null,
+        publicBrowser: state,
+        lastOperation: {
+          id: operation.id,
+          type: operation.type,
+          status: 'succeeded',
+          output,
+          completedAt: new Date().toISOString(),
+        },
+      }
+    } else if (operation.type === 'act') {
+      if (!checkpoint.publicBrowser) {
+        throw new BrowserExecutionError('browser_navigation_checkpoint_missing', 'Navigate this session before acting on the page.', false)
+      }
+      const action: PublicBrowserAction = {
+        action: String(operation.arguments.action) as PublicBrowserAction['action'],
+        target: String(operation.arguments.target ?? ''),
+        value: operation.arguments.value === null ? null : String(operation.arguments.value ?? ''),
+      }
+      const state = await actOnPublicPage(checkpoint.publicBrowser, action, session.allowed_domains)
+      output = { observation: state.observation, resumable: true }
+      currentUrl = state.currentUrl
+      nextCheckpoint = {
+        ...claimedCheckpoint,
+        pendingOperation: null,
+        publicBrowser: state,
+        lastOperation: {
+          id: operation.id,
+          type: operation.type,
+          status: 'succeeded',
+          output,
+          completedAt: new Date().toISOString(),
+        },
+      }
+    } else {
+      if (!checkpoint.publicBrowser) {
+        throw new BrowserExecutionError('browser_navigation_checkpoint_missing', 'Navigate this session before submitting a form.', false)
+      }
+      const result = await submitPublicPage(
+        checkpoint.publicBrowser,
+        String(operation.arguments.target ?? ''),
+        session.allowed_domains,
+      )
+      if (!result.confirmationObserved) {
+        throw new BrowserExecutionError(
+          'browser_submission_status_unknown',
+          'The approved form was submitted, but the page did not show a verifiable confirmation. ShotCount will not submit it again automatically.',
+          false,
+        )
+      }
+      output = {
+        submitted: result.submitted,
+        confirmation_observed: result.confirmationObserved,
+        expected_effect: String(operation.arguments.expected_effect ?? ''),
+        observation: result.state.observation,
+      }
+      currentUrl = result.state.currentUrl
+      nextCheckpoint = {
+        ...claimedCheckpoint,
+        pendingOperation: null,
+        publicBrowser: result.state,
         lastOperation: {
           id: operation.id,
           type: operation.type,

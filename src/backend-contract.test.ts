@@ -25,6 +25,7 @@ const googleToolFunction = readFileSync(resolve(root, 'supabase/functions/_share
 const agentWatchSweepFunction = readFileSync(resolve(root, 'supabase/functions/agent-watch-sweep/index.ts'), 'utf8')
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
 const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf8')
+const publicBrowser = readFileSync(resolve(root, 'api/_public-browser.ts'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -303,6 +304,8 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('pauseForApproval')
     expect(taskAgentFunction).toContain('actionIdempotencyKey')
     expect(taskAgentFunction).toContain('expectedHash !== approval.payload_hash')
+    expect(taskAgentFunction).toContain("toolName === 'browser.submit'")
+    expect(taskAgentFunction).toContain('preparedState')
     expect(taskAgentFunction).toContain('const payloadHash = await hashValue(payload)')
     expect(taskAgentFunction).toContain(".eq('status', 'pending')")
     expect(taskAgentFunction).toContain("'This approval was already decided. Refresh the task.'")
@@ -361,10 +364,17 @@ describe('agent execution security contract', () => {
 
   it('keeps browser control structured and stops before payment', () => {
     expect(browserWorker).toContain("operation.type === 'search_flights'")
-    expect(browserWorker).toContain("type: 'search_flights' | 'select_flight'")
+    expect(browserWorker).toContain("type: 'navigate' | 'act' | 'submit' | 'search_flights' | 'select_flight'")
     expect(browserWorker).toContain('resumeFlightSelection(')
+    expect(browserWorker).toContain('submissionAttempted')
+    expect(browserWorker).toContain('browser_submission_status_unknown')
     expect(browserWorker).toContain("process.env.SHOTCOUNT_BROWSER_WORKER_TOKEN")
     expect(browserWorker).not.toContain('cookie')
+    expect(publicBrowser).toContain('untrustedExternalContent: true')
+    expect(publicBrowser).toContain('browser_sensitive_field_blocked')
+    expect(publicBrowser).toContain("url.protocol !== 'https:'")
+    expect(publicBrowser).toContain('isIP(hostname) !== 0')
+    expect(publicBrowser).toContain("request.resourceType() === 'document'")
     expect(flightBrowser).toContain("paymentBoundaryReached: true")
     expect(flightBrowser).toContain('continueToProviderBooking')
     expect(flightBrowser).not.toMatch(/card(?:Number|_number)|cvv|securityCode/i)

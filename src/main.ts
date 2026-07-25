@@ -2276,12 +2276,16 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
   const body = approvalPreviewValue(approval, approval.kind === 'calendar_write' ? 'description' : 'body_text')
   const startsAt = approvalPreviewValue(approval, 'start')
   const endsAt = approvalPreviewValue(approval, 'end')
+  const destination = approvalPreviewValue(approval, 'destination')
+  const browserTarget = approvalPreviewValue(approval, 'target')
+  const browserEffect = approvalPreviewValue(approval, 'expected_effect')
+  const preparedValues = approvalPreviewValue(approval, 'prepared_values')
   const busy = agentDecisionBusy.has(approval.id)
   const confirmLabel = approval.kind === 'send_email'
     ? 'Send'
     : approval.kind === 'calendar_write'
       ? 'Confirm'
-      : 'Continue'
+      : 'Submit'
   return `<section class="task-agent-card task-agent-card--approval">
     <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">!</i> Approval needed</em></header>
     <p>${escapeHtml(approval.title)}</p>
@@ -2289,7 +2293,14 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
       ${title ? `<dl><dt>${approval.kind === 'calendar_write' ? 'Event' : 'Subject'}</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
       ${startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
-      ${body ? `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
+      ${destination ? `<dl><dt>Page</dt><dd>${escapeHtml(String(destination))}</dd></dl>` : ''}
+      ${browserTarget ? `<dl><dt>Submit</dt><dd>${escapeHtml(String(browserTarget))}</dd></dl>` : ''}
+      ${Array.isArray(preparedValues) ? preparedValues.map(item => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return ''
+        const value = item as Record<string, unknown>
+        return `<dl><dt>${escapeHtml(String(value.field ?? 'Field'))}</dt><dd>${escapeHtml(String(value.value ?? ''))}</dd></dl>`
+      }).join('') : ''}
+      ${body ? `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
     </div>
     <small>Only this exact action is approved. Any change requires a new review.</small>
     <footer>

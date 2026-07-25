@@ -21,4 +21,8 @@ Deno.test('provider writes and meeting coordination keep external-change complet
     classifySharedAgentIntent('Set up a meeting with Blessing next week'),
     { capability: 'scheduling', strategy: 'hybrid', outcomeType: 'external_change' },
   )
+  assertEquals(
+    classifySharedAgentIntent('Submit the public conference interest form for me'),
+    { capability: 'browser', strategy: 'browser', outcomeType: 'external_change' },
+  )
 })

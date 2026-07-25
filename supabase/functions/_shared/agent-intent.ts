@@ -19,6 +19,8 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
     /\b(?:set\s*up|schedule|reschedule|arrange|coordinate|organize|create|add|book|cancel|delete|move)\b/.test(titleValue)
   const hasFlight = /\b(flight|fly|airfare|airline|airport|return trip|round trip|one-way)\b/.test(value)
   const wantsBooking = /\b(book|booking|buy|purchase|reserve)\b/.test(titleValue)
+  const wantsBrowserWrite = /\b(?:submit|register|sign[\s-]?up|apply|post|publish|upload)\b/.test(titleValue) ||
+    /\b(?:fill|complete)\b[\s\S]{0,40}\bform\b/.test(titleValue)
   const research = /\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b/.test(value)
   const draft = /\b(draft|write|outline|proposal|application|polish|document)\b/.test(value)
 
@@ -55,6 +57,6 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
   return {
     capability: research ? 'research' : 'browser',
     strategy: research ? 'structured' : 'browser',
-    outcomeType: 'prepared_result',
+    outcomeType: wantsBrowserWrite ? 'external_change' : 'prepared_result',
   }
 }

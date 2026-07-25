@@ -50,6 +50,16 @@ Deno.test('completion requires provider-confirmed evidence for real-world outcom
     capability: 'calendar',
     providerConfirmedTools: ['calendar.get_availability'],
   }), false)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'browser',
+    providerConfirmedTools: ['browser.start_session', 'browser.navigate', 'browser.act'],
+  }), false)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'browser',
+    providerConfirmedTools: ['browser.start_session', 'browser.submit'],
+  }), true)
 })
 
 Deno.test('payment handoff cannot be mistaken for a confirmed purchase', () => {

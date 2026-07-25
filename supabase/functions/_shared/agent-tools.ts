@@ -68,7 +68,7 @@ export function agentCompletionEvidenceSatisfied(
   if (evidence.capability === 'calendar' || evidence.capability === 'scheduling') {
     return [...calendarWriteTools].some(tool => confirmedTools.has(tool))
   }
-  return evidence.providerConfirmedTools.length > 0
+  return confirmedTools.has('browser.submit')
 }
 
 const weekdayIndexes: Record<string, number> = {

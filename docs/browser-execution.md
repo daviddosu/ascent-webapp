@@ -1,6 +1,6 @@
 # Browser execution
 
-ShotCount uses a signed Vercel Node worker for tasks without a first-party API. The MVP’s production browser capability is a real Google Flights search and payment handoff.
+ShotCount uses a signed Vercel Node worker for tasks without a first-party API. It supports constrained public-web navigation and approved form submission, plus a purpose-built Google Flights search and payment handoff.
 
 ## Boundaries
 
@@ -9,9 +9,21 @@ ShotCount uses a signed Vercel Node worker for tasks without a first-party API. 
 - The Supabase function enforces an environment allowlist; the flight worker additionally requires `www.google.com`.
 - A random bearer token authenticates Edge Function to worker.
 - The worker uses a fresh isolated browser context and never returns cookies, storage, raw page dumps, or credentials.
+- Public page content is bounded, sanitized, and explicitly labelled as untrusted external content before the model sees it.
+- Navigation is HTTPS-only, exact-domain allowlisted, and rejects IP, local-network, credential-bearing, and unsafe redirect destinations.
+- Generic actions can type or select only non-sensitive fields. Password, one-time-code, payment, banking, and private-identifier fields are blocked.
+- Generic clicks can only follow safe links. Form submission is a separate typed tool that always requires exact approval.
 - Public cookie consent is rejected rather than accepted.
 - No card data is entered or stored.
 - No provider Continue/payment button is clicked.
+
+## Public-web tasks
+
+`browser.start_session` creates a task-owned session with only the configured domains needed for that objective. `browser.navigate`, `browser.observe`, and `browser.act` prepare the page. Each observation contains only the page title, URL, short visible text, headings, links, and labelled controls.
+
+State is replayable rather than tied to a long-lived Chromium process: the initial URL and at most 30 validated actions are stored in the session checkpoint. A serverless restart can recreate the same public page state and continue the same AgentRun.
+
+`browser.submit` is the only generic externally visible write. The exact session, target, and expected effect are hashed into the approval. Immediately before clicking, the worker persists a submission-attempt marker. A retry can therefore never click twice. Completion requires a visible post-submit page change; when confirmation is ambiguous, ShotCount stops for review and refuses to resubmit automatically.
 
 ## Flight search
 
@@ -50,7 +62,7 @@ The Chromium process may be fresh after a serverless restart, but the task-owned
 Supabase Edge Function secrets:
 
 ```text
-SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=www.google.com
+SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=www.google.com,example-public-form.com
 SHOTCOUNT_BROWSER_WORKER_URL=https://<deployment>/api/browser-worker
 SHOTCOUNT_BROWSER_WORKER_TOKEN=<random shared token>
 ```
@@ -67,7 +79,7 @@ The two worker-token values must match. The service key and worker token must ne
 
 ## Failure handling
 
-The worker records stable public codes for runtime missing, no results, changed fare/schedule, sold out, missing return, unsafe handoff, timeout, and worker connectivity. A failed selection returns to the existing options when safe; a failed search is retryable. No browser form can be submitted twice because every operation ID is persisted before dispatch.
+The worker records stable public codes for runtime missing, unsafe URLs or fields, missing or ambiguous targets, ambiguous submission confirmation, no results, changed fare/schedule, sold out, missing return, unsafe handoff, timeout, and worker connectivity. A failed selection returns to the existing options when safe; a failed search is retryable. No browser form can be submitted twice because its operation ID and attempt marker are persisted before the side effect.
 
 ## Live verification
 

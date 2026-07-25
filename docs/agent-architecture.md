@@ -60,8 +60,10 @@ Completion is evidence-gated twice. The Edge Function checks persisted,
 provider-confirmed tool actions before accepting a model completion request,
 and the database function repeats that check while holding the AgentRun row
 lock. Gmail work requires a confirmed `gmail.send_message`; Calendar and
-scheduling work require a confirmed Calendar create/update/delete. A payment
-handoff never counts as a confirmed purchase.
+scheduling work require a confirmed Calendar create/update/delete; generic
+public-web changes require a confirmed `browser.submit`. Navigation and page
+preparation never count as an external change. A payment handoff never counts
+as a confirmed purchase.
 
 ## Approval and idempotency
 

@@ -226,6 +226,37 @@ describe('mocked AgentRun integration journeys', () => {
     expect(flow.provider.count('calendar.create_event')).toBe(1)
   })
 
+  it('prepares a public form, requires exact submit approval, and completes only after submit', () => {
+    const flow = new AgentFlow(
+      'run-browser-form',
+      'Submit the public conference interest form for me',
+    )
+    flow.execute('browser.start_session', {
+      objective: 'Complete the public conference interest form.',
+      allowed_domains: ['conference.example.com'],
+    })
+    flow.execute('browser.navigate', {
+      session_id: 'browser-session-1',
+      url: 'https://conference.example.com/interest',
+    })
+    flow.execute('browser.act', {
+      session_id: 'browser-session-1',
+      action: 'type',
+      target: 'label:Name',
+      value: 'David Dosu',
+    })
+    expect(flow.complete({ externalChangeConfirmed: true })).toBe(false)
+    expect(flow.execute('browser.submit', {
+      session_id: 'browser-session-1',
+      target: 'role:button:Submit interest',
+      expected_effect: 'Submit the conference interest form once.',
+    })).toEqual({ approvalRequired: true })
+    expect(flow.provider.count('browser.submit')).toBe(0)
+    flow.approve()
+    expect(flow.provider.count('browser.submit')).toBe(1)
+    expect(flow.complete({ externalChangeConfirmed: true })).toBe(true)
+  })
+
   it('returns flight options, resumes selection, and remains waiting at payment', () => {
     const flow = new AgentFlow(
       'run-flight',
