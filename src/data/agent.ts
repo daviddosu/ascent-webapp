@@ -214,7 +214,7 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
   }
   const client = await getCloudClient()
   const user = await currentUser()
-  if (!client || !user) throw new Error('Sign in to delegate this task to Shotcount.')
+  if (!client || !user) throw new Error('Sign in to delegate this task to Roon.')
 
   const { data, error } = await client.functions.invoke<AgentRun>('task-agent', {
     method: 'POST',
@@ -231,7 +231,7 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
     },
   })
   if (error || !data) {
-    throw new Error(await resolveAgentFunctionError(error, 'Shotcount could not complete this task.'))
+    throw new Error(await resolveAgentFunctionError(error, 'Roon could not complete this task.'))
   }
   return { ...data, durable: true }
 }
@@ -291,29 +291,29 @@ async function invokeRunAction(
 }
 
 export function resumeAgentRun(runId: string, context = '') {
-  return invokeRunAction({ action: 'resume', runId, context }, 'ShotCount could not resume this task.')
+  return invokeRunAction({ action: 'resume', runId, context }, 'Roon could not resume this task.')
 }
 
 export function pollAgentRun(runId: string) {
-  return invokeRunAction({ action: 'poll', runId }, 'ShotCount could not check the external work.')
+  return invokeRunAction({ action: 'poll', runId }, 'Roon could not check the external work.')
 }
 
 export function simulateAgentReply(runId: string, simulationReply: string) {
   return invokeRunAction(
     { action: 'simulate_reply', runId, simulationReply },
-    'ShotCount could not simulate this development reply.',
+    'Roon could not simulate this development reply.',
   )
 }
 
 export function selectAgentFlight(runId: string, optionId: string) {
   return invokeRunAction(
     { action: 'select_flight', runId, optionId },
-    'ShotCount could not continue with this flight.',
+    'Roon could not continue with this flight.',
   )
 }
 
 export function cancelAgentRunRemote(runId: string) {
-  return invokeRunAction({ action: 'cancel', runId }, 'ShotCount could not cancel this task.')
+  return invokeRunAction({ action: 'cancel', runId }, 'Roon could not cancel this task.')
 }
 
 export function decideAgentApproval(approval: AgentApproval, decision: 'approve' | 'reject') {
@@ -321,7 +321,7 @@ export function decideAgentApproval(approval: AgentApproval, decision: 'approve'
     action: decision,
     approvalId: approval.id,
     approvalVersion: approval.version,
-  }, 'ShotCount could not apply this approval decision.')
+  }, 'Roon could not apply this approval decision.')
 }
 
 export async function subscribeToAgentRuns(onChange: () => void) {

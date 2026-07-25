@@ -385,7 +385,7 @@ let todayComposerDraft: TodayComposerDraft = {
   visibility: 'private',
 }
 let toast = googleAgentOAuthStatus === 'connected'
-  ? 'Google is connected to ShotCount'
+  ? 'Google is connected to Roon'
   : googleAgentOAuthStatus === 'error'
     ? 'Google could not be connected. Please try again.'
     : ''
@@ -887,10 +887,10 @@ async function startAgentRun(task: Task, context = '') {
       const resumed = await resumeAgentRun(existing.id, context)
       agentRuns.set(task.id, resumed)
       await syncAgentApproval(resumed)
-      toast = resumed.status === 'failed' ? resumed.error ?? 'ShotCount needs attention.' : 'ShotCount resumed the task'
+      toast = resumed.status === 'failed' ? resumed.error ?? 'Roon needs attention.' : 'Roon resumed the task'
     } catch (error) {
       existing.status = 'failed'
-      existing.error = error instanceof Error ? error.message : 'ShotCount could not resume this task.'
+      existing.error = error instanceof Error ? error.message : 'Roon could not resume this task.'
       toast = existing.error
     } finally {
       agentDecisionBusy.delete(existing.id)
@@ -918,11 +918,11 @@ async function startAgentRun(task: Task, context = '') {
     if (agentRuns.get(task.id)?.status === 'cancelled') return
     agentRuns.set(task.id, completed)
     await syncAgentApproval(completed)
-    toast = 'Shotcount finished your task'
+    toast = 'Roon finished your task'
   } catch (error) {
     if (agentRuns.get(task.id)?.status === 'cancelled') return
     run.status = 'failed'
-    run.error = error instanceof Error ? error.message : 'Shotcount could not complete this task.'
+    run.error = error instanceof Error ? error.message : 'Roon could not complete this task.'
     run.updatedAt = new Date().toISOString()
     toast = run.error
   } finally {
@@ -956,10 +956,10 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
     agentApprovals.delete(run.id)
     await syncAgentApproval(updated)
     toast = decision === 'approve'
-      ? 'Approved — ShotCount is continuing'
+      ? 'Approved — Roon is continuing'
       : 'Action declined'
   } catch (error) {
-    toast = error instanceof Error ? error.message : 'ShotCount could not apply that decision.'
+    toast = error instanceof Error ? error.message : 'Roon could not apply that decision.'
   } finally {
     agentDecisionBusy.delete(approval.id)
     persistAgentRuns()
@@ -981,9 +981,9 @@ async function retryAgentRun(taskId: string) {
     const updated = await resumeAgentRun(run.id)
     agentRuns.set(taskId, updated)
     await syncAgentApproval(updated)
-    toast = 'ShotCount resumed the task'
+    toast = 'Roon resumed the task'
   } catch (error) {
-    toast = error instanceof Error ? error.message : 'ShotCount could not resume this task.'
+    toast = error instanceof Error ? error.message : 'Roon could not resume this task.'
   } finally {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
@@ -1000,9 +1000,9 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
     const updated = await selectAgentFlight(run.id, optionId)
     agentRuns.set(taskId, updated)
     await syncAgentApproval(updated)
-    toast = 'ShotCount is preparing that flight'
+    toast = 'Roon is preparing that flight'
   } catch (error) {
-    toast = error instanceof Error ? error.message : 'ShotCount could not continue with this flight.'
+    toast = error instanceof Error ? error.message : 'Roon could not continue with this flight.'
   } finally {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
@@ -1037,7 +1037,7 @@ function addAgentFollowUps(task: Task) {
     .map(title => normalizeTask({
       id: crypto.randomUUID(),
       title,
-      description: `Suggested by Shotcount from “${task.title}”.`,
+      description: `Suggested by Roon from “${task.title}”.`,
       due: todayKey,
       goalId: task.goalId,
       visibility: 'private',
@@ -1306,36 +1306,36 @@ function renderAgentIsland() {
   const labels: Partial<Record<AgentRun['status'], { eyebrow: string; title: string; message: string; mark: string }>> = {
     needs_approval: {
       eyebrow: 'APPROVAL NEEDED',
-      title: 'ShotCount needs you',
+      title: 'Roon needs you',
       message: candidate.waitingReason || 'Review the prepared action.',
       mark: '!',
     },
     waiting_for_user: {
       eyebrow: 'ACTION NEEDED',
-      title: 'ShotCount needs you',
+      title: 'Roon needs you',
       message: candidate.waitingReason || 'Open the task to continue.',
       mark: '!',
     },
     waiting_external: {
-      eyebrow: 'SHOTCOUNT IS WAITING',
+      eyebrow: 'ROON IS WAITING',
       title: 'Waiting for a reply',
       message: candidate.waitingReason || 'I’ll continue automatically.',
       mark: '…',
     },
     planning: {
-      eyebrow: 'SHOTCOUNT IS WORKING',
+      eyebrow: 'ROON IS WORKING',
       title: 'Planning the task',
       message: candidate.progress.at(-1) || 'Preparing the next safe step.',
       mark: '◔',
     },
     running: {
-      eyebrow: 'SHOTCOUNT IS WORKING',
+      eyebrow: 'ROON IS WORKING',
       title: 'Moving your task forward',
       message: candidate.progress.at(-1) || 'Working through the task.',
       mark: '◔',
     },
     completed: {
-      eyebrow: 'SHOTCOUNT FINISHED',
+      eyebrow: 'ROON FINISHED',
       title: 'Done',
       message: candidate.result?.summary || 'The task reached its intended outcome.',
       mark: '✓',
@@ -1515,7 +1515,7 @@ async function connectGoogleAgent() {
     await beginGoogleAgentConnection()
   } catch (error) {
     googleAgentConnectionBusy = false
-    toast = error instanceof Error ? error.message : 'ShotCount could not start the Google connection.'
+    toast = error instanceof Error ? error.message : 'Roon could not start the Google connection.'
     render()
   }
 }
@@ -2030,7 +2030,7 @@ function renderToday() {
       <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} tasks">${screenCounts.today}</span></header>
       ${todayComposerOpen ? renderTodayComposer() : `<div class="today-command-row">
         <button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>
-        <button class="ask-shotcount-button" data-action="add-task"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask ShotCount</button>
+        <button class="ask-shotcount-button" data-action="add-task"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
       </div>`}
       <div class="task-list">
         ${todayTasks.length
@@ -2046,7 +2046,7 @@ function renderAgentHelper() {
   if (agentHelperDismissed) return ''
   return `<aside class="shotcount-agent-helper">
     <span class="shotcount-agent-helper__mark">${agentSparkleIcon()}</span>
-    <p><strong>ShotCount can help move your tasks forward.</strong><span>Try asking or delegating a task to AI.</span></p>
+    <p><strong>Roon can help move your tasks forward.</strong><span>Try asking Roon or delegating a task.</span></p>
     <button type="button" data-action="add-task">How it works</button>
     <button type="button" class="shotcount-agent-helper__dismiss" data-action="dismiss-agent-helper">Dismiss</button>
   </aside>`
@@ -2190,7 +2190,7 @@ function renderAgentPill(task: Task) {
             displayStatus === 'waiting_for_user' ? 'Needs you' :
         displayStatus === 'needs_context' ? 'Needs context' :
           displayStatus === 'failed' ? 'Needs attention' :
-            'AI available'
+            'Delegate'
   const mark = displayStatus === 'planning' || displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
     displayStatus === 'completed' ? '<span aria-hidden="true">✓</span>' :
       ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '') ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
@@ -2242,7 +2242,7 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
     research: 'I’m reading and summarizing the relevant material for you.',
   }
   return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">◔</i> In progress</em></header>
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em><i aria-hidden="true">◔</i> In progress</em></header>
     <p>${placeholder ? 'I’m reading and summarizing the report for you.' : escapeHtml(capabilityMessage[run?.capability ?? 'research'] ?? capabilityMessage.research)}</p>
     <div class="task-agent-progress">
       ${progressLabels.map((label, index) => `<div class="${index < activeIndex ? 'done' : index === activeIndex ? 'active' : ''}"><i>${index < activeIndex ? '✓' : index === activeIndex ? '◔' : ''}</i><span>${escapeHtml(label)}</span></div>`).join('')}
@@ -2255,7 +2255,7 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
 function renderAgentErrorPanel(task: Task, error: string) {
   const needsSignIn = error.toLowerCase().includes('sign in')
   return `<section class="task-agent-card task-agent-card--error" role="alert">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">!</i> Needs attention</em></header>
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em><i aria-hidden="true">!</i> Needs attention</em></header>
     <p>I couldn’t start this task.</p>
     <div class="task-agent-error-detail">
       <span aria-hidden="true">!</span>
@@ -2289,7 +2289,7 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ? 'Confirm'
       : 'Submit'
   return `<section class="task-agent-card task-agent-card--approval">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em><i aria-hidden="true">!</i> Approval needed</em></header>
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em><i aria-hidden="true">!</i> Approval needed</em></header>
     <p>${escapeHtml(approval.title)}</p>
     <div class="task-agent-approval-detail">
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
@@ -2322,7 +2322,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
   const flightTask = run.capability === 'flight_search'
   const needsGoogle = run.errorCode?.startsWith('google_') ||
     /connect google|reconnect google/i.test(run.waitingReason)
-  const title = external ? 'Waiting' : 'ShotCount needs you'
+  const title = external ? 'Waiting' : 'Roon needs you'
   const detail = external
     ? flightTask
       ? 'The isolated browser worker is continuing this same task. You can leave this screen.'
@@ -2336,7 +2336,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
       </div>`
     : ''
   return `<section class="task-agent-card task-agent-card--waiting">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em>${external ? 'Waiting' : 'Needs you'}</em></header>
+    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>${external ? 'Waiting' : 'Needs you'}</em></header>
     <p>${escapeHtml(run.waitingReason || title)}</p>
     ${flightOptions.length && !paymentHandoffUrl ? `
       <div class="task-agent-flight-options">
@@ -2346,7 +2346,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
           <small>${escapeHtml(option.route)} · ${escapeHtml(option.stops)} · ${escapeHtml(option.duration)}</small>
         </button>`).join('')}
       </div>
-      <small>Live prices can change. ShotCount rechecks the selected option before handing it back.</small>
+      <small>Live prices can change. Roon rechecks the selected option before handing it back.</small>
     ` : paymentHandoffUrl ? `
       <div class="task-agent-payment-handoff">
         <strong>Ready for you</strong>
@@ -2367,16 +2367,16 @@ function renderAgentPanel(task: Task) {
   if (!run || run.status === 'cancelled') {
     return `<section class="task-agent-card task-agent-card--delegate">
       <span class="task-agent-mark">${agentSparkleIcon()}</span>
-      <div><strong>Let Shotcount move this forward</strong><p>Delegate research or drafting. You review the result before anything goes anywhere.</p></div>
+      <div><strong>Let Roon move this forward</strong><p>Delegate research or drafting. You review the result before anything goes anywhere.</p></div>
       <button type="button" data-action="delegate-task" data-task-id="${task.id}">Delegate</button>
     </section>`
   }
 
   if (run.status === 'needs_context') {
     return `<section class="task-agent-card task-agent-card--context">
-      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Shotcount Assistant</strong><em>Needs context</em></header>
+      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>Needs context</em></header>
       <p>What outcome would make this task complete? One sentence is enough.</p>
-      <textarea class="task-agent-context" aria-label="Additional context for Shotcount" placeholder="For example: compare five options and recommend the strongest two.">${escapeHtml(run.context)}</textarea>
+      <textarea class="task-agent-context" aria-label="Additional context for Roon" placeholder="For example: compare five options and recommend the strongest two.">${escapeHtml(run.context)}</textarea>
       <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="${task.id}">Start task</button></footer>
     </section>`
   }
@@ -2394,7 +2394,7 @@ function renderAgentPanel(task: Task) {
   if (run.status === 'completed' && run.result) {
     const resultLabel = run.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review'
     return `<section class="task-agent-card task-agent-card--result">
-      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> ShotCount Assistant</strong><em>${resultLabel}</em></header>
+      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>${resultLabel}</em></header>
       <p>${escapeHtml(run.result.summary)}</p>
       <div class="task-agent-result">
         ${run.result.sections.map(section => `<article><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.body)}</p></article>`).join('')}
@@ -2408,7 +2408,7 @@ function renderAgentPanel(task: Task) {
 
   if (run.status === 'failed') {
     if (isPreviewMode && previewAgentState !== 'error') return renderAgentProgressPanel(task, 2, true)
-    return renderAgentErrorPanel(task, run.error ?? 'ShotCount could not complete this task.')
+    return renderAgentErrorPanel(task, run.error ?? 'Roon could not complete this task.')
   }
 
   return renderAgentProgressPanel(task, run.progressIndex, false, run)
@@ -2481,7 +2481,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
   if (plannerDraftGroup !== group) {
     return `<div class="upcoming-command-row">
       <button class="add-task-row" data-action="open-planner" data-task-group="${group}">${icon('plus')}<span>Add New Task</span></button>
-      <button class="ask-shotcount-button" data-action="open-planner" data-task-group="${group}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask ShotCount</button>
+      <button class="ask-shotcount-button" data-action="open-planner" data-task-group="${group}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
     </div>`
   }
   const isWeek = group === 'week'
@@ -3598,10 +3598,10 @@ app.addEventListener('click', async event => {
       agentRuns.set(taskId, updated)
       void syncAgentApproval(updated).then(() => render())
       toast = updated.status === 'waiting_external'
-        ? 'Still waiting — ShotCount will keep checking'
-        : 'ShotCount continued the task'
+        ? 'Still waiting — Roon will keep checking'
+        : 'Roon continued the task'
     }).catch(error => {
-      toast = error instanceof Error ? error.message : 'ShotCount could not check the external work.'
+      toast = error instanceof Error ? error.message : 'Roon could not check the external work.'
     }).finally(() => {
       agentDecisionBusy.delete(run.id)
       persistAgentRuns()
@@ -3623,9 +3623,9 @@ app.addEventListener('click', async event => {
     void simulateAgentReply(run.id, reply).then(updated => {
       agentRuns.set(taskId, updated)
       void syncAgentApproval(updated).then(() => render())
-      toast = 'Development reply received — ShotCount resumed the same task'
+      toast = 'Development reply received — Roon resumed the same task'
     }).catch(error => {
-      toast = error instanceof Error ? error.message : 'ShotCount could not simulate this development reply.'
+      toast = error instanceof Error ? error.message : 'Roon could not simulate this development reply.'
     }).finally(() => {
       agentDecisionBusy.delete(run.id)
       persistAgentRuns()
@@ -3641,7 +3641,7 @@ app.addEventListener('click', async event => {
   }
 
   if (action === 'view-agent-progress') {
-    toast = 'Shotcount is working through this task'
+    toast = 'Roon is working through this task'
     render()
     window.setTimeout(() => {
       toast = ''

@@ -82,7 +82,7 @@ Expected flow:
 2. Approximately three current Google Flights options return in the same inspector.
 3. Each option shows airline, route, stops, duration, and observed price.
 4. Choose one.
-5. ShotCount rechecks the option and resumes the same durable browser session.
+5. Roon rechecks the option and resumes the same durable browser session.
 6. The task stops at Ready for you.
 7. Continue to payment opens the verified airline handoff or Google Flights booking page.
 8. Point out that ShotCount has not clicked a provider purchase button and the original task is not falsely marked booked.

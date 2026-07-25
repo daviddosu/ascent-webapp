@@ -111,7 +111,7 @@ begin
     completed_run.user_id,
     'agent_completed',
     'completed',
-    coalesce(p_result ->> 'summary', 'ShotCount finished the task.')
+    coalesce(p_result ->> 'summary', 'Roon finished the task.')
   );
 
   if p_mark_task_complete then

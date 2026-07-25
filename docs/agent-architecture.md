@@ -1,6 +1,6 @@
-# ShotCount agent architecture
+# Roon agent architecture
 
-ShotCount treats an ordinary task as the command. Agent work stays inside the existing Today, Upcoming, task inspector, notification bell, and Dynamic Island surfaces.
+Roon treats an ordinary ShotCount task as the command. Agent work stays inside the existing Today, Upcoming, task inspector, notification bell, and Dynamic Island surfaces.
 
 ## Runtime path
 
@@ -39,7 +39,7 @@ Related private tables:
 - `agent_email_watches`: durable Gmail reply correlations and polling schedule.
 - `browser_execution_sessions`: allowlist, objective, checkpoint, worker operation, result, and payment-boundary state.
 
-Each new run also receives the owner’s reusable execution context from `agent_user_preferences`: timezone, home airport when known, normal meeting length, working hours, cabin, and currency. ShotCount falls back to the existing private creator-profile timezone and safe defaults, so users do not have to restate routine constraints in every task.
+Each new run also receives the owner’s reusable execution context from `agent_user_preferences`: timezone, home airport when known, normal meeting length, working hours, cabin, and currency. Roon falls back to the existing private creator-profile timezone and safe defaults, so users do not have to restate routine constraints in every task.
 
 All user-readable tables use row-level security. Model continuation state and OAuth state are service-role only. Private agent output is separate from task visibility and never enters Community payloads.
 AgentRuns, actions, approvals, events, and browser sessions are read-only to

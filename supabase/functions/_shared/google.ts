@@ -66,7 +66,7 @@ async function integrationForUser(admin: AdminClient, userId: string) {
     .maybeSingle()
   if (error) throw new GoogleIntegrationError('google_connection_failed', error.message)
   if (!data || data.status !== 'connected') {
-    throw new GoogleIntegrationError('google_connection_required', 'Connect Google to let ShotCount continue this task.', false)
+    throw new GoogleIntegrationError('google_connection_required', 'Connect Google to let Roon continue this task.', false)
   }
   return data as GoogleIntegrationRow
 }
@@ -152,7 +152,7 @@ async function googleRequest<T>(
     throw new GoogleIntegrationError('google_reauth_required', 'Reconnect Google to continue.', false)
   }
   if (response.status === 429) {
-    throw new GoogleIntegrationError('google_rate_limited', 'Google is temporarily rate-limiting this task. ShotCount will retry.')
+    throw new GoogleIntegrationError('google_rate_limited', 'Google is temporarily rate-limiting this task. Roon will retry.')
   }
   if (!response.ok) {
     const detail = await response.text()
@@ -400,7 +400,7 @@ async function preparedDraftRecord(
   if (error) {
     throw new GoogleIntegrationError(
       'gmail_draft_record_failed',
-      'ShotCount could not verify the prepared Gmail draft.',
+      'Roon could not verify the prepared Gmail draft.',
     )
   }
   return data as {

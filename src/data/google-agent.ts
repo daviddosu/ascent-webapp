@@ -48,11 +48,11 @@ export async function beginGoogleAgentConnection(returnTo = window.location.href
     },
   )
   if (error || !data?.authorizationUrl) {
-    throw new Error(data?.error || error?.message || 'ShotCount could not start the Google connection.')
+    throw new Error(data?.error || error?.message || 'Roon could not start the Google connection.')
   }
   const authorizationUrl = new URL(data.authorizationUrl)
   if (authorizationUrl.protocol !== 'https:' || authorizationUrl.hostname !== 'accounts.google.com') {
-    throw new Error('ShotCount rejected an unsafe Google authorization URL.')
+    throw new Error('Roon rejected an unsafe Google authorization URL.')
   }
   window.location.assign(authorizationUrl.toString())
 }
