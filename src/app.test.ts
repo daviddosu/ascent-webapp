@@ -209,10 +209,22 @@ describe('reference screens', () => {
     const subtaskForm = document.querySelector<HTMLFormElement>('[data-subtask-form]')!
     subtaskForm.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Check the final links'
     subtaskForm.requestSubmit()
-    expect(document.querySelector('.subtask span')?.textContent).toBe('Check the final links')
+    expect(document.querySelector('.subtask-title')?.textContent).toBe('Check the final links')
     const subtask = document.querySelector<HTMLInputElement>('[data-subtask]')!
     subtask.click()
-    expect(document.querySelector('.subtask span')?.classList.contains('completed')).toBe(true)
+    expect(document.querySelector('.subtask-title')?.classList.contains('completed')).toBe(true)
+
+    document.querySelector<HTMLButtonElement>('.subtask-title')!.click()
+    const editSubtaskForm = document.querySelector<HTMLFormElement>('[data-subtask-edit-form]')!
+    expect(editSubtaskForm.querySelector<HTMLInputElement>('[name="title"]')?.value).toBe('Check the final links')
+    editSubtaskForm.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Verify every final link'
+    editSubtaskForm.requestSubmit()
+    expect(document.querySelector('.subtask-title')?.textContent).toBe('Verify every final link')
+    expect(document.querySelector<HTMLButtonElement>('[data-action="delete-subtask"]')?.getAttribute('aria-label')).toBe('Delete Verify every final link')
+
+    document.querySelector<HTMLButtonElement>('[data-action="delete-subtask"]')!.click()
+    expect(document.querySelector('.subtask')).toBeNull()
+    expect(window.localStorage.getItem('shotcount-workspace-current-v1:planner')).not.toContain('Verify every final link')
 
     const newTaskCheckbox = document.querySelector<HTMLButtonElement>('.task-row.selected [data-complete]')!
     newTaskCheckbox.click()

@@ -370,6 +370,7 @@ let activityMode: ActivityMode = 'daily'
 let plannerDraftGroup: UpcomingGroup | null = null
 let todayComposerOpen = false
 let subtaskComposerTaskId: string | null = null
+let editingSubtaskId: string | null = null
 let roonPlannerOpen = false
 let roonPlannerStage: RoonPlannerStage = 'goal'
 let roonPlannerGoal = ''
@@ -569,6 +570,7 @@ const icons: Record<string, string> = {
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.25 2.46 3.4 5.46 3.4 9S14.25 18.54 12 21c-2.25-2.46-3.4-5.46-3.4-9S9.75 5.46 12 3Z"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
 }
 
@@ -2589,7 +2591,7 @@ function renderInspector(task: Task) {
             <button type="button" data-action="cancel-subtask" aria-label="Cancel subtask">Cancel</button>
           </form>
         ` : `<button class="add-subtask" data-action="add-subtask">${icon('plus')}<span>Add New Subtask</span></button>`}
-        ${subtasks.map(subtask => `<label class="subtask"><input type="checkbox" data-subtask="${subtask.id}" ${subtask.completed ? 'checked' : ''}/><span class="${subtask.completed ? 'completed' : ''}">${escapeHtml(subtask.title)}</span></label>`).join('')}
+        ${subtasks.map(subtask => renderSubtask(task, subtask)).join('')}
       </div>
       <div class="inspector-actions">
         <button data-action="delete-task">Delete Task</button>
@@ -2597,6 +2599,19 @@ function renderInspector(task: Task) {
       </div>
     </aside>
   `
+}
+
+function renderSubtask(task: Task, subtask: NonNullable<Task['subtaskItems']>[number]) {
+  const editing = editingSubtaskId === subtask.id
+  return `<div class="subtask">
+    <input type="checkbox" data-subtask="${subtask.id}" aria-label="Mark ${escapeHtml(subtask.title)} as ${subtask.completed ? 'not done' : 'done'}" ${subtask.completed ? 'checked' : ''}/>
+    ${editing ? `<form class="subtask-edit-form" data-subtask-edit-form="${task.id}" data-subtask-id="${subtask.id}">
+      <input name="title" value="${escapeHtml(subtask.title)}" aria-label="Edit subtask" autocomplete="off" required />
+      <button type="submit">Save</button>
+      <button type="button" data-action="cancel-subtask-edit" aria-label="Cancel editing">Cancel</button>
+    </form>` : `<button type="button" class="subtask-title ${subtask.completed ? 'completed' : ''}" data-action="edit-subtask" data-subtask-id="${subtask.id}" aria-label="Edit ${escapeHtml(subtask.title)}">${escapeHtml(subtask.title)}</button>`}
+    <button type="button" class="subtask-delete" data-action="delete-subtask" data-subtask-id="${subtask.id}" aria-label="Delete ${escapeHtml(subtask.title)}">${icon('trash')}</button>
+  </div>`
 }
 
 function renderUpcoming() {
@@ -3450,6 +3465,27 @@ app.addEventListener('submit', async event => {
     return
   }
 
+  const subtaskEditForm = target.closest<HTMLFormElement>('[data-subtask-edit-form]')
+  if (subtaskEditForm) {
+    event.preventDefault()
+    const task = tasks.find(item => item.id === subtaskEditForm.dataset.subtaskEditForm)
+    const subtask = task?.subtaskItems?.find(item => item.id === subtaskEditForm.dataset.subtaskId)
+    const title = String(new FormData(subtaskEditForm).get('title') ?? '').trim()
+    if (!task || !subtask || !title) return
+    persistInspectorDraft()
+    subtask.title = title
+    subtask.updatedAt = new Date().toISOString()
+    editingSubtaskId = null
+    persistPlanner()
+    toast = 'Subtask updated'
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1400)
+    return
+  }
+
   const calendarForm = target.closest<HTMLFormElement>('[data-calendar-form]')
   if (calendarForm) {
     event.preventDefault()
@@ -4116,6 +4152,7 @@ app.addEventListener('click', async event => {
     toast = 'Task deleted'
     mobileInspectorOpen = false
     subtaskComposerTaskId = null
+    editingSubtaskId = null
   } else if (action === 'cycle-goal') {
     persistInspectorDraft()
     const task = selectedTask()
@@ -4129,6 +4166,7 @@ app.addEventListener('click', async event => {
     const task = selectedTask()
     if (task) {
       subtaskComposerTaskId = task.id
+      editingSubtaskId = null
       render()
       document.querySelector<HTMLInputElement>('[data-subtask-form] input[name="title"]')?.focus()
     }
@@ -4136,6 +4174,37 @@ app.addEventListener('click', async event => {
   } else if (action === 'cancel-subtask') {
     subtaskComposerTaskId = null
     render()
+    return
+  } else if (action === 'edit-subtask') {
+    const subtaskId = target.closest<HTMLElement>('[data-subtask-id]')?.dataset.subtaskId
+    if (!subtaskId) return
+    persistInspectorDraft()
+    subtaskComposerTaskId = null
+    editingSubtaskId = subtaskId
+    render()
+    const editInput = document.querySelector<HTMLInputElement>('[data-subtask-edit-form] input[name="title"]')
+    editInput?.focus()
+    editInput?.select()
+    return
+  } else if (action === 'cancel-subtask-edit') {
+    editingSubtaskId = null
+    render()
+    return
+  } else if (action === 'delete-subtask') {
+    const task = selectedTask()
+    const subtaskId = target.closest<HTMLElement>('[data-subtask-id]')?.dataset.subtaskId
+    if (!task || !subtaskId) return
+    persistInspectorDraft()
+    task.subtaskItems = (task.subtaskItems ?? []).filter(item => item.id !== subtaskId)
+    task.subtasks = task.subtaskItems.length
+    if (editingSubtaskId === subtaskId) editingSubtaskId = null
+    persistPlanner()
+    toast = 'Subtask deleted'
+    render()
+    window.setTimeout(() => {
+      toast = ''
+      render()
+    }, 1400)
     return
   } else if (action === 'add-event') {
     openCalendarComposer(calendarDateKey(), '09:00')

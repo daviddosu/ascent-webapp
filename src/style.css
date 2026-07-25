@@ -1243,10 +1243,20 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .subtask-composer input:focus { border-color: #777; box-shadow: 0 0 0 3px rgba(25, 25, 25, .055); }
 .subtask-composer button { height: 32px; padding: 0 9px; border-radius: 5px; color: #686868; font-size: 11px; font-weight: 600; }
 .subtask-composer button[type='submit'] { background: #1b1b1b; color: #fff; }
-.subtask { min-height: 43px; padding: 0 10px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #ededed; font-size: 14px; }
-.subtask input { appearance: none; width: 13px; height: 13px; border: 1px solid #dedede; border-radius: 3px; }
-.subtask input:checked { border-color: #222; background: #222; box-shadow: inset 0 0 0 3px #fff; }
-.subtask span.completed { color: #888; text-decoration: line-through; }
+.subtask { min-height: 43px; padding: 5px 5px 5px 10px; display: grid; grid-template-columns: 15px minmax(0, 1fr) 30px; align-items: center; gap: 10px; border-top: 1px solid #ededed; font-size: 14px; }
+.subtask > input[type='checkbox'] { appearance: none; width: 13px; height: 13px; border: 1px solid #dedede; border-radius: 3px; }
+.subtask > input[type='checkbox']:checked { border-color: #222; background: #222; box-shadow: inset 0 0 0 3px #fff; }
+.subtask-title { min-width: 0; padding: 7px 3px; overflow: hidden; color: #242424; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.subtask-title:hover { color: #000; text-decoration: underline; text-underline-offset: 3px; }
+.subtask-title.completed { color: #888; text-decoration: line-through; }
+.subtask-delete { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 5px; color: #8a8a8a; transition: background .16s ease, color .16s ease; }
+.subtask-delete:hover { background: #f1f1f1; color: #252525; }
+.subtask-delete svg { width: 14px; height: 14px; }
+.subtask-edit-form { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px; }
+.subtask-edit-form input { min-width: 0; height: 32px; padding: 0 8px; border: 1px solid #bdbdbd; border-radius: 5px; outline: 0; font-size: 13px; }
+.subtask-edit-form input:focus { border-color: #666; box-shadow: 0 0 0 3px rgba(25, 25, 25, .055); }
+.subtask-edit-form button { height: 30px; padding: 0 7px; border-radius: 5px; color: #686868; font-size: 10px; font-weight: 600; }
+.subtask-edit-form button[type='submit'] { background: #1b1b1b; color: #fff; }
 .inspector-actions { flex: 0 0 auto; margin-top: 16px; padding-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; border-top: 1px solid #ededed; background: #fff; }
 .inspector-actions button { height: 47px; border: 1px solid #e2e2e2; border-radius: 5px; font-size: 13px; font-weight: 600; }
 .inspector-actions .save { border-color: #111; background: #111; color: #fff; box-shadow: none; }
@@ -2936,7 +2946,7 @@ body[data-theme='dark'] .community-follow:not(.is-following) {
   color: #172027;
 }
 
-body[data-theme='dark'] .subtask input {
+body[data-theme='dark'] .subtask > input[type='checkbox'] {
   background: var(--dark-text);
 }
 
@@ -2948,6 +2958,11 @@ body[data-theme='dark'] .subtask-composer input {
 }
 body[data-theme='dark'] .subtask-composer button { color: var(--dark-muted); }
 body[data-theme='dark'] .subtask-composer button[type='submit'] { background: var(--dark-text); color: var(--dark-bg); }
+body[data-theme='dark'] .subtask-title { color: var(--dark-text); }
+body[data-theme='dark'] .subtask-delete:hover { background: var(--dark-hover); color: var(--dark-text); }
+body[data-theme='dark'] .subtask-edit-form input { border-color: var(--dark-border); background: var(--dark-raised); color: var(--dark-text); }
+body[data-theme='dark'] .subtask-edit-form button { color: var(--dark-muted); }
+body[data-theme='dark'] .subtask-edit-form button[type='submit'] { background: var(--dark-text); color: var(--dark-bg); }
 body[data-theme='dark'] .today-task-group--today > h2::before,
 body[data-theme='dark'] .today-task-group--today > h2::after { background: var(--dark-border); }
 
@@ -2977,7 +2992,7 @@ body[data-theme='dark'] .theme-toggle[aria-checked='true'] > i {
     rgba(87, 112, 234, .50);
 }
 
-body[data-theme='dark'] .subtask input:checked {
+body[data-theme='dark'] .subtask > input[type='checkbox']:checked {
   background: #7f96ff;
   border-color: #7f96ff;
   box-shadow: inset 0 0 0 3px var(--dark-bg);
@@ -3338,7 +3353,9 @@ body[data-theme='dark'] .month-event {
   .add-subtask,
   .subtask { min-height: 48px; }
 
-  .subtask input {
+  .subtask { grid-template-columns: 18px minmax(0, 1fr) 36px; }
+
+  .subtask > input[type='checkbox'] {
     width: 18px;
     height: 18px;
   }
