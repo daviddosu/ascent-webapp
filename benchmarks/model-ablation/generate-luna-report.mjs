@@ -77,39 +77,40 @@ const render = (name, svg, directory = chartDir) => {
 }
 
 function scatter({ title, subtitle, yLabel, yDomain, yTicks, value, valueLabel, footnote, labelOffsets }) {
-  const left = 220, right = 1390, top = 255, bottom = 855
-  const x = cost => left + (cost / 1.8) * (right - left)
+  const left = 195, right = 1490, top = 255, bottom = 855
+  const x = cost => left + (cost / 1.75) * (right - left)
   const y = metric => bottom - ((metric - yDomain[0]) / (yDomain[1] - yDomain[0])) * (bottom - top)
   const grids = yTicks.map(tick => `<line class="grid" x1="${left}" x2="${right}" y1="${y(tick)}" y2="${y(tick)}"/><text class="axis" x="190" y="${y(tick) + 6}" text-anchor="end">${valueLabel(tick)}</text>`).join('')
   const xTicks = [0, .4, .8, 1.2, 1.6].map(tick => `<text class="axis" x="${x(tick)}" y="900" text-anchor="middle">$${tick.toFixed(1)}</text>`).join('')
+  const line = ['luna', 'terra', 'sol'].map(key => `${x(metrics[key].cost)},${y(value(metrics[key]))}`).join(' ')
   const points = Object.entries(metrics).map(([key, model]) => {
     const [dx, dy] = labelOffsets[key]
     return `<circle cx="${x(model.cost)}" cy="${y(value(model))}" r="14" fill="${colors[key]}"/><text class="label" x="${x(model.cost) + dx}" y="${y(value(model)) + dy}">${names[key]}</text><text class="small" x="${x(model.cost) + dx}" y="${y(value(model)) + dy + 27}">${money(model.cost)} · ${valueLabel(value(model))}</text>`
   }).join('')
-  return shell(title, subtitle, `${grids}${xTicks}<text class="axis" x="805" y="962" text-anchor="middle">Measured inference cost · 60 live runs</text><text class="axis" transform="translate(88 565) rotate(-90)" text-anchor="middle">${esc(yLabel)}</text>${points}`, footnote)
+  return shell(title, subtitle, `${grids}${xTicks}<polyline points="${line}" fill="none" stroke="#222" stroke-width="2.5"/><text class="axis" x="842" y="962" text-anchor="middle">Measured inference cost · 60 live runs</text><text class="axis" transform="translate(78 565) rotate(-90)" text-anchor="middle">${esc(yLabel)}</text>${points}`, footnote)
 }
 
 render('01-cost-vs-live-task-success', scatter({
   title: 'Live task performance vs inference cost', subtitle: 'Same frozen ShotCount benchmark · model is the only changed variable',
   yLabel: 'Live task success rate', yDomain: [.75, 1], yTicks: [.75, .80, .85, .90, .95, 1],
   value: model => model.success, valueLabel: pct,
-  labelOffsets: { sol: [-250, 34], terra: [24, -30], luna: [24, 30] },
+  labelOffsets: { sol: [-270, -48], terra: [24, -62], luna: [24, 32] },
   footnote: '20 tasks × 3 independent executions per model · measured token usage and inference cost',
 }))
 
 function categoryChart() {
-  const left = 225, top = 285, bottom = 855, groupWidth = 285, barWidth = 58
+  const left = 195, top = 285, bottom = 855, groupWidth = 325, barWidth = 62
   const y = value => bottom - value * (bottom - top)
-  const grids = [.8, .9, 1].map(tick => `<line class="grid" x1="${left}" x2="1395" y1="${y(tick)}" y2="${y(tick)}"/><text class="axis" x="195" y="${y(tick) + 6}" text-anchor="end">${pct(tick)}</text>`).join('')
+  const grids = [.8, .9, 1].map(tick => `<line class="grid" x1="${left}" x2="1490" y1="${y(tick)}" y2="${y(tick)}"/><text class="axis" x="170" y="${y(tick) + 6}" text-anchor="end">${pct(tick)}</text>`).join('')
   const bars = categories.map((category, index) => {
     const groupX = left + index * groupWidth
     const modelBars = Object.entries(metrics).map(([key, model], modelIndex) => {
-      const value = model.category[category].success, x = groupX + modelIndex * 76, height = value * (bottom - top), topY = bottom - height
-      return `<rect x="${x}" y="${topY}" width="${barWidth}" height="${height}" rx="3" fill="${colors[key]}"/><text class="value" x="${x + barWidth / 2}" y="${topY - 13 - modelIndex * 22}" text-anchor="middle">${pct(value)}</text>`
+      const value = model.category[category].success, x = groupX + modelIndex * 82, height = value * (bottom - top), topY = bottom - height
+      return `<rect x="${x}" y="${topY}" width="${barWidth}" height="${height}" rx="3" fill="${colors[key]}"/>`
     }).join('')
-    return `${modelBars}<text class="label" x="${groupX + 105}" y="910" text-anchor="middle">${categoryLabels[category]}</text>`
+    return `${modelBars}<text class="label" x="${groupX + 113}" y="910" text-anchor="middle">${categoryLabels[category]}</text>`
   }).join('')
-  const legend = Object.keys(metrics).map((key, index) => `<circle cx="${430 + index * 270}" cy="205" r="9" fill="${colors[key]}"/><text class="label" x="${449 + index * 270}" y="212">${names[key]}</text>`).join('')
+  const legend = Object.keys(metrics).map((key, index) => `<circle cx="${390 + index * 310}" cy="212" r="10" fill="${colors[key]}"/><text class="label" x="${412 + index * 310}" y="220">${names[key]}</text>`).join('')
   return shell('Model performance by category', 'Live success rate across Email, Calendar, Cross-tool, and Browser', `${legend}${grids}${bars}<text class="axis" transform="translate(88 565) rotate(-90)" text-anchor="middle">Successful runs</text>`, 'Each category contains 15 live runs per model')
 }
 render('02-model-performance-by-category', categoryChart())
@@ -126,7 +127,7 @@ render('04-distance-to-done-vs-cost', scatter({
   title: 'Distance-to-Done vs inference cost', subtitle: 'How close each run finished to the verified task outcome',
   yLabel: 'Distance-to-Done score', yDomain: [4.6, 5], yTicks: [4.6, 4.7, 4.8, 4.9, 5],
   value: model => model.distance, valueLabel: value => `${value.toFixed(2)}/5`,
-  labelOffsets: { sol: [-250, 36], terra: [24, -30], luna: [24, 34] },
+  labelOffsets: { sol: [-270, -48], terra: [24, -62], luna: [24, 34] },
   footnote: 'Higher is better · failed runs remain included',
 }))
 
