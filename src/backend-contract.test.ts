@@ -310,7 +310,7 @@ describe('agent execution security contract', () => {
   it('allows task execution only when the task belongs in Today', () => {
     expect(taskAgentFunction).toContain("Roon can execute tasks only when they appear in Today.")
     expect(taskAgentFunction).toContain('due > todayInExecutionTimezone')
-    expect(mainUi).toContain("if (!run && !taskIsExecutableToday(task)) return ''")
+    expect(mainUi).toContain("if (!taskIsExecutableToday(task)) return ''")
     expect(mainUi).toContain('Available on the due date')
   })
 

@@ -2942,6 +2942,17 @@ body[data-theme='dark'] .goal-row.active {
   color: var(--dark-text);
 }
 
+body[data-theme='dark'] .community-open {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: var(--dark-text);
+}
+
+body[data-theme='dark'] .community-open:hover {
+  background: var(--dark-hover);
+  color: var(--dark-text);
+}
+
 body[data-theme='dark'] .sidebar h2,
 body[data-theme='dark'] .search,
 body[data-theme='dark'] .search input::placeholder,

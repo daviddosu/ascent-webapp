@@ -9,6 +9,7 @@ describe('dark theme contract', () => {
     expect(styles).toContain("body[data-theme='dark'] .inspector-actions {")
     expect(styles).toContain("body[data-theme='dark'] .cloud-sync-state {")
     expect(styles).toContain("body[data-theme='dark'] .screen-count {")
+    expect(styles).toContain("body[data-theme='dark'] .community-open {")
   })
 
   it('uses dark heatmap colors without changing completion accents', () => {

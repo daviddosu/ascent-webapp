@@ -2483,7 +2483,7 @@ function taskIsExecutableToday(task: Task) {
 
 function renderAgentPill(task: Task) {
   const run = agentRuns.get(task.id)
-  if (!run && !taskIsExecutableToday(task)) return ''
+  if (!taskIsExecutableToday(task)) return ''
   const displayStatus = isPreviewMode && previewAgentState !== 'error' && run?.status === 'failed' ? 'running' : run?.status
   const label =
     displayStatus === 'completed' ? (run?.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review') :
@@ -2668,13 +2668,13 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
 
 function renderAgentPanel(task: Task) {
   const run = agentRuns.get(task.id)
+  if (!taskIsExecutableToday(task)) {
+    return `<section class="task-agent-card task-agent-card--delegate task-agent-card--scheduled">
+      <span class="task-agent-mark">${agentSparkleIcon()}</span>
+      <div><strong>Available on the due date</strong><p>You can edit or reschedule this task now. Roon can execute it when it appears in Today.</p></div>
+    </section>`
+  }
   if (!run || run.status === 'cancelled') {
-    if (!taskIsExecutableToday(task)) {
-      return `<section class="task-agent-card task-agent-card--delegate task-agent-card--scheduled">
-        <span class="task-agent-mark">${agentSparkleIcon()}</span>
-        <div><strong>Available on the due date</strong><p>You can edit or reschedule this task now. Roon can execute it when it appears in Today.</p></div>
-      </section>`
-    }
     return `<section class="task-agent-card task-agent-card--delegate">
       <span class="task-agent-mark">${agentSparkleIcon()}</span>
       <div><strong>Let Roon move this forward</strong><p>Delegate research or drafting. You review the result before anything goes anywhere.</p></div>
