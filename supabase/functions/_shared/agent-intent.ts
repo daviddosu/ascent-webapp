@@ -11,8 +11,10 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
   const coordinatesWithSomeone =
     /\b(?:set\s*up|arrange|coordinate|organize|schedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(value) ||
     /\b(?:meet|meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/.test(value)
+  const preparesEmailOnly = /\b(?:prepare|draft|write)\b/.test(value) ||
+    /\b(?:do\s+not|don't|without)\s+send(?:ing)?\b/.test(value)
   const wantsEmailWrite =
-    /\b(?:send|respond|follow[\s-]?up|outreach|draft|write)\b/.test(value) ||
+    (!preparesEmailOnly && /\b(?:send|respond|follow[\s-]?up|outreach)\b/.test(value)) ||
     /^(?:email|message|reply)\s+\S+/.test(value.trim()) ||
     /\breply\s+to\b/.test(value)
   const calendarWriteIntent = value.replace(

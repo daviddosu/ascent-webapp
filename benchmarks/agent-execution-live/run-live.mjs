@@ -12,7 +12,7 @@ const supabaseUrl = `https://${projectRef}.supabase.co`
 const taskAgentUrl = `${supabaseUrl}/functions/v1/task-agent`
 const fixtureUrl = `${supabaseUrl}/functions/v1/agent-benchmark-fixtures`
 const model = 'gpt-5.6-sol'
-const pricing = { input: 5, cachedInput: 0.5, output: 30 }
+const pricing = { input: 5, cachedInput: 0.5, cacheWrite: 6.25, output: 30 }
 const maxCostUsd = 31.25 // Conservative £25 gate at $1.25/£.
 
 function parseArgs() {
@@ -328,14 +328,15 @@ function modelUsage(events) {
     total.calls += 1
     total.input += Number(usage.input_tokens ?? 0)
     total.cachedInput += Number(usage.input_tokens_details?.cached_tokens ?? 0)
+    total.cacheWrite += Number(usage.input_tokens_details?.cache_write_tokens ?? 0)
     total.output += Number(usage.output_tokens ?? 0)
     return total
-  }, { calls: 0, input: 0, cachedInput: 0, output: 0 })
+  }, { calls: 0, input: 0, cachedInput: 0, cacheWrite: 0, output: 0 })
 }
 
 function usageCost(usage) {
-  const uncached = Math.max(0, usage.input - usage.cachedInput)
-  return (uncached * pricing.input + usage.cachedInput * pricing.cachedInput + usage.output * pricing.output) / 1_000_000
+  const uncached = Math.max(0, usage.input - usage.cachedInput - usage.cacheWrite)
+  return (uncached * pricing.input + usage.cachedInput * pricing.cachedInput + usage.cacheWrite * pricing.cacheWrite + usage.output * pricing.output) / 1_000_000
 }
 
 function externalWaitSeconds(events, finishedAt) {
@@ -385,7 +386,14 @@ function verifyRun(task, state, providerState) {
     const options = run.result?.flightOptions ?? browser?.checkpoint?.flightSearch?.options ?? []
     if (task.expected.state === 'payment_handoff') success = run.status === 'waiting_for_user' && run.result?.outcome?.paymentBoundaryReached === true
     else success = options.length > 0 && succeeded('browser.search_flights').length === 1
-    reason = success ? '' : (state.browser?.error_code ? 'browser/page change' : 'verification mismatch')
+    const browserError = state.browser?.checkpoint?.lastOperation?.error
+    if (success) reason = ''
+    else if (browserError?.code) {
+      reason = /timeout|closed|network|insufficient.resources|goto/i.test(`${browserError.code} ${browserError.message}`)
+        ? 'timeout/network'
+        : 'browser/page change'
+    } else if (run.status === 'needs_context') reason = 'missing-context handling'
+    else reason = 'verification mismatch'
   }
   const externalWrites = actions.filter(action => action.status === 'succeeded' && ['gmail.send_message', 'calendar.create_event', 'calendar.update_event', 'calendar.delete_event', 'browser.submit'].includes(action.tool_name))
   const uniqueWrites = new Set(externalWrites.map(action => `${action.tool_name}:${action.provider_action_id || action.idempotency_key}`))
@@ -398,7 +406,7 @@ function resultFromState({ task, runNumber, runNonce, state, providerState, benc
   const externalWait = externalWaitSeconds(state.events, finishedAt)
   const elapsed = (finishedAt - startedAt) / 1000
   const verified = verifyRun(task, state, providerState)
-  const retryCount = state.events.filter(event => event.metadata?.retried === true || event.metadata?.automatic_retry === true).length
+  const retryCount = state.events.filter(event => event.metadata?.retried === true).length
   const clarificationCount = state.events.filter(event => event.event_type === 'agent_context_requested').length + (state.run.status === 'needs_context' ? 1 : 0)
   const providerFailure = state.actions.some(action => action.status === 'failed' && /^(gmail|calendar|browser|contacts)\./.test(action.tool_name))
   return {
@@ -418,7 +426,8 @@ function resultFromState({ task, runNumber, runNonce, state, providerState, benc
     model_decision_failure: ['intent classification', 'tool selection', 'argument generation'].includes(verified.failureReason) ? 1 : 0,
     harness_failure: ['approval-state handling', 'asynchronous resumption'].includes(verified.failureReason) ? 1 : 0,
     model_calls: usage.calls, input_tokens: usage.input, cached_input_tokens: usage.cachedInput,
-    output_tokens: usage.output, inference_cost_usd: Number(usageCost(usage).toFixed(6)),
+    cache_write_tokens: usage.cacheWrite, output_tokens: usage.output,
+    inference_cost_usd: Number(usageCost(usage).toFixed(6)),
     started_at: new Date(startedAt).toISOString(), finished_at: new Date(finishedAt).toISOString(),
     actions: state.actions.map(action => ({ tool: action.tool_name, status: action.status, provider_action_id: action.provider_action_id, error_code: action.error_code })),
     provider_verification: providerState,

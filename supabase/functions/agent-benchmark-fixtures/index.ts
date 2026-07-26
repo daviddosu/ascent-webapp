@@ -70,7 +70,8 @@ async function sendFixtureEmail(
     : []
   const subject = String(argumentsValue.subject ?? '').trim()
   const bodyText = String(argumentsValue.body_text ?? '').trim()
-  if (!recipients.length || recipients.length > 3 || !subject.includes('[SC-LIVE-v1') || !bodyText) {
+  const controlledReply = Boolean(argumentsValue.thread_id && argumentsValue.in_reply_to_message_id)
+  if (!recipients.length || recipients.length > 3 || (!subject.includes('[SC-LIVE-v1') && !controlledReply) || !bodyText) {
     throw new Error('Fixture emails require controlled recipients, a benchmark marker, and a body.')
   }
   const idempotencyKey = `fixture-${benchmarkRunId.replaceAll('/', '-')}`
