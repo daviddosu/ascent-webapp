@@ -32,6 +32,7 @@ export type AgentCompletionEvidence = {
   externalChangeConfirmed: boolean
   purchaseConfirmed: boolean
   providerConfirmedTools: string[]
+  requiredExternalEffects?: Array<'gmail_send' | 'calendar_write'>
 }
 
 export function openAIToolName(toolName: string) {
@@ -62,10 +63,18 @@ export function agentCompletionEvidenceSatisfied(
   if (!evidence.externalChangeConfirmed) return false
 
   const confirmedTools = new Set(evidence.providerConfirmedTools)
+  if (evidence.requiredExternalEffects?.length) {
+    return evidence.requiredExternalEffects.every(effect => effect === 'gmail_send'
+      ? confirmedTools.has('gmail.send_message')
+      : [...calendarWriteTools].some(tool => confirmedTools.has(tool)))
+  }
   if (evidence.capability === 'gmail') {
     return confirmedTools.has('gmail.send_message')
   }
-  if (evidence.capability === 'calendar' || evidence.capability === 'scheduling') {
+  if (evidence.capability === 'scheduling') {
+    return [...calendarWriteTools].some(tool => confirmedTools.has(tool))
+  }
+  if (evidence.capability === 'calendar') {
     return [...calendarWriteTools].some(tool => confirmedTools.has(tool))
   }
   return confirmedTools.has('browser.submit')

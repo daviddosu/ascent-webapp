@@ -41,3 +41,14 @@ Deno.test('provider writes and meeting coordination keep external-change complet
     { capability: 'browser', strategy: 'browser', outcomeType: 'external_change' },
   )
 })
+
+Deno.test('explicitly missing consequential meeting details require context', () => {
+  assertEquals(needsSharedAgentContext(
+    'Handle vague meeting request',
+    'Jordan asked to meet but gave no duration or topic. Handle it without inventing missing details.',
+  ), true)
+  assertEquals(needsSharedAgentContext(
+    'Schedule investor call',
+    'Use the email request, find a free 30-minute slot, reply, and add the call to Calendar.',
+  ), false)
+})

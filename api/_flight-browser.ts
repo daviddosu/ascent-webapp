@@ -239,6 +239,30 @@ async function launchBrowser() {
   })
 }
 
+let sharedBrowserPromise: Promise<Browser> | null = null
+
+export function isRecoverableBrowserRuntimeError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  return /target page, context or browser has been closed|browser has been closed|err_insufficient_resources|browsercontext\.newpage|page\.goto/i.test(message)
+}
+
+async function sharedBrowser() {
+  if (!sharedBrowserPromise) {
+    sharedBrowserPromise = launchBrowser().catch(error => {
+      sharedBrowserPromise = null
+      throw error
+    })
+  }
+  return sharedBrowserPromise
+}
+
+async function recycleSharedBrowser(browser?: Browser) {
+  const current = sharedBrowserPromise
+  sharedBrowserPromise = null
+  const resolved = browser ?? await current?.catch(() => undefined)
+  await resolved?.close().catch(() => undefined)
+}
+
 async function dismissPublicCookiePrompt(page: Page) {
   const reject = page.getByRole('button', { name: 'Reject all', exact: true })
   if (await reject.count() === 1) {
@@ -269,19 +293,29 @@ async function openFlightSearch(page: Page, searchUrl: string) {
 }
 
 async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promise<T>) {
-  const browser = await launchBrowser()
-  try {
-    const context = await browser.newContext({
-      locale: 'en-US',
-      timezoneId: 'UTC',
-      viewport: { width: 1440, height: 1000 },
-    })
-    const page = await context.newPage()
-    page.setDefaultTimeout(20_000)
-    return await operation(browser, page)
-  } finally {
-    await browser.close().catch(() => undefined)
+  let lastError: unknown
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let browser: Browser | undefined
+    let context: Awaited<ReturnType<Browser['newContext']>> | undefined
+    try {
+      browser = await sharedBrowser()
+      context = await browser.newContext({
+        locale: 'en-US',
+        timezoneId: 'UTC',
+        viewport: { width: 1440, height: 1000 },
+      })
+      const page = await context.newPage()
+      page.setDefaultTimeout(20_000)
+      return await operation(browser, page)
+    } catch (error) {
+      lastError = error
+      if (!isRecoverableBrowserRuntimeError(error) || attempt === 1) throw error
+      await recycleSharedBrowser(browser)
+    } finally {
+      await context?.close().catch(() => undefined)
+    }
   }
+  throw lastError
 }
 
 export async function runLiveFlightSearch(input: FlightSearchInput): Promise<FlightSearchResult> {
@@ -372,11 +406,11 @@ async function activateFlightCard(
         'Google Flights did not expose a selectable itinerary.',
       )
     }
-    await select.last().press('Enter')
+    await select.last().click({ force: true })
     await page.waitForFunction(
       ready,
       expectedText,
-      { timeout: 35_000 },
+      { timeout: 25_000 },
     )
   }
 }

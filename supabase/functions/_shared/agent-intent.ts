@@ -68,6 +68,12 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
 }
 
 export function needsSharedAgentContext(title: string, description = '', context = '') {
+  const combined = `${title} ${description} ${context}`.toLocaleLowerCase()
+  const explicitlyMissingMeetingDetails =
+    /\b(?:meet|meeting|call|appointment)\b/.test(combined) &&
+    /\b(?:no|missing|without)\b[\s\S]{0,80}\b(?:duration|topic|agenda|time|date)\b/.test(combined) &&
+    /\b(?:do not|don't|never|without)\b[\s\S]{0,80}\b(?:guess|invent|assume|fabricate)/.test(combined)
+  if (explicitlyMissingMeetingDetails) return true
   if (description.trim() || context.trim()) return false
 
   const value = title.trim().toLocaleLowerCase()

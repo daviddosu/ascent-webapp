@@ -43,7 +43,24 @@ Deno.test('completion requires provider-confirmed evidence for real-world outcom
   assertEquals(agentCompletionEvidenceSatisfied({
     ...base,
     capability: 'scheduling',
+    providerConfirmedTools: ['calendar.create_event'],
+  }), true)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'scheduling',
     providerConfirmedTools: ['gmail.send_message', 'calendar.create_event'],
+  }), true)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'scheduling',
+    providerConfirmedTools: ['calendar.update_event'],
+    requiredExternalEffects: ['gmail_send', 'calendar_write'],
+  }), false)
+  assertEquals(agentCompletionEvidenceSatisfied({
+    ...base,
+    capability: 'scheduling',
+    providerConfirmedTools: ['gmail.send_message', 'calendar.update_event'],
+    requiredExternalEffects: ['gmail_send', 'calendar_write'],
   }), true)
   assertEquals(agentCompletionEvidenceSatisfied({
     ...base,
