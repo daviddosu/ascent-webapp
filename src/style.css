@@ -3149,6 +3149,40 @@ body[data-theme='dark'] .calendar-event-chips small {
   background: rgba(0, 0, 0, .24);
 }
 
+body[data-theme='dark'] .inspector-actions {
+  border-color: var(--dark-border);
+  background: var(--dark-surface);
+  color: var(--dark-text);
+}
+
+body[data-theme='dark'] .inspector-actions button:not(.save) {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+  color: var(--dark-text);
+}
+
+body[data-theme='dark'] .inspector-actions .save {
+  border-color: var(--dark-text);
+  background: var(--dark-text);
+  color: var(--dark-bg);
+}
+
+body[data-theme='dark'] .screen-count {
+  background: var(--dark-raised);
+  color: var(--dark-text);
+}
+
+body[data-theme='dark'] .activity-cell.level-0,
+body[data-theme='dark'] .activity-legend .level-0 { background: var(--dark-hover); }
+body[data-theme='dark'] .activity-cell.level-1,
+body[data-theme='dark'] .activity-legend .level-1 { background: #244044; }
+body[data-theme='dark'] .activity-cell.level-2,
+body[data-theme='dark'] .activity-legend .level-2 { background: #2a5e64; }
+body[data-theme='dark'] .activity-cell.level-3,
+body[data-theme='dark'] .activity-legend .level-3 { background: #31848c; }
+body[data-theme='dark'] .activity-cell.level-4,
+body[data-theme='dark'] .activity-legend .level-4 { background: #43aab3; }
+
 body[data-theme='dark'] .month-event {
   border-left-color: var(--event-color);
   background: color-mix(in srgb, var(--event-color) 18%, var(--dark-raised));
@@ -4450,6 +4484,18 @@ body[data-theme='dark'] .spotlight-card.creator-link-target { box-shadow: 0 0 0 
   border-radius: 999px;
   background: #eef1f5;
   text-align: center;
+}
+
+body[data-theme='dark'] .cloud-sync-state {
+  border-color: var(--dark-border);
+  background: rgba(32, 36, 40, .94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .24);
+  color: var(--dark-muted);
+}
+
+body[data-theme='dark'] .cloud-sync-state b {
+  background: var(--dark-hover);
+  color: var(--dark-text);
 }
 
 .notification-bell {
