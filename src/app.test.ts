@@ -266,7 +266,9 @@ describe('reference screens', () => {
     expect(document.querySelector('.reference-app')?.classList.contains('with-inspector')).toBe(true)
     expect(document.querySelector<HTMLInputElement>('.inspector-title')?.value).toBe(expectedTitle)
     expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-row.selected')).not.toBeNull()
-    expect(document.querySelector('.inspector .task-agent-card')).not.toBeNull()
+    expect(document.querySelector('.inspector .task-agent-card')?.textContent).toContain('Available on the due date')
+    expect(document.querySelector('.inspector [data-action="delegate-task"]')).toBeNull()
+    expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-agent-pill')).toBeNull()
   })
 
   it('routes a future-dated task from Today into This Week', () => {

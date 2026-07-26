@@ -2548,13 +2548,31 @@ Deno.serve(async request => {
       if (!title || title.length > 1000 || !taskId || taskId.length > 500) {
         return jsonResponse(request, { error: 'Valid task title and task ID are required' }, 400)
       }
-      const intent = classifySharedAgentIntent(title, description)
-      const initialStatus = needsSharedAgentContext(title, description, context) ? 'needs_context' : 'planning'
       const reusableContext = await loadReusableAgentContext(
         admin,
         user.id,
         body.timezone ?? '',
       )
+      const due = safeString(body.due, 10).trim()
+      const executionTimezone = reusableContext.timezone
+      let todayInExecutionTimezone = ''
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone: executionTimezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).formatToParts(new Date())
+        const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value ?? ''
+        todayInExecutionTimezone = `${part('year')}-${part('month')}-${part('day')}`
+      } catch {
+        return jsonResponse(request, { error: 'A valid timezone is required to delegate this task.' }, 400)
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(due) || due > todayInExecutionTimezone) {
+        return jsonResponse(request, { error: 'Roon can execute tasks only when they appear in Today.' }, 409)
+      }
+      const intent = classifySharedAgentIntent(title, description)
+      const initialStatus = needsSharedAgentContext(title, description, context) ? 'needs_context' : 'planning'
       const executionDateContext = agentExecutionDateContext(
         `${title} ${description}`,
         reusableContext.timezone,
@@ -2572,7 +2590,7 @@ Deno.serve(async request => {
           description,
           user_context: context,
           goal_id: body.goalId ?? null,
-          due: body.due ?? null,
+          due,
           timezone: reusableContext.timezone,
           execution_date_context: executionDateContext,
           user_preferences: reusableContext,
