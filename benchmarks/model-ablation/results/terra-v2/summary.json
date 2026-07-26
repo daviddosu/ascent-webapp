@@ -1,0 +1,148 @@
+{
+  "sol": {
+    "overall": {
+      "runs": 60,
+      "passed": 59,
+      "success": 0.9833333333333333
+    },
+    "email": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "calendar": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "cross_tool": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "browser": {
+      "runs": 15,
+      "passed": 14,
+      "success": 0.9333333333333333
+    },
+    "cost": 1.6665330000000003,
+    "costPerRun": 0.027775550000000003,
+    "costPerSuccess": 0.02824632203389831,
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.933333333333334,
+    "firstAttempt": 0.9666666666666667
+  },
+  "terraV1": {
+    "overall": {
+      "runs": 60,
+      "passed": 47,
+      "success": 0.7833333333333333
+    },
+    "email": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "calendar": {
+      "runs": 15,
+      "passed": 14,
+      "success": 0.9333333333333333
+    },
+    "cross_tool": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "browser": {
+      "runs": 15,
+      "passed": 3,
+      "success": 0.2
+    },
+    "cost": 0.9235840000000001,
+    "costPerRun": 0.015393066666666668,
+    "costPerSuccess": 0.019650723404255322,
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.116666666666666,
+    "firstAttempt": 0.7833333333333333
+  },
+  "terraV2": {
+    "overall": {
+      "runs": 60,
+      "passed": 55,
+      "success": 0.9166666666666666
+    },
+    "email": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "calendar": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "cross_tool": {
+      "runs": 15,
+      "passed": 12,
+      "success": 0.8
+    },
+    "browser": {
+      "runs": 15,
+      "passed": 13,
+      "success": 0.8666666666666667
+    },
+    "cost": 0.8804550000000001,
+    "costPerRun": 0.014674250000000002,
+    "costPerSuccess": 0.01600827272727273,
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.85,
+    "firstAttempt": 0.9
+  },
+  "nearSolCriteria": {
+    "successWithinFivePoints": false,
+    "precision100": true,
+    "medianInterventionsZero": true,
+    "distanceWithinPoint25": true,
+    "browserAtLeast85": true,
+    "costMateriallyBelowSol": true,
+    "passes": false
+  },
+  "remainingFailures": [
+    {
+      "taskId": "cross-02",
+      "runNumber": 2,
+      "reason": "verification mismatch",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "cross-03",
+      "runNumber": 2,
+      "reason": "verification mismatch",
+      "finalState": "completed"
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 2,
+      "reason": "timeout/network",
+      "finalState": "waiting_for_user"
+    },
+    {
+      "taskId": "cross-04",
+      "runNumber": 3,
+      "reason": "verification mismatch",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 3,
+      "reason": "verification mismatch",
+      "finalState": "failed"
+    }
+  ]
+}

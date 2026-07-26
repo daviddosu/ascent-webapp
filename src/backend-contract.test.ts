@@ -443,6 +443,9 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("code: 'browser_worker_timeout'")
     expect(taskAgentFunction).toContain("retryable: checkpoint.pendingOperation!.type !== 'submit'")
     expect(taskAgentFunction).toContain("Date.now() - updatedAt > 120_000")
+    expect(taskAgentFunction).toContain('safeBrowserRetryDelayMs')
+    expect(flightBrowser).toContain('const browser = await launchBrowser()')
+    expect(flightBrowser).not.toContain('sharedBrowserPromise')
   })
 
   it('isolates flight selection from the search worker process pool', () => {

@@ -252,6 +252,10 @@ export function isRecoverableFlightReadError(error: unknown) {
     ['flight_results_timeout'].includes(error.code)
 }
 
+export function shouldReloadFlightResults(bodyText: string) {
+  return /Oops, something went wrong\.|No results returned\./i.test(bodyText)
+}
+
 async function dismissPublicCookiePrompt(page: Page) {
   const reject = page.getByRole('button', { name: 'Reject all', exact: true })
   if (await reject.count() === 1) {
@@ -272,7 +276,7 @@ async function openFlightSearch(page: Page, searchUrl: string) {
     })
     if (listItems.some(text => currencyPattern.test(text))) return
     const body = await page.locator('body').innerText().catch(() => '')
-    if (/Oops, something went wrong\.|No results returned\./i.test(body) && reloads < 2) {
+    if (shouldReloadFlightResults(body) && reloads < 2) {
       const reload = page.getByText('Reload', { exact: true })
       if (await reload.count()) {
         reloads += 1

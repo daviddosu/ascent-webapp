@@ -7,6 +7,7 @@ import {
   maxSharedBrowserUses,
   parseGoogleFlightListItem,
   rankFlightOptions,
+  shouldReloadFlightResults,
   type FlightSearchInput,
 } from './_flight-browser'
 
@@ -94,6 +95,11 @@ describe('flight browser worker', () => {
 
   it('keeps each worker invocation isolated to one browser lifecycle', () => {
     expect(maxSharedBrowserUses).toBe(1)
+  })
+
+  it('recognizes explicit Google Flights provider failure states', () => {
+    expect(shouldReloadFlightResults('No results returned. Oops, something went wrong. Reload')).toBe(true)
+    expect(shouldReloadFlightResults('Search results 12 flights')).toBe(false)
   })
 
   it('parses a live-result list item without retaining raw page text', () => {
