@@ -1,0 +1,192 @@
+{
+  "sol": {
+    "runs": 60,
+    "passed": 59,
+    "success": 0.9833333333333333,
+    "category": {
+      "email": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1
+      },
+      "calendar": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1
+      },
+      "cross_tool": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1
+      },
+      "browser": {
+        "runs": 15,
+        "passed": 14,
+        "success": 0.9333333333333333
+      }
+    },
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.933333333333334,
+    "firstAttempt": 0.9666666666666667,
+    "retries": 3,
+    "activeExecutionSeconds": {
+      "total": 1332.6100000000006,
+      "average": 22.210166666666677,
+      "median": 18.195
+    },
+    "tokens": {
+      "input": 923499,
+      "cachedInput": 846961,
+      "cacheWrite": 75833,
+      "output": 25519,
+      "total": 949018
+    },
+    "cost": 1.6665330000000003,
+    "costPerRun": 0.027775550000000003,
+    "costPerSuccess": 0.02824632203389831
+  },
+  "terra": {
+    "runs": 60,
+    "passed": 55,
+    "success": 0.9166666666666666,
+    "category": {
+      "email": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1
+      },
+      "calendar": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1
+      },
+      "cross_tool": {
+        "runs": 15,
+        "passed": 12,
+        "success": 0.8
+      },
+      "browser": {
+        "runs": 15,
+        "passed": 13,
+        "success": 0.8666666666666667
+      }
+    },
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.85,
+    "firstAttempt": 0.9,
+    "retries": 4,
+    "activeExecutionSeconds": {
+      "total": 1645.332,
+      "average": 27.4222,
+      "median": 21.0565
+    },
+    "tokens": {
+      "input": 970664,
+      "cachedInput": 884360,
+      "cacheWrite": 85581,
+      "output": 26008,
+      "total": 996672
+    },
+    "cost": 0.8804550000000001,
+    "costPerRun": 0.014674250000000002,
+    "costPerSuccess": 0.01600827272727273
+  },
+  "luna": {
+    "runs": 60,
+    "passed": 54,
+    "success": 0.9,
+    "category": {
+      "email": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1
+      },
+      "calendar": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1
+      },
+      "cross_tool": {
+        "runs": 15,
+        "passed": 12,
+        "success": 0.8
+      },
+      "browser": {
+        "runs": 15,
+        "passed": 12,
+        "success": 0.8
+      }
+    },
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.8,
+    "firstAttempt": 0.9,
+    "retries": 3,
+    "activeExecutionSeconds": {
+      "total": 1054.6910000000003,
+      "average": 17.57818333333334,
+      "median": 14.105
+    },
+    "tokens": {
+      "input": 896095,
+      "cachedInput": 816250,
+      "cacheWrite": 79149,
+      "output": 25501,
+      "total": 921596
+    },
+    "cost": 0.4178280000000001,
+    "costPerRun": 0.006963800000000002,
+    "costPerSuccess": 0.007737555555555557
+  },
+  "lunaFailureTaxonomy": {
+    "verification mismatch": 5,
+    "timeout/network": 1
+  },
+  "lunaFailures": [
+    {
+      "taskId": "cross-04",
+      "runNumber": 1,
+      "reason": "verification mismatch",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "cross-03",
+      "runNumber": 2,
+      "reason": "verification mismatch",
+      "finalState": "completed"
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 2,
+      "reason": "timeout/network",
+      "finalState": "waiting_for_user"
+    },
+    {
+      "taskId": "cross-03",
+      "runNumber": 3,
+      "reason": "verification mismatch",
+      "finalState": "completed"
+    },
+    {
+      "taskId": "browser-03",
+      "runNumber": 3,
+      "reason": "verification mismatch",
+      "finalState": "waiting_for_user"
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 3,
+      "reason": "verification mismatch",
+      "finalState": "failed"
+    }
+  ],
+  "costReduction": {
+    "versusSol": 0.7492830925040188,
+    "versusTerra": 0.5254408232107262
+  }
+}
