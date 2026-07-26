@@ -13,6 +13,7 @@ import {
   GoogleIntegrationError,
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, needsSharedAgentContext } from '../_shared/agent-intent.ts'
+import { safeBrowserRetryDelayMs } from '../_shared/browser-retry.ts'
 
 type RequestBody = {
   action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'cancel' | 'select_flight' | 'simulate_reply' | 'plan_tasks'
@@ -117,6 +118,7 @@ type BrowserOperation = {
 }
 
 type BrowserCheckpoint = {
+  workerAttempts?: number
   pendingOperation?: BrowserOperation | null
   lastOperation?: {
     id: string
@@ -1432,14 +1434,19 @@ async function pollBrowserExecutionRun(
     }
     const retryable = operation.error?.retryable !== false
     const workerAttempts = Number(checkpoint.workerAttempts ?? 0)
-    if (retryable && operation.type !== 'submit' && workerAttempts < 3) {
+    const retryDelay = retryable
+      ? safeBrowserRetryDelayMs(operation.type, errorCode, workerAttempts)
+      : null
+    if (retryDelay !== null) {
+      const completedAt = Date.parse(safeString(operation.completedAt, 80))
+      const retryAt = (Number.isFinite(completedAt) ? completedAt : Date.now()) + retryDelay
       const waiting = await updateRun(admin, run, {
         status: 'waiting_external',
         waiting_reason: 'The live browser step will retry automatically.',
         error_code: errorCode,
         error: message,
         retryable: true,
-        external_correlation_id: null,
+        external_correlation_id: `browser-session:${session.id}`,
         lease_owner: null,
         lease_expires_at: null,
       })
@@ -1449,8 +1456,11 @@ async function pollBrowserExecutionRun(
         retryable: true,
         automatic_retry: true,
         worker_attempt: workerAttempts,
+        retry_not_before: new Date(retryAt).toISOString(),
       })
-      return waiting
+      if (Date.now() < retryAt) return waiting
+      const retried = await retryWaitingProviderAction(admin, waiting, openaiKey)
+      return retried ?? waiting
     }
     if (operation.type === 'select_flight' || operation.type === 'submit') {
       const waiting = await updateRun(admin, run, {

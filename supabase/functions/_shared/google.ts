@@ -31,6 +31,32 @@ export class GoogleIntegrationError extends Error {
   }
 }
 
+export function calendarQueryTimestamp(value: string, timeZone: string) {
+  if (/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return new Date(value).toISOString()
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/)
+  if (!match) return value
+  const target = Date.UTC(
+    Number(match[1]), Number(match[2]) - 1, Number(match[3]),
+    Number(match[4]), Number(match[5]), Number(match[6] ?? 0),
+    Number((match[7] ?? '').padEnd(3, '0') || 0),
+  )
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+  let instant = target
+  for (let iteration = 0; iteration < 2; iteration += 1) {
+    const parts = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]))
+    const observed = Date.UTC(
+      Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+      Number(parts.hour), Number(parts.minute), Number(parts.second),
+      Number((match[7] ?? '').padEnd(3, '0') || 0),
+    )
+    instant += target - observed
+  }
+  return new Date(instant).toISOString()
+}
+
 function safeHeader(value: unknown) {
   return String(value ?? '').replace(/[\r\n]+/g, ' ').trim()
 }
@@ -705,13 +731,16 @@ async function calendarCreateEvent(
   idempotencyKey: string,
 ): Promise<Record<string, unknown>> {
   const calendarId = String(argumentsValue.calendar_id)
+  const timezone = String(argumentsValue.timezone)
+  const queryStart = calendarQueryTimestamp(String(argumentsValue.start), timezone)
+  const queryEnd = calendarQueryTimestamp(String(argumentsValue.end), timezone)
   const existing = await existingCalendarEvent(
     admin,
     userId,
     calendarId,
     idempotencyKey,
-    String(argumentsValue.start),
-    String(argumentsValue.end),
+    queryStart,
+    queryEnd,
   )
   if (existing) return { ...existing, already_created: true }
 
@@ -719,8 +748,8 @@ async function calendarCreateEvent(
     admin,
     userId,
     calendarId,
-    String(argumentsValue.start),
-    String(argumentsValue.end),
+    queryStart,
+    queryEnd,
   )
 
   const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`)

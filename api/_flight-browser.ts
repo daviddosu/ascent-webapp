@@ -239,9 +239,6 @@ async function launchBrowser() {
   })
 }
 
-let sharedBrowserPromise: Promise<Browser> | null = null
-let sharedBrowserUses = 0
-let activeBrowserContexts = 0
 export const maxSharedBrowserUses = 1
 
 export function isRecoverableBrowserRuntimeError(error: unknown) {
@@ -255,25 +252,6 @@ export function isRecoverableFlightReadError(error: unknown) {
     ['flight_results_timeout'].includes(error.code)
 }
 
-async function sharedBrowser() {
-  if (!sharedBrowserPromise) {
-    sharedBrowserPromise = launchBrowser().catch(error => {
-      sharedBrowserPromise = null
-      throw error
-    })
-  }
-  return sharedBrowserPromise
-}
-
-async function recycleSharedBrowser(browser?: Browser) {
-  const current = sharedBrowserPromise
-  sharedBrowserPromise = null
-  sharedBrowserUses = 0
-  const resolved = browser ?? await current?.catch(() => undefined)
-  await resolved?.close().catch(() => undefined)
-  await new Promise(resolve => setTimeout(resolve, 750))
-}
-
 async function dismissPublicCookiePrompt(page: Page) {
   const reject = page.getByRole('button', { name: 'Reject all', exact: true })
   if (await reject.count() === 1) {
@@ -285,57 +263,51 @@ async function dismissPublicCookiePrompt(page: Page) {
 async function openFlightSearch(page: Page, searchUrl: string) {
   await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 })
   await dismissPublicCookiePrompt(page)
-  try {
-    await page.waitForFunction(
-      () => [...document.querySelectorAll('li, [role="listitem"]')].some(element =>
-        /(?:[$£€]\s?[\d,.]+|(?:USD|GBP|EUR|NGN)\s?[\d,.]+)/i.test(
-          (element as HTMLElement).innerText ?? '',
-        )
-      ),
-      undefined,
-      { timeout: 45_000 },
-    )
-  } catch {
-    throw new BrowserExecutionError(
-      'flight_results_timeout',
-      'Google Flights took too long to return live options. Try again in a moment.',
-    )
+  const deadline = Date.now() + 42_000
+  let reloads = 0
+  while (Date.now() < deadline) {
+    const listItems = await page.locator('li, [role="listitem"]').allInnerTexts().catch(error => {
+      if (/execution context was destroyed|most likely because of a navigation/i.test(String(error))) return []
+      throw error
+    })
+    if (listItems.some(text => currencyPattern.test(text))) return
+    const body = await page.locator('body').innerText().catch(() => '')
+    if (/Oops, something went wrong\.|No results returned\./i.test(body) && reloads < 2) {
+      const reload = page.getByText('Reload', { exact: true })
+      if (await reload.count()) {
+        reloads += 1
+        await reload.click({ noWaitAfter: true, timeout: 5_000 }).catch(() => undefined)
+        await page.waitForTimeout(2_500)
+        continue
+      }
+    }
+    await page.waitForTimeout(750)
   }
+  throw new BrowserExecutionError(
+    'flight_results_timeout',
+    'Google Flights took too long to return live options. Try again in a moment.',
+  )
 }
 
 async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promise<T>) {
-  let lastError: unknown
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    let browser: Browser | undefined
-    let context: Awaited<ReturnType<Browser['newContext']>> | undefined
-    try {
-      browser = await sharedBrowser()
-      context = await browser.newContext({
-        locale: 'en-US',
-        timezoneId: 'UTC',
-        viewport: { width: 1440, height: 1000 },
-      })
-      sharedBrowserUses += 1
-      activeBrowserContexts += 1
-      const page = await context.newPage()
-      page.setDefaultTimeout(20_000)
-      return await operation(browser, page)
-    } catch (error) {
-      lastError = error
-      if (
-        (!isRecoverableBrowserRuntimeError(error) && !isRecoverableFlightReadError(error)) ||
-        attempt === 1
-      ) throw error
-      await recycleSharedBrowser(browser)
-    } finally {
-      await context?.close().catch(() => undefined)
-      if (context) activeBrowserContexts = Math.max(0, activeBrowserContexts - 1)
-      if (sharedBrowserUses >= maxSharedBrowserUses && activeBrowserContexts === 0) {
-        await recycleSharedBrowser(browser)
-      }
-    }
+  // One isolated browser per worker invocation avoids one failed read closing a
+  // browser that another invocation is still using. Durable retries happen at
+  // the task-owned session layer, outside this bounded serverless invocation.
+  const browser = await launchBrowser()
+  let context: Awaited<ReturnType<Browser['newContext']>> | undefined
+  try {
+    context = await browser.newContext({
+      locale: 'en-US',
+      timezoneId: 'UTC',
+      viewport: { width: 1440, height: 1000 },
+    })
+    const page = await context.newPage()
+    page.setDefaultTimeout(20_000)
+    return await operation(browser, page)
+  } finally {
+    await context?.close().catch(() => undefined)
+    await browser.close().catch(() => undefined)
   }
-  throw lastError
 }
 
 export async function runLiveFlightSearch(input: FlightSearchInput): Promise<FlightSearchResult> {

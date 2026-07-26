@@ -92,6 +92,10 @@ describe('flight browser worker', () => {
     expect(isRecoverableFlightReadError(new Error('submit timed out'))).toBe(false)
   })
 
+  it('keeps each worker invocation isolated to one browser lifecycle', () => {
+    expect(maxSharedBrowserUses).toBe(1)
+  })
+
   it('parses a live-result list item without retaining raw page text', () => {
     const parsed = parseGoogleFlightListItem(
       results[0]!,
