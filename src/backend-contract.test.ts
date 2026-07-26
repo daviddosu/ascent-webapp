@@ -433,6 +433,11 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('Payment must be completed by you.')
   })
 
+  it('waits for scheduling replies only when a remaining action depends on them', () => {
+    expect(taskAgentFunction).toContain('only when a reply is still required')
+    expect(taskAgentFunction).toContain('notification-only email after a completed Calendar change does not require a reply watch')
+  })
+
   it('keeps delayed-reply simulation behind explicit development gates', () => {
     expect(taskAgentFunction).toContain("Deno.env.get('SHOTCOUNT_ENABLE_DEMO_REPLY_SIMULATION') !== 'true'")
     expect(agentClient).toContain("{ action: 'simulate_reply', runId, simulationReply }")

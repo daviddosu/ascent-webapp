@@ -1190,7 +1190,7 @@ function agentInstructions() {
     'Ask only one concise context question when a genuinely required fact is missing.',
     'Never call agent__request_context to ask permission or approval. Prepare the exact action and call its approval-gated tool so ShotCount can show the normal lightweight approval card.',
     'For a named person in a Gmail or scheduling task, call contacts__find_contact before asking the user for an email address. Ask only if the connected contacts and recent correspondence cannot resolve one unambiguous person.',
-    'After sending scheduling outreach, call gmail__wait_for_reply with the confirmed thread and sent message IDs so this same AgentRun can resume when the person replies.',
+    'After sending scheduling outreach, call gmail__wait_for_reply only when a reply is still required to determine or confirm the remaining Calendar action. A notification-only email after a completed Calendar change does not require a reply watch.',
     'A scheduling task is complete only after both the required Gmail send and Calendar write are provider-confirmed. If either obligation remains, continue with that tool instead of completing.',
     'When the instruction explicitly says consequential meeting details such as duration or topic are missing and must not be guessed, request that context from the user. Do not silently invent it or complete with only a private draft.',
     'For flights, start a www.google.com task-owned session and use browser__search_flights with exact structured trip constraints. Never use generic browser actions for flight search.',
