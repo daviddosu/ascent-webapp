@@ -242,7 +242,7 @@ async function launchBrowser() {
 let sharedBrowserPromise: Promise<Browser> | null = null
 let sharedBrowserUses = 0
 let activeBrowserContexts = 0
-export const maxSharedBrowserUses = 2
+export const maxSharedBrowserUses = 1
 
 export function isRecoverableBrowserRuntimeError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
@@ -265,7 +265,7 @@ async function recycleSharedBrowser(browser?: Browser) {
   sharedBrowserUses = 0
   const resolved = browser ?? await current?.catch(() => undefined)
   await resolved?.close().catch(() => undefined)
-  await new Promise(resolve => setTimeout(resolve, 250))
+  await new Promise(resolve => setTimeout(resolve, 750))
 }
 
 async function dismissPublicCookiePrompt(page: Page) {
