@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-26T13:00:18.378Z",
+  "model": "gpt-5.6-sol",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 5,
+    "cachedInput": 0.5,
+    "cacheWrite": 6.25,
+    "output": 30
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "preflightbrowser-04-post-v2",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "2550bce",
+      "benchmark_commit": "2550bce",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "browser-04",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "f714d01a00",
+      "agent_run_id": "43a24418-9ff6-4acc-aece-d5058dec81e2",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 0,
+      "retry_count": 2,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 15.917,
+      "external_wait_time_seconds": 295.105,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "waiting_for_user",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6226,
+      "cached_input_tokens": 5843,
+      "cache_write_tokens": 377,
+      "output_tokens": 196,
+      "inference_cost_usd": 0.011188,
+      "started_at": "2026-07-26T12:55:07.337Z",
+      "finished_at": "2026-07-26T13:00:18.359Z",
+      "actions": [
+        {
+          "tool": "browser.start_session",
+          "status": "succeeded",
+          "provider_action_id": "b3ffa45f-1c94-480d-8b11-1f308250aead",
+          "error_code": null
+        },
+        {
+          "tool": "browser.search_flights",
+          "status": "succeeded",
+          "provider_action_id": "b3ffa45f-1c94-480d-8b11-1f308250aead",
+          "error_code": null
+        },
+        {
+          "tool": "browser.select_flight",
+          "status": "succeeded",
+          "provider_action_id": "b3ffa45f-1c94-480d-8b11-1f308250aead",
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": "2026-08-09",
+              "budgetAmount": null,
+              "departureDate": "2026-08-06",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "06f7922cd6be570055b1e187",
+                "label": "Best overall",
+                "price": "$950",
+                "route": "LOS–LHR",
+                "stops": "1 stop",
+                "amount": 950,
+                "airline": "Ethiopian",
+                "currency": "USD",
+                "duration": "17 hr 20 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "7:00 AM+1",
+                "departureTime": "1:40 PM",
+                "durationMinutes": 1040
+              },
+              {
+                "id": "5c24ba404de1db1bb4096a85",
+                "label": "Fastest",
+                "price": "$2,464",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 2464,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "4775ff2f5d5c17d979f6e4e5",
+                "label": "Also worth considering",
+                "price": "$964",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 964,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-26T12:59:43.235Z"
+          },
+          "lastOperation": {
+            "id": "agent:43a24418-9ff6-4acc-aece-d5058dec81e2:2:browser.select_flight:bd909912e870cc1bcd43f8a4",
+            "type": "select_flight",
+            "output": {
+              "provider": "Google Flights",
+              "resumable": true,
+              "handoffUrl": "https://dxbooking.ethiopianairlines.com/dx/ETDX/?utm_source=Google_GFS_712&utm_medium=AGGREGATOR&utm_term=H4a7LTsGsAv8ABGmpABD----------vtsi8AAAAAGpmBNYAFLPOA&utm_campaign=&utm_content=round-trip-LOS-ADD-2026-08-06T13:40:00-ADD-LHR-2026-08-07T00:45:00-LHR-ADD-2026-08-09T21:00:00-ADD-LOS-2026-08-10T09:00:00#/meta-search?ms[0][origin]=LOS&ms[0][destination]=ADD&ms[0][operatingAirlineCode]=ET&ms[0][fareBasis]=QHXESNG/WEB&ms[0][airlineCode]=ET&ms[0][departure]=2026-08-06T13:40:00&ms[0][arrival]=2026-08-06T21:00:00&ms[0][cabinClass]=Economy&ms[0][flightNumber]=900&ms[0][bookingClass]=Q&ms[0][marriageGroup]=O&ms[0][leg]=0&ms[1][origin]=ADD&ms[1][destination]=LHR&ms[1][operatingAirlineCode]=ET&ms[1][fareBasis]=QHXESNG/WEB&ms[1][airlineCode]=ET&ms[1][departure]=2026-08-07T00:45:00&ms[1][arrival]=2026-08-07T07:00:00&ms[1][cabinClass]=Economy&ms[1][flightNumber]=700&ms[1][bookingClass]=Q&ms[1][marriageGroup]=O&ms[1][leg]=0&ms[2][origin]=LHR&ms[2][destination]=ADD&ms[2][operatingAirlineCode]=ET&ms[2][fareBasis]=UHXESNG/WEB&ms[2][airlineCode]=ET&ms[2][departure]=2026-08-09T21:00:00&ms[2][arrival]=2026-08-10T06:45:00&ms[2][cabinClass]=Economy&ms[2][flightNumber]=701&ms[2][bookingClass]=U&ms[2][marriageGroup]=O&ms[2][leg]=1&ms[3][origin]=ADD&ms[3][destination]=LOS&ms[3][operatingAirlineCode]=ET&ms[3][fareBasis]=UHXESNG/WEB&ms[3][airlineCode]=ET&ms[3][departure]=2026-08-10T09:00:00&ms[3][arrival]=2026-08-10T12:25:00&ms[3][cabinClass]=Economy&ms[3][flightNumber]=901&ms[3][bookingClass]=U&ms[3][marriageGroup]=O&ms[3][leg]=1&journeyType=round-trip&ADT=1&referrerCode=GoogleGFS7&currency=NGN&CID=affkayak&locale=en-GB",
+              "observedAt": "2026-07-26T13:00:10.430Z",
+              "handoffStage": "provider_booking",
+              "selectedOption": {
+                "id": "06f7922cd6be570055b1e187",
+                "label": "Best overall",
+                "price": "$950",
+                "route": "LOS–LHR",
+                "stops": "1 stop",
+                "amount": 950,
+                "airline": "Ethiopian",
+                "currency": "USD",
+                "duration": "17 hr 20 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "7:00 AM+1",
+                "departureTime": "1:40 PM",
+                "durationMinutes": 1040
+              },
+              "handoffProvider": "Ethiopian",
+              "paymentBoundaryReached": true
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-26T13:00:11.636Z"
+          },
+          "selectedFlight": {
+            "provider": "Google Flights",
+            "resumable": true,
+            "handoffUrl": "https://dxbooking.ethiopianairlines.com/dx/ETDX/?utm_source=Google_GFS_712&utm_medium=AGGREGATOR&utm_term=H4a7LTsGsAv8ABGmpABD----------vtsi8AAAAAGpmBNYAFLPOA&utm_campaign=&utm_content=round-trip-LOS-ADD-2026-08-06T13:40:00-ADD-LHR-2026-08-07T00:45:00-LHR-ADD-2026-08-09T21:00:00-ADD-LOS-2026-08-10T09:00:00#/meta-search?ms[0][origin]=LOS&ms[0][destination]=ADD&ms[0][operatingAirlineCode]=ET&ms[0][fareBasis]=QHXESNG/WEB&ms[0][airlineCode]=ET&ms[0][departure]=2026-08-06T13:40:00&ms[0][arrival]=2026-08-06T21:00:00&ms[0][cabinClass]=Economy&ms[0][flightNumber]=900&ms[0][bookingClass]=Q&ms[0][marriageGroup]=O&ms[0][leg]=0&ms[1][origin]=ADD&ms[1][destination]=LHR&ms[1][operatingAirlineCode]=ET&ms[1][fareBasis]=QHXESNG/WEB&ms[1][airlineCode]=ET&ms[1][departure]=2026-08-07T00:45:00&ms[1][arrival]=2026-08-07T07:00:00&ms[1][cabinClass]=Economy&ms[1][flightNumber]=700&ms[1][bookingClass]=Q&ms[1][marriageGroup]=O&ms[1][leg]=0&ms[2][origin]=LHR&ms[2][destination]=ADD&ms[2][operatingAirlineCode]=ET&ms[2][fareBasis]=UHXESNG/WEB&ms[2][airlineCode]=ET&ms[2][departure]=2026-08-09T21:00:00&ms[2][arrival]=2026-08-10T06:45:00&ms[2][cabinClass]=Economy&ms[2][flightNumber]=701&ms[2][bookingClass]=U&ms[2][marriageGroup]=O&ms[2][leg]=1&ms[3][origin]=ADD&ms[3][destination]=LOS&ms[3][operatingAirlineCode]=ET&ms[3][fareBasis]=UHXESNG/WEB&ms[3][airlineCode]=ET&ms[3][departure]=2026-08-10T09:00:00&ms[3][arrival]=2026-08-10T12:25:00&ms[3][cabinClass]=Economy&ms[3][flightNumber]=901&ms[3][bookingClass]=U&ms[3][marriageGroup]=O&ms[3][leg]=1&journeyType=round-trip&ADT=1&referrerCode=GoogleGFS7&currency=NGN&CID=affkayak&locale=en-GB",
+            "observedAt": "2026-07-26T13:00:10.430Z",
+            "handoffStage": "provider_booking",
+            "selectedOption": {
+              "id": "06f7922cd6be570055b1e187",
+              "label": "Best overall",
+              "price": "$950",
+              "route": "LOS–LHR",
+              "stops": "1 stop",
+              "amount": 950,
+              "airline": "Ethiopian",
+              "currency": "USD",
+              "duration": "17 hr 20 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "7:00 AM+1",
+              "departureTime": "1:40 PM",
+              "durationMinutes": 1040
+            },
+            "handoffProvider": "Ethiopian",
+            "paymentBoundaryReached": true
+          },
+          "workerAttempts": 4,
+          "pendingOperation": null
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": true,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "Your selected flight is ready for you.",
+          "sections": [
+            {
+              "body": "Ethiopian · LOS–LHR · 1 stop · 17 hr 20 min · $950",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $2,464",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $964",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "06f7922cd6be570055b1e187",
+              "label": "Best overall",
+              "price": "$950",
+              "route": "LOS–LHR",
+              "stops": "1 stop",
+              "amount": 950,
+              "airline": "Ethiopian",
+              "currency": "USD",
+              "duration": "17 hr 20 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "7:00 AM+1",
+              "departureTime": "1:40 PM",
+              "durationMinutes": 1040
+            },
+            {
+              "id": "5c24ba404de1db1bb4096a85",
+              "label": "Fastest",
+              "price": "$2,464",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 2464,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "4775ff2f5d5c17d979f6e4e5",
+              "label": "Also worth considering",
+              "price": "$964",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 964,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            }
+          ],
+          "selectedFlight": {
+            "id": "06f7922cd6be570055b1e187",
+            "label": "Best overall",
+            "price": "$950",
+            "route": "LOS–LHR",
+            "stops": "1 stop",
+            "amount": 950,
+            "airline": "Ethiopian",
+            "currency": "USD",
+            "duration": "17 hr 20 min",
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+            "stopCount": 1,
+            "arrivalTime": "7:00 AM+1",
+            "departureTime": "1:40 PM",
+            "durationMinutes": 1040
+          },
+          "paymentHandoffUrl": "https://dxbooking.ethiopianairlines.com/dx/ETDX/?utm_source=Google_GFS_712&utm_medium=AGGREGATOR&utm_term=H4a7LTsGsAv8ABGmpABD----------vtsi8AAAAAGpmBNYAFLPOA&utm_campaign=&utm_content=round-trip-LOS-ADD-2026-08-06T13:40:00-ADD-LHR-2026-08-07T00:45:00-LHR-ADD-2026-08-09T21:00:00-ADD-LOS-2026-08-10T09:00:00#/meta-search?ms[0][origin]=LOS&ms[0][destination]=ADD&ms[0][operatingAirlineCode]=ET&ms[0][fareBasis]=QHXESNG/WEB&ms[0][airlineCode]=ET&ms[0][departure]=2026-08-06T13:40:00&ms[0][arrival]=2026-08-06T21:00:00&ms[0][cabinClass]=Economy&ms[0][flightNumber]=900&ms[0][bookingClass]=Q&ms[0][marriageGroup]=O&ms[0][leg]=0&ms[1][origin]=ADD&ms[1][destination]=LHR&ms[1][operatingAirlineCode]=ET&ms[1][fareBasis]=QHXESNG/WEB&ms[1][airlineCode]=ET&ms[1][departure]=2026-08-07T00:45:00&ms[1][arrival]=2026-08-07T07:00:00&ms[1][cabinClass]=Economy&ms[1][flightNumber]=700&ms[1][bookingClass]=Q&ms[1][marriageGroup]=O&ms[1][leg]=0&ms[2][origin]=LHR&ms[2][destination]=ADD&ms[2][operatingAirlineCode]=ET&ms[2][fareBasis]=UHXESNG/WEB&ms[2][airlineCode]=ET&ms[2][departure]=2026-08-09T21:00:00&ms[2][arrival]=2026-08-10T06:45:00&ms[2][cabinClass]=Economy&ms[2][flightNumber]=701&ms[2][bookingClass]=U&ms[2][marriageGroup]=O&ms[2][leg]=1&ms[3][origin]=ADD&ms[3][destination]=LOS&ms[3][operatingAirlineCode]=ET&ms[3][fareBasis]=UHXESNG/WEB&ms[3][airlineCode]=ET&ms[3][departure]=2026-08-10T09:00:00&ms[3][arrival]=2026-08-10T12:25:00&ms[3][cabinClass]=Economy&ms[3][flightNumber]=901&ms[3][bookingClass]=U&ms[3][marriageGroup]=O&ms[3][leg]=1&journeyType=round-trip&ADT=1&referrerCode=GoogleGFS7&currency=NGN&CID=affkayak&locale=en-GB",
+          "paymentHandoffStage": "provider_booking",
+          "paymentHandoffProvider": "Ethiopian"
+        }
+      }
+    }
+  ]
+}

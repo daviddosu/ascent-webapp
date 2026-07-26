@@ -1,0 +1,116 @@
+{
+  "v1": {
+    "runs": 60,
+    "costUsd": 1.8337619999999997,
+    "metrics": {
+      "email": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1,
+        "precision": 1,
+        "distance": 5,
+        "firstAttempt": 1,
+        "medianIntervention": 0
+      },
+      "calendar": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1,
+        "precision": 1,
+        "distance": 5,
+        "firstAttempt": 1,
+        "medianIntervention": 0
+      },
+      "cross_tool": {
+        "runs": 15,
+        "passed": 9,
+        "success": 0.6,
+        "precision": 1,
+        "distance": 4.6,
+        "firstAttempt": 0.6,
+        "medianIntervention": 0
+      },
+      "browser": {
+        "runs": 15,
+        "passed": 6,
+        "success": 0.4,
+        "precision": 1,
+        "distance": 2.6666666666666665,
+        "firstAttempt": 0.4,
+        "medianIntervention": 0.5
+      },
+      "overall": {
+        "runs": 60,
+        "passed": 45,
+        "success": 0.75,
+        "precision": 1,
+        "distance": 4.316666666666666,
+        "firstAttempt": 0.75,
+        "medianIntervention": 0
+      }
+    }
+  },
+  "v2": {
+    "runs": 60,
+    "costUsd": 1.6665330000000003,
+    "metrics": {
+      "email": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1,
+        "precision": 1,
+        "distance": 5,
+        "firstAttempt": 1,
+        "medianIntervention": 0
+      },
+      "calendar": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1,
+        "precision": 1,
+        "distance": 5,
+        "firstAttempt": 1,
+        "medianIntervention": 0
+      },
+      "cross_tool": {
+        "runs": 15,
+        "passed": 15,
+        "success": 1,
+        "precision": 1,
+        "distance": 5,
+        "firstAttempt": 1,
+        "medianIntervention": 0
+      },
+      "browser": {
+        "runs": 15,
+        "passed": 14,
+        "success": 0.9333333333333333,
+        "precision": 1,
+        "distance": 4.733333333333333,
+        "firstAttempt": 0.8666666666666667,
+        "medianIntervention": 0
+      },
+      "overall": {
+        "runs": 60,
+        "passed": 59,
+        "success": 0.9833333333333333,
+        "precision": 1,
+        "distance": 4.933333333333334,
+        "firstAttempt": 0.9666666666666667,
+        "medianIntervention": 0
+      }
+    }
+  },
+  "remainingFailures": [
+    {
+      "taskId": "browser-04",
+      "runNumber": 3,
+      "reason": "timeout/network"
+    }
+  ],
+  "postV2TargetedProof": {
+    "taskId": "browser-04",
+    "success": true,
+    "commit": "2550bcea0e5cc16d7dcd7a018b946496b2814d00"
+  }
+}
