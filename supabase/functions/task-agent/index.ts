@@ -695,11 +695,13 @@ function configuredBrowserDomains() {
 
 function browserWorkerConfig() {
   const rawUrl = Deno.env.get('SHOTCOUNT_BROWSER_WORKER_URL') ?? ''
+  const rawSelectionUrl = Deno.env.get('SHOTCOUNT_BROWSER_SELECTION_WORKER_URL') ?? ''
   const token = Deno.env.get('SHOTCOUNT_BROWSER_WORKER_TOKEN') ?? ''
   try {
     const url = new URL(rawUrl)
-    if (url.protocol !== 'https:' || !token) return null
-    return { url: url.toString(), token }
+    const selectionUrl = new URL(rawSelectionUrl || rawUrl)
+    if (url.protocol !== 'https:' || selectionUrl.protocol !== 'https:' || !token) return null
+    return { url: url.toString(), selectionUrl: selectionUrl.toString(), token }
   } catch {
     return null
   }
@@ -727,7 +729,8 @@ async function dispatchBrowserWorker(
   operation: BrowserOperation,
   config: NonNullable<ReturnType<typeof browserWorkerConfig>>,
 ) {
-  const work = fetch(config.url, {
+  const workerUrl = operation.type === 'select_flight' ? config.selectionUrl : config.url
+  const work = fetch(workerUrl, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${config.token}`,

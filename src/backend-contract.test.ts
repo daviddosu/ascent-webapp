@@ -28,6 +28,7 @@ const agentTools = readFileSync(resolve(root, 'supabase/functions/_shared/agent-
 const agentWatchSweepFunction = readFileSync(resolve(root, 'supabase/functions/agent-watch-sweep/index.ts'), 'utf8')
 const scheduledReminderFunction = readFileSync(resolve(root, 'supabase/functions/send-scheduled-reminders/index.ts'), 'utf8')
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
+const browserSelectWorker = readFileSync(resolve(root, 'api/browser-select-worker.ts'), 'utf8')
 const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf8')
 const publicBrowser = readFileSync(resolve(root, 'api/_public-browser.ts'), 'utf8')
 const agentClient = readFileSync(resolve(root, 'src/data/agent.ts'), 'utf8')
@@ -442,6 +443,12 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("code: 'browser_worker_timeout'")
     expect(taskAgentFunction).toContain("retryable: checkpoint.pendingOperation!.type !== 'submit'")
     expect(taskAgentFunction).toContain("Date.now() - updatedAt > 120_000")
+  })
+
+  it('isolates flight selection from the search worker process pool', () => {
+    expect(taskAgentFunction).toContain('SHOTCOUNT_BROWSER_SELECTION_WORKER_URL')
+    expect(taskAgentFunction).toContain("operation.type === 'select_flight' ? config.selectionUrl : config.url")
+    expect(browserSelectWorker).toContain("from './browser-worker.js'")
   })
 
   it('keeps delayed-reply simulation behind explicit development gates', () => {
