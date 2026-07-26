@@ -496,6 +496,28 @@ async function gmailSendDraft(
   }
 }
 
+export async function deleteGoogleBenchmarkDraft(
+  admin: AdminClient,
+  userId: string,
+  draftId: string,
+) {
+  if (!draftId) return { deleted: false, already_deleted: true }
+  try {
+    await googleRequest<Record<string, unknown>>(
+      admin,
+      userId,
+      `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}`,
+      { method: 'DELETE' },
+    )
+    return { deleted: true, already_deleted: false }
+  } catch (error) {
+    if (error instanceof GoogleIntegrationError && error.code === 'google_404') {
+      return { deleted: false, already_deleted: true }
+    }
+    throw error
+  }
+}
+
 async function calendarListEvents(admin: AdminClient, userId: string, argumentsValue: Record<string, unknown>) {
   const calendarId = encodeURIComponent(String(argumentsValue.calendar_id))
   const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`)

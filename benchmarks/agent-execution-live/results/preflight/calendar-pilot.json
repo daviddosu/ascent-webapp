@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-26T06:50:18.173Z",
+  "model": "gpt-5.6-sol",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 5,
+    "cachedInput": 0.5,
+    "output": 30
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "e1c4974fba47dfdc1ec7b505781a11f05a5ffc9f",
+      "benchmark_commit": "e1c4974fba47dfdc1ec7b505781a11f05a5ffc9f",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-03",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "5a2f4f493c",
+      "agent_run_id": "662c8f25-c18f-4f2e-8b62-8fafd152919e",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.966,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6306,
+      "cached_input_tokens": 2921,
+      "output_tokens": 257,
+      "inference_cost_usd": 0.026096,
+      "started_at": "2026-07-26T06:50:02.206Z",
+      "finished_at": "2026-07-26T06:50:18.172Z",
+      "actions": [
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "7hp00o4v10olufjranm8fdvga8",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ]
+    }
+  ]
+}

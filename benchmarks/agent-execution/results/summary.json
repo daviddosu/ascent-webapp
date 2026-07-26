@@ -1,0 +1,47 @@
+{
+  "successRate": 0.9,
+  "precision": 1,
+  "successByCategory": {
+    "email": 0.8,
+    "calendar": 0.8,
+    "cross_tool": 1,
+    "browser": 1
+  },
+  "precisionByCategory": {
+    "email": 1,
+    "calendar": 1,
+    "cross_tool": 1,
+    "browser": 1
+  },
+  "averageInterventionsSuccessful": 0.1111111111111111,
+  "medianInterventions": 0,
+  "medianActiveTime": 1.28,
+  "averageDistance": 4.75,
+  "distanceByCategory": {
+    "email": 4.6,
+    "calendar": 4.6,
+    "cross_tool": 5,
+    "browser": 4.8
+  },
+  "interventionsByCategory": {
+    "email": 0,
+    "calendar": 0,
+    "cross_tool": 0.2,
+    "browser": 0.2
+  },
+  "clarificationRate": 0.1,
+  "successWilson95": [
+    0.7985053527602123,
+    0.9533571655261158
+  ],
+  "precisionWilson95": [
+    0.93982814785791,
+    0.9999999999999998
+  ],
+  "taskCount": 20,
+  "runCount": 60,
+  "failureDistribution": {
+    "completion_policy_misclassified_prepare_as_send": 3,
+    "completion_policy_ignored_negated_calendar_write": 3
+  }
+}

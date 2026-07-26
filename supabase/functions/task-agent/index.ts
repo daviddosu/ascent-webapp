@@ -30,6 +30,7 @@ type RequestBody = {
   timezone?: string
   goal?: string
   clarification?: string
+  benchmarkRunId?: string
 }
 
 type AgentIntent = {
@@ -77,6 +78,17 @@ type OpenAIResponse = {
   status?: string
   output?: OpenAIOutputItem[]
   error?: { code?: string; message?: string } | null
+  usage?: {
+    input_tokens?: number
+    input_tokens_details?: {
+      cached_tokens?: number
+      [key: string]: unknown
+    }
+    output_tokens?: number
+    output_tokens_details?: Record<string, unknown>
+    total_tokens?: number
+    [key: string]: unknown
+  }
 }
 
 type ToolOutput = {
@@ -2136,6 +2148,24 @@ async function advanceRun(
 
   for (let iteration = 0; iteration < maximumModelSteps; iteration += 1) {
     const response = await callOpenAI(openaiKey, current, history)
+    const benchmarkRunId = safeString(current.context?.benchmark_run_id, 160)
+    if (benchmarkRunId.startsWith('shotcount-eval-live-v1/')) {
+      await addEvent(
+        admin,
+        current,
+        'agent_model_response',
+        response.status ?? 'completed',
+        'Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.',
+        {
+          benchmark_run_id: benchmarkRunId,
+          response_id: safeString(response.id, 160),
+          model: 'gpt-5.6-sol',
+          reasoning_effort: 'low',
+          iteration,
+          usage: response.usage ?? null,
+        },
+      )
+    }
     if (!response.output?.length) throw new Error('The agent response was empty.')
     history = [...history, ...response.output]
     await saveModelHistory(admin, current, history, response.id)
@@ -2545,6 +2575,10 @@ Deno.serve(async request => {
       const taskId = body.taskId?.trim() ?? ''
       const description = body.description?.trim() ?? ''
       const context = body.context?.trim() ?? ''
+      const benchmarkRunId = safeString(body.benchmarkRunId, 160).trim()
+      if (benchmarkRunId && !/^shotcount-eval-live-v1\/[a-z0-9-]+\/run-[1-3]\/[a-z0-9-]+$/.test(benchmarkRunId)) {
+        return jsonResponse(request, { error: 'Invalid benchmark run ID' }, 400)
+      }
       if (!title || title.length > 1000 || !taskId || taskId.length > 500) {
         return jsonResponse(request, { error: 'Valid task title and task ID are required' }, 400)
       }
@@ -2594,6 +2628,7 @@ Deno.serve(async request => {
           timezone: reusableContext.timezone,
           execution_date_context: executionDateContext,
           user_preferences: reusableContext,
+          ...(benchmarkRunId ? { benchmark_run_id: benchmarkRunId } : {}),
         },
         plan: [],
         progress: [],
