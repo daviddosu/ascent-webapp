@@ -1,0 +1,177 @@
+{
+  "sol": {
+    "overall": {
+      "runs": 60,
+      "passed": 59,
+      "success": 0.9833333333333333
+    },
+    "email": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "calendar": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "cross_tool": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "browser": {
+      "runs": 15,
+      "passed": 14,
+      "success": 0.9333333333333333
+    },
+    "cost": 1.6665330000000003,
+    "costPerRun": 0.027775550000000003,
+    "costPerSuccess": 0.02824632203389831,
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.933333333333334,
+    "firstAttempt": 0.9666666666666667,
+    "retries": 3,
+    "tokens": {
+      "input_tokens": 923499,
+      "cached_input_tokens": 846961,
+      "cache_write_tokens": 75833,
+      "output_tokens": 25519
+    }
+  },
+  "terra": {
+    "overall": {
+      "runs": 60,
+      "passed": 47,
+      "success": 0.7833333333333333
+    },
+    "email": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "calendar": {
+      "runs": 15,
+      "passed": 14,
+      "success": 0.9333333333333333
+    },
+    "cross_tool": {
+      "runs": 15,
+      "passed": 15,
+      "success": 1
+    },
+    "browser": {
+      "runs": 15,
+      "passed": 3,
+      "success": 0.2
+    },
+    "cost": 0.9235840000000001,
+    "costPerRun": 0.015393066666666668,
+    "costPerSuccess": 0.019650723404255322,
+    "precision": 1,
+    "medianInterventions": 0,
+    "averageInterventions": 0.1,
+    "distance": 4.116666666666666,
+    "firstAttempt": 0.7833333333333333,
+    "retries": 24,
+    "tokens": {
+      "input_tokens": 1011155,
+      "cached_input_tokens": 917131,
+      "cache_write_tokens": 93292,
+      "output_tokens": 26729
+    }
+  },
+  "delta": {
+    "costSavingsUsd": 0.7429490000000002,
+    "costReduction": 0.4458051535733166,
+    "success": -0.19999999999999996,
+    "precision": 0,
+    "medianInterventions": 0,
+    "averageInterventions": 0,
+    "distance": -0.8166666666666673,
+    "firstAttempt": -0.18333333333333335
+  },
+  "terraFailures": [
+    {
+      "taskId": "calendar-03",
+      "runNumber": 1,
+      "reason": "verification mismatch",
+      "finalState": "waiting_for_user"
+    },
+    {
+      "taskId": "browser-01",
+      "runNumber": 1,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-02",
+      "runNumber": 1,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-03",
+      "runNumber": 1,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 1,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-01",
+      "runNumber": 2,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-02",
+      "runNumber": 2,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-03",
+      "runNumber": 2,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 2,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-01",
+      "runNumber": 3,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-02",
+      "runNumber": 3,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-03",
+      "runNumber": 3,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 3,
+      "reason": "timeout/network",
+      "finalState": "failed"
+    }
+  ],
+  "lunaRun": false
+}
