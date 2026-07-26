@@ -250,15 +250,22 @@ async function dismissPublicCookiePrompt(page: Page) {
 async function openFlightSearch(page: Page, searchUrl: string) {
   await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 })
   await dismissPublicCookiePrompt(page)
-  await page.waitForFunction(
-    () => [...document.querySelectorAll('li')].some(element =>
-      /(?:[$£€]\s?[\d,.]+|(?:USD|GBP|EUR|NGN)\s?[\d,.]+)/i.test(
-        (element as HTMLElement).innerText ?? '',
-      )
-    ),
-    undefined,
-    { timeout: 25_000 },
-  )
+  try {
+    await page.waitForFunction(
+      () => [...document.querySelectorAll('li, [role="listitem"]')].some(element =>
+        /(?:[$£€]\s?[\d,.]+|(?:USD|GBP|EUR|NGN)\s?[\d,.]+)/i.test(
+          (element as HTMLElement).innerText ?? '',
+        )
+      ),
+      undefined,
+      { timeout: 45_000 },
+    )
+  } catch {
+    throw new BrowserExecutionError(
+      'flight_results_timeout',
+      'Google Flights took too long to return live options. Try again in a moment.',
+    )
+  }
 }
 
 async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promise<T>) {
@@ -281,7 +288,7 @@ export async function runLiveFlightSearch(input: FlightSearchInput): Promise<Fli
   const searchUrl = buildGoogleFlightsUrl(input)
   return withBrowser(async (_browser, page) => {
     await openFlightSearch(page, searchUrl)
-    const listItemTexts = await page.locator('li').allInnerTexts()
+    const listItemTexts = await page.locator('li, [role="listitem"]').allInnerTexts()
     const options = rankFlightOptions(listItemTexts, input, searchUrl)
     if (!options.length) {
       throw new BrowserExecutionError(

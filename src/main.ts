@@ -2652,7 +2652,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
         <span>Your itinerary is selected. Payment and the final purchase remain under your control.</span>
         <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Continue to payment</a>
       </div>
-    ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(external && flightTask ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>`}
+    ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(external && flightTask && flightOptions.length ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>`}
     ${replySimulation}
     <footer>
       <button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>
