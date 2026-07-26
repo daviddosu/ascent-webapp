@@ -240,6 +240,8 @@ async function launchBrowser() {
 }
 
 let sharedBrowserPromise: Promise<Browser> | null = null
+let sharedBrowserUses = 0
+let activeBrowserContexts = 0
 
 export function isRecoverableBrowserRuntimeError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
@@ -259,8 +261,10 @@ async function sharedBrowser() {
 async function recycleSharedBrowser(browser?: Browser) {
   const current = sharedBrowserPromise
   sharedBrowserPromise = null
+  sharedBrowserUses = 0
   const resolved = browser ?? await current?.catch(() => undefined)
   await resolved?.close().catch(() => undefined)
+  await new Promise(resolve => setTimeout(resolve, 250))
 }
 
 async function dismissPublicCookiePrompt(page: Page) {
@@ -304,6 +308,8 @@ async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promi
         timezoneId: 'UTC',
         viewport: { width: 1440, height: 1000 },
       })
+      sharedBrowserUses += 1
+      activeBrowserContexts += 1
       const page = await context.newPage()
       page.setDefaultTimeout(20_000)
       return await operation(browser, page)
@@ -313,6 +319,10 @@ async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promi
       await recycleSharedBrowser(browser)
     } finally {
       await context?.close().catch(() => undefined)
+      if (context) activeBrowserContexts = Math.max(0, activeBrowserContexts - 1)
+      if (sharedBrowserUses >= 3 && activeBrowserContexts === 0) {
+        await recycleSharedBrowser(browser)
+      }
     }
   }
   throw lastError

@@ -65,14 +65,23 @@ function benchmarkRunId(taskId, runNumber, runNonce) {
 }
 
 async function fixture(secret, body) {
-  const response = await fetch(fixtureUrl, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(`Fixture ${response.status}: ${payload.error ?? 'request failed'}`)
-  return payload
+  let lastError
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(fixtureUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(`Fixture ${response.status}: ${payload.error ?? 'request failed'}`)
+      return payload
+    } catch (error) {
+      lastError = error
+      if (attempt < 2) await sleep(500 * (attempt + 1))
+    }
+  }
+  throw lastError
 }
 
 async function userSession(admin, publicKey, userId) {
