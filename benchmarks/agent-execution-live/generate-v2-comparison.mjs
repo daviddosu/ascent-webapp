@@ -47,58 +47,60 @@ const summaryDir = resolve(here, 'yc-summary-v2')
 mkdirSync(chartDir, { recursive: true })
 mkdirSync(summaryDir, { recursive: true })
 
-function svg(title, subtitle, body, note = '') {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
-  <rect width="1600" height="900" fill="#F7F7F4"/>
-  <style>text{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#111}.title{font-size:56px;font-weight:740;letter-spacing:-2px}.sub{font-size:22px;fill:#666}.label{font-size:24px;font-weight:650}.value{font-size:25px;font-weight:760}.small{font-size:18px;fill:#666}.note{font-size:18px;fill:#777}</style>
-  <text class="title" x="100" y="110">${esc(title)}</text><text class="sub" x="100" y="155">${esc(subtitle)}</text>${body}${note ? `<text class="note" x="100" y="850">${esc(note)}</text>` : ''}</svg>`
+const palette = ['#E87DB9', '#68C9C1', '#7867D8', '#F2A65A', '#B9DC73']
+
+function editorialSvg(title, subtitle, body, note = '') {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1160" viewBox="0 0 1600 1160">
+  <rect width="1600" height="1160" fill="#FFFFFF"/>
+  <style>text{font-family:Arial,Helvetica,sans-serif;fill:#111}.title{font-size:34px;font-weight:700}.subtitle{font-size:32px;font-weight:700}.axis{font-size:21px;font-weight:400}.label{font-size:23px;font-weight:400}.value{font-size:23px;font-weight:400}.note{font-size:18px;font-weight:400;fill:#555}.brand{font-size:35px;font-weight:400}</style>
+  <text class="title" x="112" y="102">${esc(title)}</text>
+  <text class="subtitle" x="112" y="142">${esc(subtitle)}</text>
+  <text class="brand" x="1480" y="118" text-anchor="end">✦</text>
+  ${body}${note ? `<text class="note" x="112" y="1110">${esc(note)}</text>` : ''}</svg>`
 }
 
-function comparisonBars(title, subtitle, accessor, format, maximum = 1, note = '') {
-  const x = 360; const width = 980; const start = 230; const gap = 120
-  const rows = [...categories, 'overall'].map((category, index) => {
-    const y = start + index * gap
-    const a = accessor(before[category]); const b = accessor(after[category])
-    return `<text class="label" x="100" y="${y + 35}">${labels[category]}</text>
-      <rect x="${x}" y="${y}" width="${width}" height="30" fill="#E2E2DE"/><rect x="${x}" y="${y}" width="${width * a / maximum}" height="30" fill="#A7AAAC"/>
-      <rect x="${x}" y="${y + 42}" width="${width}" height="30" fill="#E2E2DE"/><rect x="${x}" y="${y + 42}" width="${width * b / maximum}" height="30" fill="#111"/>
-      <text class="value" x="1450" y="${y + 25}" text-anchor="end">${format(a)}</text><text class="value" x="1450" y="${y + 68}" text-anchor="end">${format(b)}</text>`
+function verticalBars({ title, subtitle, values, maximum, unit, axisLabel, note = '' }) {
+  const plotLeft = 240; const plotTop = 330; const plotBottom = 835
+  const plotHeight = plotBottom - plotTop; const barWidth = 150
+  const gap = values.length === 5 ? 74 : 126
+  const ticks = maximum === 5 ? [0, 1, 2, 3, 4, 5] : [0, 20, 40, 60, 80, 100]
+  const tickLabels = ticks.map(tick => {
+    const y = plotBottom - (tick / maximum) * plotHeight
+    return `<text class="axis" x="207" y="${y + 7}" text-anchor="end">${tick}</text>`
   }).join('')
-  const legend = `<rect x="1110" y="175" width="22" height="12" fill="#A7AAAC"/><text class="small" x="1143" y="186">Live v1</text><rect x="1280" y="175" width="22" height="12" fill="#111"/><text class="small" x="1313" y="186">Live v2</text>`
-  return svg(title, subtitle, legend + rows, note)
+  const bars = values.map((item, index) => {
+    const x = plotLeft + index * (barWidth + gap)
+    const height = Math.max(item.value === 0 ? 0 : 2, item.value / maximum * plotHeight)
+    const y = plotBottom - height
+    const color = palette[index % palette.length]
+    return `<rect x="${x}" y="${y}" width="${barWidth}" height="${height}" rx="4" fill="${color}" fill-opacity="0.72" stroke="${color}" stroke-width="2"/>
+      <text class="value" x="${x + barWidth / 2}" y="${Math.max(plotTop - 8, y - 14)}" text-anchor="middle">${item.display}</text>
+      <text class="label" transform="translate(${x + 42} ${plotBottom + 45}) rotate(-48)" text-anchor="end">${esc(item.label)}</text>`
+  }).join('')
+  const axis = `<line x1="${plotLeft - 14}" y1="${plotBottom}" x2="1450" y2="${plotBottom}" stroke="#111" stroke-width="1"/>
+    <text class="axis" transform="translate(145 ${plotTop + plotHeight / 2}) rotate(-90)" text-anchor="middle">${esc(axisLabel)}</text>`
+  return editorialSvg(title, subtitle, `${tickLabels}${axis}${bars}`, note || `${values.length} categories · ${unit}`)
 }
 
 function render(name, content, dir = chartDir) {
   const source = resolve(dir, `${name}.svg`)
   writeFileSync(source, `${content}\n`)
-  execFileSync('rsvg-convert', ['--width', '3200', '--height', '1800', '--output', resolve(dir, `${name}.png`), source])
+  execFileSync('rsvg-convert', ['--width', '3200', '--height', '2320', '--output', resolve(dir, `${name}.png`), source])
 }
 
-render('01-v1-v2-success', comparisonBars('Live reliability improved from 75% to 98.3%', 'Same 20 tasks · same three runs per task · same scoring and verification', value => value.success, pct))
-render('02-v1-v2-first-attempt', comparisonBars('First-attempt success improved to 96.7%', 'Retries remain bounded and consequential external actions are never duplicated', value => value.firstAttempt, pct))
-render('03-v1-v2-distance-to-done', comparisonBars('Failures now finish much closer to done', 'Average Distance-to-Done across every run · five is complete', value => value.distance, value => fixed(value, 2), 5))
+const currentCategories = categories.map(key => ({ label: labels[key], value: after[key].success * 100, display: pct(after[key].success) }))
+const currentWithOverall = [...currentCategories, { label: 'Overall', value: after.overall.success * 100, display: pct(after.overall.success) }]
+render('01-v1-v2-success', verticalBars({ title: 'ShotCount Live Benchmark', subtitle: 'Task success across execution categories', values: currentWithOverall, maximum: 100, unit: 'success rate', axisLabel: 'Successful runs (%)', note: '20 tasks · 60 fresh production runs · three independent runs per task' }))
+render('02-v1-v2-first-attempt', verticalBars({ title: 'First-attempt completion', subtitle: 'Successful before any internal retry', values: [...categories, 'overall'].map(key => ({ label: labels[key], value: after[key].firstAttempt * 100, display: pct(after[key].firstAttempt) })), maximum: 100, unit: 'first-attempt rate', axisLabel: 'First-attempt success (%)' }))
+render('03-v1-v2-distance-to-done', verticalBars({ title: 'Distance to Done', subtitle: 'Average progress toward the intended outcome', values: [...categories, 'overall'].map(key => ({ label: labels[key], value: after[key].distance, display: fixed(after[key].distance, 2) })), maximum: 5, unit: 'score out of five', axisLabel: 'Distance to Done (0–5)' }))
+render('04-failure-class-resolution', verticalBars({ title: 'Original failure recovery', subtitle: 'Resolved slots by failure class', values: [
+  { label: 'Browser timeout / network', value: 8 / 9 * 100, display: '88.9%' },
+  { label: 'Cross-tool verification', value: 100, display: '100%' },
+  { label: 'Missing-context handling', value: 100, display: '100%' },
+], maximum: 100, unit: 'recovered failure slots', axisLabel: 'Recovered original failures (%)', note: 'Fourteen of fifteen original failure slots recovered in the official 60-run result set' }))
 
-const resolved = [
-  ['Browser timeout/network', 9, 1],
-  ['Cross-tool verification', 3, 0],
-  ['Missing-context handling', 3, 0],
-]
-const failureBody = resolved.map(([label, oldCount, newCount], index) => {
-  const y = 275 + index * 155
-  return `<text class="label" x="100" y="${y + 28}">${label}</text><rect x="520" y="${y}" width="760" height="36" fill="#E2E2DE"/><rect x="520" y="${y}" width="${760 * oldCount / 9}" height="36" fill="#A7AAAC"/><text class="value" x="1340" y="${y + 29}">${oldCount}</text><rect x="520" y="${y + 53}" width="760" height="36" fill="#E2E2DE"/><rect x="520" y="${y + 53}" width="${760 * newCount / 9}" height="36" fill="#111"/><text class="value" x="1340" y="${y + 82}">${newCount}</text>`
-}).join('')
-render('04-failure-class-resolution', svg('Fourteen of fifteen original failure slots recovered', 'Failure counts in the official 60-run result sets', failureBody, 'The remaining failure was a transient Google Flights result timeout; the post-v2 targeted regression passed after bounded read recovery.'))
-
-const hero = svg('SHOTCOUNT-EVAL LIVE v2', 'Reliability hardening · 20 tasks · 60 fresh production runs',
-  `<text x="100" y="305" style="font-size:108px;font-weight:780;letter-spacing:-4px">${pct(after.overall.success)}</text><text class="small" x="100" y="345">Overall success · 59 / 60</text>
-   <text x="520" y="305" style="font-size:108px;font-weight:780;letter-spacing:-4px">${pct(after.overall.precision)}</text><text class="small" x="520" y="345">Execution precision</text>
-   <text x="930" y="305" style="font-size:108px;font-weight:780;letter-spacing:-4px">${fixed(after.overall.medianIntervention, 1)}</text><text class="small" x="930" y="345">Median user rescue</text>
-   <text x="1270" y="305" style="font-size:108px;font-weight:780;letter-spacing:-4px">${fixed(after.overall.distance, 2)}</text><text class="small" x="1270" y="345">Distance / 5</text>
-   <line x1="100" y1="415" x2="1500" y2="415" stroke="#D8D8D4"/>
-   ${categories.map((key, index) => `<text class="label" x="${100 + index * 360}" y="500">${labels[key]}</text><text x="${100 + index * 360}" y="585" style="font-size:66px;font-weight:750">${pct(after[key].success)}</text><text class="small" x="${100 + index * 360}" y="620">${after[key].passed} / ${after[key].runs}</text>`).join('')}
-   <text class="note" x="100" y="770">Live v1: 75% · Live v2: 98.3% · no Email or Calendar regression · $${fixed(costV2, 6)} measured OpenAI inference cost.</text>`)
-render('shotcount-eval-live-v2-summary', hero, summaryDir)
-writeFileSync(resolve(summaryDir, 'index.html'), '<!doctype html><meta charset="utf-8"><title>SHOTCOUNT-EVAL LIVE v2</title><style>html,body{margin:0;background:#f7f7f4}img{display:block;width:100%;height:auto}</style><img src="shotcount-eval-live-v2-summary.svg" alt="SHOTCOUNT-EVAL LIVE v2 benchmark summary">\n')
+render('shotcount-eval-live-v2-summary', verticalBars({ title: 'ShotCount Live Benchmark', subtitle: 'Reliability across real execution tools', values: currentCategories, maximum: 100, unit: 'success rate', axisLabel: 'Successful runs (%)', note: `Overall 98.3% · execution precision 100% · median user rescue 0 · Distance to Done 4.93 / 5` }), summaryDir)
+writeFileSync(resolve(summaryDir, 'index.html'), '<!doctype html><meta charset="utf-8"><title>ShotCount Live Benchmark</title><style>html,body{margin:0;background:#fff}img{display:block;width:100%;height:auto}</style><img src="shotcount-eval-live-v2-summary.svg" alt="ShotCount Live Benchmark summary">\n')
 
 const originalFailures = [
   ['browser-04 · run 1', 'Browser', 'Google Flights itinerary selection did not expose a stable selectable card before the bounded wait.', 'Isolated selection worker, stale-operation recovery, resilient card targeting.'],
