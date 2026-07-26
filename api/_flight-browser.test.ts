@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildGoogleFlightsUrl,
   isRecoverableBrowserRuntimeError,
+  maxSharedBrowserUses,
   parseGoogleFlightListItem,
   rankFlightOptions,
   type FlightSearchInput,
@@ -70,6 +71,7 @@ describe('flight browser worker', () => {
   })
 
   it('recycles Chromium only for transient runtime failures', () => {
+    expect(maxSharedBrowserUses).toBe(2)
     expect(isRecoverableBrowserRuntimeError(new Error('browserContext.newPage: Target page, context or browser has been closed'))).toBe(true)
     expect(isRecoverableBrowserRuntimeError(new Error('page.goto: net::ERR_INSUFFICIENT_RESOURCES'))).toBe(true)
     expect(isRecoverableBrowserRuntimeError(new Error('The flight price changed'))).toBe(false)

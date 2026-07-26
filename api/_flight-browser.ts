@@ -242,6 +242,7 @@ async function launchBrowser() {
 let sharedBrowserPromise: Promise<Browser> | null = null
 let sharedBrowserUses = 0
 let activeBrowserContexts = 0
+export const maxSharedBrowserUses = 2
 
 export function isRecoverableBrowserRuntimeError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
@@ -320,7 +321,7 @@ async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promi
     } finally {
       await context?.close().catch(() => undefined)
       if (context) activeBrowserContexts = Math.max(0, activeBrowserContexts - 1)
-      if (sharedBrowserUses >= 3 && activeBrowserContexts === 0) {
+      if (sharedBrowserUses >= maxSharedBrowserUses && activeBrowserContexts === 0) {
         await recycleSharedBrowser(browser)
       }
     }

@@ -1,0 +1,2925 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-26T11:48:38.018Z",
+  "model": "gpt-5.6-sol",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 5,
+    "cachedInput": 0.5,
+    "cacheWrite": 6.25,
+    "output": 30
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "live-v2",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "email-01",
+      "category": "email",
+      "run_number": 1,
+      "run_nonce": "92732923ae",
+      "agent_run_id": "cab9f96e-6ef1-4087-abba-a1f9ec8847ed",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 26.011,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 5,
+      "input_tokens": 18240,
+      "cached_input_tokens": 16892,
+      "cache_write_tokens": 1333,
+      "output_tokens": 512,
+      "inference_cost_usd": 0.032212,
+      "started_at": "2026-07-26T11:37:35.704Z",
+      "finished_at": "2026-07-26T11:38:01.715Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3765014045b",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r-4359311827970072574",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e37a9e7d4b28",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "gmailQuery": "in:sent newer_than:1d",
+        "gmailMessages": [
+          {
+            "id": "19f9e37a9e7d4b28",
+            "thread_id": "19f9e3765014045b"
+          },
+          {
+            "id": "19f9e34dcd86060c",
+            "thread_id": "19f9e346c2e0312f"
+          },
+          {
+            "id": "19f9e2f06b77508a",
+            "thread_id": "19f9e2f00b596a99"
+          },
+          {
+            "id": "19f9e2efc20d1a54",
+            "thread_id": "19f9e2ef77eddeec"
+          },
+          {
+            "id": "19f9e2eda878f403",
+            "thread_id": "19f9e2e923ae291b"
+          },
+          {
+            "id": "19f9e2bd2e24c236",
+            "thread_id": "19f9e2b835e63499"
+          },
+          {
+            "id": "19f9e2abed8cb156",
+            "thread_id": "19f9e2a438edcaa8"
+          },
+          {
+            "id": "19f9e293d2122289",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9e278667590b3",
+            "thread_id": "19f9e2744ea1438d"
+          },
+          {
+            "id": "19f9e2508f759966",
+            "thread_id": "19f9e250350957ab"
+          },
+          {
+            "id": "19f9e24ffd993eec",
+            "thread_id": "19f9e24f8fcd8836"
+          },
+          {
+            "id": "19f9e249ed95fdb0",
+            "thread_id": "19f9e241a6701fb2"
+          },
+          {
+            "id": "19f9e211ab25f2c9",
+            "thread_id": "19f9e20c620cdcf7"
+          },
+          {
+            "id": "19f9e1fb54e2eece",
+            "thread_id": "19f9e1f23a3bbba3"
+          },
+          {
+            "id": "19f9e1e86aa2f81a",
+            "thread_id": "19f9e1e61da0aa57"
+          },
+          {
+            "id": "19f9e1be8a7c8bf5",
+            "thread_id": "19f9e1b837c6ba51"
+          },
+          {
+            "id": "19f9e19c686eb33c",
+            "thread_id": "19f9e19c1fc6ecab"
+          },
+          {
+            "id": "19f9e19b60df4b67",
+            "thread_id": "19f9e19b199ff4b1"
+          },
+          {
+            "id": "19f9e1986a0bdb33",
+            "thread_id": "19f9e1947a2ec940"
+          },
+          {
+            "id": "19f9e11d36a5e967",
+            "thread_id": "19f9e115372f6694"
+          },
+          {
+            "id": "19f9e10b43b9b5e1",
+            "thread_id": "19f9e10572d26d0e"
+          },
+          {
+            "id": "19f9e0fc242a23ca",
+            "thread_id": "19f9e0fa5c22d2c0"
+          },
+          {
+            "id": "19f9e0e00e1a63ab",
+            "thread_id": "19f9e0db643c5017"
+          },
+          {
+            "id": "19f9e0c43a2a5f3f",
+            "thread_id": "19f9e0c3c9f003a0"
+          },
+          {
+            "id": "19f9e0c36618d603",
+            "thread_id": "19f9e0c31c578ae6"
+          },
+          {
+            "id": "19f9e0c134d74743",
+            "thread_id": "19f9e0bc62619d8c"
+          },
+          {
+            "id": "19f9de63022384e6",
+            "thread_id": "19f9de5e870b45bb"
+          },
+          {
+            "id": "19f9de123224e3b1",
+            "thread_id": "19f9de0b58b2cad3"
+          },
+          {
+            "id": "19f9de02d72dbac4",
+            "thread_id": "19f9de0123f54923"
+          },
+          {
+            "id": "19f9ddf7ef559530",
+            "thread_id": "19f9ddf31f57d164"
+          },
+          {
+            "id": "19f9dddda6954638",
+            "thread_id": "19f9dddd4a82ae9b"
+          },
+          {
+            "id": "19f9dddd184276a0",
+            "thread_id": "19f9dddcae378823"
+          },
+          {
+            "id": "19f9dddac3a50fe6",
+            "thread_id": "19f9ddd612c7e726"
+          },
+          {
+            "id": "19f9ddbf18da805a",
+            "thread_id": "19f9ddb98271cf6e"
+          },
+          {
+            "id": "19f9ddb72e9e66ab",
+            "thread_id": "19f9ddb01b0fb75e"
+          },
+          {
+            "id": "19f9dd9a5cd7ec90",
+            "thread_id": "19f9dd9537ddcba7"
+          },
+          {
+            "id": "19f9dd8c3b0f0c36",
+            "thread_id": "19f9dd8a83f9382b"
+          },
+          {
+            "id": "19f9dd7ed55c058d",
+            "thread_id": "19f9dd7aa26f20be"
+          },
+          {
+            "id": "19f9dd6833c1ad39",
+            "thread_id": "19f9dd67c2365b96"
+          },
+          {
+            "id": "19f9dd67888229d4",
+            "thread_id": "19f9dd6722397392"
+          },
+          {
+            "id": "19f9dd6549ad9a94",
+            "thread_id": "19f9dd61279227cb"
+          },
+          {
+            "id": "19f9dd4dea2811a8",
+            "thread_id": "19f9dd48a1d489f6"
+          },
+          {
+            "id": "19f9dcfa459036d4",
+            "thread_id": "19f9dcf3e6bbd018"
+          },
+          {
+            "id": "19f9dc29e191f5f9",
+            "thread_id": "19f9dc23e0a8657e"
+          },
+          {
+            "id": "19f9dc1c01b43f95",
+            "thread_id": "19f9dc1aa6773ad1"
+          },
+          {
+            "id": "19f9dc12acf39043",
+            "thread_id": "19f9dc0e43d63586"
+          },
+          {
+            "id": "19f9dbfa508588e1",
+            "thread_id": "19f9dbf9e93df2ff"
+          },
+          {
+            "id": "19f9dbf99fd5b023",
+            "thread_id": "19f9dbf93bbc018f"
+          },
+          {
+            "id": "19f9dbf770b0b192",
+            "thread_id": "19f9dbf2ad55d0b7"
+          },
+          {
+            "id": "19f9d5a7e310eac9",
+            "thread_id": "19f9d5a766fdd7ea"
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "email-02",
+      "category": "email",
+      "run_number": 1,
+      "run_nonce": "dc2609f921",
+      "agent_run_id": "e2f57a73-e47e-4035-a482-9db823aaf389",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 36.021,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 6,
+      "input_tokens": 24852,
+      "cached_input_tokens": 22647,
+      "cache_write_tokens": 2187,
+      "output_tokens": 760,
+      "inference_cost_usd": 0.047882,
+      "started_at": "2026-07-26T11:38:03.239Z",
+      "finished_at": "2026-07-26T11:38:39.260Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19f9e37d5d0ca321",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19f9e37cb6bbcef3",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r702491504726113949",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r-1796391821342495047",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "gmailQuery": "in:drafts newer_than:1d",
+        "gmailMessages": [
+          {
+            "id": "19f9e382dfa245c7",
+            "thread_id": "19f9e37cb6bbcef3"
+          },
+          {
+            "id": "19f9e381a710a5fc",
+            "thread_id": "19f9e37d5d0ca321"
+          },
+          {
+            "id": "19f9e302104de9ad",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9ba66c013e33a",
+            "thread_id": "19f9b9d183d1331c"
+          },
+          {
+            "id": "19f9b9d01172cbd0",
+            "thread_id": "19f9b9d01172cbd0"
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "email-03",
+      "category": "email",
+      "run_number": 1,
+      "run_nonce": "d7222e0b59",
+      "agent_run_id": "70b5e657-2684-4094-a4bc-6ee3c55680a0",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 19.689,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 4,
+      "input_tokens": 14719,
+      "cached_input_tokens": 13061,
+      "cache_write_tokens": 1646,
+      "output_tokens": 397,
+      "inference_cost_usd": 0.028788,
+      "started_at": "2026-07-26T11:38:41.820Z",
+      "finished_at": "2026-07-26T11:39:01.509Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e2f805438b22",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e258868de653",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "gmailQuery": "in:anywhere newer_than:1d",
+        "gmailMessages": [
+          {
+            "id": "19f9e386f5e1b310",
+            "thread_id": "19f9e386f5e1b310"
+          },
+          {
+            "id": "19f9e37dbe40eca4",
+            "thread_id": "19f9e37d5d0ca321"
+          },
+          {
+            "id": "19f9e37d150e71eb",
+            "thread_id": "19f9e37cb6bbcef3"
+          },
+          {
+            "id": "19f9e37a9e7d4b28",
+            "thread_id": "19f9e3765014045b"
+          },
+          {
+            "id": "19f9e3765014045b",
+            "thread_id": "19f9e3765014045b"
+          },
+          {
+            "id": "19f9e34dcd86060c",
+            "thread_id": "19f9e346c2e0312f"
+          },
+          {
+            "id": "19f9e346c2e0312f",
+            "thread_id": "19f9e346c2e0312f"
+          },
+          {
+            "id": "19f9e302104de9ad",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9e2fcfef2fe19",
+            "thread_id": "19f9e2fcfef2fe19"
+          },
+          {
+            "id": "19f9e2f805438b22",
+            "thread_id": "19f9e2f805438b22"
+          },
+          {
+            "id": "19f9e2f06b77508a",
+            "thread_id": "19f9e2f00b596a99"
+          },
+          {
+            "id": "19f9e2efc20d1a54",
+            "thread_id": "19f9e2ef77eddeec"
+          },
+          {
+            "id": "19f9e2eda878f403",
+            "thread_id": "19f9e2e923ae291b"
+          },
+          {
+            "id": "19f9e2e923ae291b",
+            "thread_id": "19f9e2e923ae291b"
+          },
+          {
+            "id": "19f9e2c797896bd9",
+            "thread_id": "19f9e2c797896bd9"
+          },
+          {
+            "id": "19f9e2bfd5283587",
+            "thread_id": "19f9e2b835e63499"
+          },
+          {
+            "id": "19f9e2bd2e24c236",
+            "thread_id": "19f9e2b835e63499"
+          },
+          {
+            "id": "19f9e2b835e63499",
+            "thread_id": "19f9e2b835e63499"
+          },
+          {
+            "id": "19f9e2b0801abd82",
+            "thread_id": "19f9e2b0801abd82"
+          },
+          {
+            "id": "19f9e2abed8cb156",
+            "thread_id": "19f9e2a438edcaa8"
+          },
+          {
+            "id": "19f9e2a438edcaa8",
+            "thread_id": "19f9e2a438edcaa8"
+          },
+          {
+            "id": "19f9e29660b9b65f",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9e293d2122289",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9e278667590b3",
+            "thread_id": "19f9e2744ea1438d"
+          },
+          {
+            "id": "19f9e2744ea1438d",
+            "thread_id": "19f9e2744ea1438d"
+          },
+          {
+            "id": "19f9e26153bce9f3",
+            "thread_id": "19f9e26153bce9f3"
+          },
+          {
+            "id": "19f9e258868de653",
+            "thread_id": "19f9e258868de653"
+          },
+          {
+            "id": "19f9e2508f759966",
+            "thread_id": "19f9e250350957ab"
+          },
+          {
+            "id": "19f9e24ffd993eec",
+            "thread_id": "19f9e24f8fcd8836"
+          },
+          {
+            "id": "19f9e249ed95fdb0",
+            "thread_id": "19f9e241a6701fb2"
+          },
+          {
+            "id": "19f9e241a6701fb2",
+            "thread_id": "19f9e241a6701fb2"
+          },
+          {
+            "id": "19f9e221119e33a2",
+            "thread_id": "19f9e221119e33a2"
+          },
+          {
+            "id": "19f9e21628df9b7e",
+            "thread_id": "19f9e20c620cdcf7"
+          },
+          {
+            "id": "19f9e211ab25f2c9",
+            "thread_id": "19f9e20c620cdcf7"
+          },
+          {
+            "id": "19f9e20c620cdcf7",
+            "thread_id": "19f9e20c620cdcf7"
+          },
+          {
+            "id": "19f9e2055eae368c",
+            "thread_id": "19f9e2055eae368c"
+          },
+          {
+            "id": "19f9e1fb54e2eece",
+            "thread_id": "19f9e1f23a3bbba3"
+          },
+          {
+            "id": "19f9e1f23a3bbba3",
+            "thread_id": "19f9e1f23a3bbba3"
+          },
+          {
+            "id": "19f9e1eab5754adc",
+            "thread_id": "19f9e1e61da0aa57"
+          },
+          {
+            "id": "19f9e1e86aa2f81a",
+            "thread_id": "19f9e1e61da0aa57"
+          },
+          {
+            "id": "19f9e1be8a7c8bf5",
+            "thread_id": "19f9e1b837c6ba51"
+          },
+          {
+            "id": "19f9e1b837c6ba51",
+            "thread_id": "19f9e1b837c6ba51"
+          },
+          {
+            "id": "19f9e1ad22f613fc",
+            "thread_id": "19f9e1ad22f613fc"
+          },
+          {
+            "id": "19f9e1a5c0633d0c",
+            "thread_id": "19f9e1a5c0633d0c"
+          },
+          {
+            "id": "19f9e19c686eb33c",
+            "thread_id": "19f9e19c1fc6ecab"
+          },
+          {
+            "id": "19f9e19b60df4b67",
+            "thread_id": "19f9e19b199ff4b1"
+          },
+          {
+            "id": "19f9e1986a0bdb33",
+            "thread_id": "19f9e1947a2ec940"
+          },
+          {
+            "id": "19f9e1947a2ec940",
+            "thread_id": "19f9e1947a2ec940"
+          },
+          {
+            "id": "19f9e11d36a5e967",
+            "thread_id": "19f9e115372f6694"
+          },
+          {
+            "id": "19f9e115372f6694",
+            "thread_id": "19f9e115372f6694"
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "email-04",
+      "category": "email",
+      "run_number": 1,
+      "run_nonce": "422ad0e00d",
+      "agent_run_id": "8e31a4b2-f860-4bac-adad-d69b8a62f711",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 57.766,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 7,
+      "input_tokens": 34851,
+      "cached_input_tokens": 30934,
+      "cache_write_tokens": 3896,
+      "output_tokens": 841,
+      "inference_cost_usd": 0.065152,
+      "started_at": "2026-07-26T11:39:02.311Z",
+      "finished_at": "2026-07-26T11:40:00.077Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19f9e291ff643c1f",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19f9e1e61da0aa57",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r4819800757721637835",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "gmailQuery": "in:drafts newer_than:1d",
+        "gmailMessages": [
+          {
+            "id": "19f9e397aaa4b204",
+            "thread_id": "19f9e1e61da0aa57"
+          },
+          {
+            "id": "19f9e302104de9ad",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9ba66c013e33a",
+            "thread_id": "19f9b9d183d1331c"
+          },
+          {
+            "id": "19f9b9d01172cbd0",
+            "thread_id": "19f9b9d01172cbd0"
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "email-05",
+      "category": "email",
+      "run_number": 1,
+      "run_nonce": "0ce762ecbf",
+      "agent_run_id": "137870ca-651a-4123-a4d1-9b74c7cfe64e",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 23.178,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 5,
+      "input_tokens": 19310,
+      "cached_input_tokens": 17714,
+      "cache_write_tokens": 1581,
+      "output_tokens": 437,
+      "inference_cost_usd": 0.031923,
+      "started_at": "2026-07-26T11:40:02.074Z",
+      "finished_at": "2026-07-26T11:40:25.252Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e39a1631fe1f",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r1220936182208262057",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e39e0689e378",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "gmailQuery": "in:sent newer_than:1d",
+        "gmailMessages": [
+          {
+            "id": "19f9e39e0689e378",
+            "thread_id": "19f9e39a1631fe1f"
+          },
+          {
+            "id": "19f9e37dbe40eca4",
+            "thread_id": "19f9e37d5d0ca321"
+          },
+          {
+            "id": "19f9e37d150e71eb",
+            "thread_id": "19f9e37cb6bbcef3"
+          },
+          {
+            "id": "19f9e37a9e7d4b28",
+            "thread_id": "19f9e3765014045b"
+          },
+          {
+            "id": "19f9e34dcd86060c",
+            "thread_id": "19f9e346c2e0312f"
+          },
+          {
+            "id": "19f9e2f06b77508a",
+            "thread_id": "19f9e2f00b596a99"
+          },
+          {
+            "id": "19f9e2efc20d1a54",
+            "thread_id": "19f9e2ef77eddeec"
+          },
+          {
+            "id": "19f9e2eda878f403",
+            "thread_id": "19f9e2e923ae291b"
+          },
+          {
+            "id": "19f9e2bd2e24c236",
+            "thread_id": "19f9e2b835e63499"
+          },
+          {
+            "id": "19f9e2abed8cb156",
+            "thread_id": "19f9e2a438edcaa8"
+          },
+          {
+            "id": "19f9e293d2122289",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9e278667590b3",
+            "thread_id": "19f9e2744ea1438d"
+          },
+          {
+            "id": "19f9e2508f759966",
+            "thread_id": "19f9e250350957ab"
+          },
+          {
+            "id": "19f9e24ffd993eec",
+            "thread_id": "19f9e24f8fcd8836"
+          },
+          {
+            "id": "19f9e249ed95fdb0",
+            "thread_id": "19f9e241a6701fb2"
+          },
+          {
+            "id": "19f9e211ab25f2c9",
+            "thread_id": "19f9e20c620cdcf7"
+          },
+          {
+            "id": "19f9e1fb54e2eece",
+            "thread_id": "19f9e1f23a3bbba3"
+          },
+          {
+            "id": "19f9e1e86aa2f81a",
+            "thread_id": "19f9e1e61da0aa57"
+          },
+          {
+            "id": "19f9e1be8a7c8bf5",
+            "thread_id": "19f9e1b837c6ba51"
+          },
+          {
+            "id": "19f9e19c686eb33c",
+            "thread_id": "19f9e19c1fc6ecab"
+          },
+          {
+            "id": "19f9e19b60df4b67",
+            "thread_id": "19f9e19b199ff4b1"
+          },
+          {
+            "id": "19f9e1986a0bdb33",
+            "thread_id": "19f9e1947a2ec940"
+          },
+          {
+            "id": "19f9e11d36a5e967",
+            "thread_id": "19f9e115372f6694"
+          },
+          {
+            "id": "19f9e10b43b9b5e1",
+            "thread_id": "19f9e10572d26d0e"
+          },
+          {
+            "id": "19f9e0fc242a23ca",
+            "thread_id": "19f9e0fa5c22d2c0"
+          },
+          {
+            "id": "19f9e0e00e1a63ab",
+            "thread_id": "19f9e0db643c5017"
+          },
+          {
+            "id": "19f9e0c43a2a5f3f",
+            "thread_id": "19f9e0c3c9f003a0"
+          },
+          {
+            "id": "19f9e0c36618d603",
+            "thread_id": "19f9e0c31c578ae6"
+          },
+          {
+            "id": "19f9e0c134d74743",
+            "thread_id": "19f9e0bc62619d8c"
+          },
+          {
+            "id": "19f9de63022384e6",
+            "thread_id": "19f9de5e870b45bb"
+          },
+          {
+            "id": "19f9de123224e3b1",
+            "thread_id": "19f9de0b58b2cad3"
+          },
+          {
+            "id": "19f9de02d72dbac4",
+            "thread_id": "19f9de0123f54923"
+          },
+          {
+            "id": "19f9ddf7ef559530",
+            "thread_id": "19f9ddf31f57d164"
+          },
+          {
+            "id": "19f9dddda6954638",
+            "thread_id": "19f9dddd4a82ae9b"
+          },
+          {
+            "id": "19f9dddd184276a0",
+            "thread_id": "19f9dddcae378823"
+          },
+          {
+            "id": "19f9dddac3a50fe6",
+            "thread_id": "19f9ddd612c7e726"
+          },
+          {
+            "id": "19f9ddbf18da805a",
+            "thread_id": "19f9ddb98271cf6e"
+          },
+          {
+            "id": "19f9ddb72e9e66ab",
+            "thread_id": "19f9ddb01b0fb75e"
+          },
+          {
+            "id": "19f9dd9a5cd7ec90",
+            "thread_id": "19f9dd9537ddcba7"
+          },
+          {
+            "id": "19f9dd8c3b0f0c36",
+            "thread_id": "19f9dd8a83f9382b"
+          },
+          {
+            "id": "19f9dd7ed55c058d",
+            "thread_id": "19f9dd7aa26f20be"
+          },
+          {
+            "id": "19f9dd6833c1ad39",
+            "thread_id": "19f9dd67c2365b96"
+          },
+          {
+            "id": "19f9dd67888229d4",
+            "thread_id": "19f9dd6722397392"
+          },
+          {
+            "id": "19f9dd6549ad9a94",
+            "thread_id": "19f9dd61279227cb"
+          },
+          {
+            "id": "19f9dd4dea2811a8",
+            "thread_id": "19f9dd48a1d489f6"
+          },
+          {
+            "id": "19f9dcfa459036d4",
+            "thread_id": "19f9dcf3e6bbd018"
+          },
+          {
+            "id": "19f9dc29e191f5f9",
+            "thread_id": "19f9dc23e0a8657e"
+          },
+          {
+            "id": "19f9dc1c01b43f95",
+            "thread_id": "19f9dc1aa6773ad1"
+          },
+          {
+            "id": "19f9dc12acf39043",
+            "thread_id": "19f9dc0e43d63586"
+          },
+          {
+            "id": "19f9dbfa508588e1",
+            "thread_id": "19f9dbf9e93df2ff"
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-01",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "9167054971",
+      "agent_run_id": "77c038eb-041c-4c73-bff6-14e85320016e",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.393,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 10410,
+      "cached_input_tokens": 9301,
+      "cache_write_tokens": 1100,
+      "output_tokens": 308,
+      "inference_cost_usd": 0.02081,
+      "started_at": "2026-07-26T11:40:26.691Z",
+      "finished_at": "2026-07-26T11:40:42.084Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "mgnc47h3mgevqf30hcik25593k",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "mgnc47h3mgevqf30hcik25593k",
+            "status": "confirmed",
+            "summary": "Product Review",
+            "start": {
+              "dateTime": "2026-07-27T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-27T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "lcb5nkl7m8hkv0cdp3rurlbqgc",
+            "status": "confirmed",
+            "summary": "Investor call with Ada",
+            "start": {
+              "dateTime": "2026-07-28T12:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T12:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "daviddosuu@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          },
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-02",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "dba7365883",
+      "agent_run_id": "8f68e3e7-b907-4d88-9886-1d9938fa3036",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 10.529,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6801,
+      "cached_input_tokens": 5832,
+      "cache_write_tokens": 963,
+      "output_tokens": 227,
+      "inference_cost_usd": 0.015775,
+      "started_at": "2026-07-26T11:40:43.700Z",
+      "finished_at": "2026-07-26T11:40:54.229Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          },
+          {
+            "id": "hg57d73pijo09i8d0ssnhbaokg",
+            "status": "confirmed",
+            "summary": "Controlled busy window 1",
+            "start": {
+              "dateTime": "2026-07-29T13:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "92468matu8gksggq4uim2ade64",
+            "status": "confirmed",
+            "summary": "Controlled busy window 2",
+            "start": {
+              "dateTime": "2026-07-29T16:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T17:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-03",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "6457fdea33",
+      "agent_run_id": "816f3081-4811-43dc-93b4-74b17a69b15f",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 12.98,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6482,
+      "cached_input_tokens": 5824,
+      "cache_write_tokens": 652,
+      "output_tokens": 265,
+      "inference_cost_usd": 0.014967,
+      "started_at": "2026-07-26T11:40:56.489Z",
+      "finished_at": "2026-07-26T11:41:09.469Z",
+      "actions": [
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "qrbn18q3ojqh7tqcniihmh57ko",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "qrbn18q3ojqh7tqcniihmh57ko",
+            "status": "confirmed",
+            "summary": "Design Review",
+            "start": {
+              "dateTime": "2026-07-30T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-30T15:45:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-04",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "0300ebcf99",
+      "agent_run_id": "4068b03c-2b23-4bd7-ae9f-7448b04b02c5",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.867,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 10444,
+      "cached_input_tokens": 9304,
+      "cache_write_tokens": 1131,
+      "output_tokens": 314,
+      "inference_cost_usd": 0.021186,
+      "started_at": "2026-07-26T11:41:10.973Z",
+      "finished_at": "2026-07-26T11:41:26.840Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "alljsh8qrouk4csjeusbi5g7pc",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "alljsh8qrouk4csjeusbi5g7pc",
+            "status": "confirmed",
+            "summary": "Planning Session",
+            "start": {
+              "dateTime": "2026-07-31T16:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-31T16:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "daviddosuu@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-05",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "08f8f3f70a",
+      "agent_run_id": "c6f6fba1-154d-477c-b14a-191e82cc2ff2",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.782,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 10002,
+      "cached_input_tokens": 9268,
+      "cache_write_tokens": 725,
+      "output_tokens": 235,
+      "inference_cost_usd": 0.01626,
+      "started_at": "2026-07-26T11:41:28.301Z",
+      "finished_at": "2026-07-26T11:41:44.083Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.delete_event",
+          "status": "succeeded",
+          "provider_action_id": "l75jr1lck2n8akc87n973tsg38",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": []
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "cross-01",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "e9a7dd7dc9",
+      "agent_run_id": "ae87846e-901c-428d-bb0a-44543a64edda",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 42.183,
+      "external_wait_time_seconds": 38.126,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 8,
+      "input_tokens": 31305,
+      "cached_input_tokens": 29044,
+      "cache_write_tokens": 2237,
+      "output_tokens": 973,
+      "inference_cost_usd": 0.057813,
+      "started_at": "2026-07-26T11:41:49.356Z",
+      "finished_at": "2026-07-26T11:43:09.665Z",
+      "actions": [
+        {
+          "tool": "contacts.find_contact",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.get_availability",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r-4766512890443836951",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3b8c56c40b4",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.wait_for_reply",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending"
+        },
+        {
+          "tool": "calendar.get_availability",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "88jdrthlp9sclkrmu2el27bfrg",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {}
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "cross-02",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "4442c3608c",
+      "agent_run_id": "5d32f586-4274-43fc-8497-b9223db0a5e0",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 38.595,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 7,
+      "input_tokens": 27947,
+      "cached_input_tokens": 25769,
+      "cache_write_tokens": 2157,
+      "output_tokens": 753,
+      "inference_cost_usd": 0.049061,
+      "started_at": "2026-07-26T11:43:11.147Z",
+      "finished_at": "2026-07-26T11:43:49.742Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3c857b5841a",
+          "error_code": null
+        },
+        {
+          "tool": "calendar.get_availability",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r8130072606556006698",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3ce3d13dc83",
+          "error_code": null
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "oo2spd9uo8060hl2p51ifstrvk",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {}
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "cross-03",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "81ec2f056e",
+      "agent_run_id": "30c75396-8e40-4a6d-befd-31262e254020",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 41.375,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 8,
+      "input_tokens": 32972,
+      "cached_input_tokens": 30494,
+      "cache_write_tokens": 2454,
+      "output_tokens": 843,
+      "inference_cost_usd": 0.055995,
+      "started_at": "2026-07-26T11:43:51.440Z",
+      "finished_at": "2026-07-26T11:44:32.815Z",
+      "actions": [
+        {
+          "tool": "contacts.find_contact",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3d2442bce40",
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "3ru0lbmvmbec1lksasdsnm93hk",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r6694953686276199961",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3da417d2420",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "lcb5nkl7m8hkv0cdp3rurlbqgc",
+            "status": "confirmed",
+            "summary": "Investor call with Ada",
+            "start": {
+              "dateTime": "2026-07-28T12:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T12:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "daviddosuu@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          },
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          },
+          {
+            "id": "3ru0lbmvmbec1lksasdsnm93hk",
+            "status": "confirmed",
+            "summary": "Team Sync",
+            "start": {
+              "dateTime": "2026-07-29T11:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T11:45:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "cross-04",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "998be68cb7",
+      "agent_run_id": "8dcc8912-9343-4fe4-acda-c58f5d941020",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 49.042,
+      "external_wait_time_seconds": 38.609,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 8,
+      "input_tokens": 32899,
+      "cached_input_tokens": 30269,
+      "cache_write_tokens": 2606,
+      "output_tokens": 901,
+      "inference_cost_usd": 0.058572,
+      "started_at": "2026-07-26T11:44:35.711Z",
+      "finished_at": "2026-07-26T11:46:03.362Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3dce620795e",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r2934446070613077270",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e3e15389adcc",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.wait_for_reply",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending"
+        },
+        {
+          "tool": "calendar.get_availability",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "0fe45pnplprv65rh5kgq5ceqd0",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "0fe45pnplprv65rh5kgq5ceqd0",
+            "status": "confirmed",
+            "summary": "ShotCount demo with Maya",
+            "start": {
+              "dateTime": "2026-07-30T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-30T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "daviddosuu@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "cross-05",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "0fdded7ff0",
+      "agent_run_id": "09ca1b5e-e1fa-4c2d-9417-d9c8b3b7610e",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 1,
+      "clarifications": 1,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 5.768,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "needs_context",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "cache_write_tokens": 0,
+      "output_tokens": 0,
+      "inference_cost_usd": 0,
+      "started_at": "2026-07-26T11:46:07.614Z",
+      "finished_at": "2026-07-26T11:46:13.382Z",
+      "actions": [],
+      "provider_verification": {}
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "browser-01",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "98d49cdb31",
+      "agent_run_id": "d07efcb4-7011-4131-96da-ea9a4f0fb4e2",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 12.098,
+      "external_wait_time_seconds": 14.262,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6180,
+      "cached_input_tokens": 5826,
+      "cache_write_tokens": 348,
+      "output_tokens": 184,
+      "inference_cost_usd": 0.010638,
+      "started_at": "2026-07-26T11:46:13.393Z",
+      "finished_at": "2026-07-26T11:46:39.753Z",
+      "actions": [
+        {
+          "tool": "browser.start_session",
+          "status": "succeeded",
+          "provider_action_id": "255c5039-6d8a-4cb4-b668-3a88025ce20e",
+          "error_code": null
+        },
+        {
+          "tool": "browser.search_flights",
+          "status": "succeeded",
+          "provider_action_id": "255c5039-6d8a-4cb4-b668-3a88025ce20e",
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": "2026-08-09",
+              "budgetAmount": null,
+              "departureDate": "2026-08-06",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "06f7922cd6be570055b1e187",
+                "label": "Best overall",
+                "price": "$950",
+                "route": "LOS–LHR",
+                "stops": "1 stop",
+                "amount": 950,
+                "airline": "Ethiopian",
+                "currency": "USD",
+                "duration": "17 hr 20 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "7:00 AM+1",
+                "departureTime": "1:40 PM",
+                "durationMinutes": 1040
+              },
+              {
+                "id": "5c24ba404de1db1bb4096a85",
+                "label": "Fastest",
+                "price": "$2,464",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 2464,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "4775ff2f5d5c17d979f6e4e5",
+                "label": "Also worth considering",
+                "price": "$964",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 964,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-26T11:46:31.712Z"
+          },
+          "lastOperation": {
+            "id": "agent:d07efcb4-7011-4131-96da-ea9a4f0fb4e2:1:browser.search_flights:77b64535016bfc24f05c5849",
+            "type": "search_flights",
+            "output": {
+              "options": [
+                {
+                  "id": "06f7922cd6be570055b1e187",
+                  "label": "Best overall",
+                  "price": "$950",
+                  "route": "LOS–LHR",
+                  "stops": "1 stop",
+                  "amount": 950,
+                  "airline": "Ethiopian",
+                  "currency": "USD",
+                  "duration": "17 hr 20 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "7:00 AM+1",
+                  "departureTime": "1:40 PM",
+                  "durationMinutes": 1040
+                },
+                {
+                  "id": "5c24ba404de1db1bb4096a85",
+                  "label": "Fastest",
+                  "price": "$2,464",
+                  "route": "LOS–LHR",
+                  "stops": "Nonstop",
+                  "amount": 2464,
+                  "airline": "British Airways",
+                  "currency": "USD",
+                  "duration": "6 hr 30 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                  "stopCount": 0,
+                  "arrivalTime": "5:20 AM+1",
+                  "departureTime": "10:50 PM",
+                  "durationMinutes": 390
+                },
+                {
+                  "id": "4775ff2f5d5c17d979f6e4e5",
+                  "label": "Also worth considering",
+                  "price": "$964",
+                  "route": "LOS–STN",
+                  "stops": "1 stop",
+                  "amount": 964,
+                  "airline": "Royal Air Maroc",
+                  "currency": "USD",
+                  "duration": "11 hr 5 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "6:20 AM+1",
+                  "departureTime": "7:15 PM",
+                  "durationMinutes": 665
+                }
+              ],
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "observedAt": "2026-07-26T11:46:31.712Z"
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-26T11:46:31.840Z"
+          },
+          "workerAttempts": 1,
+          "pendingOperation": null
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": false,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "3 live flight options are ready.",
+          "sections": [
+            {
+              "body": "Ethiopian · LOS–LHR · 1 stop · 17 hr 20 min · $950",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $2,464",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $964",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "06f7922cd6be570055b1e187",
+              "label": "Best overall",
+              "price": "$950",
+              "route": "LOS–LHR",
+              "stops": "1 stop",
+              "amount": 950,
+              "airline": "Ethiopian",
+              "currency": "USD",
+              "duration": "17 hr 20 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "7:00 AM+1",
+              "departureTime": "1:40 PM",
+              "durationMinutes": 1040
+            },
+            {
+              "id": "5c24ba404de1db1bb4096a85",
+              "label": "Fastest",
+              "price": "$2,464",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 2464,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "4775ff2f5d5c17d979f6e4e5",
+              "label": "Also worth considering",
+              "price": "$964",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 964,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            }
+          ]
+        }
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "browser-02",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "79736bf139",
+      "agent_run_id": "ddcba313-6ac7-4419-814c-7e0ac232da30",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 12.858,
+      "external_wait_time_seconds": 9.46,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6206,
+      "cached_input_tokens": 5831,
+      "cache_write_tokens": 369,
+      "output_tokens": 201,
+      "inference_cost_usd": 0.011282,
+      "started_at": "2026-07-26T11:46:39.766Z",
+      "finished_at": "2026-07-26T11:47:02.084Z",
+      "actions": [
+        {
+          "tool": "browser.start_session",
+          "status": "succeeded",
+          "provider_action_id": "16b85b7f-1be1-43b4-a851-c2d8ececfe63",
+          "error_code": null
+        },
+        {
+          "tool": "browser.search_flights",
+          "status": "succeeded",
+          "provider_action_id": "16b85b7f-1be1-43b4-a851-c2d8ececfe63",
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 2,
+              "originCode": "LOS",
+              "returnDate": "2026-08-09",
+              "budgetAmount": 1000,
+              "departureDate": "2026-08-06",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "06f7922cd6be570055b1e187",
+                "label": "Best overall",
+                "price": "$950",
+                "route": "LOS–LHR",
+                "stops": "1 stop",
+                "amount": 950,
+                "airline": "Ethiopian",
+                "currency": "USD",
+                "duration": "17 hr 20 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "7:00 AM+1",
+                "departureTime": "1:40 PM",
+                "durationMinutes": 1040
+              },
+              {
+                "id": "4775ff2f5d5c17d979f6e4e5",
+                "label": "Fastest",
+                "price": "$964",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 964,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "b3737e5506d35c9cc2f9e973",
+                "label": "Also worth considering",
+                "price": "$988",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 988,
+                "airline": "Kenya Airways",
+                "currency": "USD",
+                "duration": "32 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:50 AM+2",
+                "departureTime": "10:45 PM",
+                "durationMinutes": 1925
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-26T11:46:54.831Z"
+          },
+          "lastOperation": {
+            "id": "agent:ddcba313-6ac7-4419-814c-7e0ac232da30:1:browser.search_flights:dd20893783484bec42ab0bbf",
+            "type": "search_flights",
+            "output": {
+              "options": [
+                {
+                  "id": "06f7922cd6be570055b1e187",
+                  "label": "Best overall",
+                  "price": "$950",
+                  "route": "LOS–LHR",
+                  "stops": "1 stop",
+                  "amount": 950,
+                  "airline": "Ethiopian",
+                  "currency": "USD",
+                  "duration": "17 hr 20 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "7:00 AM+1",
+                  "departureTime": "1:40 PM",
+                  "durationMinutes": 1040
+                },
+                {
+                  "id": "4775ff2f5d5c17d979f6e4e5",
+                  "label": "Fastest",
+                  "price": "$964",
+                  "route": "LOS–STN",
+                  "stops": "1 stop",
+                  "amount": 964,
+                  "airline": "Royal Air Maroc",
+                  "currency": "USD",
+                  "duration": "11 hr 5 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "6:20 AM+1",
+                  "departureTime": "7:15 PM",
+                  "durationMinutes": 665
+                },
+                {
+                  "id": "b3737e5506d35c9cc2f9e973",
+                  "label": "Also worth considering",
+                  "price": "$988",
+                  "route": "LOS–LGW",
+                  "stops": "1 stop",
+                  "amount": 988,
+                  "airline": "Kenya Airways",
+                  "currency": "USD",
+                  "duration": "32 hr 5 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "6:50 AM+2",
+                  "departureTime": "10:45 PM",
+                  "durationMinutes": 1925
+                }
+              ],
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "observedAt": "2026-07-26T11:46:54.831Z"
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-26T11:46:54.966Z"
+          },
+          "workerAttempts": 1,
+          "pendingOperation": null
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": false,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "3 live flight options are ready.",
+          "sections": [
+            {
+              "body": "Ethiopian · LOS–LHR · 1 stop · 17 hr 20 min · $950",
+              "title": "Best overall"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $964",
+              "title": "Fastest"
+            },
+            {
+              "body": "Kenya Airways · LOS–LGW · 1 stop · 32 hr 5 min · $988",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "06f7922cd6be570055b1e187",
+              "label": "Best overall",
+              "price": "$950",
+              "route": "LOS–LHR",
+              "stops": "1 stop",
+              "amount": 950,
+              "airline": "Ethiopian",
+              "currency": "USD",
+              "duration": "17 hr 20 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "7:00 AM+1",
+              "departureTime": "1:40 PM",
+              "durationMinutes": 1040
+            },
+            {
+              "id": "4775ff2f5d5c17d979f6e4e5",
+              "label": "Fastest",
+              "price": "$964",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 964,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            {
+              "id": "b3737e5506d35c9cc2f9e973",
+              "label": "Also worth considering",
+              "price": "$988",
+              "route": "LOS–LGW",
+              "stops": "1 stop",
+              "amount": 988,
+              "airline": "Kenya Airways",
+              "currency": "USD",
+              "duration": "32 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-06+returning+2026-08-09+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:50 AM+2",
+              "departureTime": "10:45 PM",
+              "durationMinutes": 1925
+            }
+          ]
+        }
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "browser-03",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "a53ab7d954",
+      "agent_run_id": "e2b899a8-2a30-4f4b-a649-d1733713f178",
+      "success": 0,
+      "execution_precision": 1,
+      "first_attempt_success": 0,
+      "retry_count": 2,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 12.408,
+      "external_wait_time_seconds": 23.612,
+      "distance_to_done": 1,
+      "failure_reason": "timeout/network",
+      "final_state": "failed",
+      "live_provider_failure": 1,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6223,
+      "cached_input_tokens": 5833,
+      "cache_write_tokens": 384,
+      "output_tokens": 208,
+      "inference_cost_usd": 0.011586,
+      "started_at": "2026-07-26T11:47:02.091Z",
+      "finished_at": "2026-07-26T11:47:38.111Z",
+      "actions": [
+        {
+          "tool": "browser.start_session",
+          "status": "succeeded",
+          "provider_action_id": "7f0d353a-20ca-4210-9268-3829d63291a4",
+          "error_code": null
+        },
+        {
+          "tool": "browser.search_flights",
+          "status": "failed",
+          "provider_action_id": null,
+          "error_code": "browser_worker_failed"
+        }
+      ],
+      "provider_verification": {
+        "browserCheckpoint": {
+          "lastOperation": {
+            "id": "agent:e2b899a8-2a30-4f4b-a649-d1733713f178:1:browser.search_flights:b0bbdd70ef1984fa7725fc28",
+            "type": "search_flights",
+            "error": {
+              "code": "browser_worker_failed",
+              "message": "browserContext.newPage: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> /tmp/chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --di",
+              "retryable": true
+            },
+            "status": "failed",
+            "completedAt": "2026-07-26T11:47:29.469Z"
+          },
+          "workerAttempts": 3,
+          "pendingOperation": null
+        },
+        "browserResult": null
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "browser-04",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "e2212bf7b5",
+      "agent_run_id": "8fcc52bd-edcf-4065-b685-84aaf98d2ecf",
+      "success": 0,
+      "execution_precision": 1,
+      "first_attempt_success": 0,
+      "retry_count": 2,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 10.974,
+      "external_wait_time_seconds": 16.284,
+      "distance_to_done": 1,
+      "failure_reason": "timeout/network",
+      "final_state": "failed",
+      "live_provider_failure": 1,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6230,
+      "cached_input_tokens": 5844,
+      "cache_write_tokens": 380,
+      "output_tokens": 198,
+      "inference_cost_usd": 0.011267,
+      "started_at": "2026-07-26T11:47:38.122Z",
+      "finished_at": "2026-07-26T11:48:05.380Z",
+      "actions": [
+        {
+          "tool": "browser.start_session",
+          "status": "succeeded",
+          "provider_action_id": "db5bb299-c1e7-4cdf-9831-6bdda77799cd",
+          "error_code": null
+        },
+        {
+          "tool": "browser.search_flights",
+          "status": "failed",
+          "provider_action_id": null,
+          "error_code": "browser_worker_failed"
+        }
+      ],
+      "provider_verification": {
+        "browserCheckpoint": {
+          "lastOperation": {
+            "id": "agent:8fcc52bd-edcf-4065-b685-84aaf98d2ecf:1:browser.search_flights:88d46ba2735e2711bf77ac42",
+            "type": "search_flights",
+            "error": {
+              "code": "browser_worker_failed",
+              "message": "browserContext.newPage: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> /tmp/chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --di",
+              "retryable": true
+            },
+            "status": "failed",
+            "completedAt": "2026-07-26T11:47:59.324Z"
+          },
+          "workerAttempts": 3,
+          "pendingOperation": null
+        },
+        "browserResult": null
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "browser-05",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "2057cc5122",
+      "agent_run_id": "c3df59ad-6d3f-48a2-ad07-48e16ed00d07",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 1,
+      "clarifications": 1,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 1.102,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "needs_context",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "cache_write_tokens": 0,
+      "output_tokens": 0,
+      "inference_cost_usd": 0,
+      "started_at": "2026-07-26T11:48:05.391Z",
+      "finished_at": "2026-07-26T11:48:06.493Z",
+      "actions": [],
+      "provider_verification": {
+        "browserCheckpoint": null,
+        "browserResult": null
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "benchmark_commit": "d29fbc1f57f3beed317c81c793fe969cdf18e442",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "email-01",
+      "category": "email",
+      "run_number": 2,
+      "run_nonce": "e824567001",
+      "agent_run_id": "d4fc9ecd-be19-4afe-a985-c05032725549",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 30.743,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 5,
+      "input_tokens": 18254,
+      "cached_input_tokens": 16933,
+      "cache_write_tokens": 1306,
+      "output_tokens": 469,
+      "inference_cost_usd": 0.030774,
+      "started_at": "2026-07-26T11:48:06.502Z",
+      "finished_at": "2026-07-26T11:48:37.245Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e410b9a4c3b8",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r4698332691224342714",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19f9e415d68c124b",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "gmailQuery": "in:sent newer_than:1d",
+        "gmailMessages": [
+          {
+            "id": "19f9e415d68c124b",
+            "thread_id": "19f9e410b9a4c3b8"
+          },
+          {
+            "id": "19f9e3e15389adcc",
+            "thread_id": "19f9e3dce620795e"
+          },
+          {
+            "id": "19f9e3da417d2420",
+            "thread_id": "19f9e3d2442bce40"
+          },
+          {
+            "id": "19f9e3ce3d13dc83",
+            "thread_id": "19f9e3c857b5841a"
+          },
+          {
+            "id": "19f9e3b8c56c40b4",
+            "thread_id": "19f9e3b75899aa6d"
+          },
+          {
+            "id": "19f9e39e0689e378",
+            "thread_id": "19f9e39a1631fe1f"
+          },
+          {
+            "id": "19f9e37dbe40eca4",
+            "thread_id": "19f9e37d5d0ca321"
+          },
+          {
+            "id": "19f9e37d150e71eb",
+            "thread_id": "19f9e37cb6bbcef3"
+          },
+          {
+            "id": "19f9e37a9e7d4b28",
+            "thread_id": "19f9e3765014045b"
+          },
+          {
+            "id": "19f9e34dcd86060c",
+            "thread_id": "19f9e346c2e0312f"
+          },
+          {
+            "id": "19f9e2f06b77508a",
+            "thread_id": "19f9e2f00b596a99"
+          },
+          {
+            "id": "19f9e2efc20d1a54",
+            "thread_id": "19f9e2ef77eddeec"
+          },
+          {
+            "id": "19f9e2eda878f403",
+            "thread_id": "19f9e2e923ae291b"
+          },
+          {
+            "id": "19f9e2bd2e24c236",
+            "thread_id": "19f9e2b835e63499"
+          },
+          {
+            "id": "19f9e2abed8cb156",
+            "thread_id": "19f9e2a438edcaa8"
+          },
+          {
+            "id": "19f9e293d2122289",
+            "thread_id": "19f9e291ff643c1f"
+          },
+          {
+            "id": "19f9e278667590b3",
+            "thread_id": "19f9e2744ea1438d"
+          },
+          {
+            "id": "19f9e2508f759966",
+            "thread_id": "19f9e250350957ab"
+          },
+          {
+            "id": "19f9e24ffd993eec",
+            "thread_id": "19f9e24f8fcd8836"
+          },
+          {
+            "id": "19f9e249ed95fdb0",
+            "thread_id": "19f9e241a6701fb2"
+          },
+          {
+            "id": "19f9e211ab25f2c9",
+            "thread_id": "19f9e20c620cdcf7"
+          },
+          {
+            "id": "19f9e1fb54e2eece",
+            "thread_id": "19f9e1f23a3bbba3"
+          },
+          {
+            "id": "19f9e1e86aa2f81a",
+            "thread_id": "19f9e1e61da0aa57"
+          },
+          {
+            "id": "19f9e1be8a7c8bf5",
+            "thread_id": "19f9e1b837c6ba51"
+          },
+          {
+            "id": "19f9e19c686eb33c",
+            "thread_id": "19f9e19c1fc6ecab"
+          },
+          {
+            "id": "19f9e19b60df4b67",
+            "thread_id": "19f9e19b199ff4b1"
+          },
+          {
+            "id": "19f9e1986a0bdb33",
+            "thread_id": "19f9e1947a2ec940"
+          },
+          {
+            "id": "19f9e11d36a5e967",
+            "thread_id": "19f9e115372f6694"
+          },
+          {
+            "id": "19f9e10b43b9b5e1",
+            "thread_id": "19f9e10572d26d0e"
+          },
+          {
+            "id": "19f9e0fc242a23ca",
+            "thread_id": "19f9e0fa5c22d2c0"
+          },
+          {
+            "id": "19f9e0e00e1a63ab",
+            "thread_id": "19f9e0db643c5017"
+          },
+          {
+            "id": "19f9e0c43a2a5f3f",
+            "thread_id": "19f9e0c3c9f003a0"
+          },
+          {
+            "id": "19f9e0c36618d603",
+            "thread_id": "19f9e0c31c578ae6"
+          },
+          {
+            "id": "19f9e0c134d74743",
+            "thread_id": "19f9e0bc62619d8c"
+          },
+          {
+            "id": "19f9de63022384e6",
+            "thread_id": "19f9de5e870b45bb"
+          },
+          {
+            "id": "19f9de123224e3b1",
+            "thread_id": "19f9de0b58b2cad3"
+          },
+          {
+            "id": "19f9de02d72dbac4",
+            "thread_id": "19f9de0123f54923"
+          },
+          {
+            "id": "19f9ddf7ef559530",
+            "thread_id": "19f9ddf31f57d164"
+          },
+          {
+            "id": "19f9dddda6954638",
+            "thread_id": "19f9dddd4a82ae9b"
+          },
+          {
+            "id": "19f9dddd184276a0",
+            "thread_id": "19f9dddcae378823"
+          },
+          {
+            "id": "19f9dddac3a50fe6",
+            "thread_id": "19f9ddd612c7e726"
+          },
+          {
+            "id": "19f9ddbf18da805a",
+            "thread_id": "19f9ddb98271cf6e"
+          },
+          {
+            "id": "19f9ddb72e9e66ab",
+            "thread_id": "19f9ddb01b0fb75e"
+          },
+          {
+            "id": "19f9dd9a5cd7ec90",
+            "thread_id": "19f9dd9537ddcba7"
+          },
+          {
+            "id": "19f9dd8c3b0f0c36",
+            "thread_id": "19f9dd8a83f9382b"
+          },
+          {
+            "id": "19f9dd7ed55c058d",
+            "thread_id": "19f9dd7aa26f20be"
+          },
+          {
+            "id": "19f9dd6833c1ad39",
+            "thread_id": "19f9dd67c2365b96"
+          },
+          {
+            "id": "19f9dd67888229d4",
+            "thread_id": "19f9dd6722397392"
+          },
+          {
+            "id": "19f9dd6549ad9a94",
+            "thread_id": "19f9dd61279227cb"
+          },
+          {
+            "id": "19f9dd4dea2811a8",
+            "thread_id": "19f9dd48a1d489f6"
+          }
+        ]
+      }
+    }
+  ]
+}
