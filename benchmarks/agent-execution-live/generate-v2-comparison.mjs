@@ -46,16 +46,17 @@ const chartDir = resolve(here, 'charts-v2')
 const summaryDir = resolve(here, 'yc-summary-v2')
 mkdirSync(chartDir, { recursive: true })
 mkdirSync(summaryDir, { recursive: true })
+const logoData = readFileSync(resolve(here, 'assets/shotcount-logo-transparent.png')).toString('base64')
 
 const palette = ['#E87DB9', '#68C9C1', '#7867D8', '#F2A65A', '#B9DC73']
 
 function editorialSvg(title, subtitle, body, note = '') {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1160" viewBox="0 0 1600 1160">
   <rect width="1600" height="1160" fill="#FFFFFF"/>
-  <style>text{font-family:Arial,Helvetica,sans-serif;fill:#111}.title{font-size:34px;font-weight:700}.subtitle{font-size:32px;font-weight:700}.axis{font-size:21px;font-weight:400}.label{font-size:23px;font-weight:400}.value{font-size:23px;font-weight:400}.note{font-size:18px;font-weight:400;fill:#555}.brand{font-size:35px;font-weight:400}</style>
+  <style>text{font-family:Arial,Helvetica,sans-serif;fill:#111}.title{font-size:34px;font-weight:700}.subtitle{font-size:32px;font-weight:700}.axis{font-size:21px;font-weight:400}.label{font-size:23px;font-weight:400}.value{font-size:23px;font-weight:400}.note{font-size:18px;font-weight:400;fill:#555}</style>
   <text class="title" x="112" y="102">${esc(title)}</text>
   <text class="subtitle" x="112" y="142">${esc(subtitle)}</text>
-  <text class="brand" x="1480" y="118" text-anchor="end">✦</text>
+  <image href="data:image/png;base64,${logoData}" x="1410" y="66" width="92" height="92" preserveAspectRatio="xMidYMid meet"/>
   ${body}${note ? `<text class="note" x="112" y="1110">${esc(note)}</text>` : ''}</svg>`
 }
 
@@ -77,8 +78,7 @@ function verticalBars({ title, subtitle, values, maximum, unit, axisLabel, note 
       <text class="value" x="${x + barWidth / 2}" y="${Math.max(plotTop - 8, y - 14)}" text-anchor="middle">${item.display}</text>
       <text class="label" transform="translate(${x + 42} ${plotBottom + 45}) rotate(-48)" text-anchor="end">${esc(item.label)}</text>`
   }).join('')
-  const axis = `<line x1="${plotLeft - 14}" y1="${plotBottom}" x2="1450" y2="${plotBottom}" stroke="#111" stroke-width="1"/>
-    <text class="axis" transform="translate(145 ${plotTop + plotHeight / 2}) rotate(-90)" text-anchor="middle">${esc(axisLabel)}</text>`
+  const axis = `<text class="axis" transform="translate(145 ${plotTop + plotHeight / 2}) rotate(-90)" text-anchor="middle">${esc(axisLabel)}</text>`
   return editorialSvg(title, subtitle, `${tickLabels}${axis}${bars}`, note || `${values.length} categories · ${unit}`)
 }
 
