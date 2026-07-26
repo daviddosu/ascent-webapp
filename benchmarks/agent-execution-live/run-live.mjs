@@ -256,10 +256,11 @@ async function loadRunState(admin, runId) {
 }
 
 async function replyFromSecondary({ secret, id, primary, secondary, task }) {
+  const exactSubject = task.fixture.subject ? ` subject:${JSON.stringify(task.fixture.subject)}` : ''
   const search = await fixture(secret, {
     action: 'google_tool', benchmarkRunId: id, userId: secondary.user_id,
     toolName: 'gmail.search_messages',
-    arguments: { query: `from:${primary.account_email} newer_than:1d`, max_results: 10 },
+    arguments: { query: `from:${primary.account_email}${exactSubject} newer_than:1d`, max_results: 10 },
   })
   const candidate = search.value?.messages?.[0]
   if (!candidate?.id) throw new Error('The controlled recipient did not receive the scheduling email.')
@@ -298,7 +299,7 @@ async function driveRun({ admin, accessToken, publicKey, secret, id, task, prima
     }
     if (run.status === 'waiting_external') {
       const emailWatch = state.actions.find(item => item.tool_name === 'gmail.wait_for_reply' && item.status === 'succeeded')
-      if (emailWatch && !replied && secondary && ['cross-01', 'cross-04'].includes(task.id)) {
+      if (emailWatch && !replied && secondary && ['cross-01', 'cross-02', 'cross-04'].includes(task.id)) {
         await replyFromSecondary({ secret, id, primary, secondary, task })
         replied = true
         await sleep(4000)

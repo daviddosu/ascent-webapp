@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#F7F7F4"/>
+  <style>text{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#111}.title{font-size:58px;font-weight:720;letter-spacing:-2.2px}.subtitle{font-size:23px;fill:#666}.label{font-size:24px;font-weight:620}.value{font-size:30px;font-weight:760}.note{font-size:18px;fill:#777}.small{font-size:19px;fill:#666}</style>
+  <text class="title" x="100" y="110">SHOTCOUNT-EVAL LIVE</text>
+  <text class="subtitle" x="100" y="158">20 tasks · 60 runs</text>
+  <text x="100" y="270" style="font-size:92px;font-weight:760;letter-spacing:-3px">75%</text><text class="small" x="100" y="310">Overall success</text>
+   <text x="470" y="270" style="font-size:92px;font-weight:760;letter-spacing:-3px">100%</text><text class="small" x="470" y="310">Execution precision</text>
+   <text x="860" y="270" style="font-size:92px;font-weight:760;letter-spacing:-3px">0.0</text><text class="small" x="860" y="310">Median user rescue</text>
+   <text x="1210" y="270" style="font-size:92px;font-weight:760;letter-spacing:-3px">4.3</text><text class="small" x="1210" y="310">Distance to done / 5</text>
+   <line x1="100" y1="385" x2="1500" y2="385" stroke="#D8D8D4"/>
+   <text class="label" x="100" y="470">Email</text><text x="100" y="555" style="font-size:66px;font-weight:740">100%</text><text class="small" x="100" y="590">15 runs</text><text class="label" x="460" y="470">Calendar</text><text x="460" y="555" style="font-size:66px;font-weight:740">100%</text><text class="small" x="460" y="590">15 runs</text><text class="label" x="820" y="470">Cross-tool</text><text x="820" y="555" style="font-size:66px;font-weight:740">60%</text><text class="small" x="820" y="590">15 runs</text><text class="label" x="1180" y="470">Browser</text><text x="1180" y="555" style="font-size:66px;font-weight:740">40%</text><text class="small" x="1180" y="590">15 runs</text>
+   <text class="note" x="100" y="750">Live OpenAI inference with real Gmail, Calendar, and browser execution.</text>
+   <text class="note" x="100" y="783">Controlled test accounts used for safe repeatability. No comparison to other foundation-model providers is claimed.</text>
+  
+  </svg>

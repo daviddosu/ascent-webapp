@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#F7F7F4"/>
+  <style>text{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#111}.title{font-size:58px;font-weight:720;letter-spacing:-2.2px}.subtitle{font-size:23px;fill:#666}.label{font-size:24px;font-weight:620}.value{font-size:30px;font-weight:760}.note{font-size:18px;fill:#777}.small{font-size:19px;fill:#666}</style>
+  <text class="title" x="100" y="110">Controlled vs live execution performance</text>
+  <text class="subtitle" x="100" y="158">Same 20-task structure · three runs per task</text>
+  <rect x="1120" y="170" width="22" height="12" fill="#C7C9C7"/><text class="small" x="1154" y="181">Controlled</text><rect x="1320" y="170" width="22" height="12" fill="#171717"/><text class="small" x="1354" y="181">Live</text><text class="label" x="100" y="274">Email</text>
+      <rect x="360" y="245" width="816" height="28" fill="#C7C9C7"/>
+      <rect x="360" y="283" width="1020" height="28" fill="#171717"/>
+      <text class="small" x="1190" y="268">80%</text>
+      <text class="small" x="1394" y="307">100%</text>
+<text class="label" x="100" y="386">Calendar</text>
+      <rect x="360" y="357" width="816" height="28" fill="#C7C9C7"/>
+      <rect x="360" y="395" width="1020" height="28" fill="#171717"/>
+      <text class="small" x="1190" y="380">80%</text>
+      <text class="small" x="1394" y="419">100%</text>
+<text class="label" x="100" y="498">Cross-tool</text>
+      <rect x="360" y="469" width="1020" height="28" fill="#C7C9C7"/>
+      <rect x="360" y="507" width="612" height="28" fill="#171717"/>
+      <text class="small" x="1394" y="492">100%</text>
+      <text class="small" x="986" y="531">60%</text>
+<text class="label" x="100" y="610">Browser</text>
+      <rect x="360" y="581" width="1020" height="28" fill="#C7C9C7"/>
+      <rect x="360" y="619" width="408" height="28" fill="#171717"/>
+      <text class="small" x="1394" y="604">100%</text>
+      <text class="small" x="782" y="643">40%</text>
+<text class="label" x="100" y="722">Overall</text>
+      <rect x="360" y="693" width="918" height="28" fill="#C7C9C7"/>
+      <rect x="360" y="731" width="765" height="28" fill="#171717"/>
+      <text class="small" x="1292" y="716">90%</text>
+      <text class="small" x="1139" y="755">75%</text>
+  <text class="note" x="100" y="852">Controlled fixtures and live provider conditions are different evaluation environments.</text>
+  </svg>

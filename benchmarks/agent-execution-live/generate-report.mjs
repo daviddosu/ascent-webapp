@@ -218,6 +218,7 @@ The defensible claim is that **ShotCount is an execution system for ordinary to-
 - Live webpage and provider behavior can change after the evaluation window.
 - The 20-task set is intentionally small and product-shaped; it is not a general intelligence benchmark.
 - Email wording quality was inspected but was not a primary success judge when provider state could be verified programmatically.
+- Execution precision measures unintended or duplicate externally visible mutations; it is not a score of prose quality or overall task success.
 - No flight purchase was attempted. Booking success ends at the verified user-controlled payment handoff.
 `
 writeFileSync(resolve(here, 'report.md'), report)
@@ -259,7 +260,7 @@ Programmatic provider state was the primary success judge whenever available. A 
 
 ## Metrics and scoring
 
-Task Success and Execution Precision are binary. Non-approval interventions, clarifications, corrections, retries, active execution time, and external wait time are recorded per run. Distance-to-Done uses a 0–5 scale: 0 means no useful progress and 5 means the requested outcome is complete. A booking task that safely reaches the verified payment boundary is scored according to the published intentional-boundary rule; payment itself is neither required nor attempted.
+Task Success and Execution Precision are binary. Execution Precision records whether externally visible mutations were intended, idempotent, and free of duplicates; it does not substitute for Task Success or judge prose quality. Non-approval interventions, clarifications, corrections, retries, active execution time, and external wait time are recorded per run. Distance-to-Done uses a 0–5 scale: 0 means no useful progress and 5 means the requested outcome is complete. A booking task that safely reaches the verified payment boundary is scored according to the published intentional-boundary rule; payment itself is neither required nor attempted.
 
 Every failure receives one primary cause from the fixed taxonomy. First-attempt success requires success with zero internal retries. Provider, model-decision, and harness contribution flags are stored separately.
 
