@@ -447,13 +447,13 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'browser.search_flights',
-    description: 'Run a live, bounded round-trip flight search in the task-owned browser session.',
+    description: 'Run a live, bounded one-way or round-trip flight search in the task-owned browser session.',
     parameters: objectSchema({
       session_id: stringValue('Browser execution session ID.', 64),
       origin_code: stringValue('Three-letter IATA origin code.', 3),
       destination_code: stringValue('Three-letter IATA destination or city code.', 3),
       departure_date: stringValue('Outbound date in YYYY-MM-DD format.', 10),
-      return_date: stringValue('Return date in YYYY-MM-DD format.', 10),
+      return_date: nullableString('Return date in YYYY-MM-DD format, or null for one-way travel.', 10),
       cabin: {
         type: 'string',
         enum: ['economy', 'premium_economy', 'business', 'first'],
@@ -755,8 +755,10 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         /^[A-Z]{3}$/.test(String(value.destination_code)) &&
         value.origin_code !== value.destination_code &&
         validateDateOnly(value.departure_date) &&
-        validateDateOnly(value.return_date) &&
-        Date.parse(`${value.return_date}T00:00:00Z`) > Date.parse(`${value.departure_date}T00:00:00Z`) &&
+        (value.return_date === null || (
+          validateDateOnly(value.return_date) &&
+          Date.parse(`${value.return_date}T00:00:00Z`) > Date.parse(`${value.departure_date}T00:00:00Z`)
+        )) &&
         ['economy', 'premium_economy', 'business', 'first'].includes(String(value.cabin)) &&
         Number.isInteger(value.max_stops) &&
         Number(value.max_stops) >= 0 &&

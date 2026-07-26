@@ -8,7 +8,7 @@ export type FlightSearchInput = {
   originCode: string
   destinationCode: string
   departureDate: string
-  returnDate: string
+  returnDate: string | null
   cabin: 'economy' | 'premium_economy' | 'business' | 'first'
   maxStops: 0 | 1 | 2
   budgetAmount: number | null
@@ -111,7 +111,7 @@ export function buildGoogleFlightsUrl(input: FlightSearchInput) {
   const query = [
     `Flights from ${input.originCode} to ${input.destinationCode}`,
     `on ${input.departureDate}`,
-    `returning ${input.returnDate}`,
+    ...(input.returnDate ? [`returning ${input.returnDate}`] : ['one way']),
     cabin,
   ].join(' ')
   const url = new URL('https://www.google.com/travel/flights')

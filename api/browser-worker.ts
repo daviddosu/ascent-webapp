@@ -87,7 +87,7 @@ function searchInput(argumentsValue: Record<string, unknown>): FlightSearchInput
     originCode: String(argumentsValue.origin_code),
     destinationCode: String(argumentsValue.destination_code),
     departureDate: String(argumentsValue.departure_date),
-    returnDate: String(argumentsValue.return_date),
+    returnDate: argumentsValue.return_date === null ? null : String(argumentsValue.return_date),
     cabin: argumentsValue.cabin as FlightSearchInput['cabin'],
     maxStops: Number(argumentsValue.max_stops) as FlightSearchInput['maxStops'],
     budgetAmount: argumentsValue.budget_amount === null

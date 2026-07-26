@@ -1387,6 +1387,27 @@ async function pollBrowserExecutionRun(
         completed_at: new Date().toISOString(),
       }).eq('id', actionResult.data.id)
     }
+    const retryable = operation.error?.retryable !== false
+    const workerAttempts = Number(checkpoint.workerAttempts ?? 0)
+    if (retryable && operation.type !== 'submit' && workerAttempts < 3) {
+      const waiting = await updateRun(admin, run, {
+        status: 'waiting_external',
+        waiting_reason: 'The live browser step will retry automatically.',
+        error_code: errorCode,
+        error: message,
+        retryable: true,
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      await addEvent(admin, waiting, 'agent_waiting_external', waiting.status, waiting.waiting_reason, {
+        browser_session_id: session.id,
+        operation_type: operation.type,
+        retryable: true,
+        automatic_retry: true,
+        worker_attempt: workerAttempts,
+      })
+      return waiting
+    }
     if (operation.type === 'select_flight' || operation.type === 'submit') {
       const waiting = await updateRun(admin, run, {
         status: 'waiting_for_user',

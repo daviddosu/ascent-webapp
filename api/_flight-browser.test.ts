@@ -62,6 +62,12 @@ describe('flight browser worker', () => {
     expect(url.searchParams.get('curr')).toBe('USD')
   })
 
+  it('builds a one-way search without inventing a return date', () => {
+    const url = new URL(buildGoogleFlightsUrl({ ...input, returnDate: null }))
+    expect(url.searchParams.get('q')).toContain('one way')
+    expect(url.searchParams.get('q')).not.toContain('returning')
+  })
+
   it('parses a live-result list item without retaining raw page text', () => {
     const parsed = parseGoogleFlightListItem(
       results[0]!,

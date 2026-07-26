@@ -392,7 +392,7 @@ function resultFromState({ task, runNumber, runNonce, state, providerState, benc
   const externalWait = externalWaitSeconds(state.events, finishedAt)
   const elapsed = (finishedAt - startedAt) / 1000
   const verified = verifyRun(task, state, providerState)
-  const retryCount = state.events.filter(event => event.metadata?.retried === true).length
+  const retryCount = state.events.filter(event => event.metadata?.retried === true || event.metadata?.automatic_retry === true).length
   const clarificationCount = state.events.filter(event => event.event_type === 'agent_context_requested').length + (state.run.status === 'needs_context' ? 1 : 0)
   const providerFailure = state.actions.some(action => action.status === 'failed' && /^(gmail|calendar|browser|contacts)\./.test(action.tool_name))
   return {
