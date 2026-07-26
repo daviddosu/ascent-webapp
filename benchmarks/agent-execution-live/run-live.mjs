@@ -27,6 +27,7 @@ function parseArgs() {
     taskIds: selected.split(',').map(item => item.trim()).filter(Boolean),
     runs,
     pilot: args.includes('--pilot'),
+    resultSet: (value('--result-set') || process.env.SHOTCOUNT_LIVE_RESULT_SET || 'latest').replace(/[^a-z0-9-]/gi, ''),
   }
 }
 
@@ -435,8 +436,10 @@ function resultFromState({ task, runNumber, runNonce, state, providerState, benc
   }
 }
 
-function writeResults(results, metadata) {
-  const directory = resolve(here, 'results')
+function writeResults(results, metadata, resultSet = 'latest') {
+  const directory = resultSet === 'latest'
+    ? resolve(here, 'results')
+    : resolve(here, 'results', resultSet)
   mkdirSync(directory, { recursive: true })
   const jsonPath = resolve(directory, 'latest.json')
   writeFileSync(jsonPath, `${JSON.stringify({ schemaVersion: 1, ...metadata, runs: results }, null, 2)}\n`)
@@ -462,10 +465,14 @@ async function main() {
   const primary = integrations.data.find(item => !requestedPrimary || item.account_email.toLowerCase() === requestedPrimary) ?? integrations.data[0]
   const secondary = integrations.data.find(item => item.user_id !== primary.user_id && (!requestedSecondary || item.account_email.toLowerCase() === requestedSecondary)) ?? null
   const session = await userSession(admin, publicKey, primary.user_id)
-  const benchmarkCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
+  const benchmarkCommit = process.env.SHOTCOUNT_EVALUATED_COMMIT ||
+    execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
   process.stdout.write(`SHOTCOUNT-EVAL LIVE v1\nPrimary: ${shortEmail(primary.account_email)}\nSecondary: ${secondary ? shortEmail(secondary.account_email) : 'not connected'}\n`)
 
-  const resultPath = resolve(here, 'results/latest.json')
+  const resultDirectory = options.resultSet === 'latest'
+    ? resolve(here, 'results')
+    : resolve(here, 'results', options.resultSet)
+  const resultPath = resolve(resultDirectory, 'latest.json')
   let results = []
   try {
     results = JSON.parse(readFileSync(resultPath, 'utf8')).runs ?? []
@@ -501,8 +508,8 @@ async function main() {
       writeResults(results, {
         generatedAt: new Date().toISOString(), model, reasoningEffort: 'low',
         pricingUsdPerMillionTokens: pricing, costGateUsd: maxCostUsd,
-        taskCount: 20, intendedRuns: 60, executionMode: 'live-production-path',
-      })
+        taskCount: 20, intendedRuns: 60, executionMode: 'live-production-path', resultSet: options.resultSet,
+      }, options.resultSet)
       await cleanupFixture({ secret, id, primary, cleanup: fixtureState.cleanup, actions: state.actions })
       const totalCost = results.reduce((sum, row) => sum + row.inference_cost_usd, 0)
       process.stdout.write(`  ${taskId}: ${result.success ? 'PASS' : 'FAIL'} · $${result.inference_cost_usd.toFixed(4)} · cumulative $${totalCost.toFixed(4)}\n`)
