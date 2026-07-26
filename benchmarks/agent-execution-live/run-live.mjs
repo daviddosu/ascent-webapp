@@ -208,7 +208,15 @@ async function collectProviderState({ secret, id, task, primary, state, fixtureS
         toolName: 'calendar.list_events',
         arguments: { calendar_id: 'primary', time_min: timeMin, time_max: timeMax, max_results: 250 },
       })
-      return { calendarEvents: result.value?.events ?? [] }
+      return {
+        calendarEvents: (result.value?.events ?? []).map(event => ({
+          id: event.id ?? '', status: event.status ?? '', summary: event.summary ?? '',
+          start: event.start ?? null, end: event.end ?? null,
+          attendees: (event.attendees ?? []).map(attendee => ({
+            email: attendee.email ?? '', responseStatus: attendee.responseStatus ?? '',
+          })),
+        })),
+      }
     }
   }
   if (task.category === 'email') {
@@ -417,7 +425,7 @@ function writeResults(results, metadata) {
   const jsonPath = resolve(directory, 'latest.json')
   writeFileSync(jsonPath, `${JSON.stringify({ schemaVersion: 1, ...metadata, runs: results }, null, 2)}\n`)
   if (!results.length) return
-  const fields = Object.keys(results[0]).filter(field => field !== 'actions')
+  const fields = Object.keys(results[0]).filter(field => !['actions', 'provider_verification'].includes(field))
   const cell = value => {
     const text = String(value ?? '')
     return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text

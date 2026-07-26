@@ -15,8 +15,12 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
     /\b(?:send|respond|follow[\s-]?up|outreach|draft|write)\b/.test(value) ||
     /^(?:email|message|reply)\s+\S+/.test(value.trim()) ||
     /\breply\s+to\b/.test(value)
+  const calendarWriteIntent = value.replace(
+    /\b(?:do\s+not|don't|without)\s+(?:create|creating|add|adding|book|booking|schedule|scheduling|reschedule|rescheduling|move|moving|cancel|cancelling|canceling|delete|deleting)\b/g,
+    '',
+  )
   const wantsCalendarWrite =
-    /\b(?:set\s*up|schedule|reschedule|arrange|coordinate|organize|create|add|book|cancel|delete|move)\b/.test(value)
+    /\b(?:set\s*up|schedule|reschedule|arrange|coordinate|organize|create|add|book|cancel|delete|move)\b/.test(calendarWriteIntent)
   const hasFlight = /\b(flight|fly|airfare|airline|airport|return trip|round trip|one-way)\b/.test(value)
   const wantsBooking = /\b(book|booking|buy|purchase|reserve)\b/.test(value)
   const wantsBrowserWrite = /\b(?:submit|register|sign[\s-]?up|apply|post|publish|upload)\b/.test(value) ||

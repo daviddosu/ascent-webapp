@@ -1,0 +1,980 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-26T06:57:09.242Z",
+  "model": "gpt-5.6-sol",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 5,
+    "cachedInput": 0.5,
+    "output": 30
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-03",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "a77d2975a5",
+      "agent_run_id": "c860b9e9-d14c-4831-a304-8fd36099268b",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 13.76,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6294,
+      "cached_input_tokens": 5625,
+      "output_tokens": 271,
+      "inference_cost_usd": 0.014287,
+      "started_at": "2026-07-26T06:52:53.753Z",
+      "finished_at": "2026-07-26T06:53:07.513Z",
+      "actions": [
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "thjh5sh85n2rjers3b7jddplg8",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "thjh5sh85n2rjers3b7jddplg8",
+            "status": "confirmed",
+            "summary": "Design Review",
+            "start": {
+              "dateTime": "2026-07-30T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-30T15:45:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-01",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "6622549725",
+      "agent_run_id": "d5e33a46-2426-40ed-9ac1-b8e2e860c81c",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.028,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 10099,
+      "cached_input_tokens": 8999,
+      "output_tokens": 305,
+      "inference_cost_usd": 0.019149,
+      "started_at": "2026-07-26T06:54:22.619Z",
+      "finished_at": "2026-07-26T06:54:37.647Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "mj491a4cdgeihmsdbblhita9ng",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "mj491a4cdgeihmsdbblhita9ng",
+            "status": "confirmed",
+            "summary": "Product Review",
+            "start": {
+              "dateTime": "2026-07-27T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-27T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-02",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "06aa05a109",
+      "agent_run_id": "1225dd5f-700f-4522-9624-64019a30dfa1",
+      "success": 0,
+      "execution_precision": 1,
+      "first_attempt_success": 0,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 12.122,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 1,
+      "failure_reason": "verification mismatch",
+      "final_state": "waiting_for_user",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6631,
+      "cached_input_tokens": 5633,
+      "output_tokens": 296,
+      "inference_cost_usd": 0.016686,
+      "started_at": "2026-07-26T06:54:39.058Z",
+      "finished_at": "2026-07-26T06:54:51.180Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          },
+          {
+            "id": "09hadu0toli0v30cab3dbrpvfc",
+            "status": "confirmed",
+            "summary": "Controlled busy window 1",
+            "start": {
+              "dateTime": "2026-07-29T13:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "50kjniop86l0n95v8junv54gjo",
+            "status": "confirmed",
+            "summary": "Controlled busy window 2",
+            "start": {
+              "dateTime": "2026-07-29T16:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T17:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-05",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "3051250fa4",
+      "agent_run_id": "741352a9-ca37-494b-a116-2f2ef019f605",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.917,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 9703,
+      "cached_input_tokens": 8969,
+      "output_tokens": 258,
+      "inference_cost_usd": 0.015894,
+      "started_at": "2026-07-26T06:54:53.844Z",
+      "finished_at": "2026-07-26T06:55:09.761Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.delete_event",
+          "status": "succeeded",
+          "provider_action_id": "0jfel9ubaul89283iaithmj6l4",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": []
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-01",
+      "category": "calendar",
+      "run_number": 2,
+      "run_nonce": "4dfcdd1ea4",
+      "agent_run_id": "9a415b38-601d-4d1d-86b9-9142363cb6db",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 14.053,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 10120,
+      "cached_input_tokens": 9008,
+      "output_tokens": 303,
+      "inference_cost_usd": 0.019154,
+      "started_at": "2026-07-26T06:55:11.097Z",
+      "finished_at": "2026-07-26T06:55:25.150Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "77ltk3n59kr1ql1mqd0th198fk",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "77ltk3n59kr1ql1mqd0th198fk",
+            "status": "confirmed",
+            "summary": "Product Review",
+            "start": {
+              "dateTime": "2026-07-27T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-27T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-02",
+      "category": "calendar",
+      "run_number": 2,
+      "run_nonce": "94351f7559",
+      "agent_run_id": "312377da-9d52-409e-a9a6-c3f640410881",
+      "success": 0,
+      "execution_precision": 1,
+      "first_attempt_success": 0,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 11.832,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 1,
+      "failure_reason": "verification mismatch",
+      "final_state": "waiting_for_user",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6617,
+      "cached_input_tokens": 5633,
+      "output_tokens": 273,
+      "inference_cost_usd": 0.015926,
+      "started_at": "2026-07-26T06:55:26.976Z",
+      "finished_at": "2026-07-26T06:55:38.808Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          },
+          {
+            "id": "gr67jo0pm8ob12pufovnpcpfjk",
+            "status": "confirmed",
+            "summary": "Controlled busy window 1",
+            "start": {
+              "dateTime": "2026-07-29T13:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "fc72o6o30tstf1fkv6b8b1i514",
+            "status": "confirmed",
+            "summary": "Controlled busy window 2",
+            "start": {
+              "dateTime": "2026-07-29T16:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T17:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-03",
+      "category": "calendar",
+      "run_number": 2,
+      "run_nonce": "0fde864b85",
+      "agent_run_id": "3ce69ec4-7436-41f2-aecf-80213f3fdd7c",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 10.522,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6298,
+      "cached_input_tokens": 5624,
+      "output_tokens": 275,
+      "inference_cost_usd": 0.014432,
+      "started_at": "2026-07-26T06:55:41.576Z",
+      "finished_at": "2026-07-26T06:55:52.098Z",
+      "actions": [
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "r4m68a3m1rmo82s0hknk3eemvg",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "r4m68a3m1rmo82s0hknk3eemvg",
+            "status": "confirmed",
+            "summary": "Design Review",
+            "start": {
+              "dateTime": "2026-07-30T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-30T15:45:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-05",
+      "category": "calendar",
+      "run_number": 2,
+      "run_nonce": "c7fe6bb460",
+      "agent_run_id": "483f9d18-76ed-4e87-967a-4913368c465c",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.506,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 9701,
+      "cached_input_tokens": 8967,
+      "output_tokens": 241,
+      "inference_cost_usd": 0.015383,
+      "started_at": "2026-07-26T06:55:53.653Z",
+      "finished_at": "2026-07-26T06:56:09.159Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.delete_event",
+          "status": "succeeded",
+          "provider_action_id": "64iahh9cnhlse9iqknpghi1cgk",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": []
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-01",
+      "category": "calendar",
+      "run_number": 3,
+      "run_nonce": "2682ecb438",
+      "agent_run_id": "44d330a4-d395-412e-9ed9-c7e06680cbaf",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 15.219,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 10105,
+      "cached_input_tokens": 9002,
+      "output_tokens": 310,
+      "inference_cost_usd": 0.019316,
+      "started_at": "2026-07-26T06:56:10.606Z",
+      "finished_at": "2026-07-26T06:56:25.825Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "25ma8eprghpm0nah0t8ejhb8vk",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "25ma8eprghpm0nah0t8ejhb8vk",
+            "status": "confirmed",
+            "summary": "Product Review",
+            "start": {
+              "dateTime": "2026-07-27T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-27T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-02",
+      "category": "calendar",
+      "run_number": 3,
+      "run_nonce": "5da5a733cc",
+      "agent_run_id": "f118f259-2ca7-40c3-8b75-b1d2daa9b2fd",
+      "success": 0,
+      "execution_precision": 1,
+      "first_attempt_success": 0,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 11.21,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 1,
+      "failure_reason": "verification mismatch",
+      "final_state": "waiting_for_user",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6678,
+      "cached_input_tokens": 5634,
+      "output_tokens": 274,
+      "inference_cost_usd": 0.016257,
+      "started_at": "2026-07-26T06:56:27.294Z",
+      "finished_at": "2026-07-26T06:56:38.504Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "q5n5odp1j588h4chaitge94e4g",
+            "status": "confirmed",
+            "summary": "ShotCount launch discussion with Blessing",
+            "start": {
+              "dateTime": "2026-07-28T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-28T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "blessingfowe@gmail.com",
+                "responseStatus": "needsAction"
+              }
+            ]
+          },
+          {
+            "id": "ft2lgho0avpssjv9j0o906lpo4",
+            "status": "confirmed",
+            "summary": "Controlled busy window 1",
+            "start": {
+              "dateTime": "2026-07-29T13:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "ufla3a3frjrf9fl4lopu64ig90",
+            "status": "confirmed",
+            "summary": "Controlled busy window 2",
+            "start": {
+              "dateTime": "2026-07-29T16:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-29T17:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-03",
+      "category": "calendar",
+      "run_number": 3,
+      "run_nonce": "00a8d0a682",
+      "agent_run_id": "2c4b3bd8-71c7-4007-9e82-75efa325c9be",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 11.136,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6291,
+      "cached_input_tokens": 5626,
+      "output_tokens": 294,
+      "inference_cost_usd": 0.014958,
+      "started_at": "2026-07-26T06:56:41.053Z",
+      "finished_at": "2026-07-26T06:56:52.189Z",
+      "actions": [
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "d5avol5ovs3d7f1h8rdttujjt4",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "d5avol5ovs3d7f1h8rdttujjt4",
+            "status": "confirmed",
+            "summary": "Design Review",
+            "start": {
+              "dateTime": "2026-07-30T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-07-30T15:45:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "benchmark_commit": "46bce6419cccc6b51cdbc145c8939289c50094e5",
+      "openai_model": "gpt-5.6-sol",
+      "reasoning_effort": "low",
+      "task_id": "calendar-05",
+      "category": "calendar",
+      "run_number": 3,
+      "run_nonce": "2dcf847f13",
+      "agent_run_id": "c843adf6-e9ac-4cab-8ae3-bbb191706b12",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 1,
+      "active_execution_time_seconds": 14.799,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 3,
+      "input_tokens": 9700,
+      "cached_input_tokens": 8967,
+      "output_tokens": 236,
+      "inference_cost_usd": 0.015229,
+      "started_at": "2026-07-26T06:56:53.761Z",
+      "finished_at": "2026-07-26T06:57:08.560Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.delete_event",
+          "status": "succeeded",
+          "provider_action_id": "lnbp5kqkghr5hm46pcariskots",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": []
+      }
+    }
+  ]
+}
