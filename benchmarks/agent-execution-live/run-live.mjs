@@ -167,7 +167,13 @@ async function setupFixture({ secret, id, task, primary, secondary }) {
     }
   }
   if (task.fixture.kind === 'incoming_attachment') {
-    throw new Error('The real Gmail attachment fixture is not installed yet.')
+    const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 0>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n'
+    await sendFixtureEmail(secret, secondary, id, {
+      to: [primary.account_email], subject: task.fixture.subject,
+      body_text: 'Attached is the latest controlled ShotCount deck.',
+      attachment_name: task.fixture.attachment,
+      attachment_base64: Buffer.from(pdf).toString('base64'),
+    })
   }
   return { cleanup, created }
 }

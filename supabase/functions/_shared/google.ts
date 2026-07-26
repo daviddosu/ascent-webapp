@@ -168,8 +168,9 @@ async function googleRequest<T>(
 
 type GmailHeader = { name?: string; value?: string }
 type GmailPart = {
+  filename?: string
   mimeType?: string
-  body?: { data?: string }
+  body?: { data?: string; attachmentId?: string; size?: number }
   parts?: GmailPart[]
 }
 type GmailMessage = {
@@ -209,6 +210,20 @@ function plainTextFromPart(part: GmailPart | undefined): string {
 }
 
 function compactMessage(message: GmailMessage) {
+  const attachments: Array<{ filename: string; mime_type: string; attachment_id: string; size: number }> = []
+  const visit = (part: GmailPart | undefined) => {
+    if (!part) return
+    if (part.filename && part.body?.attachmentId) {
+      attachments.push({
+        filename: part.filename,
+        mime_type: part.mimeType ?? 'application/octet-stream',
+        attachment_id: part.body.attachmentId,
+        size: Number(part.body.size ?? 0),
+      })
+    }
+    part.parts?.forEach(visit)
+  }
+  visit(message.payload)
   return {
     id: message.id ?? '',
     thread_id: message.threadId ?? '',
@@ -223,6 +238,7 @@ function compactMessage(message: GmailMessage) {
     in_reply_to: headerValue(message, 'In-Reply-To'),
     body_text: plainTextFromPart(message.payload).slice(0, 40_000),
     snippet: message.snippet ?? '',
+    attachments,
   }
 }
 
@@ -331,17 +347,41 @@ async function gmailCreateDraft(
       already_created: true,
     }
   }
+  const attachmentName = safeHeader(argumentsValue.benchmark_attachment_name)
+    .replace(/[^a-zA-Z0-9._ -]/g, '')
+    .slice(0, 160)
+  const attachmentBase64 = String(argumentsValue.benchmark_attachment_base64 ?? '')
+  const hasBenchmarkAttachment = Boolean(attachmentName && attachmentBase64 && attachmentBase64.length <= 1_400_000)
+  const boundary = `shotcount-${idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
     `To: ${to.join(', ')}`,
     `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: 8bit',
+    hasBenchmarkAttachment
+      ? `Content-Type: multipart/mixed; boundary="${boundary}"`
+      : 'Content-Type: text/plain; charset=UTF-8',
+    ...(hasBenchmarkAttachment ? [] : ['Content-Transfer-Encoding: 8bit']),
     `Message-ID: ${messageIdHeader}`,
     ...(reply.inReplyTo ? [`In-Reply-To: ${reply.inReplyTo}`] : []),
     ...(reply.references ? [`References: ${reply.references}`] : []),
   ]
-  const raw = base64UrlEncode(`${headers.join('\r\n')}\r\n\r\n${bodyText}`)
+  const mimeBody = hasBenchmarkAttachment
+    ? [
+        `--${boundary}`,
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        bodyText,
+        `--${boundary}`,
+        'Content-Type: application/pdf',
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${attachmentName}"`,
+        '',
+        attachmentBase64.replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'),
+        `--${boundary}--`,
+      ].join('\r\n')
+    : bodyText
+  const raw = base64UrlEncode(`${headers.join('\r\n')}\r\n\r\n${mimeBody}`)
   const draft = await googleRequest<{ id?: string; message?: GmailMessage }>(
     admin,
     userId,

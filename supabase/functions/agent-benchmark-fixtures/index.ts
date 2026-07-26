@@ -98,6 +98,12 @@ async function sendFixtureEmail(
       in_reply_to_message_id: argumentsValue.in_reply_to_message_id
         ? String(argumentsValue.in_reply_to_message_id)
         : null,
+      ...(argumentsValue.attachment_name && argumentsValue.attachment_base64
+        ? {
+            benchmark_attachment_name: String(argumentsValue.attachment_name),
+            benchmark_attachment_base64: String(argumentsValue.attachment_base64),
+          }
+        : {}),
     }
     const draft = await executeGoogleTool(
       admin,
