@@ -907,6 +907,14 @@ function agentUpdateToast(run: AgentRun) {
   return 'Roon is working through this task'
 }
 
+function clearAgentToast(expected: string) {
+  window.setTimeout(() => {
+    if (toast !== expected) return
+    toast = ''
+    render()
+  }, 2400)
+}
+
 async function startAgentRun(task: Task, context = '') {
   const existing = agentRuns.get(task.id)
   if (context && existing?.status === 'needs_context' && existing.durable && activeUser) {
@@ -929,6 +937,7 @@ async function startAgentRun(task: Task, context = '') {
       agentDecisionBusy.delete(existing.id)
       persistAgentRuns()
       render()
+      if (toast) clearAgentToast(toast)
     }
     return
   }
@@ -961,6 +970,7 @@ async function startAgentRun(task: Task, context = '') {
   } finally {
     persistAgentRuns()
     render()
+    if (toast) clearAgentToast(toast)
   }
 }
 
@@ -997,6 +1007,7 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
     agentDecisionBusy.delete(approval.id)
     persistAgentRuns()
     render()
+    if (toast) clearAgentToast(toast)
   }
 }
 
@@ -1021,6 +1032,7 @@ async function retryAgentRun(taskId: string) {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
     render()
+    if (toast) clearAgentToast(toast)
   }
 }
 
@@ -1040,6 +1052,7 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
     render()
+    if (toast) clearAgentToast(toast)
   }
 }
 
@@ -2605,6 +2618,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ? safeAgentHandoffUrl(run.result.paymentHandoffUrl)
     : ''
   const flightTask = run.capability === 'flight_search'
+  const awaitingFlightSelection = run.status === 'waiting_for_user' && flightOptions.length > 0 && !paymentHandoffUrl
   const needsGoogle = run.errorCode?.startsWith('google_') ||
     /connect google|reconnect google/i.test(run.waitingReason)
   const title = external ? 'Waiting' : 'Roon needs you'
@@ -2623,7 +2637,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
   return `<section class="task-agent-card task-agent-card--waiting">
     <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>${external ? 'Waiting' : 'Needs you'}</em></header>
     <p>${escapeHtml(run.waitingReason || title)}</p>
-    ${flightOptions.length && !paymentHandoffUrl ? `
+    ${awaitingFlightSelection ? `
       <div class="task-agent-flight-options">
         ${flightOptions.map(option => `<button type="button" data-action="select-agent-flight" data-task-id="${task.id}" data-flight-option-id="${escapeHtml(option.id)}" ${busy ? 'disabled' : ''}>
           <span><strong>${escapeHtml(option.label)}</strong><em>${escapeHtml(option.price)}</em></span>
@@ -2638,11 +2652,11 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
         <span>Your itinerary is selected. Payment and the final purchase remain under your control.</span>
         <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Continue to payment</a>
       </div>
-    ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(detail)}</span></div>`}
+    ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(external && flightTask ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>`}
     ${replySimulation}
     <footer>
       <button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>
-      ${flightOptions.length || paymentHandoffUrl ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Checking…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : 'Try again'}</button>`}
+      ${awaitingFlightSelection || paymentHandoffUrl ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Checking…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : 'Try again'}</button>`}
     </footer>
   </section>`
 }
