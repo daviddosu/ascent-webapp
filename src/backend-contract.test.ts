@@ -438,6 +438,12 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('notification-only email after a completed Calendar change does not require a reply watch')
   })
 
+  it('reclaims stalled safe browser work without retrying submissions', () => {
+    expect(taskAgentFunction).toContain("code: 'browser_worker_timeout'")
+    expect(taskAgentFunction).toContain("retryable: checkpoint.pendingOperation!.type !== 'submit'")
+    expect(taskAgentFunction).toContain("Date.now() - updatedAt > 120_000")
+  })
+
   it('keeps delayed-reply simulation behind explicit development gates', () => {
     expect(taskAgentFunction).toContain("Deno.env.get('SHOTCOUNT_ENABLE_DEMO_REPLY_SIMULATION') !== 'true'")
     expect(agentClient).toContain("{ action: 'simulate_reply', runId, simulationReply }")

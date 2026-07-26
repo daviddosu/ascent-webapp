@@ -1372,9 +1372,35 @@ async function pollBrowserExecutionRun(
   openaiKey?: string,
 ) {
   if (!run.browser_session_id) return run
-  const session = await loadOwnedBrowserSession(admin, run, run.browser_session_id)
-  if (!session || ['planning', 'working', 'waiting_external'].includes(session.status)) return run
-  const checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
+  let session = await loadOwnedBrowserSession(admin, run, run.browser_session_id)
+  if (!session) return run
+  let checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
+  if (['planning', 'working'].includes(session.status)) {
+    const updatedAt = Date.parse(safeString(session.updated_at, 80))
+    const stale = checkpoint.pendingOperation && Number.isFinite(updatedAt) && Date.now() - updatedAt > 120_000
+    if (!stale) return run
+    const timedOutOperation = {
+      ...checkpoint.pendingOperation!,
+      status: 'failed' as const,
+      error: {
+        code: 'browser_worker_timeout',
+        message: 'The browser worker stopped responding before this safe step finished.',
+        retryable: checkpoint.pendingOperation!.type !== 'submit',
+      },
+      completedAt: new Date().toISOString(),
+    }
+    checkpoint = { ...checkpoint, pendingOperation: null, lastOperation: timedOutOperation }
+    const recovered = await admin.from('browser_execution_sessions').update({
+      status: 'failed',
+      checkpoint,
+      worker_session_id: null,
+      last_observed_at: new Date().toISOString(),
+    }).eq('id', session.id).eq('updated_at', session.updated_at).select('*').maybeSingle()
+    if (recovered.error) throw new Error(recovered.error.message)
+    if (!recovered.data) return run
+    session = recovered.data
+  }
+  if (session.status === 'waiting_external') return run
   const operation = checkpoint.lastOperation
   if (!operation) return run
 
