@@ -249,6 +249,12 @@ export function isRecoverableBrowserRuntimeError(error: unknown) {
   return /target page, context or browser has been closed|browser has been closed|err_insufficient_resources|browsercontext\.newpage|page\.goto/i.test(message)
 }
 
+export function isRecoverableFlightReadError(error: unknown) {
+  return error instanceof BrowserExecutionError &&
+    error.retryable &&
+    ['flight_results_timeout'].includes(error.code)
+}
+
 async function sharedBrowser() {
   if (!sharedBrowserPromise) {
     sharedBrowserPromise = launchBrowser().catch(error => {
@@ -316,7 +322,10 @@ async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promi
       return await operation(browser, page)
     } catch (error) {
       lastError = error
-      if (!isRecoverableBrowserRuntimeError(error) || attempt === 1) throw error
+      if (
+        (!isRecoverableBrowserRuntimeError(error) && !isRecoverableFlightReadError(error)) ||
+        attempt === 1
+      ) throw error
       await recycleSharedBrowser(browser)
     } finally {
       await context?.close().catch(() => undefined)

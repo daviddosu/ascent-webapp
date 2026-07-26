@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildGoogleFlightsUrl,
+  BrowserExecutionError,
+  isRecoverableFlightReadError,
   isRecoverableBrowserRuntimeError,
   maxSharedBrowserUses,
   parseGoogleFlightListItem,
@@ -75,6 +77,19 @@ describe('flight browser worker', () => {
     expect(isRecoverableBrowserRuntimeError(new Error('browserContext.newPage: Target page, context or browser has been closed'))).toBe(true)
     expect(isRecoverableBrowserRuntimeError(new Error('page.goto: net::ERR_INSUFFICIENT_RESOURCES'))).toBe(true)
     expect(isRecoverableBrowserRuntimeError(new Error('The flight price changed'))).toBe(false)
+  })
+
+  it('retries a timed-out flight read in a fresh browser without retrying consequential failures', () => {
+    expect(isRecoverableFlightReadError(new BrowserExecutionError(
+      'flight_results_timeout',
+      'Google Flights took too long to return live options.',
+    ))).toBe(true)
+    expect(isRecoverableFlightReadError(new BrowserExecutionError(
+      'flight_price_or_schedule_changed',
+      'The flight changed.',
+      false,
+    ))).toBe(false)
+    expect(isRecoverableFlightReadError(new Error('submit timed out'))).toBe(false)
   })
 
   it('parses a live-result list item without retaining raw page text', () => {
