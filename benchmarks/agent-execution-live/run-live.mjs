@@ -297,7 +297,7 @@ async function driveRun({ admin, accessToken, publicKey, secret, id, task, prima
         replied = true
         await sleep(4000)
       }
-      await invokeAgent(accessToken, publicKey, { action: 'poll', runId })
+      await invokeAgent(accessToken, publicKey, { action: 'poll', runId }).catch(() => null)
       await sleep(3000)
       continue
     }

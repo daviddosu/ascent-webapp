@@ -617,6 +617,7 @@ async function recordAction(
     .eq('user_id', run.user_id)
     .eq('tool_name', toolName)
     .eq('idempotency_key', idempotencyKey)
+    .limit(1)
     .maybeSingle()
   if (existing.data) return existing.data
 
@@ -1396,6 +1397,7 @@ async function pollBrowserExecutionRun(
         error_code: errorCode,
         error: message,
         retryable: true,
+        external_correlation_id: null,
         lease_owner: null,
         lease_expires_at: null,
       })
