@@ -528,4 +528,17 @@ async function main() {
   }
 }
 
-await main()
+if (fileURLToPath(import.meta.url) === resolve(process.argv[1] ?? '')) await main()
+
+export {
+  apiKeys,
+  benchmarkRunId,
+  cleanupFixture,
+  collectProviderState,
+  fixture,
+  replyFromSecondary,
+  resultFromState,
+  setupFixture,
+  verifyRun,
+  writeResults,
+}

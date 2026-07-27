@@ -8,7 +8,7 @@ import {
 type AdminClient = SupabaseClient<any, 'public', 'public', any, any>
 
 type RequestBody = {
-  action?: 'status' | 'google_tool' | 'send_fixture_email' | 'delete_fixture_draft'
+  action?: 'status' | 'google_tool' | 'send_fixture_email' | 'delete_fixture_draft' | 'cleanup_generic_adapters'
   benchmarkRunId?: string
   userId?: string
   toolName?: string
@@ -19,6 +19,9 @@ const allowedTools = new Set([
   'gmail.search_messages',
   'gmail.read_message',
   'gmail.read_thread',
+  'gmail.create_draft',
+  'gmail.send_message',
+  'contacts.find_contact',
   'calendar.list_events',
   'calendar.get_availability',
   'calendar.create_event',
@@ -173,7 +176,41 @@ Deno.serve(async request => {
         body.arguments ?? {},
         `fixture-${benchmarkRunId.replaceAll('/', '-')}-${toolName}-${await shortHash(body.arguments ?? {})}`,
       )
-      return json({ value: result.value, providerActionId: result.providerActionId ?? null })
+      let adapterRunId: string | null = null
+      if (toolName === 'gmail.create_draft') {
+        const taskId = `generic-draft-${benchmarkRunId.replaceAll('/', '-')}-${await shortHash(result.value)}`
+        const runResult = await admin.from('agent_runs').insert({
+          user_id: integration.user_id,
+          task_id: taskId,
+          status: 'running',
+          objective: 'Generic benchmark Gmail provider adapter',
+          context: { generic_benchmark_adapter: true, benchmark_run_id: benchmarkRunId },
+          capability: 'gmail',
+          strategy: 'structured',
+          intent: {},
+          plan: [],
+          progress: [],
+          task_completion_policy: 'external_change',
+        }).select('id').single()
+        if (runResult.error || !runResult.data) throw new Error(runResult.error?.message ?? 'Could not record generic draft adapter.')
+        adapterRunId = runResult.data.id
+        const actionResult = await admin.from('agent_actions').insert({
+          run_id: adapterRunId,
+          user_id: integration.user_id,
+          step_index: 0,
+          tool_name: 'gmail.create_draft',
+          risk: 'prepare',
+          status: 'succeeded',
+          arguments: body.arguments ?? {},
+          output: result.value,
+          public_summary: 'Prepared a Gmail draft for review.',
+          idempotency_key: taskId,
+          provider_action_id: result.providerActionId ?? null,
+          completed_at: new Date().toISOString(),
+        })
+        if (actionResult.error) throw new Error(actionResult.error.message)
+      }
+      return json({ value: result.value, providerActionId: result.providerActionId ?? null, adapterRunId })
     }
     if (body.action === 'send_fixture_email') {
       const value = await sendFixtureEmail(
@@ -188,6 +225,14 @@ Deno.serve(async request => {
       const draftId = String(body.arguments?.draft_id ?? '')
       if (!draftId) return json({ error: 'Draft ID required' }, 400)
       return json({ value: await deleteGoogleBenchmarkDraft(admin, integration.user_id, draftId) })
+    }
+    if (body.action === 'cleanup_generic_adapters') {
+      const result = await admin.from('agent_runs')
+        .delete()
+        .eq('user_id', integration.user_id)
+        .contains('context', { generic_benchmark_adapter: true, benchmark_run_id: benchmarkRunId })
+      if (result.error) throw new Error(result.error.message)
+      return json({ value: { deleted: true } })
     }
     return json({ error: 'Unknown fixture action' }, 400)
   } catch (error) {
