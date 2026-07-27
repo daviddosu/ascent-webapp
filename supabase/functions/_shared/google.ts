@@ -491,6 +491,10 @@ async function sentMessageForPreparedDraft(
   return existing.messages[0] ?? null
 }
 
+export function hasConfirmedSentMessage(value: { id?: string } | null | undefined) {
+  return Boolean(value?.id)
+}
+
 async function gmailSendDraft(
   admin: AdminClient,
   userId: string,
@@ -538,7 +542,7 @@ async function gmailSendDraft(
   if (messageIdHeader) {
     const existing = await gmailSearch(admin, userId, `in:sent rfc822msgid:${messageIdHeader}`, 1)
     const existingMessage = existing.messages[0]
-    if (existingMessage?.id) {
+    if (hasConfirmedSentMessage(existingMessage)) {
       return {
         message_id: existingMessage.id,
         thread_id: existingMessage.thread_id,
@@ -615,10 +619,13 @@ async function calendarAvailability(admin: AdminClient, userId: string, argument
 
 type GoogleCalendarEvent = {
   id?: string
+  summary?: string
+  description?: string
   status?: string
   transparency?: string
   start?: { dateTime?: string; date?: string; timeZone?: string }
   end?: { dateTime?: string; date?: string; timeZone?: string }
+  attendees?: Array<{ email?: string; responseStatus?: string }>
   extendedProperties?: { private?: Record<string, string> }
 }
 
@@ -842,7 +849,17 @@ async function calendarUpdateEvent(
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
-  return { ...updated, already_updated: false }
+  return {
+    ...updated,
+    already_updated: false,
+    shotcount_previous_event: {
+      summary: current.summary ?? '',
+      description: current.description ?? '',
+      start: current.start ?? null,
+      end: current.end ?? null,
+      attendee_emails: (current.attendees ?? []).map(attendee => attendee.email).filter(Boolean),
+    },
+  }
 }
 
 async function calendarDeleteEvent(
@@ -945,7 +962,7 @@ export async function executeGoogleTool(
       const value = await calendarUpdateEvent(admin, userId, argumentsValue, idempotencyKey)
       return {
         value,
-        providerActionId: String(value.id ?? argumentsValue.event_id),
+        providerActionId: String(argumentsValue.event_id),
         publicSummary: 'Google Calendar confirmed the event was updated.',
       }
     }

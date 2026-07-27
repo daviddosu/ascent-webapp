@@ -16,6 +16,7 @@ const tracesDir = resolve(here, 'traces')
 mkdirSync(resultsDir, { recursive: true })
 mkdirSync(tracesDir, { recursive: true })
 const rerun = process.argv.includes('--rerun')
+const resultName = process.argv.find(value => value.startsWith('--result-name='))?.split('=')[1] || (rerun ? 'rerun' : 'raw')
 const scenarioArg = process.argv.find(value => value.startsWith('--scenarios='))?.split('=')[1]
 const selectedScenarios = scenarioArg ? new Set(scenarioArg.split(',').filter(Boolean)) : null
 
@@ -353,7 +354,7 @@ async function main() {
       const verification = classify(scenario, driven.state, evidence, driven)
       const measuredUsage = usage(driven.state.events)
       const trace = traceFor(scenario, driven.state, evidence, driven, verification)
-      writeFileSync(resolve(tracesDir, `${scenario.id}${rerun ? '-rerun' : ''}.json`), `${JSON.stringify(trace, null, 2)}\n`)
+      writeFileSync(resolve(tracesDir, `${scenario.id}-${resultName}.json`), `${JSON.stringify(trace, null, 2)}\n`)
       results.push({
         scenario: scenario.id, category: scenario.category, result: verification.success ? 'PASS' : 'FAIL',
         primaryFailureClass: verification.primaryClass, exactMechanism: verification.exactMechanism,
@@ -372,7 +373,7 @@ async function main() {
       if (state) await cleanup(secret, primary, scenario, benchmarkRunId, state, initialIds)
       process.stdout.write(`${scenario.id}: FAIL · F. PROVIDER · ${error.message}\n`)
     }
-    writeFileSync(resolve(resultsDir, rerun ? 'rerun.json' : 'raw.json'), `${JSON.stringify({ model: 'gpt-5.6-luna', reasoningEffort: 'low', evaluatedCommit: benchmarkCommit, runs: results }, null, 2)}\n`)
+    writeFileSync(resolve(resultsDir, `${resultName}.json`), `${JSON.stringify({ model: 'gpt-5.6-luna', reasoningEffort: 'low', evaluatedCommit: benchmarkCommit, runs: results }, null, 2)}\n`)
   }
 }
 

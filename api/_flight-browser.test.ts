@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   buildGoogleFlightsUrl,
   BrowserExecutionError,
+  chooseFlightCandidate,
   isRecoverableFlightReadError,
   isRecoverableBrowserRuntimeError,
   maxSharedBrowserUses,
+  maximumFlightSelectionAttempts,
   parseGoogleFlightListItem,
   rankFlightOptions,
   shouldReloadFlightResults,
@@ -95,6 +97,25 @@ describe('flight browser worker', () => {
 
   it('keeps each worker invocation isolated to one browser lifecycle', () => {
     expect(maxSharedBrowserUses).toBe(1)
+  })
+
+  it('re-identifies a stale itinerary after result cards reorder and ids change', () => {
+    const expected = rankFlightOptions(results, input)[0]!
+    const changedId = { ...expected, id: 'changed-card-id' }
+    const unrelated = { ...rankFlightOptions(results, input)[1]!, id: 'first-after-reorder' }
+    const chosen = chooseFlightCandidate([unrelated, changedId], expected)
+    expect(chosen?.candidate).toMatchObject({ id: 'changed-card-id', airline: expected.airline })
+    expect(chosen!.score).toBeGreaterThanOrEqual(80)
+  })
+
+  it('does not select a reordered card that no longer matches the itinerary facts', () => {
+    const expected = rankFlightOptions(results, input)[0]!
+    const changed = { ...expected, id: 'changed', airline: 'Different Air', route: 'LOS–CDG' }
+    expect(chooseFlightCandidate([changed], expected)).toBeNull()
+  })
+
+  it('bounds safe selection retries', () => {
+    expect(maximumFlightSelectionAttempts).toBe(3)
   })
 
   it('recognizes explicit Google Flights provider failure states', () => {

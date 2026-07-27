@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { safeBrowserRetryDelayMs } from './browser-retry.ts'
+import { isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs } from './browser-retry.ts'
 
 Deno.test('safe browser reads back off between durable worker attempts', () => {
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'browser_worker_failed', 1), 8_000)
@@ -11,4 +11,9 @@ Deno.test('safe browser reads back off between durable worker attempts', () => {
 Deno.test('consequential submissions and exhausted reads never retry automatically', () => {
   assertEquals(safeBrowserRetryDelayMs('submit', 'browser_worker_failed', 1), null)
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'browser_worker_failed', 3), null)
+})
+
+Deno.test('immediate selection retries only the known PostgREST single-object coercion race', () => {
+  assertEquals(isTransientSingleObjectCoercionError('JSON object requested, multiple (or no) rows returned: cannot coerce the result to a single JSON object'), true)
+  assertEquals(isTransientSingleObjectCoercionError('duplicate key violates unique constraint'), false)
 })

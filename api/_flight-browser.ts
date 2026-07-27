@@ -50,17 +50,26 @@ export type FlightSelectionResult = {
   observedAt: string
   paymentBoundaryReached: true
   resumable: true
+  selectionTrace: FlightSelectionTraceEvent[]
+}
+
+export type FlightSelectionTraceEvent = {
+  stage: string
+  at: string
+  details: Record<string, unknown>
 }
 
 export class BrowserExecutionError extends Error {
   code: string
   retryable: boolean
+  details?: Record<string, unknown>
 
-  constructor(code: string, message: string, retryable = true) {
+  constructor(code: string, message: string, retryable = true, details?: Record<string, unknown>) {
     super(message)
     this.name = 'BrowserExecutionError'
     this.code = code
     this.retryable = retryable
+    this.details = details
   }
 }
 
@@ -335,80 +344,159 @@ export async function runLiveFlightSearch(input: FlightSearchInput): Promise<Fli
   })
 }
 
-async function flightListItem(page: Page, option: FlightOption) {
-  const exact = page.locator('li:visible')
-    .filter({ hasText: option.airline })
-    .filter({ hasText: option.price })
-    .filter({ hasText: option.duration })
-  if (await exact.count()) return exact.first()
+type FlightCardCandidate = {
+  index: number
+  option: Omit<FlightOption, 'label'>
+  score: number
+}
 
-  const changed = page.locator('li:visible')
-    .filter({ hasText: option.airline })
-    .filter({ hasText: option.duration })
-  if (await changed.count()) {
-    throw new BrowserExecutionError(
-      'flight_price_or_schedule_changed',
-      'This flight changed since the search. Run the search again before continuing.',
-      false,
-    )
+export function flightOptionMatchScore(
+  candidate: Pick<FlightOption, 'id' | 'airline' | 'route' | 'departureTime' | 'durationMinutes' | 'stopCount' | 'amount'>,
+  expected: Pick<FlightOption, 'id' | 'airline' | 'route' | 'departureTime' | 'durationMinutes' | 'stopCount' | 'amount'>,
+) {
+  if (candidate.id === expected.id) return 100
+  let score = 0
+  if (candidate.airline.toLocaleLowerCase() === expected.airline.toLocaleLowerCase()) score += 30
+  if (candidate.route === expected.route) score += 25
+  if (candidate.departureTime === expected.departureTime) score += 15
+  if (candidate.durationMinutes === expected.durationMinutes) score += 10
+  if (candidate.stopCount === expected.stopCount) score += 10
+  if (candidate.amount === expected.amount) score += 10
+  return score
+}
+
+export function chooseFlightCandidate<T extends Pick<FlightOption, 'id' | 'airline' | 'route' | 'departureTime' | 'durationMinutes' | 'stopCount' | 'amount'>>(
+  candidates: T[],
+  expected: FlightOption,
+) {
+  const ranked = candidates
+    .map(candidate => ({ candidate, score: flightOptionMatchScore(candidate, expected) }))
+    .sort((left, right) => right.score - left.score)
+  return ranked[0]?.score >= 80 ? ranked[0] : null
+}
+
+export const maximumFlightSelectionAttempts = 3
+
+function traceEvent(
+  trace: FlightSelectionTraceEvent[],
+  stage: string,
+  details: Record<string, unknown>,
+) {
+  trace.push({ stage, at: new Date().toISOString(), details })
+}
+
+async function visibleFlightCandidates(
+  page: Page,
+  input: FlightSearchInput,
+  searchUrl: string,
+  expected: FlightOption,
+) {
+  const cards = page.locator('li:visible, [role="listitem"]:visible')
+  const texts = await cards.allInnerTexts()
+  const candidates: FlightCardCandidate[] = []
+  const seen = new Set<string>()
+  for (const [index, text] of texts.entries()) {
+    const option = parseGoogleFlightListItem(text, input.currency, searchUrl)
+    if (!option || option.stopCount > input.maxStops || seen.has(option.id)) continue
+    seen.add(option.id)
+    candidates.push({ index, option, score: flightOptionMatchScore(option, expected) })
   }
-  throw new BrowserExecutionError(
-    'flight_sold_out',
-    'This flight is no longer available. Run the search again for current options.',
-    false,
+  return { cards, candidates }
+}
+
+async function expectedFlightStageReady(page: Page, expectedStage: 'returning_flights' | 'booking_options') {
+  if (expectedStage === 'booking_options') {
+    return new URL(page.url()).pathname.startsWith('/travel/flights/booking')
+  }
+  return page.getByText(/Returning flights/i).count().then(count => count > 0).catch(() => false)
+}
+
+async function waitForFlightStage(page: Page, expectedStage: 'returning_flights' | 'booking_options', timeout: number) {
+  await page.waitForFunction(
+    stage => stage === 'booking_options'
+      ? window.location.pathname.startsWith('/travel/flights/booking')
+      : /Returning flights/i.test(document.body.innerText),
+    expectedStage,
+    { timeout },
   )
 }
 
-async function activateFlightCard(
+async function activateFlightOption(
   page: Page,
-  item: ReturnType<Page['locator']>,
-  expectedText: string,
+  input: FlightSearchInput,
+  expected: FlightOption,
+  expectedStage: 'returning_flights' | 'booking_options',
+  trace: FlightSelectionTraceEvent[],
 ) {
-  const selectLink = item.locator(
-    '[role="link"][aria-label*="Select flight" i]:visible',
-  )
-  const cardAction = item.locator(
-    '[jsname="BXUrOb"][jsaction*="O1htCb"]:visible',
-  )
-  if (await cardAction.count()) {
-    // The current Google Flights card places a non-native role=link overlay
-    // behind the visible card contents. Click the card's own action surface so
-    // the trusted pointer event reaches the O1htCb selection handler.
-    await cardAction.first().click({ force: true })
-  }
-  else if (await selectLink.count()) await selectLink.first().click({ force: true })
-  else await item.click({ force: true })
-  const ready = (text: string) =>
-    text === 'Booking options'
-      ? window.location.pathname.startsWith('/travel/flights/booking')
-      : document.body.innerText.includes(text)
-  try {
-    await page.waitForFunction(
-      ready,
-      expectedText,
-      { timeout: 15_000 },
-    )
-    return
-  } catch {
-    // Google renders the itinerary action as a role=link overlay on a div,
-    // rather than a native anchor. Prefer the latest visible accessible
-    // control, which belongs to the card the user just selected.
-    const select = page.locator(
-      '[role="link"][aria-label*="Select flight" i]:visible',
-    )
-    if (!await select.count()) {
+  for (let attempt = 1; attempt <= maximumFlightSelectionAttempts; attempt += 1) {
+    if (await expectedFlightStageReady(page, expectedStage)) {
+      traceEvent(trace, 'post_click_state', { attempt, expectedStage, url: page.url(), alreadyReady: true })
+      return
+    }
+    const { cards, candidates } = await visibleFlightCandidates(page, input, expected.searchUrl, expected)
+    traceEvent(trace, 'candidate_cards_found', {
+      attempt,
+      count: candidates.length,
+      candidates: candidates.slice(0, 12).map(candidate => ({
+        index: candidate.index, id: candidate.option.id, airline: candidate.option.airline,
+        route: candidate.option.route, departureTime: candidate.option.departureTime,
+        durationMinutes: candidate.option.durationMinutes, stopCount: candidate.option.stopCount,
+        amount: candidate.option.amount, score: candidate.score,
+      })),
+    })
+    const chosen = chooseFlightCandidate(candidates.map(candidate => candidate.option), expected)
+    if (!chosen) {
       throw new BrowserExecutionError(
-        'flight_selection_failed',
-        'Google Flights did not expose a selectable itinerary.',
+        'flight_sold_out',
+        'This flight is no longer available. Run the search again for current options.',
+        false,
       )
     }
-    await select.last().click({ force: true })
-    await page.waitForFunction(
-      ready,
-      expectedText,
-      { timeout: 25_000 },
-    )
+    const selected = candidates.find(candidate => candidate.option.id === chosen.candidate.id)!
+    if (selected.option.amount !== expected.amount) {
+      throw new BrowserExecutionError(
+        'flight_price_changed',
+        'The flight price changed since the search. Review fresh options before continuing.',
+        false,
+      )
+    }
+    traceEvent(trace, 'chosen_candidate', {
+      attempt, id: selected.option.id, score: chosen.score, index: selected.index,
+      airline: selected.option.airline, route: selected.option.route,
+      amount: selected.option.amount, expectedStage,
+    })
+    const item = cards.nth(selected.index)
+    const targets = [
+      { name: 'card_action', locator: item.locator('[jsname="BXUrOb"][jsaction*="O1htCb"]:visible').first() },
+      { name: 'accessible_select_link', locator: item.locator('[role="link"][aria-label*="Select flight" i]:visible').first() },
+      { name: 'select_button', locator: item.getByRole('button', { name: /select/i }).first() },
+      { name: 'card', locator: item },
+    ]
+    const target = await (async () => {
+      for (const candidate of targets) if (await candidate.locator.count()) return candidate
+      return null
+    })()
+    if (!target) throw new BrowserExecutionError('flight_selection_failed', 'Google Flights did not expose a selectable itinerary.')
+    traceEvent(trace, 'selection_target', { attempt, target: target.name })
+    await target.locator.click({ force: target.name !== 'select_button', noWaitAfter: true }).catch(error => {
+      traceEvent(trace, 'stale_or_changed_target', { attempt, target: target.name, message: String(error).slice(0, 240) })
+    })
+    try {
+      await waitForFlightStage(page, expectedStage, attempt === maximumFlightSelectionAttempts ? 20_000 : 10_000)
+      traceEvent(trace, 'post_click_state', { attempt, expectedStage, url: page.url(), recovered: attempt > 1 })
+      return
+    } catch (error) {
+      traceEvent(trace, 'selection_retry', { attempt, reason: String(error).slice(0, 240), url: page.url() })
+      if (attempt < maximumFlightSelectionAttempts && !page.url().startsWith('https://www.google.com/travel/flights')) {
+        await openFlightSearch(page, expected.searchUrl)
+        traceEvent(trace, 'recovered_state', { attempt, url: page.url(), source: 'search_checkpoint' })
+      }
+    }
   }
+  throw new BrowserExecutionError(
+    'flight_selection_failed',
+    'Google Flights did not expose a selectable itinerary after bounded safe retries.',
+  )
 }
 
 function providerHandoffUrl(value: string) {
@@ -477,37 +565,30 @@ export async function resumeFlightSelection(
     )
   }
 
-  return withBrowser(async (_browser, page) => {
+  const selectionTrace: FlightSelectionTraceEvent[] = []
+  try {
+    return await withBrowser(async (_browser, page) => {
     await openFlightSearch(page, selectedOption.searchUrl)
-    const outbound = await flightListItem(page, selectedOption)
-    const liveOutbound = parseGoogleFlightListItem(
-      await outbound.innerText(),
-      input.currency,
-      selectedOption.searchUrl,
+    traceEvent(selectionTrace, 'selection_started', {
+      optionId, searchUrl: selectedOption.searchUrl, tripType: input.returnDate ? 'round_trip' : 'one_way',
+      constraints: { maxStops: input.maxStops, cabin: input.cabin, originCode: input.originCode, destinationCode: input.destinationCode },
+    })
+    await activateFlightOption(
+      page,
+      input,
+      selectedOption,
+      input.returnDate ? 'returning_flights' : 'booking_options',
+      selectionTrace,
     )
-    if (!liveOutbound || liveOutbound.amount !== selectedOption.amount) {
-      throw new BrowserExecutionError(
-        'flight_price_changed',
-        'The flight price changed since the search. Review fresh options before continuing.',
-        false,
-      )
-    }
-    await activateFlightCard(page, outbound, 'Returning flights')
 
-    const returnCandidates = page.locator('li:visible')
-      .filter({ hasText: selectedOption.airline })
-      .filter({ hasText: selectedOption.price })
-    const returnFlight = await returnCandidates.count()
-      ? returnCandidates.first()
-      : page.locator('li:visible').filter({ hasText: currencyPattern }).first()
-    if (!await returnFlight.count()) {
-      throw new BrowserExecutionError(
-        'return_flight_unavailable',
-        'The matching return flight is no longer available.',
-        false,
-      )
+    if (input.returnDate) {
+      const returnCards = page.locator('li:visible, [role="listitem"]:visible')
+      const texts = await returnCards.allInnerTexts()
+      const parsed = texts.map(text => parseGoogleFlightListItem(text, input.currency, selectedOption.searchUrl)).filter((option): option is Omit<FlightOption, 'label'> => Boolean(option))
+      const returnOption = parsed.find(option => option.airline === selectedOption.airline && option.stopCount <= input.maxStops) ?? parsed.find(option => option.stopCount <= input.maxStops)
+      if (!returnOption) throw new BrowserExecutionError('return_flight_unavailable', 'The matching return flight is no longer available.', false)
+      await activateFlightOption(page, input, { ...returnOption, label: 'Also worth considering' }, 'booking_options', selectionTrace)
     }
-    await activateFlightCard(page, returnFlight, 'Booking options')
     await page.waitForURL(
       url => url.hostname === 'www.google.com' && url.pathname.startsWith('/travel/flights/booking'),
       { timeout: 25_000 },
@@ -522,6 +603,12 @@ export async function resumeFlightSelection(
       )
     }
     const providerHandoff = await continueToProviderBooking(page).catch(() => null)
+    traceEvent(selectionTrace, 'handoff_verified', {
+      stage: providerHandoff ? 'provider_booking' : 'google_booking_options',
+      provider: providerHandoff?.provider ?? 'Google Flights',
+      hostname: new URL(providerHandoff?.url ?? handoffUrl).hostname,
+      paymentBoundaryReached: true,
+    })
     return {
       provider: 'Google Flights',
       selectedOption,
@@ -531,6 +618,13 @@ export async function resumeFlightSelection(
       observedAt: new Date().toISOString(),
       paymentBoundaryReached: true,
       resumable: true,
+      selectionTrace,
     }
-  })
+    })
+  } catch (error) {
+    if (error instanceof BrowserExecutionError) {
+      error.details = { ...(error.details ?? {}), selectionTrace }
+    }
+    throw error
+  }
 }

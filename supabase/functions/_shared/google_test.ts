@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { calendarEventBlocksTime, calendarQueryTimestamp } from './google.ts'
+import { calendarEventBlocksTime, calendarQueryTimestamp, hasConfirmedSentMessage } from './google.ts'
 
 Deno.test('calendar conflict checks ignore only transparent, cancelled, or edited events', () => {
   assertEquals(calendarEventBlocksTime({
@@ -31,4 +31,10 @@ Deno.test('calendar query timestamps resolve local wall time through the supplie
     calendarQueryTimestamp('2026-07-30T15:00:00+01:00', 'Africa/Lagos'),
     '2026-07-30T14:00:00.000Z',
   )
+})
+
+Deno.test('confirmed Gmail provider evidence prevents duplicate draft sends', () => {
+  assertEquals(hasConfirmedSentMessage({ id: 'provider-message-id' }), true)
+  assertEquals(hasConfirmedSentMessage({}), false)
+  assertEquals(hasConfirmedSentMessage(null), false)
 })

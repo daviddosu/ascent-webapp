@@ -102,7 +102,7 @@ function searchInput(argumentsValue: Record<string, unknown>): FlightSearchInput
 
 function publicError(error: unknown) {
   if (error instanceof BrowserExecutionError) {
-    return { code: error.code, message: error.message, retryable: error.retryable }
+    return { code: error.code, message: error.message, retryable: error.retryable, details: error.details }
   }
   return {
     code: 'browser_worker_failed',

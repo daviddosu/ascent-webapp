@@ -13,7 +13,10 @@ import {
   GoogleIntegrationError,
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, needsSharedAgentContext } from '../_shared/agent-intent.ts'
-import { safeBrowserRetryDelayMs } from '../_shared/browser-retry.ts'
+import { isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs } from '../_shared/browser-retry.ts'
+import {
+  verifyScheduleNotificationDraft,
+} from '../_shared/schedule-notification.ts'
 
 type RequestBody = {
   action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'cancel' | 'select_flight' | 'simulate_reply' | 'plan_tasks'
@@ -125,7 +128,7 @@ type BrowserCheckpoint = {
     type: BrowserOperation['type']
     status: 'succeeded' | 'failed'
     output?: Record<string, unknown>
-    error?: { code?: string; message?: string; retryable?: boolean }
+    error?: { code?: string; message?: string; retryable?: boolean; details?: Record<string, unknown> }
     completedAt?: string
   }
   flightSearch?: {
@@ -468,6 +471,14 @@ async function approvalPayload(
     ) {
       throw new Error('The send action changed after the Gmail draft was prepared.')
     }
+    const scheduleVerification = await verifyPreparedScheduleNotification(
+      admin,
+      run,
+      argumentsValue,
+    )
+    if (scheduleVerification.applicable && !scheduleVerification.valid) {
+      throw new Error('The schedule notification does not match the verified Calendar change.')
+    }
     payload.preview = {
       to: draftArguments.to,
       subject: draftArguments.subject,
@@ -505,6 +516,68 @@ async function approvalPayload(
     payload.preview = argumentsValue
   }
   return payload
+}
+
+async function verifyPreparedScheduleNotification(
+  admin: AdminClient,
+  run: AgentRunRow,
+  sendArguments: Record<string, unknown>,
+) {
+  const draftId = safeString(sendArguments.draft_id, 256)
+  const [updateResult, draftResult] = await Promise.all([
+    admin.from('agent_actions')
+      .select('arguments,output')
+      .eq('run_id', run.id)
+      .eq('user_id', run.user_id)
+      .eq('tool_name', 'calendar.update_event')
+      .eq('status', 'succeeded')
+      .order('completed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin.from('agent_actions')
+      .select('arguments,output')
+      .eq('run_id', run.id)
+      .eq('user_id', run.user_id)
+      .eq('tool_name', 'gmail.create_draft')
+      .eq('status', 'succeeded')
+      .eq('output->>draft_id', draftId)
+      .limit(1)
+      .maybeSingle(),
+  ])
+  if (updateResult.error || draftResult.error) {
+    throw new Error('The schedule notification evidence could not be loaded.')
+  }
+  if (!updateResult.data?.arguments || !updateResult.data.output || !draftResult.data?.arguments) {
+    return { applicable: false, valid: true, issues: [] as string[], canonical: null }
+  }
+  const updateArguments = updateResult.data.arguments as Record<string, unknown>
+  const updated = updateResult.data.output as Record<string, unknown>
+  const previous = updated.shotcount_previous_event as Record<string, unknown> | undefined
+  const previousStart = previous?.start as Record<string, unknown> | undefined
+  const previousEnd = previous?.end as Record<string, unknown> | undefined
+  const updatedStart = updated.start as Record<string, unknown> | undefined
+  const updatedEnd = updated.end as Record<string, unknown> | undefined
+  const oldStart = safeString(previousStart?.dateTime, 64)
+  const oldEnd = safeString(previousEnd?.dateTime, 64)
+  const newStart = safeString(updatedStart?.dateTime ?? updateArguments.start, 64)
+  const newEnd = safeString(updatedEnd?.dateTime ?? updateArguments.end, 64)
+  const timezone = safeString(
+    updateArguments.timezone ?? updatedStart?.timeZone ?? previousStart?.timeZone ?? run.context.timezone,
+    120,
+  )
+  const attendeeEmails = Array.isArray(previous?.attendee_emails)
+    ? previous.attendee_emails.map(value => safeString(value, 320)).filter(Boolean)
+    : []
+  if (!oldStart || !oldEnd || !newStart || !newEnd || !timezone || !attendeeEmails.length) {
+    return { applicable: false, valid: true, issues: [] as string[], canonical: null }
+  }
+  const draft = draftResult.data.arguments as Record<string, unknown>
+  const verification = verifyScheduleNotificationDraft({
+    to: Array.isArray(draft.to) ? draft.to.map(value => safeString(value, 320)) : [],
+    subject: safeString(draft.subject, 998),
+    bodyText: safeString(draft.body_text, 20_000),
+  }, { attendeeEmails, oldStart, oldEnd, newStart, newEnd, timezone })
+  return { applicable: true, ...verification }
 }
 
 async function addEvent(
@@ -1459,6 +1532,7 @@ async function pollBrowserExecutionRun(
         retry_not_before: new Date(retryAt).toISOString(),
       })
       if (Date.now() < retryAt) return waiting
+      if (!openaiKey) return waiting
       const retried = await retryWaitingProviderAction(admin, waiting, openaiKey)
       return retried ?? waiting
     }
@@ -2156,7 +2230,7 @@ async function selectFlightOption(
     )
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
-    if (!/coerce the result to a single json object/i.test(message)) throw error
+    if (!isTransientSingleObjectCoercionError(message)) throw error
     // A browser completion poll and an immediate user selection can briefly
     // overlap at the PostgREST representation boundary. This retry only
     // records the task-owned selection intent; it does not dispatch or repeat
@@ -2301,6 +2375,56 @@ async function advanceRun(
       })
       await addEvent(admin, current, 'agent_waiting_for_user', current.status, current.waiting_reason, { tool_name: toolName })
       return current
+    }
+    if (toolName === 'gmail.send_message') {
+      const verification = await verifyPreparedScheduleNotification(admin, current, argumentsValue)
+      if (verification.applicable && !verification.valid) {
+        const reconstructionAttempts = Number(current.context?.schedule_notification_reconstruction_attempts ?? 0)
+        await addEvent(
+          admin,
+          current,
+          'agent_schedule_notification_rejected',
+          reconstructionAttempts < 1 ? 'running' : 'waiting_for_user',
+          'The drafted schedule notification did not match the verified Calendar change.',
+          {
+            issues: verification.issues,
+            canonical: verification.canonical,
+            reconstruction_attempts: reconstructionAttempts,
+            model_reasoning_mismatch: true,
+            sol_escalation_eligible: reconstructionAttempts >= 1,
+          },
+        )
+        if (reconstructionAttempts < 1) {
+          history.push({
+            type: 'function_call_output',
+            call_id: safeString(call.call_id, 256),
+            output: JSON.stringify({
+              ok: false,
+              error_code: 'schedule_notification_mismatch',
+              error_message: 'Recreate the Gmail draft once using only these verified Calendar values.',
+              issues: verification.issues,
+              canonical_schedule_values: verification.canonical,
+            }),
+          })
+          current = await updateRun(admin, current, {
+            context: {
+              ...(current.context ?? {}),
+              schedule_notification_reconstruction_attempts: 1,
+            },
+          })
+          await saveModelHistory(admin, current, history, response.id)
+          continue
+        }
+        current = await updateRun(admin, current, {
+          status: 'waiting_for_user',
+          waiting_reason: 'The schedule notification still conflicts with the verified Calendar change. Nothing was sent.',
+          error_code: 'schedule_notification_mismatch',
+          error_message: 'The model repeatedly misinterpreted structured schedule data.',
+          lease_owner: null,
+          lease_expires_at: null,
+        })
+        return current
+      }
     }
     if (policy.approvalKind) {
       return pauseForApproval(admin, current, toolName, safeString(call.call_id, 256), argumentsValue)
