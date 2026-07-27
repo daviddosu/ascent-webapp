@@ -2144,14 +2144,36 @@ async function selectFlightOption(
     session_id: run.browser_session_id,
     option_id: optionId,
   }
-  const action = await recordAction(
-    admin,
-    run,
-    'browser.select_flight',
-    '',
-    argumentsValue,
-    'running',
-  )
+  let action
+  try {
+    action = await recordAction(
+      admin,
+      run,
+      'browser.select_flight',
+      '',
+      argumentsValue,
+      'running',
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (!/coerce the result to a single json object/i.test(message)) throw error
+    // A browser completion poll and an immediate user selection can briefly
+    // overlap at the PostgREST representation boundary. This retry only
+    // records the task-owned selection intent; it does not dispatch or repeat
+    // the browser operation itself.
+    await new Promise(resolvePromise => setTimeout(resolvePromise, 150))
+    const current = await loadOwnedRun(admin, run.user_id, run.id)
+    if (!current || current.status !== 'waiting_for_user') throw error
+    action = await recordAction(
+      admin,
+      current,
+      'browser.select_flight',
+      '',
+      argumentsValue,
+      'running',
+    )
+    run = current
+  }
   const operation: BrowserOperation = {
     id: String(action.idempotency_key),
     type: 'select_flight',

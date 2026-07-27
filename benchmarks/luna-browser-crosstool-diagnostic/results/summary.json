@@ -1,0 +1,27 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "baseline": {
+    "runs": 5,
+    "successful": 3,
+    "successRate": 0.6,
+    "executionPrecision": 1,
+    "duplicateOrUnintendedSideEffects": 0,
+    "totalInferenceCostUsd": 0.035181,
+    "costPerRunUsd": 0.007036,
+    "costPerSuccessUsd": 0.011727
+  },
+  "targetedRerun": {
+    "runs": 4,
+    "successful": 1,
+    "successRate": 0.25,
+    "executionPrecision": 1,
+    "duplicateOrUnintendedSideEffects": 0,
+    "totalInferenceCostUsd": 0.02381,
+    "costPerRunUsd": 0.005952,
+    "costPerSuccessUsd": 0.02381
+  },
+  "totalInferenceCostUsd": 0.058991,
+  "browserConclusion": "Not viable as the default yet: search-only passed, but both payment-handoff paths failed in the selection worker after valid results were found.",
+  "crossToolConclusion": "Promising but not yet an unconditional default: both untouched runs passed, while the passing-control rerun exposed one Luna reasoning error in the notification wording."
+}

@@ -1,0 +1,128 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "evaluatedCommit": "7ca79ab812d419c0801d5db11c12bac58df7e8d4",
+  "runs": [
+    {
+      "scenario": "browser-search",
+      "category": "Browser",
+      "result": "PASS",
+      "primaryFailureClass": "NONE",
+      "exactMechanism": "",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.006657,
+      "usage": {
+        "calls": 2,
+        "input": 6211,
+        "cached": 3037,
+        "cacheWrite": 3168,
+        "output": 176
+      },
+      "finalState": "waiting_for_user",
+      "runId": "859eb827-ba27-4c5d-9536-f1b39d5bc9cc",
+      "browserSessionId": "7e3ebe95-662c-4b8c-bacd-0a9ab531015f",
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T11:08:25.787Z",
+      "finishedAt": "2026-07-27T11:08:49.580Z",
+      "note": "The untouched run returned three real, constraint-valid options with the cheapest observed option ranked first. The first diagnostic verifier incorrectly parsed the display string \"1 stop\" as a number; this reporting correction does not rerun or change the product result."
+    },
+    {
+      "scenario": "browser-handoff",
+      "category": "Browser",
+      "result": "FAIL",
+      "primaryFailureClass": "D. TOOL / DATA COERCION",
+      "exactMechanism": "The immediate selection request collided with a transient PostgREST single-object response boundary and failed with “Cannot coerce the result to a single JSON object” before browser.select_flight was recorded.",
+      "harnessFixJustified": true,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.00277,
+      "usage": {
+        "calls": 2,
+        "input": 6238,
+        "cached": 5849,
+        "cacheWrite": 383,
+        "output": 191
+      },
+      "finalState": "failed",
+      "runId": "6a17b998-97c3-4e26-958e-b4d8abca96bf",
+      "browserSessionId": "08be43be-6188-45d2-9a6d-9f2eb0a02caf",
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T11:08:49.580Z",
+      "finishedAt": "2026-07-27T11:09:07.150Z"
+    },
+    {
+      "scenario": "browser-recovery",
+      "category": "Browser",
+      "result": "FAIL",
+      "primaryFailureClass": "B. BROWSER INFRASTRUCTURE",
+      "exactMechanism": "The injected read-only target closure was detected and the search recovered from its checkpoint, but the selection worker later exhausted its bounded retries because Google Flights exposed no selectable itinerary.",
+      "harnessFixJustified": true,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.002639,
+      "usage": {
+        "calls": 2,
+        "input": 6220,
+        "cached": 5847,
+        "cacheWrite": 367,
+        "output": 177
+      },
+      "finalState": "waiting_for_user",
+      "runId": "e3ce16c8-c494-493a-a66c-ae9b7a3f68f5",
+      "browserSessionId": "aedfdc12-52a7-43cf-bd4a-773f23b88a9b",
+      "recoveryInjected": true,
+      "startedAt": "2026-07-27T11:09:07.151Z",
+      "finishedAt": "2026-07-27T11:10:34.887Z"
+    },
+    {
+      "scenario": "email-calendar",
+      "category": "Cross-tool",
+      "result": "PASS",
+      "primaryFailureClass": "NONE",
+      "exactMechanism": "",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.010371,
+      "usage": {
+        "calls": 6,
+        "input": 22590,
+        "cached": 20826,
+        "cacheWrite": 1746,
+        "output": 669
+      },
+      "finalState": "completed",
+      "runId": "d8d36cd3-b5a7-4767-8261-b45fd3219dd5",
+      "browserSessionId": null,
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T11:10:34.889Z",
+      "finishedAt": "2026-07-27T11:11:49.410Z"
+    },
+    {
+      "scenario": "calendar-email",
+      "category": "Cross-tool",
+      "result": "PASS",
+      "primaryFailureClass": "NONE",
+      "exactMechanism": "",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.012744,
+      "usage": {
+        "calls": 7,
+        "input": 29696,
+        "cached": 27222,
+        "cacheWrite": 2453,
+        "output": 731
+      },
+      "finalState": "completed",
+      "runId": "e71d54b0-9d9c-434f-884f-04ffe8309cd1",
+      "browserSessionId": null,
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T11:11:51.791Z",
+      "finishedAt": "2026-07-27T11:12:23.389Z"
+    }
+  ]
+}

@@ -1,0 +1,415 @@
+{
+  "scenario": "browser-search",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "runId": "f63a2cf3-c141-454f-a17e-2f0c5cec0060",
+  "browserSessionId": "67e7d7ee-ad90-4adf-acf4-68cf55f5f5ae",
+  "controls": {
+    "recoveryInjected": false,
+    "controlledReplyInjected": false,
+    "flightOptionSelected": false
+  },
+  "events": [
+    {
+      "at": "2026-07-27T11:34:24.222032+00:00",
+      "type": "model_decision",
+      "status": "run_started",
+      "detail": {
+        "title": "Find cheapest valid London flight",
+        "category": "Browser"
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:26.766285+00:00",
+      "type": "tool",
+      "tool": "browser.start_session",
+      "arguments": {
+        "objective": "Find the cheapest valid one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, and stop before booking or payment.",
+        "allowed_domains": [
+          "www.google.com"
+        ]
+      },
+      "resultType": "succeeded",
+      "providerActionId": "67e7d7ee-ad90-4adf-acf4-68cf55f5f5ae",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:34:29.351691+00:00",
+      "type": "tool",
+      "tool": "browser.search_flights",
+      "arguments": {
+        "cabin": "economy",
+        "currency": "USD",
+        "max_stops": 1,
+        "session_id": "67e7d7ee-ad90-4adf-acf4-68cf55f5f5ae",
+        "origin_code": "LOS",
+        "return_date": null,
+        "budget_amount": null,
+        "departure_date": "2026-09-17",
+        "destination_code": "LON",
+        "preferred_airlines": []
+      },
+      "resultType": "succeeded",
+      "providerActionId": "67e7d7ee-ad90-4adf-acf4-68cf55f5f5ae",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:34:24.330438+00:00",
+      "type": "agent_run_started",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "strategy": "browser",
+        "capability": "flight_search"
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:24.437884+00:00",
+      "type": "task_delegated",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T11:34:26.472516+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3038,
+          "total_tokens": 3112,
+          "output_tokens": 74,
+          "input_tokens_details": {
+            "cached_tokens": 2806,
+            "cache_write_tokens": 229
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 14
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_05929e8cc72f6cbc016a674240e3e4819e914e3ad8be8fba7f",
+        "benchmark_run_id": "durable-luna-smoke/browser-search/shotcount/e1bcb32d9a",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:27.332309+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "05901c8e-c41b-4c21-a30a-73cc64114b8e",
+        "tool_name": "browser.start_session"
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:29.095328+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3164,
+          "total_tokens": 3261,
+          "output_tokens": 97,
+          "input_tokens_details": {
+            "cached_tokens": 3035,
+            "cache_write_tokens": 126
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "iteration": 1,
+        "response_id": "resp_05929e8cc72f6cbc016a6742437418819e8dc83f52ce331fc4",
+        "benchmark_run_id": "durable-luna-smoke/browser-search/shotcount/e1bcb32d9a",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:29.776375+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "tool_name": "browser.search_flights"
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:42.245511+00:00",
+      "type": "task_completed_by_agent",
+      "status": "completed",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "task_id": "d189c2f3-fd6c-4313-a52a-604a6e664fdb"
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:42.245511+00:00",
+      "type": "agent_completed",
+      "status": "completed",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T11:34:45.148Z",
+      "type": "provider_verification",
+      "result": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": null,
+              "budgetAmount": null,
+              "departureDate": "2026-09-17",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "f4884d9e0d1271ed861e2709",
+                "label": "Best overall",
+                "price": "$397",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 397,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "7fe386da9f974d874b8199a7",
+                "label": "Fastest",
+                "price": "$1,171",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 1171,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "8a565a5072ddf74ec7f575f9",
+                "label": "Also worth considering",
+                "price": "$423",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 423,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "9 hr",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "3:50 PM",
+                "departureTime": "6:50 AM",
+                "durationMinutes": 540
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-27T11:34:39.731Z"
+          },
+          "lastOperation": {
+            "id": "agent:f63a2cf3-c141-454f-a17e-2f0c5cec0060:1:browser.search_flights:04bf704d00f1a9da07a48893",
+            "type": "search_flights",
+            "output": {
+              "options": [
+                {
+                  "id": "f4884d9e0d1271ed861e2709",
+                  "label": "Best overall",
+                  "price": "$397",
+                  "route": "LOS–STN",
+                  "stops": "1 stop",
+                  "amount": 397,
+                  "airline": "Royal Air Maroc",
+                  "currency": "USD",
+                  "duration": "11 hr 5 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "6:20 AM+1",
+                  "departureTime": "7:15 PM",
+                  "durationMinutes": 665
+                },
+                {
+                  "id": "7fe386da9f974d874b8199a7",
+                  "label": "Fastest",
+                  "price": "$1,171",
+                  "route": "LOS–LHR",
+                  "stops": "Nonstop",
+                  "amount": 1171,
+                  "airline": "British Airways",
+                  "currency": "USD",
+                  "duration": "6 hr 30 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                  "stopCount": 0,
+                  "arrivalTime": "5:20 AM+1",
+                  "departureTime": "10:50 PM",
+                  "durationMinutes": 390
+                },
+                {
+                  "id": "8a565a5072ddf74ec7f575f9",
+                  "label": "Also worth considering",
+                  "price": "$423",
+                  "route": "LOS–LGW",
+                  "stops": "1 stop",
+                  "amount": 423,
+                  "airline": "Royal Air Maroc",
+                  "currency": "USD",
+                  "duration": "9 hr",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "3:50 PM",
+                  "departureTime": "6:50 AM",
+                  "durationMinutes": 540
+                }
+              ],
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "observedAt": "2026-07-27T11:34:39.731Z"
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-27T11:34:40.562Z"
+          },
+          "workerAttempts": 1,
+          "pendingOperation": null
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": false,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "3 live flight options are ready.",
+          "sections": [
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $397",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $1,171",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–LGW · 1 stop · 9 hr · $423",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "f4884d9e0d1271ed861e2709",
+              "label": "Best overall",
+              "price": "$397",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 397,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            {
+              "id": "7fe386da9f974d874b8199a7",
+              "label": "Fastest",
+              "price": "$1,171",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 1171,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "8a565a5072ddf74ec7f575f9",
+              "label": "Also worth considering",
+              "price": "$423",
+              "route": "LOS–LGW",
+              "stops": "1 stop",
+              "amount": 423,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "9 hr",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "3:50 PM",
+              "departureTime": "6:50 AM",
+              "durationMinutes": 540
+            }
+          ]
+        },
+        "sentMessages": []
+      }
+    },
+    {
+      "at": "2026-07-27T11:34:45.151Z",
+      "type": "completion_decision",
+      "status": "completed",
+      "verification": {
+        "success": true,
+        "primaryClass": "NONE",
+        "exactMechanism": "",
+        "duplicates": false,
+        "executionPrecision": 1
+      }
+    }
+  ]
+}

@@ -24,7 +24,11 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
   const wantsCalendarWrite =
     /\b(?:set\s*up|schedule|reschedule|arrange|coordinate|organize|create|add|book|cancel|delete|move)\b/.test(calendarWriteIntent)
   const hasFlight = /\b(flight|fly|airfare|airline|airport|return trip|round trip|one-way)\b/.test(value)
-  const wantsBooking = /\b(book|booking|buy|purchase|reserve)\b/.test(value)
+  const bookingIntent = value.replace(
+    /\b(?:do\s+not|don't|never|without|stop\s+before)\b[\s\S]{0,60}\b(?:book|booking|buy|purchase|reserve|payment)\b/g,
+    '',
+  )
+  const wantsBooking = /\b(book|booking|buy|purchase|reserve|payment\s+handoff)\b/.test(bookingIntent)
   const wantsBrowserWrite = /\b(?:submit|register|sign[\s-]?up|apply|post|publish|upload)\b/.test(value) ||
     /\b(?:fill|complete)\b[\s\S]{0,40}\bform\b/.test(value)
   const research = /\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b/.test(value)

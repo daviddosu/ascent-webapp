@@ -1,0 +1,499 @@
+{
+  "scenario": "email-calendar",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "runId": "d8d36cd3-b5a7-4767-8261-b45fd3219dd5",
+  "browserSessionId": null,
+  "controls": {
+    "recoveryInjected": false,
+    "controlledReplyInjected": false,
+    "flightOptionSelected": false
+  },
+  "events": [
+    {
+      "at": "2026-07-27T11:10:35.571289+00:00",
+      "type": "model_decision",
+      "status": "run_started",
+      "detail": {
+        "title": "Coordinate controlled meeting",
+        "category": "Cross-tool"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:38.586262+00:00",
+      "type": "tool",
+      "tool": "gmail.create_draft",
+      "arguments": {
+        "to": [
+          "CONTROLLED_ACCOUNT@example.invalid"
+        ],
+        "subject": "[Luna diagnostic cda839b5e1] availability",
+        "body_text": "Hi David,\n\nAre you available for a 30-minute meeting next week? Please let me know what day and time works for you.\n\nBest,\n",
+        "thread_id": null,
+        "in_reply_to_message_id": null
+      },
+      "resultType": "succeeded",
+      "providerActionId": "r-4123428310352025973",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:10:42.016845+00:00",
+      "type": "tool",
+      "tool": "gmail.send_message",
+      "arguments": {
+        "draft_id": "r-4123428310352025973",
+        "expected_to": [
+          "CONTROLLED_ACCOUNT@example.invalid"
+        ],
+        "expected_subject": "[Luna diagnostic cda839b5e1] availability"
+      },
+      "resultType": "succeeded",
+      "providerActionId": "19fa3452809da2a1",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:10:51.128896+00:00",
+      "type": "tool",
+      "tool": "gmail.wait_for_reply",
+      "arguments": {
+        "thread_id": "19fa3450cadf3920",
+        "timeout_days": 30,
+        "contact_email": "CONTROLLED_ACCOUNT@example.invalid",
+        "sent_message_id": "19fa3452809da2a1"
+      },
+      "resultType": "succeeded",
+      "providerActionId": null,
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:11:33.995635+00:00",
+      "type": "tool",
+      "tool": "calendar.get_availability",
+      "arguments": {
+        "time_max": "2026-08-04T14:30:00+01:00",
+        "time_min": "2026-08-04T14:00:00+01:00",
+        "timezone": "Africa/Lagos",
+        "calendar_ids": [
+          "primary"
+        ]
+      },
+      "resultType": "succeeded",
+      "providerActionId": null,
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:11:36.635567+00:00",
+      "type": "tool",
+      "tool": "calendar.create_event",
+      "arguments": {
+        "end": "2026-08-04T14:30:00+01:00",
+        "start": "2026-08-04T14:00:00+01:00",
+        "summary": "Luna diagnostic meeting cda839b5e1",
+        "timezone": "Africa/Lagos",
+        "calendar_id": "primary",
+        "description": "30-minute meeting with David Dosu.",
+        "add_google_meet": false,
+        "attendee_emails": [
+          "CONTROLLED_ACCOUNT@example.invalid"
+        ]
+      },
+      "resultType": "succeeded",
+      "providerActionId": "27l304tl9dp384q09oqkoejbtk",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:11:46.382582+00:00",
+      "type": "tool",
+      "tool": "agent.complete",
+      "arguments": {
+        "drafts": [],
+        "sources": [],
+        "summary": "Email sent, reply received, calendar checked, and the requested meeting was created.",
+        "sections": [
+          {
+            "body": "Sent to CONTROLLED_ACCOUNT@example.invalid with subject “[Luna diagnostic cda839b5e1] availability.” David replied that Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos works.",
+            "title": "Email"
+          },
+          {
+            "body": "The calendar was available for 14:00–14:30 Africa/Lagos. Created exactly one confirmed event titled “Luna diagnostic meeting cda839b5e1” with CONTROLLED_ACCOUNT@example.invalid as attendee.",
+            "title": "Calendar"
+          }
+        ],
+        "follow_ups": [],
+        "prepared_result": false,
+        "purchase_confirmed": false,
+        "payment_boundary_reached": false,
+        "external_change_confirmed": true
+      },
+      "resultType": "succeeded",
+      "providerActionId": null,
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T11:10:35.700688+00:00",
+      "type": "agent_run_started",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "strategy": "hybrid",
+        "capability": "scheduling"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:35.794195+00:00",
+      "type": "task_delegated",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T11:10:38.24173+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3116,
+          "total_tokens": 3242,
+          "output_tokens": 126,
+          "input_tokens_details": {
+            "cached_tokens": 2806,
+            "cache_write_tokens": 307
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 30
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_0a82b34d871308c3016a673cac4bfc819298faa609b82905ed",
+        "benchmark_run_id": "durable-luna-smoke/email-calendar/shotcount/abc47faf7f",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:39.878421+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "a7bc767e-c1f6-427f-a8f2-7a0c2495f757",
+        "tool_name": "gmail.create_draft"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:41.718802+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3421,
+          "total_tokens": 3489,
+          "output_tokens": 68,
+          "input_tokens_details": {
+            "cached_tokens": 3113,
+            "cache_write_tokens": 305
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 9
+          }
+        },
+        "iteration": 1,
+        "response_id": "resp_0a82b34d871308c3016a673cb03c2481928ec5e534a563c869",
+        "benchmark_run_id": "durable-luna-smoke/email-calendar/shotcount/abc47faf7f",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:42.428462+00:00",
+      "type": "agent_approval_requested",
+      "status": "needs_approval",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "b994ba68-526a-47d6-9e6d-f462c8be2799",
+        "tool_name": "gmail.send_message"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:44.766292+00:00",
+      "type": "agent_approval_granted",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "b994ba68-526a-47d6-9e6d-f462c8be2799"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:47.379218+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "approved": true,
+        "action_id": "b994ba68-526a-47d6-9e6d-f462c8be2799",
+        "tool_name": "gmail.send_message"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:50.854892+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3536,
+          "total_tokens": 3605,
+          "output_tokens": 69,
+          "input_tokens_details": {
+            "cached_tokens": 3418,
+            "cache_write_tokens": 115
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 9
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_0a82b34d871308c3016a673cb7d9ac819291b34edee261ba3a",
+        "benchmark_run_id": "durable-luna-smoke/email-calendar/shotcount/abc47faf7f",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:10:51.508926+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "tool_name": "gmail.wait_for_reply"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:31.597827+00:00",
+      "type": "agent_resumed",
+      "status": "planning",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "watch_id": "ab3fc8c9-a3bf-4576-82eb-9b493ec51665",
+        "message_id": "19fa345524e584a6"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:33.700365+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3901,
+          "total_tokens": 3991,
+          "output_tokens": 90,
+          "input_tokens_details": {
+            "cached_tokens": 3533,
+            "cache_write_tokens": 365
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 19
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_0a82b34d871308c3016a673ce410e881929c96abca7f7499c0",
+        "benchmark_run_id": "durable-luna-smoke/email-calendar/shotcount/abc47faf7f",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:34.624426+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "0f9a27dd-00b1-4ec2-900f-7ef4671992df",
+        "tool_name": "calendar.get_availability"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:36.321825+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 4061,
+          "total_tokens": 4185,
+          "output_tokens": 124,
+          "input_tokens_details": {
+            "cached_tokens": 3898,
+            "cache_write_tokens": 160
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 13
+          }
+        },
+        "iteration": 1,
+        "response_id": "resp_0a82b34d871308c3016a673ce6be70819289eb6b6c8b723862",
+        "benchmark_run_id": "durable-luna-smoke/email-calendar/shotcount/abc47faf7f",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:36.997776+00:00",
+      "type": "agent_approval_requested",
+      "status": "needs_approval",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "535c68e2-41fd-43a4-bea7-4177ebed1b97",
+        "tool_name": "calendar.create_event"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:42.421309+00:00",
+      "type": "agent_approval_granted",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "535c68e2-41fd-43a4-bea7-4177ebed1b97"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:43.653789+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "approved": true,
+        "action_id": "535c68e2-41fd-43a4-bea7-4177ebed1b97",
+        "tool_name": "calendar.create_event"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:46.07599+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 4555,
+          "total_tokens": 4747,
+          "output_tokens": 192,
+          "input_tokens_details": {
+            "cached_tokens": 4058,
+            "cache_write_tokens": 494
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 9
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_0a82b34d871308c3016a673ceffefc8192a63e07abd37e30cf",
+        "benchmark_run_id": "durable-luna-smoke/email-calendar/shotcount/abc47faf7f",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:46.844827+00:00",
+      "type": "agent_completed",
+      "status": "completed",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T11:11:46.844827+00:00",
+      "type": "task_completed_by_agent",
+      "status": "completed",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "task_id": "09b681c2-4e43-4302-b8ca-4780047e6537"
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:49.406Z",
+      "type": "provider_verification",
+      "result": {
+        "calendarEvents": [
+          {
+            "id": "27l304tl9dp384q09oqkoejbtk",
+            "summary": "Luna diagnostic meeting cda839b5e1",
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": [
+              {
+                "email": "CONTROLLED_ACCOUNT@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ]
+          }
+        ],
+        "sentMessages": [
+          {
+            "id": "19fa3452809da2a1",
+            "thread_id": "19fa3450cadf3920"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-07-27T11:11:49.406Z",
+      "type": "completion_decision",
+      "status": "completed",
+      "verification": {
+        "success": true,
+        "primaryClass": "NONE",
+        "exactMechanism": "",
+        "duplicates": false,
+        "executionPrecision": 1
+      }
+    }
+  ]
+}

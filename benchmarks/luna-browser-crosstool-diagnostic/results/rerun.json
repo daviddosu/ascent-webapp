@@ -1,0 +1,103 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "evaluatedCommit": "7ca79ab812d419c0801d5db11c12bac58df7e8d4",
+  "runs": [
+    {
+      "scenario": "browser-search",
+      "category": "Browser",
+      "result": "PASS",
+      "primaryFailureClass": "NONE",
+      "exactMechanism": "",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.002575,
+      "usage": {
+        "calls": 2,
+        "input": 6202,
+        "cached": 5841,
+        "cacheWrite": 355,
+        "output": 171
+      },
+      "finalState": "completed",
+      "runId": "f63a2cf3-c141-454f-a17e-2f0c5cec0060",
+      "browserSessionId": "67e7d7ee-ad90-4adf-acf4-68cf55f5f5ae",
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T11:34:22.716Z",
+      "finishedAt": "2026-07-27T11:34:45.154Z"
+    },
+    {
+      "scenario": "browser-handoff",
+      "category": "Browser",
+      "result": "FAIL",
+      "primaryFailureClass": "B. BROWSER INFRASTRUCTURE",
+      "exactMechanism": "flight_selection_failed: Google Flights did not expose a selectable itinerary.",
+      "harnessFixJustified": true,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.002647,
+      "usage": {
+        "calls": 2,
+        "input": 6219,
+        "cached": 5846,
+        "cacheWrite": 367,
+        "output": 178
+      },
+      "finalState": "waiting_for_user",
+      "runId": "e9b383bd-6ded-42bc-bc91-7010dd9c8cc3",
+      "browserSessionId": "44511d79-32aa-46cc-bde2-fa3f694cc71d",
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T11:34:45.154Z",
+      "finishedAt": "2026-07-27T11:36:14.492Z"
+    },
+    {
+      "scenario": "browser-recovery",
+      "category": "Browser",
+      "result": "FAIL",
+      "primaryFailureClass": "B. BROWSER INFRASTRUCTURE",
+      "exactMechanism": "flight_selection_failed: Google Flights did not expose a selectable itinerary.",
+      "harnessFixJustified": true,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.002648,
+      "usage": {
+        "calls": 2,
+        "input": 6221,
+        "cached": 5847,
+        "cacheWrite": 368,
+        "output": 178
+      },
+      "finalState": "waiting_for_user",
+      "runId": "3a17ce1c-7c89-4cca-a426-f33f13996ad1",
+      "browserSessionId": "69710237-ef36-4933-beeb-ad85a0a87d6b",
+      "recoveryInjected": true,
+      "startedAt": "2026-07-27T11:36:14.493Z",
+      "finishedAt": "2026-07-27T11:37:35.244Z"
+    },
+    {
+      "scenario": "calendar-email",
+      "category": "Cross-tool",
+      "result": "FAIL",
+      "primaryFailureClass": "A. MODEL / REASONING",
+      "exactMechanism": "The Calendar update used the correct instant, but Luna changed the requested 10:00→11:30 local-time notification into 11:00→12:30 and then claimed the sent wording was verified.",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.01594,
+      "usage": {
+        "calls": 7,
+        "input": 29675,
+        "cached": 27204,
+        "cacheWrite": 2450,
+        "output": 1158
+      },
+      "finalState": "completed",
+      "runId": "78658e7b-91ab-48b1-8e19-c564071edf1e",
+      "browserSessionId": null,
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T11:37:36.682Z",
+      "finishedAt": "2026-07-27T11:38:09.243Z"
+    }
+  ]
+}

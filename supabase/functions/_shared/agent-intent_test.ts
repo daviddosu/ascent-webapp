@@ -27,6 +27,23 @@ Deno.test('short titles use Description for intent and only ask when context is 
   assertEquals(needsSharedAgentContext("Reply to Sarah's email"), false)
 })
 
+Deno.test('flight search that explicitly stops before booking is a prepared result', () => {
+  assertEquals(
+    classifySharedAgentIntent(
+      'Find cheapest valid London flight',
+      'Find a one-way economy flight and stop before any booking or payment step.',
+    ),
+    { capability: 'flight_search', strategy: 'browser', outcomeType: 'prepared_result' },
+  )
+  assertEquals(
+    classifySharedAgentIntent(
+      'Prepare London flight handoff',
+      'Choose a valid result and continue only to the final safe payment handoff. Do not purchase.',
+    ),
+    { capability: 'flight_search', strategy: 'browser', outcomeType: 'payment_handoff' },
+  )
+})
+
 Deno.test('provider writes and meeting coordination keep external-change completion', () => {
   assertEquals(
     classifySharedAgentIntent('Follow up with everyone I emailed last week'),
