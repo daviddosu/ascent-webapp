@@ -5,6 +5,22 @@ export type ProviderActionEvidence = {
   completed_at?: string | null
 }
 
+export type RequiredEffect = 'gmail_send' | 'calendar_write'
+
+export function requiredEffectsSatisfied(required: RequiredEffect[], confirmedTools: string[]) {
+  const confirmed = new Set(confirmedTools)
+  return required.every(effect => effect === 'gmail_send'
+    ? confirmed.has('gmail.send_message')
+    : ['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
+}
+
+export function unresolvedRequiredEffects(required: RequiredEffect[], confirmedTools: string[]) {
+  const confirmed = new Set(confirmedTools)
+  return required.filter(effect => effect === 'gmail_send'
+    ? !confirmed.has('gmail.send_message')
+    : !['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
+}
+
 export function verifiedCrossToolStage(actions: ProviderActionEvidence[]) {
   const succeeded = actions.filter(action => action.status === 'succeeded' && action.provider_action_id)
   const calendar = succeeded.filter(action => action.tool_name === 'calendar.update_event').at(-1)

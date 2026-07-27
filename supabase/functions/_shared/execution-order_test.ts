@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { reasoningFallbackAllowed, verifiedCrossToolStage } from './execution-order.ts'
+import { reasoningFallbackAllowed, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from './execution-order.ts'
 
 Deno.test('blocks out-of-order and premature cross-tool completion', () => {
   assertEquals(verifiedCrossToolStage([]).stage, 'calendar_required')
@@ -24,4 +24,18 @@ Deno.test('Sol is allowed only for deterministic reasoning mismatches', () => {
     assertEquals(reasoningFallbackAllowed(failure, true), false)
   }
   assertEquals(reasoningFallbackAllowed('MODEL_REASONING', false), false)
+})
+
+Deno.test('required-effect ledger ignores model claims and drafts', () => {
+  const required = ['calendar_write', 'gmail_send'] as const
+  assertEquals(requiredEffectsSatisfied([...required], ['calendar.update_event', 'gmail.create_draft']), false)
+  assertEquals(unresolvedRequiredEffects([...required], ['calendar.update_event', 'gmail.create_draft']), ['gmail_send'])
+  assertEquals(requiredEffectsSatisfied([...required], ['calendar.update_event', 'gmail.send_message']), true)
+})
+
+Deno.test('required-effect ledger preserves completed Calendar work during continuation', () => {
+  const required = ['calendar_write', 'gmail_send'] as const
+  const confirmed = ['calendar.update_event']
+  assertEquals(unresolvedRequiredEffects([...required], confirmed), ['gmail_send'])
+  assertEquals(confirmed.includes('calendar.update_event'), true)
 })

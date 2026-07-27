@@ -14,7 +14,7 @@ import {
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, needsSharedAgentContext } from '../_shared/agent-intent.ts'
 import { browserFailureClass, canonicalFlightSearch, isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
-import { reasoningFallbackAllowed, verifiedCrossToolStage } from '../_shared/execution-order.ts'
+import { reasoningFallbackAllowed, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
 import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
   verifyScheduleNotificationDraft,
@@ -171,6 +171,7 @@ type ReusableAgentContext = {
 
 const workerId = `task-agent:${crypto.randomUUID()}`
 const maximumModelSteps = 10
+const maximumCompletionContinuations = 3
 
 function allowedOrigin(request: Request) {
   const requestOrigin = request.headers.get('Origin') ?? ''
@@ -1239,11 +1240,7 @@ async function executeProviderTool(
   }
 }
 
-async function completionSatisfied(
-  admin: AdminClient,
-  run: AgentRunRow,
-  argumentsValue: Record<string, unknown>,
-) {
+function requiredEffectsForRun(run: AgentRunRow): Array<'gmail_send' | 'calendar_write'> {
   const objective = `${run.objective} ${safeString(run.context?.description, 4000)}`.toLocaleLowerCase()
   const requiredExternalEffects: Array<'gmail_send' | 'calendar_write'> = []
   if (run.capability === 'scheduling') {
@@ -1254,8 +1251,15 @@ async function completionSatisfied(
       /\b(?:meet|meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/.test(objective)
     ) requiredExternalEffects.push('gmail_send')
   }
-  const requiresProviderEvidence = run.task_completion_policy === 'external_change' || requiredExternalEffects.length > 0
-  const actions = requiresProviderEvidence
+  return requiredExternalEffects
+}
+
+async function requiredEffectLedger(
+  admin: AdminClient,
+  run: AgentRunRow,
+) {
+  const required = requiredEffectsForRun(run)
+  const actions = required.length
     ? await admin
       .from('agent_actions')
       .select('tool_name,status,provider_action_id,completed_at')
@@ -1265,26 +1269,56 @@ async function completionSatisfied(
       .not('provider_action_id', 'is', null)
     : { data: [], error: null }
   if (actions.error) throw new Error(actions.error.message)
+  const confirmedTools = new Set((actions.data ?? []).map(action => safeString(action.tool_name, 120)))
+  const effects = {
+    CALENDAR_EVENT_UPDATED: !required.includes('calendar_write') || requiredEffectsSatisfied(['calendar_write'], [...confirmedTools]),
+    GMAIL_MESSAGE_SENT: !required.includes('gmail_send') || requiredEffectsSatisfied(['gmail_send'], [...confirmedTools]),
+  }
+  return { required, effects, actions: actions.data ?? [] }
+}
+
+function unresolvedEffectMessage(ledger: Awaited<ReturnType<typeof requiredEffectLedger>>) {
+  const completed = [
+    ledger.effects.CALENDAR_EVENT_UPDATED ? 'CALENDAR_EVENT_UPDATED' : null,
+    ledger.effects.GMAIL_MESSAGE_SENT ? 'GMAIL_MESSAGE_SENT' : null,
+  ].filter(Boolean)
+  const unresolved = unresolvedRequiredEffects(ledger.required, [
+    ledger.effects.CALENDAR_EVENT_UPDATED ? 'calendar.update_event' : '',
+    ledger.effects.GMAIL_MESSAGE_SENT ? 'gmail.send_message' : '',
+  ]).map(effect => effect === 'calendar_write' ? 'CALENDAR_EVENT_UPDATED' : 'GMAIL_MESSAGE_SENT')
+  return `Confirmed completed effects: ${completed.length ? completed.join(', ') : 'none'}. Required effects still unsatisfied: ${unresolved.join(', ')}. Provider-confirmed state is authoritative. Continue execution only for the missing effect(s); do not repeat already-confirmed external actions.`
+}
+
+async function completionSatisfied(
+  admin: AdminClient,
+  run: AgentRunRow,
+  argumentsValue: Record<string, unknown>,
+) {
+  const requiredExternalEffects = requiredEffectsForRun(run)
+  const ledger = await requiredEffectLedger(admin, run)
+  const requiresProviderEvidence =
+    run.task_completion_policy === 'external_change' || requiredExternalEffects.length > 0
+  if (requiredExternalEffects.length && Object.values(ledger.effects).some(value => !value)) return false
 
   // A prepared Gmail draft is never evidence of a required send. Keep this
   // explicit so cross-tool completion cannot regress if evidence mapping grows.
-  const confirmedTools = new Set((actions.data ?? []).map(action => safeString(action.tool_name, 120)))
+  const confirmedTools = new Set(ledger.actions.map(action => safeString(action.tool_name, 120)))
   if (requiredExternalEffects.includes('gmail_send') &&
       confirmedTools.has('gmail.create_draft') &&
       !confirmedTools.has('gmail.send_message')) return false
 
   const requiresOrderedChangeNotification = run.capability === 'scheduling' &&
     requiredExternalEffects.includes('gmail_send') &&
-    /\b(?:move|moved|reschedule|rescheduled|change|changed|update|updated)\b/i.test(objective)
-  if (requiresOrderedChangeNotification && !verifiedCrossToolStage(actions.data ?? []).complete) return false
+    /\b(?:move|moved|reschedule|rescheduled|change|changed|update|updated)\b/i.test(`${run.objective} ${safeString(run.context?.description, 4000)}`)
+  if (requiresOrderedChangeNotification && !verifiedCrossToolStage(ledger.actions).complete) return false
 
   return agentCompletionEvidenceSatisfied({
-    taskCompletionPolicy: requiredExternalEffects.length > 0 ? 'external_change' : run.task_completion_policy,
+    taskCompletionPolicy: requiresProviderEvidence ? 'external_change' : run.task_completion_policy,
     capability: run.capability,
     preparedResult: argumentsValue.prepared_result === true,
     externalChangeConfirmed: argumentsValue.external_change_confirmed === true,
     purchaseConfirmed: argumentsValue.purchase_confirmed === true,
-    providerConfirmedTools: (actions.data ?? [])
+    providerConfirmedTools: ledger.actions
       .filter(action => safeString(action.provider_action_id, 500).trim())
       .map(action => safeString(action.tool_name, 120))
       .filter(Boolean),
@@ -2614,14 +2648,35 @@ async function advanceRun(
         completed_at: new Date().toISOString(),
       }).eq('id', action.id)
       if (!accepted) {
+        const ledger = await requiredEffectLedger(admin, current)
+        const continuationCount = Number(current.context?.completion_continuations ?? 0) + 1
+        if (continuationCount > maximumCompletionContinuations) {
+          current = await updateRun(admin, current, {
+            status: 'failed',
+            error_code: 'model_reasoning_luna',
+            error: 'The required external effect remained unsatisfied after bounded same-run continuations.',
+            context: { ...(current.context ?? {}), completion_continuations: continuationCount },
+            lease_owner: null,
+            lease_expires_at: null,
+          })
+          await addEvent(admin, current, 'agent_failed', current.status, current.error ?? '', {
+            failure_class: 'MODEL_REASONING_LUNA',
+            unresolved_effects: unresolvedEffectMessage(ledger),
+            continuation_count: continuationCount,
+          })
+          return current
+        }
         history.push({
           type: 'function_call_output',
           call_id: safeString(call.call_id, 256),
           output: JSON.stringify({
             accepted: false,
             error_code: 'completion_evidence_incomplete',
-            error_message: 'Required provider-confirmed task obligations remain. Continue with the missing tool action.',
+            error_message: unresolvedEffectMessage(ledger),
           }),
+        })
+        current = await updateRun(admin, current, {
+          context: { ...(current.context ?? {}), completion_continuations: continuationCount },
         })
         await saveModelHistory(admin, current, history, response.id)
         continue
