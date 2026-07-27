@@ -1,0 +1,31 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "evaluatedCommit": "65f1fb574eefa7c30169f272bd4c968e0b552950",
+  "runs": [
+    {
+      "scenario": "stale-gmail",
+      "category": "Cross-tool",
+      "result": "FAIL",
+      "primaryFailureClass": "D. TOOL / DATA COERCION",
+      "exactMechanism": "tool result coercion: Cannot coerce the result to a single JSON object",
+      "harnessFixJustified": true,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.004497,
+      "usage": {
+        "calls": 3,
+        "input": 10069,
+        "cached": 9322,
+        "cacheWrite": 738,
+        "output": 289
+      },
+      "finalState": "failed",
+      "runId": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+      "browserSessionId": null,
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T16:37:39.019Z",
+      "finishedAt": "2026-07-27T16:38:16.548Z"
+    }
+  ]
+}

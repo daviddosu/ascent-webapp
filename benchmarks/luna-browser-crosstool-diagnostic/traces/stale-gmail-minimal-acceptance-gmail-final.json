@@ -1,0 +1,761 @@
+{
+  "scenario": "stale-gmail",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "runId": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+  "browserSessionId": null,
+  "controls": {
+    "state": {
+      "run": {
+        "id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+        "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+        "task_id": "919a6dae-99ac-4644-a506-a27f16877c7e",
+        "status": "failed",
+        "objective": "Coordinate stale-state meeting",
+        "context": {
+          "due": "2026-07-27",
+          "goal_id": null,
+          "timezone": "Africa/Lagos",
+          "description": "Email daviddosuu@gmail.com asking whether they are available for a 30-minute meeting on Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos. Use subject \"[Stale Gmail acceptance ee3740c509] availability\". Wait for their reply, then create exactly one 30-minute Calendar event titled \"Stale Gmail acceptance meeting ee3740c509\" with them as attendee.",
+          "user_context": "",
+          "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/stale-gmail-d8a5c87c20",
+          "user_preferences": {
+            "timezone": "Africa/Lagos",
+            "home_airport": null,
+            "working_hours": {
+              "end": "17:00",
+              "start": "09:00"
+            },
+            "preferred_cabin": "economy",
+            "preferred_currency": "USD",
+            "default_meeting_minutes": 30
+          },
+          "execution_date_context": {
+            "timezone": "Africa/Lagos",
+            "utc_time": "2026-07-27T16:37:40.267Z",
+            "local_date": "2026-07-27",
+            "relative_dates": []
+          }
+        },
+        "capability": "scheduling",
+        "progress": [
+          "Prepared a Gmail draft for review.",
+          "Waiting for daviddosuu@gmail.com to reply."
+        ],
+        "result": null,
+        "error": "Cannot coerce the result to a single JSON object",
+        "created_at": "2026-07-27T16:37:40.360429+00:00",
+        "updated_at": "2026-07-27T16:38:10.915179+00:00",
+        "strategy": "hybrid",
+        "intent": {
+          "strategy": "hybrid",
+          "capability": "scheduling",
+          "outcomeType": "external_change"
+        },
+        "plan": [],
+        "current_step": 3,
+        "waiting_reason": "",
+        "task_completion_policy": "external_change",
+        "openai_response_id": "resp_060b63d66c110a85016a6789558410819f85193f11c3f016d6",
+        "browser_session_id": null,
+        "external_correlation_id": "gmail-message:19fa470d5990c36a",
+        "lease_owner": null,
+        "lease_expires_at": null,
+        "attempt_count": 2,
+        "retryable": true,
+        "error_code": "agent_execution_error",
+        "started_at": "2026-07-27T16:37:40.678+00:00",
+        "completed_at": null,
+        "cancelled_at": null,
+        "version": 11
+      },
+      "actions": [
+        {
+          "id": "68e9331a-991a-45ce-9941-16b893e16659",
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 0,
+          "tool_name": "gmail.create_draft",
+          "model_call_id": "call_iCHBTjpqhYiIaqX14MjAaVXu",
+          "risk": "prepare",
+          "status": "succeeded",
+          "arguments": {
+            "to": [
+              "daviddosuu@gmail.com"
+            ],
+            "subject": "[Stale Gmail acceptance ee3740c509] availability",
+            "body_text": "Hi David,\n\nAre you available for a 30-minute meeting on Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos?\n\nBest,\n",
+            "thread_id": null,
+            "in_reply_to_message_id": null
+          },
+          "output": {
+            "to": [
+              "daviddosuu@gmail.com"
+            ],
+            "subject": "[Stale Gmail acceptance ee3740c509] availability",
+            "draft_id": "r-7729910709435512002",
+            "body_text": "Hi David,\r\n\r\nAre you available for a 30-minute meeting on Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos?\r\n\r\nBest,\r\n",
+            "thread_id": "19fa4708adf81885",
+            "message_id": "19fa4708adf81885",
+            "already_created": false,
+            "message_id_header": "<agent.a8dc1d0e-0fd3-4362-9c11-16e1766a7b28.0.gmail.create_draft.71321474bf5888d63e8e21e6@shotcount.app>"
+          },
+          "public_summary": "Prepared a Gmail draft for review.",
+          "idempotency_key": "agent:a8dc1d0e-0fd3-4362-9c11-16e1766a7b28:0:gmail.create_draft:71321474bf5888d63e8e21e6",
+          "provider_action_id": "r-7729910709435512002",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T16:37:47.231+00:00",
+          "created_at": "2026-07-27T16:37:46.495125+00:00",
+          "updated_at": "2026-07-27T16:37:47.296396+00:00"
+        },
+        {
+          "id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2",
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 1,
+          "tool_name": "gmail.send_message",
+          "model_call_id": "call_BZsRgr8QHXTVWg1X2qZ73Uiu",
+          "risk": "external_write",
+          "status": "succeeded",
+          "arguments": {
+            "draft_id": "r-7729910709435512002",
+            "expected_to": [
+              "daviddosuu@gmail.com"
+            ],
+            "expected_subject": "[Stale Gmail acceptance ee3740c509] availability"
+          },
+          "output": {
+            "thread_id": "19fa4708adf81885",
+            "history_id": "",
+            "message_id": "19fa470a41558772",
+            "already_sent": false
+          },
+          "public_summary": "Gmail confirmed the email was sent.",
+          "idempotency_key": "agent:a8dc1d0e-0fd3-4362-9c11-16e1766a7b28:1:gmail.send_message:95909017fc10d96873ee43e7",
+          "provider_action_id": "19fa470a41558772",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T16:37:51.927+00:00",
+          "completed_at": "2026-07-27T16:37:53.69+00:00",
+          "created_at": "2026-07-27T16:37:49.819588+00:00",
+          "updated_at": "2026-07-27T16:37:53.753232+00:00"
+        },
+        {
+          "id": "a6803c8a-3073-4650-b5bd-dcee5ab7bf4f",
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 2,
+          "tool_name": "gmail.wait_for_reply",
+          "model_call_id": "call_NmIf4EaV9YdbIXUB8d2dMNfW",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "thread_id": "19fa4708adf81885",
+            "timeout_days": 30,
+            "contact_email": "daviddosuu@gmail.com",
+            "sent_message_id": "19fa470a41558772"
+          },
+          "output": {
+            "watch_id": "6acf2cc7-ec3d-46b3-aba3-9cf766b0bf4f",
+            "thread_id": "19fa4708adf81885",
+            "expires_at": "2026-08-26T16:37:57.504+00:00",
+            "next_poll_at": "2026-07-27T16:37:57.504+00:00"
+          },
+          "public_summary": "Waiting for daviddosuu@gmail.com to reply.",
+          "idempotency_key": "agent:a8dc1d0e-0fd3-4362-9c11-16e1766a7b28:2:gmail.wait_for_reply:b21dfb07bcbc4cf0e913ac97",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending",
+          "error_message": "Waiting for daviddosuu@gmail.com to reply.",
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T16:37:57.586+00:00",
+          "created_at": "2026-07-27T16:37:57.48523+00:00",
+          "updated_at": "2026-07-27T16:37:57.638031+00:00"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "28fe6eab-7b95-45e1-ad52-727a4d514340",
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "action_id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "status": "approved",
+          "kind": "send_email",
+          "title": "Send this email?",
+          "summary": "Send “[Stale Gmail acceptance ee3740c509] availability” to daviddosuu@gmail.com.",
+          "payload": {
+            "preview": {
+              "to": [
+                "daviddosuu@gmail.com"
+              ],
+              "subject": "[Stale Gmail acceptance ee3740c509] availability",
+              "body_text": "Hi David,\n\nAre you available for a 30-minute meeting on Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos?\n\nBest,\n"
+            },
+            "toolName": "gmail.send_message",
+            "arguments": {
+              "draft_id": "r-7729910709435512002",
+              "expected_to": [
+                "daviddosuu@gmail.com"
+              ],
+              "expected_subject": "[Stale Gmail acceptance ee3740c509] availability"
+            }
+          },
+          "payload_hash": "c1d292d898b7057a4b4def7610ff8f09b4382e4d0c91b74c1f7b9eddee7db346",
+          "version": 2,
+          "expires_at": "2026-07-28T16:37:50.037+00:00",
+          "decided_at": "2026-07-27T16:37:51.847+00:00",
+          "created_at": "2026-07-27T16:37:50.110538+00:00",
+          "updated_at": "2026-07-27T16:37:51.906816+00:00"
+        }
+      ],
+      "events": [
+        {
+          "id": 9231,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "hybrid",
+            "capability": "scheduling"
+          },
+          "created_at": "2026-07-27T16:37:40.478227+00:00"
+        },
+        {
+          "id": 9232,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T16:37:40.564366+00:00"
+        },
+        {
+          "id": 9233,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3090,
+              "total_tokens": 3242,
+              "output_tokens": 152,
+              "input_tokens_details": {
+                "cached_tokens": 2806,
+                "cache_write_tokens": 281
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 52
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_060b63d66c110a85016a6789558410819f85193f11c3f016d6",
+            "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/stale-gmail-d8a5c87c20",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T16:37:46.251344+00:00"
+        },
+        {
+          "id": 9234,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Prepared a Gmail draft for review.",
+          "metadata": {
+            "action_id": "68e9331a-991a-45ce-9941-16b893e16659",
+            "tool_name": "gmail.create_draft"
+          },
+          "created_at": "2026-07-27T16:37:47.542939+00:00"
+        },
+        {
+          "id": 9235,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3432,
+              "total_tokens": 3502,
+              "output_tokens": 70,
+              "input_tokens_details": {
+                "cached_tokens": 3087,
+                "cache_write_tokens": 342
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 12
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_060b63d66c110a85016a67895baec8819fb8ea40cf36853d37",
+            "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/stale-gmail-d8a5c87c20",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T16:37:49.465205+00:00"
+        },
+        {
+          "id": 9236,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_requested",
+          "status": "needs_approval",
+          "message": "Send “[Stale Gmail acceptance ee3740c509] availability” to daviddosuu@gmail.com.",
+          "metadata": {
+            "action_id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T16:37:50.2907+00:00"
+        },
+        {
+          "id": 9237,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_granted",
+          "status": "running",
+          "message": "Send “[Stale Gmail acceptance ee3740c509] availability” to daviddosuu@gmail.com.",
+          "metadata": {
+            "action_id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2"
+          },
+          "created_at": "2026-07-27T16:37:52.200799+00:00"
+        },
+        {
+          "id": 9238,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Gmail confirmed the email was sent.",
+          "metadata": {
+            "approved": true,
+            "action_id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T16:37:54.083231+00:00"
+        },
+        {
+          "id": 9239,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3547,
+              "total_tokens": 3614,
+              "output_tokens": 67,
+              "input_tokens_details": {
+                "cached_tokens": 3429,
+                "cache_write_tokens": 115
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 9
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_060b63d66c110a85016a678963955c819f97a4e9d629c55f3b",
+            "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/stale-gmail-d8a5c87c20",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T16:37:57.2569+00:00"
+        },
+        {
+          "id": 9240,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Waiting for daviddosuu@gmail.com to reply.",
+          "metadata": {
+            "tool_name": "gmail.wait_for_reply"
+          },
+          "created_at": "2026-07-27T16:37:57.785254+00:00"
+        },
+        {
+          "id": 9241,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_test_stale_gmail_injected",
+          "status": "failed",
+          "message": "Injected a stale Gmail watch checkpoint before provider reread.",
+          "metadata": {
+            "test_mode": true,
+            "stale_thread_id": "19fa4708adf81885",
+            "stale_history_id": "controlled-stale-history"
+          },
+          "created_at": "2026-07-27T16:38:09.855343+00:00"
+        },
+        {
+          "id": 9242,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_provider_state_reconciled",
+          "status": "succeeded",
+          "message": "Rejected stale Gmail watch state and fetched the canonical current provider thread.",
+          "metadata": {
+            "provider": "gmail",
+            "sol_invoked": false,
+            "canonical_thread_id": "19fa4708adf81885"
+          },
+          "created_at": "2026-07-27T16:38:09.947852+00:00"
+        },
+        {
+          "id": 9243,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_resumed",
+          "status": "planning",
+          "message": "A relevant Gmail reply arrived.",
+          "metadata": {
+            "watch_id": "6acf2cc7-ec3d-46b3-aba3-9cf766b0bf4f",
+            "message_id": "19fa470d5990c36a"
+          },
+          "created_at": "2026-07-27T16:38:10.840284+00:00"
+        },
+        {
+          "id": 9244,
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_failed",
+          "status": "failed",
+          "message": "Cannot coerce the result to a single JSON object",
+          "metadata": {
+            "retryable": true
+          },
+          "created_at": "2026-07-27T16:38:11.023297+00:00"
+        }
+      ],
+      "browser": null,
+      "watches": [
+        {
+          "id": "6acf2cc7-ec3d-46b3-aba3-9cf766b0bf4f",
+          "run_id": "a8dc1d0e-0fd3-4362-9c11-16e1766a7b28",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "thread_id": "19fa4708adf81885",
+          "contact_email": "daviddosuu@gmail.com",
+          "sent_message_id": "19fa470a41558772",
+          "last_history_id": null,
+          "status": "matched",
+          "next_poll_at": "2026-07-27T16:37:57.504+00:00",
+          "last_checked_at": "2026-07-27T16:38:10.274+00:00",
+          "expires_at": "2026-08-26T16:37:57.504+00:00",
+          "matched_message_id": "19fa470d5990c36a",
+          "created_at": "2026-07-27T16:37:57.564217+00:00",
+          "updated_at": "2026-07-27T16:38:10.382401+00:00"
+        }
+      ]
+    },
+    "recoveryInjected": false,
+    "replied": true,
+    "selected": false,
+    "secondaryEmail": "daviddosuu@gmail.com"
+  },
+  "events": [
+    {
+      "at": "2026-07-27T16:37:40.360429+00:00",
+      "type": "model_decision",
+      "status": "run_started",
+      "detail": {
+        "title": "Coordinate stale-state meeting",
+        "category": "Cross-tool"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:46.495125+00:00",
+      "type": "tool",
+      "tool": "gmail.create_draft",
+      "arguments": {
+        "to": [
+          "daviddosuu@gmail.com"
+        ],
+        "subject": "[Stale Gmail acceptance ee3740c509] availability",
+        "body_text": "Hi David,\n\nAre you available for a 30-minute meeting on Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos?\n\nBest,\n",
+        "thread_id": null,
+        "in_reply_to_message_id": null
+      },
+      "resultType": "succeeded",
+      "providerActionId": "r-7729910709435512002",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T16:37:49.819588+00:00",
+      "type": "tool",
+      "tool": "gmail.send_message",
+      "arguments": {
+        "draft_id": "r-7729910709435512002",
+        "expected_to": [
+          "daviddosuu@gmail.com"
+        ],
+        "expected_subject": "[Stale Gmail acceptance ee3740c509] availability"
+      },
+      "resultType": "succeeded",
+      "providerActionId": "19fa470a41558772",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T16:37:57.48523+00:00",
+      "type": "tool",
+      "tool": "gmail.wait_for_reply",
+      "arguments": {
+        "thread_id": "19fa4708adf81885",
+        "timeout_days": 30,
+        "contact_email": "daviddosuu@gmail.com",
+        "sent_message_id": "19fa470a41558772"
+      },
+      "resultType": "succeeded",
+      "providerActionId": null,
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T16:37:40.478227+00:00",
+      "type": "agent_run_started",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "strategy": "hybrid",
+        "capability": "scheduling"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:40.564366+00:00",
+      "type": "task_delegated",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T16:37:46.251344+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3090,
+          "total_tokens": 3242,
+          "output_tokens": 152,
+          "input_tokens_details": {
+            "cached_tokens": 2806,
+            "cache_write_tokens": 281
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 52
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_060b63d66c110a85016a6789558410819f85193f11c3f016d6",
+        "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/stale-gmail-d8a5c87c20",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:47.542939+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "68e9331a-991a-45ce-9941-16b893e16659",
+        "tool_name": "gmail.create_draft"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:49.465205+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3432,
+          "total_tokens": 3502,
+          "output_tokens": 70,
+          "input_tokens_details": {
+            "cached_tokens": 3087,
+            "cache_write_tokens": 342
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 12
+          }
+        },
+        "iteration": 1,
+        "response_id": "resp_060b63d66c110a85016a67895baec8819fb8ea40cf36853d37",
+        "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/stale-gmail-d8a5c87c20",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:50.2907+00:00",
+      "type": "agent_approval_requested",
+      "status": "needs_approval",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2",
+        "tool_name": "gmail.send_message"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:52.200799+00:00",
+      "type": "agent_approval_granted",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:54.083231+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "approved": true,
+        "action_id": "4c794fdc-0730-4898-8bc3-2a19f8a878e2",
+        "tool_name": "gmail.send_message"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:57.2569+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3547,
+          "total_tokens": 3614,
+          "output_tokens": 67,
+          "input_tokens_details": {
+            "cached_tokens": 3429,
+            "cache_write_tokens": 115
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 9
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_060b63d66c110a85016a678963955c819f97a4e9d629c55f3b",
+        "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/stale-gmail-d8a5c87c20",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T16:37:57.785254+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "tool_name": "gmail.wait_for_reply"
+      }
+    },
+    {
+      "at": "2026-07-27T16:38:09.855343+00:00",
+      "type": "agent_test_stale_gmail_injected",
+      "status": "failed",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "test_mode": true,
+        "stale_thread_id": "19fa4708adf81885",
+        "stale_history_id": "controlled-stale-history"
+      }
+    },
+    {
+      "at": "2026-07-27T16:38:09.947852+00:00",
+      "type": "agent_provider_state_reconciled",
+      "status": "succeeded",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "provider": "gmail",
+        "sol_invoked": false,
+        "canonical_thread_id": "19fa4708adf81885"
+      }
+    },
+    {
+      "at": "2026-07-27T16:38:10.840284+00:00",
+      "type": "agent_resumed",
+      "status": "planning",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "watch_id": "6acf2cc7-ec3d-46b3-aba3-9cf766b0bf4f",
+        "message_id": "19fa470d5990c36a"
+      }
+    },
+    {
+      "at": "2026-07-27T16:38:11.023297+00:00",
+      "type": "agent_failed",
+      "status": "failed",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "retryable": true
+      }
+    },
+    {
+      "at": "2026-07-27T16:38:16.543Z",
+      "type": "provider_verification",
+      "result": {
+        "calendarEvents": [],
+        "sentMessages": [
+          {
+            "id": "19fa470a41558772",
+            "thread_id": "19fa4708adf81885",
+            "subject": "[Stale Gmail acceptance ee3740c509] availability",
+            "to": "daviddosuu@gmail.com",
+            "bodyText": "Hi David,\r\n\r\nAre you available for a 30-minute meeting on Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos?\r\n\r\nBest,\r\n"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-07-27T16:38:16.545Z",
+      "type": "completion_decision",
+      "status": "failed",
+      "verification": {
+        "success": false,
+        "primaryClass": "D. TOOL / DATA COERCION",
+        "exactMechanism": "tool result coercion: Cannot coerce the result to a single JSON object",
+        "duplicates": false,
+        "executionPrecision": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "evaluatedCommit": "65f1fb574eefa7c30169f272bd4c968e0b552950",
+  "runs": [
+    {
+      "scenario": "calendar-email",
+      "category": "Cross-tool",
+      "result": "FAIL",
+      "primaryFailureClass": "F. PROVIDER",
+      "exactMechanism": "Agent request failed (546)",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.004088,
+      "finalState": "running",
+      "runId": "9e1c2598-8252-4ff8-88e2-e72644d200e9",
+      "browserSessionId": null,
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T16:27:48.375Z",
+      "finishedAt": "2026-07-27T16:30:27.781Z"
+    }
+  ]
+}

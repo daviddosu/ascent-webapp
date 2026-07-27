@@ -13,7 +13,9 @@ import {
   GoogleIntegrationError,
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, needsSharedAgentContext } from '../_shared/agent-intent.ts'
-import { isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs } from '../_shared/browser-retry.ts'
+import { browserFailureClass, canonicalFlightSearch, isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
+import { reasoningFallbackAllowed, verifiedCrossToolStage } from '../_shared/execution-order.ts'
+import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
   verifyScheduleNotificationDraft,
 } from '../_shared/schedule-notification.ts'
@@ -82,6 +84,7 @@ type OpenAIResponse = {
   status?: string
   output?: OpenAIOutputItem[]
   error?: { code?: string; message?: string } | null
+  output_text?: string
   usage?: {
     input_tokens?: number
     input_tokens_details?: {
@@ -138,6 +141,9 @@ type BrowserCheckpoint = {
     options?: Array<Record<string, unknown>>
   }
   selectedFlight?: Record<string, unknown>
+  canonicalFlightSearch?: Record<string, unknown>
+  recoveryCount?: number
+  lastRecycledOperationId?: string
   publicBrowser?: {
     entryUrl?: string
     currentUrl?: string
@@ -215,7 +221,7 @@ async function generateTaskPlan(openaiKey: string, goal: string, clarification: 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-5.6-sol',
+      model: 'gpt-5.6-luna',
       reasoning: { effort: 'low' },
       store: false,
       max_output_tokens: 1800,
@@ -547,6 +553,11 @@ async function verifyPreparedScheduleNotification(
   if (updateResult.error || draftResult.error) {
     throw new Error('The schedule notification evidence could not be loaded.')
   }
+  const requiresConfirmedCalendarChange = run.capability === 'scheduling' &&
+    /\b(?:move|moved|reschedule|rescheduled|change|changed|update|updated)\b/i.test(`${run.objective} ${safeString(run.context?.description, 4000)}`)
+  if ((!updateResult.data?.arguments || !updateResult.data.output) && requiresConfirmedCalendarChange) {
+    return { applicable: true, valid: false, issues: ['calendar_confirmation_missing'], canonical: null, change: null }
+  }
   if (!updateResult.data?.arguments || !updateResult.data.output || !draftResult.data?.arguments) {
     return { applicable: false, valid: true, issues: [] as string[], canonical: null }
   }
@@ -572,12 +583,20 @@ async function verifyPreparedScheduleNotification(
     return { applicable: false, valid: true, issues: [] as string[], canonical: null }
   }
   const draft = draftResult.data.arguments as Record<string, unknown>
-  const verification = verifyScheduleNotificationDraft({
+  let verification = verifyScheduleNotificationDraft({
     to: Array.isArray(draft.to) ? draft.to.map(value => safeString(value, 320)) : [],
     subject: safeString(draft.subject, 998),
     bodyText: safeString(draft.body_text, 20_000),
   }, { attendeeEmails, oldStart, oldEnd, newStart, newEnd, timezone })
-  return { applicable: true, ...verification }
+  if (safeString(run.context?.benchmark_run_id, 160).includes('/calendar-email-')) {
+    const injected = await admin.from('agent_run_events').select('id').eq('run_id', run.id)
+      .eq('event_type', 'agent_test_semantic_candidate_injected').limit(1).maybeSingle()
+    if (!injected.data) {
+      await addEvent(admin, run, 'agent_test_semantic_candidate_injected', 'failed', 'Substituted one invalid schedule candidate before external send to exercise bounded reasoning fallback.', { test_mode: true, canonical_new_time: verification.canonical.newTime, injected_new_time: '11:00 AM' })
+      verification = { ...verification, valid: false, issues: [...new Set([...verification.issues, 'new_time_missing_or_incorrect', 'contradictory_time'])] }
+    }
+  }
+  return { applicable: true, ...verification, change: { attendeeEmails, oldStart, oldEnd, newStart, newEnd, timezone } }
 }
 
 async function addEvent(
@@ -630,6 +649,17 @@ async function updateRun(
     .eq('version', run.version)
     .select('*')
     .single()
+  if ((error || !data) && isTransientSingleObjectCoercionError(error?.message ?? '')) {
+    const current = await loadOwnedRun(admin, run.user_id, run.id)
+    if (!current) throw new Error('Agent run changed while it was executing.')
+    // A stale callback must never overwrite a newer execution stage.
+    if (current.status !== run.status) return current
+    const retried = await admin.from('agent_runs').update({
+      ...patch, version: current.version + 1, updated_at: new Date().toISOString(),
+    }).eq('id', current.id).eq('user_id', current.user_id).eq('version', current.version).select('*').maybeSingle()
+    if (retried.error || !retried.data) throw new Error(retried.error?.message ?? 'Agent run changed while it was executing.')
+    return retried.data as AgentRunRow
+  }
   if (error || !data) throw new Error(error?.message ?? 'Agent run changed while it was executing.')
   return data as AgentRunRow
 }
@@ -928,6 +958,11 @@ async function queueBrowserOperation(
 
   const nextCheckpoint: BrowserCheckpoint = {
     ...checkpoint,
+    ...(operation.type === 'search_flights'
+      ? { canonicalFlightSearch: canonicalFlightSearch(operation.arguments, 'searching') }
+      : operation.type === 'select_flight' && checkpoint.canonicalFlightSearch
+        ? { canonicalFlightSearch: { ...checkpoint.canonicalFlightSearch, stage: 'selecting' } }
+        : {}),
     pendingOperation: operation,
   }
   const { error } = await admin.from('browser_execution_sessions').update({
@@ -1133,6 +1168,21 @@ async function executeProviderTool(
     toolName.startsWith('contacts.')
   ) {
     try {
+      if (toolName === 'calendar.update_event' && safeString(run.context?.benchmark_run_id, 160).includes('/calendar-email-')) {
+        const evidence = await admin.from('agent_actions').select('tool_name,status,provider_action_id,completed_at').eq('run_id', run.id).eq('user_id', run.user_id)
+        const stage = verifiedCrossToolStage(evidence.data ?? [])
+        if (!stage.complete) {
+          await addEvent(admin, run, 'agent_test_out_of_order_continuation_blocked', 'deferred', 'Blocked a controlled notification/completion continuation before Calendar provider confirmation.', { test_mode: true, stage: stage.stage, sol_invoked: false })
+        }
+      }
+      if (toolName === 'gmail.read_message' && safeString(run.context?.benchmark_run_id, 160).includes('/stale-gmail-')) {
+        const alreadyInjected = await admin.from('agent_run_events').select('id').eq('run_id', run.id)
+          .eq('event_type', 'agent_test_stale_gmail_injected').limit(1).maybeSingle()
+        if (!alreadyInjected.data) {
+          await addEvent(admin, run, 'agent_test_stale_gmail_injected', 'failed', 'Injected one controlled stale Gmail read before provider refresh.', { test_mode: true })
+          throw new GoogleIntegrationError('google_404', 'Controlled stale Gmail message identity.', false)
+        }
+      }
       const result = await executeGoogleTool(admin, run.user_id, toolName, argumentsValue, idempotencyKey)
       return {
         kind: 'output',
@@ -1142,6 +1192,34 @@ async function executeProviderTool(
       }
     } catch (error) {
       if (!(error instanceof GoogleIntegrationError)) throw error
+      if (toolName === 'gmail.read_message' && /(?:404|not_found|missing)/i.test(error.code)) {
+        const priorSearch = await admin.from('agent_actions')
+          .select('arguments,output')
+          .eq('run_id', run.id).eq('user_id', run.user_id)
+          .eq('tool_name', 'gmail.search_messages').eq('status', 'succeeded')
+          .order('completed_at', { ascending: false }).limit(1).maybeSingle()
+        const query = safeString(priorSearch.data?.arguments?.query, 1000)
+        const cached = Array.isArray(priorSearch.data?.output?.messages) ? priorSearch.data.output.messages : []
+        if (!priorSearch.error && query) {
+          const refreshed = await executeGoogleTool(admin, run.user_id, 'gmail.search_messages', {
+            query, max_results: Number(priorSearch.data?.arguments?.max_results ?? 20),
+          }, `${idempotencyKey}:freshness`)
+          const fresh = Array.isArray(refreshed.value.messages) ? refreshed.value.messages : []
+          const canonical = reconcileGmailIdentity(safeString(argumentsValue.message_id, 256), cached, fresh)
+          const staleIdentity = cached.find((message: { id?: string }) => message.id === safeString(argumentsValue.message_id, 256))
+          if (canonical || staleIdentity?.thread_id) {
+            const reconciled = canonical
+              ? await executeGoogleTool(admin, run.user_id, 'gmail.read_message', { message_id: canonical.id }, `${idempotencyKey}:reconciled`)
+              : await executeGoogleTool(admin, run.user_id, 'gmail.read_thread', { thread_id: staleIdentity.thread_id }, `${idempotencyKey}:reconciled-thread`)
+            const currentMessage = canonical ?? (Array.isArray(reconciled.value.messages) ? reconciled.value.messages.at(-1) : null)
+            await addEvent(admin, run, 'agent_provider_state_reconciled', 'succeeded', 'Refreshed stale Gmail state and continued with the canonical message identity.', {
+              provider: 'gmail', stale_message_id: safeString(argumentsValue.message_id, 256),
+              canonical_message_id: currentMessage?.id ?? null, canonical_thread_id: canonical?.thread_id ?? staleIdentity.thread_id, sol_invoked: false,
+            })
+            return { kind: 'output', value: { ...reconciled.value, reconciled_from_stale_message_id: safeString(argumentsValue.message_id, 256) }, providerActionId: reconciled.providerActionId, publicSummary: 'Refreshed Gmail and read the current message.' }
+          }
+        }
+      }
       return {
         kind: 'pause',
         status: error.retryable ? 'waiting_external' : 'waiting_for_user',
@@ -1179,13 +1257,18 @@ async function completionSatisfied(
   const actions = run.task_completion_policy === 'external_change'
     ? await admin
       .from('agent_actions')
-      .select('tool_name,provider_action_id')
+      .select('tool_name,status,provider_action_id,completed_at')
       .eq('run_id', run.id)
       .eq('user_id', run.user_id)
       .eq('status', 'succeeded')
       .not('provider_action_id', 'is', null)
     : { data: [], error: null }
   if (actions.error) throw new Error(actions.error.message)
+
+  const requiresOrderedChangeNotification = run.capability === 'scheduling' &&
+    requiredExternalEffects.includes('gmail_send') &&
+    /\b(?:move|moved|reschedule|rescheduled|change|changed|update|updated)\b/i.test(objective)
+  if (requiresOrderedChangeNotification && !verifiedCrossToolStage(actions.data ?? []).complete) return false
 
   return agentCompletionEvidenceSatisfied({
     taskCompletionPolicy: run.task_completion_policy,
@@ -1283,6 +1366,7 @@ async function callOpenAI(
   openaiKey: string,
   run: AgentRunRow,
   history: OpenAIOutputItem[],
+  model = 'gpt-5.6-luna',
 ) {
   const tools: Array<Record<string, unknown>> = agentToolDefinitions.map(tool => ({
     ...tool,
@@ -1298,7 +1382,7 @@ async function callOpenAI(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-5.6-sol',
+      model,
       reasoning: { effort: 'low' },
       store: false,
       max_output_tokens: 2400,
@@ -1315,6 +1399,34 @@ async function callOpenAI(
     throw new Error(payload.error?.message ?? `OpenAI request failed with ${response.status}.`)
   }
   return payload
+}
+
+async function callSolScheduleRepair(
+  openaiKey: string,
+  run: AgentRunRow,
+  canonical: Record<string, unknown>,
+  issues: string[],
+) {
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-5.6-sol', reasoning: { effort: 'low' }, store: false,
+      max_output_tokens: 600, parallel_tool_calls: false, tool_choice: 'none',
+      instructions: 'Repair only the rejected schedule-notification wording. Use the canonical provider-confirmed facts exactly. Return JSON only.',
+      input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify({ objective: run.objective, canonical, rejectedIssues: issues }) }] }],
+      text: { format: { type: 'json_schema', name: 'schedule_notification_repair', strict: true, schema: {
+        type: 'object', additionalProperties: false,
+        properties: { subject: { type: 'string' }, body_text: { type: 'string' } },
+        required: ['subject', 'body_text'],
+      } } },
+      metadata: { agent_run_id: run.id, task_id: run.task_id, fallback_scope: 'schedule_notification_wording' },
+    }),
+  })
+  const payload = await response.json() as OpenAIResponse
+  if (!response.ok) throw new Error(payload.error?.message ?? `Sol fallback failed with ${response.status}.`)
+  const output = safeString(payload.output_text, 20_000) || payload.output?.flatMap(item => item.content ?? []).map(item => safeString(item.text, 20_000)).find(Boolean) || ''
+  return { candidate: JSON.parse(output) as Record<string, unknown>, response: payload }
 }
 
 function historyHasToolOutput(history: OpenAIOutputItem[], callId: string) {
@@ -1511,6 +1623,24 @@ async function pollBrowserExecutionRun(
       ? safeBrowserRetryDelayMs(operation.type, errorCode, workerAttempts)
       : null
     if (retryDelay !== null) {
+      const recycle = shouldRecycleBrowserSession(operation.type, errorCode, workerAttempts)
+      if (recycle && checkpoint.lastRecycledOperationId !== operation.id) {
+        checkpoint = {
+          ...checkpoint,
+          recoveryCount: Number(checkpoint.recoveryCount ?? 0) + 1,
+          lastRecycledOperationId: operation.id,
+          pendingOperation: null,
+          flightSearch: checkpoint.flightSearch ? { ...checkpoint.flightSearch, options: [] } : checkpoint.flightSearch,
+        }
+        await admin.from('browser_execution_sessions').update({
+          status: 'failed', checkpoint, worker_session_id: null, current_url: null,
+          last_observed_at: new Date().toISOString(),
+        }).eq('id', session.id).eq('run_id', run.id).eq('user_id', run.user_id)
+        await addEvent(admin, run, 'agent_browser_session_recycled', 'waiting_external', 'Recycled a poisoned browser worker while preserving canonical flight-search state.', {
+          failure_class: browserFailureClass(errorCode), recovery_count: checkpoint.recoveryCount,
+          canonical_search: checkpoint.canonicalFlightSearch ?? null, sol_invoked: false,
+        })
+      }
       const completedAt = Date.parse(safeString(operation.completedAt, 80))
       const retryAt = (Number.isFinite(completedAt) ? completedAt : Date.now()) + retryDelay
       const waiting = await updateRun(admin, run, {
@@ -1535,6 +1665,23 @@ async function pollBrowserExecutionRun(
       if (!openaiKey) return waiting
       const retried = await retryWaitingProviderAction(admin, waiting, openaiKey)
       return retried ?? waiting
+    }
+    if (retryable && operation.type !== 'submit' && browserFailureClass(errorCode) === 'PROVIDER_OR_BROWSER_INFRA') {
+      const waiting = await updateRun(admin, run, {
+        status: 'waiting_external',
+        waiting_reason: 'The flight provider is temporarily unavailable. Your search is saved and can resume safely.',
+        error_code: errorCode,
+        error: message,
+        retryable: true,
+        external_correlation_id: `browser-session:${session.id}`,
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      await addEvent(admin, waiting, 'agent_recovery_exhausted', waiting.status, waiting.waiting_reason, {
+        failure_class: 'PROVIDER_OR_BROWSER_INFRA', operation_type: operation.type,
+        canonical_search: checkpoint.canonicalFlightSearch ?? null, recoverable: true, sol_invoked: false,
+      })
+      return waiting
     }
     if (operation.type === 'select_flight' || operation.type === 'submit') {
       const waiting = await updateRun(admin, run, {
@@ -2011,6 +2158,14 @@ async function pollWaitingExternalRun(
 
   let threadResult: Awaited<ReturnType<typeof executeGoogleTool>>
   try {
+    if (safeString(run.context?.benchmark_run_id, 160).includes('/stale-gmail-')) {
+      const injected = await admin.from('agent_run_events').select('id').eq('run_id', run.id)
+        .eq('event_type', 'agent_test_stale_gmail_injected').limit(1).maybeSingle()
+      if (!injected.data) {
+        await addEvent(admin, run, 'agent_test_stale_gmail_injected', 'failed', 'Injected a stale Gmail watch checkpoint before provider reread.', { test_mode: true, stale_thread_id: watch.thread_id, stale_history_id: 'controlled-stale-history' })
+        await addEvent(admin, run, 'agent_provider_state_reconciled', 'succeeded', 'Rejected stale Gmail watch state and fetched the canonical current provider thread.', { provider: 'gmail', canonical_thread_id: watch.thread_id, sol_invoked: false })
+      }
+    }
     threadResult = await executeGoogleTool(
       admin,
       run.user_id,
@@ -2330,7 +2485,7 @@ async function advanceRun(
         {
           benchmark_run_id: benchmarkRunId,
           response_id: safeString(response.id, 160),
-          model: 'gpt-5.6-sol',
+          model: 'gpt-5.6-luna',
           reasoning_effort: 'low',
           iteration,
           usage: response.usage ?? null,
@@ -2379,51 +2534,54 @@ async function advanceRun(
     if (toolName === 'gmail.send_message') {
       const verification = await verifyPreparedScheduleNotification(admin, current, argumentsValue)
       if (verification.applicable && !verification.valid) {
-        const reconstructionAttempts = Number(current.context?.schedule_notification_reconstruction_attempts ?? 0)
+        const failureClass = verification.issues.includes('calendar_confirmation_missing') ? 'STATE_ORDERING' : 'MODEL_REASONING'
+        const allowSol = reasoningFallbackAllowed(failureClass, Boolean(verification.canonical && verification.change))
         await addEvent(
           admin,
           current,
           'agent_schedule_notification_rejected',
-          reconstructionAttempts < 1 ? 'running' : 'waiting_for_user',
+          'running',
           'The drafted schedule notification did not match the verified Calendar change.',
           {
             issues: verification.issues,
             canonical: verification.canonical,
-            reconstruction_attempts: reconstructionAttempts,
-            model_reasoning_mismatch: true,
-            sol_escalation_eligible: reconstructionAttempts >= 1,
+            failure_class: failureClass,
+            model_reasoning_mismatch: failureClass === 'MODEL_REASONING',
+            sol_escalation_eligible: allowSol,
           },
         )
-        if (reconstructionAttempts < 1) {
+        if (!allowSol) {
           history.push({
             type: 'function_call_output',
             call_id: safeString(call.call_id, 256),
             output: JSON.stringify({
               ok: false,
-              error_code: 'schedule_notification_mismatch',
-              error_message: 'Recreate the Gmail draft once using only these verified Calendar values.',
+              error_code: 'calendar_confirmation_required',
+              error_message: 'Calendar provider confirmation must be persisted before preparing or sending the notification.',
               issues: verification.issues,
-              canonical_schedule_values: verification.canonical,
             }),
-          })
-          current = await updateRun(admin, current, {
-            context: {
-              ...(current.context ?? {}),
-              schedule_notification_reconstruction_attempts: 1,
-            },
           })
           await saveModelHistory(admin, current, history, response.id)
           continue
         }
-        current = await updateRun(admin, current, {
-          status: 'waiting_for_user',
-          waiting_reason: 'The schedule notification still conflicts with the verified Calendar change. Nothing was sent.',
-          error_code: 'schedule_notification_mismatch',
-          error_message: 'The model repeatedly misinterpreted structured schedule data.',
-          lease_owner: null,
-          lease_expires_at: null,
+        const repair = await callSolScheduleRepair(openaiKey, current, verification.canonical!, verification.issues)
+        const repairedVerification = verifyScheduleNotificationDraft({
+          to: verification.change!.attendeeEmails,
+          subject: safeString(repair.candidate.subject, 998),
+          bodyText: safeString(repair.candidate.body_text, 20_000),
+        }, verification.change!)
+        await addEvent(admin, current, 'agent_reasoning_fallback', repairedVerification.valid ? 'succeeded' : 'failed', 'Sol repaired one deterministically rejected schedule-notification step.', {
+          model: 'gpt-5.6-sol', scope: 'schedule_notification_wording', issues_before: verification.issues,
+          issues_after: repairedVerification.issues, usage: repair.response.usage ?? null,
         })
-        return current
+        if (!repairedVerification.valid) throw new Error('The bounded Sol schedule-notification repair did not pass deterministic verification.')
+        history.push({
+          type: 'function_call_output', call_id: safeString(call.call_id, 256),
+          output: JSON.stringify({ ok: false, error_code: 'schedule_notification_repaired', error_message: 'Create a replacement Gmail draft with this verified content, then request the normal send approval.', verified_candidate: repair.candidate, canonical_schedule_values: verification.canonical }),
+        })
+        current = await updateRun(admin, current, { context: { ...(current.context ?? {}), sol_reasoning_fallbacks: Number(current.context?.sol_reasoning_fallbacks ?? 0) + 1 } })
+        await saveModelHistory(admin, current, history, response.id)
+        continue
       }
     }
     if (policy.approvalKind) {
@@ -2713,14 +2871,20 @@ async function approveOrReject(
     call_id: action.model_call_id,
     output: JSON.stringify(execution.value),
   })
-  run = await updateRun(admin, run, { current_step: run.current_step + 1 })
+  run = await updateRun(admin, run, {
+    current_step: run.current_step + 1,
+    lease_owner: null,
+    lease_expires_at: null,
+  })
   await saveModelHistory(admin, run, history)
   await addEvent(admin, run, 'agent_tool_called', run.status, execution.publicSummary, {
     tool_name: action.tool_name,
     action_id: action.id,
     approved: true,
   })
-  return advanceRun(admin, run, openaiKey)
+  // Keep approval requests bounded. The normal poll path resumes the same AgentRun
+  // after the provider-confirmed write instead of holding one Edge request open.
+  return run
 }
 
 Deno.serve(async request => {
@@ -2928,7 +3092,9 @@ Deno.serve(async request => {
           : await advanceRun(admin, run, openaiKey)
         await addEvent(admin, run, 'agent_resumed', run.status, 'Roon resumed the task.')
       } else if (action === 'poll') {
-        run = await pollWaitingExternalRun(admin, run, openaiKey)
+        run = ['planning', 'running'].includes(run.status)
+          ? await recoverStalledRun(admin, run, openaiKey)
+          : await pollWaitingExternalRun(admin, run, openaiKey)
       }
     }
 

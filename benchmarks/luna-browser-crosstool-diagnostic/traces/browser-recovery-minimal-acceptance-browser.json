@@ -1,0 +1,2595 @@
+{
+  "scenario": "browser-recovery",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "runId": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+  "browserSessionId": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+  "controls": {
+    "state": {
+      "run": {
+        "id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+        "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+        "task_id": "3feab954-d1bb-4926-ac9f-b3a431c5cd8a",
+        "status": "waiting_for_user",
+        "objective": "Prepare recoverable London flight",
+        "context": {
+          "due": "2026-07-27",
+          "goal_id": null,
+          "timezone": "Africa/Lagos",
+          "description": "Find a one-way economy flight from Lagos to London on 2026-09-17. Maximum one stop. Choose a valid result and continue only to the final safe booking or payment handoff. Do not purchase or enter payment details.",
+          "user_context": "",
+          "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/browser-recovery-b0016f5429",
+          "user_preferences": {
+            "timezone": "Africa/Lagos",
+            "home_airport": null,
+            "working_hours": {
+              "end": "17:00",
+              "start": "09:00"
+            },
+            "preferred_cabin": "economy",
+            "preferred_currency": "USD",
+            "default_meeting_minutes": 30
+          },
+          "execution_date_context": {
+            "timezone": "Africa/Lagos",
+            "utc_time": "2026-07-27T16:21:31.438Z",
+            "local_date": "2026-07-27",
+            "relative_dates": []
+          }
+        },
+        "capability": "flight_search",
+        "progress": [
+          "Started an isolated browser session.",
+          "Compared live flight options.",
+          "Prepared the selected itinerary."
+        ],
+        "result": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": true,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "Your selected flight is ready for you.",
+          "sections": [
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $396",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $1,172",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–LGW · 1 stop · 9 hr · $422",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "49ced533818aee50b4b568af",
+              "label": "Best overall",
+              "price": "$396",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 396,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            {
+              "id": "4af648bd68a2b4813b60f4da",
+              "label": "Fastest",
+              "price": "$1,172",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 1172,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "f734a5538036fbcf276d9536",
+              "label": "Also worth considering",
+              "price": "$422",
+              "route": "LOS–LGW",
+              "stops": "1 stop",
+              "amount": 422,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "9 hr",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "3:50 PM",
+              "departureTime": "6:50 AM",
+              "durationMinutes": 540
+            }
+          ],
+          "selectedFlight": {
+            "id": "49ced533818aee50b4b568af",
+            "label": "Best overall",
+            "price": "$396",
+            "route": "LOS–STN",
+            "stops": "1 stop",
+            "amount": 396,
+            "airline": "Royal Air Maroc",
+            "currency": "USD",
+            "duration": "11 hr 5 min",
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "stopCount": 1,
+            "arrivalTime": "6:20 AM+1",
+            "departureTime": "7:15 PM",
+            "durationMinutes": 665
+          },
+          "paymentHandoffUrl": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+          "paymentHandoffStage": "provider_booking",
+          "paymentHandoffProvider": "Royal Air Maroc"
+        },
+        "error": null,
+        "created_at": "2026-07-27T16:21:31.580815+00:00",
+        "updated_at": "2026-07-27T16:22:48.150357+00:00",
+        "strategy": "browser",
+        "intent": {
+          "strategy": "browser",
+          "capability": "flight_search",
+          "outcomeType": "payment_handoff"
+        },
+        "plan": [],
+        "current_step": 3,
+        "waiting_reason": "Your flight is selected. Continue when you are ready to handle payment.",
+        "task_completion_policy": "payment_handoff",
+        "openai_response_id": "resp_0bb56aebd0604208016a67858c7a9081a38fde619999726e88",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+        "external_correlation_id": null,
+        "lease_owner": null,
+        "lease_expires_at": null,
+        "attempt_count": 1,
+        "retryable": true,
+        "error_code": null,
+        "started_at": "2026-07-27T16:21:32.031+00:00",
+        "completed_at": null,
+        "cancelled_at": null,
+        "version": 18
+      },
+      "actions": [
+        {
+          "id": "12d36b06-0b9e-4d74-b4ac-6225bc8a1192",
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 0,
+          "tool_name": "browser.start_session",
+          "model_call_id": "call_KirA6ArLHhPllLJxpOtluG3G",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "objective": "Find a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, then select a valid result and proceed to the final safe booking/payment handoff without purchasing or entering payment details.",
+            "allowed_domains": [
+              "www.google.com"
+            ]
+          },
+          "output": {
+            "status": "planning",
+            "resumable": true,
+            "session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "public_summary": "Started an isolated browser session.",
+          "idempotency_key": "agent:141a9c3a-4f0d-425e-9b65-ccbea6bd8986:0:browser.start_session:64d7bbe0098b9046d3d5b678",
+          "provider_action_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T16:21:35.906+00:00",
+          "created_at": "2026-07-27T16:21:35.682149+00:00",
+          "updated_at": "2026-07-27T16:21:35.962892+00:00"
+        },
+        {
+          "id": "7cbe530c-c42c-4d3a-bde3-33d2712df0b3",
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 1,
+          "tool_name": "browser.search_flights",
+          "model_call_id": "call_lBa9QCdwFy28WUVNkp5jaDKL",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "cabin": "economy",
+            "currency": "USD",
+            "max_stops": 1,
+            "session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+            "origin_code": "LOS",
+            "return_date": null,
+            "budget_amount": null,
+            "departure_date": "2026-09-17",
+            "destination_code": "LON",
+            "preferred_airlines": []
+          },
+          "output": {
+            "options": [
+              {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "4af648bd68a2b4813b60f4da",
+                "label": "Fastest",
+                "price": "$1,172",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 1172,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "f734a5538036fbcf276d9536",
+                "label": "Also worth considering",
+                "price": "$422",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 422,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "9 hr",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "3:50 PM",
+                "departureTime": "6:50 AM",
+                "durationMinutes": 540
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-27T16:22:19.516Z"
+          },
+          "public_summary": "Compared live flight options.",
+          "idempotency_key": "agent:141a9c3a-4f0d-425e-9b65-ccbea6bd8986:1:browser.search_flights:33953236c04d2e1ee4907381",
+          "provider_action_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T16:22:10.876+00:00",
+          "completed_at": "2026-07-27T16:22:23.148+00:00",
+          "created_at": "2026-07-27T16:21:37.944334+00:00",
+          "updated_at": "2026-07-27T16:22:23.262458+00:00"
+        },
+        {
+          "id": "b9fbb668-f41d-423d-af98-c0ed45b528f4",
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 2,
+          "tool_name": "browser.select_flight",
+          "model_call_id": null,
+          "risk": "prepare",
+          "status": "succeeded",
+          "arguments": {
+            "option_id": "49ced533818aee50b4b568af",
+            "session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "output": {
+            "provider": "Google Flights",
+            "resumable": true,
+            "handoffUrl": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+            "observedAt": "2026-07-27T16:22:44.607Z",
+            "handoffStage": "provider_booking",
+            "selectedOption": {
+              "id": "49ced533818aee50b4b568af",
+              "label": "Best overall",
+              "price": "$396",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 396,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            "selectionTrace": [
+              {
+                "at": "2026-07-27T16:22:38.844Z",
+                "stage": "selection_started",
+                "details": {
+                  "optionId": "49ced533818aee50b4b568af",
+                  "tripType": "one_way",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                  "constraints": {
+                    "cabin": "economy",
+                    "maxStops": 1,
+                    "originCode": "LOS",
+                    "destinationCode": "LON"
+                  }
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.910Z",
+                "stage": "candidate_cards_found",
+                "details": {
+                  "count": 9,
+                  "attempt": 1,
+                  "candidates": [
+                    {
+                      "id": "49ced533818aee50b4b568af",
+                      "index": 0,
+                      "route": "LOS–STN",
+                      "score": 100,
+                      "amount": 396,
+                      "airline": "Royal Air Maroc",
+                      "stopCount": 1,
+                      "departureTime": "7:15 PM",
+                      "durationMinutes": 665
+                    },
+                    {
+                      "id": "f734a5538036fbcf276d9536",
+                      "index": 1,
+                      "route": "LOS–LGW",
+                      "score": 40,
+                      "amount": 422,
+                      "airline": "Royal Air Maroc",
+                      "stopCount": 1,
+                      "departureTime": "6:50 AM",
+                      "durationMinutes": 540
+                    },
+                    {
+                      "id": "4a6ca36c47b134aa22cb218d",
+                      "index": 2,
+                      "route": "LOS–LGW",
+                      "score": 10,
+                      "amount": 441,
+                      "airline": "Qatar AirwaysBritish Airways",
+                      "stopCount": 1,
+                      "departureTime": "2:45 PM",
+                      "durationMinutes": 955
+                    },
+                    {
+                      "id": "9b59fa5f1709cb40a40e5f70",
+                      "index": 3,
+                      "route": "LOS–LGW",
+                      "score": 0,
+                      "amount": 501,
+                      "airline": "Air Peace",
+                      "stopCount": 0,
+                      "departureTime": "11:40 PM",
+                      "durationMinutes": 400
+                    },
+                    {
+                      "id": "3507c4c870c9301bf4fd7809",
+                      "index": 4,
+                      "route": "LOS–LHR",
+                      "score": 0,
+                      "amount": 762,
+                      "airline": "Virgin AtlanticOperated by Operated by Virgin Atlantic International",
+                      "stopCount": 0,
+                      "departureTime": "9:00 AM",
+                      "durationMinutes": 415
+                    },
+                    {
+                      "id": "8517a8e99119f17ed8bda5ad",
+                      "index": 5,
+                      "route": "LOS–LHR",
+                      "score": 10,
+                      "amount": 420,
+                      "airline": "RwandAir",
+                      "stopCount": 1,
+                      "departureTime": "2:45 PM",
+                      "durationMinutes": 1140
+                    },
+                    {
+                      "id": "8360dcb7732080060f40b65a",
+                      "index": 6,
+                      "route": "LOS–LHR",
+                      "score": 10,
+                      "amount": 479,
+                      "airline": "Kenya Airways",
+                      "stopCount": 1,
+                      "departureTime": "10:45 PM",
+                      "durationMinutes": 1050
+                    },
+                    {
+                      "id": "3fc069df99cb44768d980de7",
+                      "index": 7,
+                      "route": "LOS–LGW",
+                      "score": 10,
+                      "amount": 627,
+                      "airline": "Air France",
+                      "stopCount": 1,
+                      "departureTime": "11:50 PM",
+                      "durationMinutes": 575
+                    },
+                    {
+                      "id": "4af648bd68a2b4813b60f4da",
+                      "index": 8,
+                      "route": "LOS–LHR",
+                      "score": 0,
+                      "amount": 1172,
+                      "airline": "British Airways",
+                      "stopCount": 0,
+                      "departureTime": "10:50 PM",
+                      "durationMinutes": 390
+                    }
+                  ]
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.910Z",
+                "stage": "chosen_candidate",
+                "details": {
+                  "id": "49ced533818aee50b4b568af",
+                  "index": 0,
+                  "route": "LOS–STN",
+                  "score": 100,
+                  "amount": 396,
+                  "airline": "Royal Air Maroc",
+                  "attempt": 1,
+                  "expectedStage": "booking_options"
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.992Z",
+                "stage": "selection_target",
+                "details": {
+                  "target": "card_action",
+                  "attempt": 1
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:39.344Z",
+                "stage": "post_click_state",
+                "details": {
+                  "url": "https://www.google.com/travel/flights/booking?tfs=CBwQAhplEgoyMDI2LTA5LTE3Ih8KA0xPUxIKMjAyNi0wOS0xNxoDQ01OKgJBVDIDNTU2Ih8KA0NNThIKMjAyNi0wOS0xOBoDU1ROKgJBVDIDODA4agcIARIDTE9TcgwIAhIIL20vMDRqcGxAAUgBcAGCAQsI____________AZgBAg&tfu=CnRDalJJZEhaV1lsZEhZMFJKTkVsQlMzbGpTbEZDUnkwdExTMHRMUzE1YVdGbU9DMXVNVUZCUVVGQlIzQnVhR056UjBwYU1qQkJFZ3RCVkRVMU5ueEJWRGd3T0JvTENJVzFBaEFDR2dOVlUwUTRIWENGdFFJPRICCAAiAA&hl=en&curr=USD",
+                  "attempt": 1,
+                  "recovered": false,
+                  "expectedStage": "booking_options"
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:44.607Z",
+                "stage": "handoff_verified",
+                "details": {
+                  "stage": "provider_booking",
+                  "hostname": "booking.onesait.com",
+                  "provider": "Royal Air Maroc",
+                  "paymentBoundaryReached": true
+                }
+              }
+            ],
+            "handoffProvider": "Royal Air Maroc",
+            "paymentBoundaryReached": true
+          },
+          "public_summary": "Prepared the selected itinerary for payment handoff.",
+          "idempotency_key": "agent:141a9c3a-4f0d-425e-9b65-ccbea6bd8986:2:browser.select_flight:a884146d6f40b6f0d70ff945",
+          "provider_action_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T16:22:48.003+00:00",
+          "created_at": "2026-07-27T16:22:28.024693+00:00",
+          "updated_at": "2026-07-27T16:22:48.066523+00:00"
+        }
+      ],
+      "approvals": [],
+      "events": [
+        {
+          "id": 9142,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "browser",
+            "capability": "flight_search"
+          },
+          "created_at": "2026-07-27T16:21:31.757913+00:00"
+        },
+        {
+          "id": 9143,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T16:21:31.856928+00:00"
+        },
+        {
+          "id": 9144,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3050,
+              "total_tokens": 3147,
+              "output_tokens": 97,
+              "input_tokens_details": {
+                "cached_tokens": 0,
+                "cache_write_tokens": 3047
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 24
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0bb56aebd0604208016a67858c7a9081a38fde619999726e88",
+            "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/browser-recovery-b0016f5429",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T16:21:35.401582+00:00"
+        },
+        {
+          "id": 9145,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Started an isolated browser session.",
+          "metadata": {
+            "action_id": "12d36b06-0b9e-4d74-b4ac-6225bc8a1192",
+            "tool_name": "browser.start_session"
+          },
+          "created_at": "2026-07-27T16:21:36.210398+00:00"
+        },
+        {
+          "id": 9146,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3196,
+              "total_tokens": 3290,
+              "output_tokens": 94,
+              "input_tokens_details": {
+                "cached_tokens": 3047,
+                "cache_write_tokens": 146
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 0
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_0bb56aebd0604208016a67859055d081a398e7d87c4a6d0d50",
+            "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/browser-recovery-b0016f5429",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T16:21:37.702715+00:00"
+        },
+        {
+          "id": 9147,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Searching live flight options.",
+          "metadata": {
+            "tool_name": "browser.search_flights"
+          },
+          "created_at": "2026-07-27T16:21:38.340115+00:00"
+        },
+        {
+          "id": 9148,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_browser_session_recycled",
+          "status": "waiting_external",
+          "message": "Recycled a poisoned browser worker while preserving canonical flight-search state.",
+          "metadata": {
+            "sol_invoked": false,
+            "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+            "recovery_count": 1,
+            "canonical_search": {
+              "cabin": "economy",
+              "stage": "searching",
+              "origin": "",
+              "currency": "USD",
+              "maxStops": 1,
+              "departDate": "",
+              "destination": ""
+            }
+          },
+          "created_at": "2026-07-27T16:21:40.475051+00:00"
+        },
+        {
+          "id": 9149,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:21:40.740932+00:00"
+        },
+        {
+          "id": 9150,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_browser_session_recycled",
+          "status": "waiting_external",
+          "message": "Recycled a poisoned browser worker while preserving canonical flight-search state.",
+          "metadata": {
+            "sol_invoked": false,
+            "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+            "recovery_count": 2,
+            "canonical_search": {
+              "cabin": "economy",
+              "stage": "searching",
+              "origin": "",
+              "currency": "USD",
+              "maxStops": 1,
+              "departDate": "",
+              "destination": ""
+            }
+          },
+          "created_at": "2026-07-27T16:21:43.37776+00:00"
+        },
+        {
+          "id": 9151,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:21:43.524399+00:00"
+        },
+        {
+          "id": 9152,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_browser_session_recycled",
+          "status": "waiting_external",
+          "message": "Recycled a poisoned browser worker while preserving canonical flight-search state.",
+          "metadata": {
+            "sol_invoked": false,
+            "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+            "recovery_count": 3,
+            "canonical_search": {
+              "cabin": "economy",
+              "stage": "searching",
+              "origin": "",
+              "currency": "USD",
+              "maxStops": 1,
+              "departDate": "",
+              "destination": ""
+            }
+          },
+          "created_at": "2026-07-27T16:21:48.001621+00:00"
+        },
+        {
+          "id": 9153,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:21:48.192227+00:00"
+        },
+        {
+          "id": 9154,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_browser_session_recycled",
+          "status": "waiting_external",
+          "message": "Recycled a poisoned browser worker while preserving canonical flight-search state.",
+          "metadata": {
+            "sol_invoked": false,
+            "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+            "recovery_count": 4,
+            "canonical_search": {
+              "cabin": "economy",
+              "stage": "searching",
+              "origin": "",
+              "currency": "USD",
+              "maxStops": 1,
+              "departDate": "",
+              "destination": ""
+            }
+          },
+          "created_at": "2026-07-27T16:21:53.620695+00:00"
+        },
+        {
+          "id": 9155,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:21:53.859728+00:00"
+        },
+        {
+          "id": 9156,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:21:57.020483+00:00"
+        },
+        {
+          "id": 9157,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_browser_session_recycled",
+          "status": "waiting_external",
+          "message": "Recycled a poisoned browser worker while preserving canonical flight-search state.",
+          "metadata": {
+            "sol_invoked": false,
+            "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+            "recovery_count": 5,
+            "canonical_search": {
+              "cabin": "economy",
+              "stage": "searching",
+              "origin": "",
+              "currency": "USD",
+              "maxStops": 1,
+              "departDate": "",
+              "destination": ""
+            }
+          },
+          "created_at": "2026-07-27T16:21:58.205714+00:00"
+        },
+        {
+          "id": 9158,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:21:58.443133+00:00"
+        },
+        {
+          "id": 9159,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_browser_session_recycled",
+          "status": "waiting_external",
+          "message": "Recycled a poisoned browser worker while preserving canonical flight-search state.",
+          "metadata": {
+            "sol_invoked": false,
+            "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+            "recovery_count": 6,
+            "canonical_search": {
+              "cabin": "economy",
+              "stage": "searching",
+              "origin": "",
+              "currency": "USD",
+              "maxStops": 1,
+              "departDate": "",
+              "destination": ""
+            }
+          },
+          "created_at": "2026-07-27T16:22:03.046472+00:00"
+        },
+        {
+          "id": 9160,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:22:03.299951+00:00"
+        },
+        {
+          "id": 9161,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_browser_session_recycled",
+          "status": "waiting_external",
+          "message": "Recycled a poisoned browser worker while preserving canonical flight-search state.",
+          "metadata": {
+            "sol_invoked": false,
+            "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+            "recovery_count": 7,
+            "canonical_search": {
+              "cabin": "economy",
+              "stage": "searching",
+              "origin": "",
+              "currency": "USD",
+              "maxStops": 1,
+              "departDate": "",
+              "destination": ""
+            }
+          },
+          "created_at": "2026-07-27T16:22:08.266941+00:00"
+        },
+        {
+          "id": 9162,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:22:08.441787+00:00"
+        },
+        {
+          "id": 9163,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T16:22:09.074Z",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:22:10.760406+00:00"
+        },
+        {
+          "id": 9164,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Searching live flight options.",
+          "metadata": {
+            "retried": true,
+            "action_id": "7cbe530c-c42c-4d3a-bde3-33d2712df0b3",
+            "tool_name": "browser.search_flights"
+          },
+          "created_at": "2026-07-27T16:22:11.462385+00:00"
+        },
+        {
+          "id": 9165,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_for_user",
+          "status": "waiting_for_user",
+          "message": "Choose a flight option to continue.",
+          "metadata": {
+            "live_result_count": 3,
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:22:23.506441+00:00"
+        },
+        {
+          "id": 9166,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Preparing the selected itinerary.",
+          "metadata": {
+            "option_id": "49ced533818aee50b4b568af",
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+          },
+          "created_at": "2026-07-27T16:22:28.501957+00:00"
+        },
+        {
+          "id": 9167,
+          "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_for_user",
+          "status": "waiting_for_user",
+          "message": "Your flight is selected. Continue when you are ready to handle payment.",
+          "metadata": {
+            "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+            "payment_boundary_reached": true
+          },
+          "created_at": "2026-07-27T16:22:48.229065+00:00"
+        }
+      ],
+      "browser": {
+        "id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+        "run_id": "141a9c3a-4f0d-425e-9b65-ccbea6bd8986",
+        "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+        "status": "completed",
+        "allowed_domains": [
+          "www.google.com"
+        ],
+        "current_domain": "booking.onesait.com",
+        "current_url": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+        "objective": "Find a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, then select a valid result and proceed to the final safe booking/payment handoff without purchasing or entering payment details.",
+        "checkpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": null,
+              "budgetAmount": null,
+              "departureDate": "2026-09-17",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "4af648bd68a2b4813b60f4da",
+                "label": "Fastest",
+                "price": "$1,172",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 1172,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "f734a5538036fbcf276d9536",
+                "label": "Also worth considering",
+                "price": "$422",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 422,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "9 hr",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "3:50 PM",
+                "departureTime": "6:50 AM",
+                "durationMinutes": 540
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-27T16:22:19.516Z"
+          },
+          "lastOperation": {
+            "id": "agent:141a9c3a-4f0d-425e-9b65-ccbea6bd8986:2:browser.select_flight:a884146d6f40b6f0d70ff945",
+            "type": "select_flight",
+            "output": {
+              "provider": "Google Flights",
+              "resumable": true,
+              "handoffUrl": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+              "observedAt": "2026-07-27T16:22:44.607Z",
+              "handoffStage": "provider_booking",
+              "selectedOption": {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              "selectionTrace": [
+                {
+                  "at": "2026-07-27T16:22:38.844Z",
+                  "stage": "selection_started",
+                  "details": {
+                    "optionId": "49ced533818aee50b4b568af",
+                    "tripType": "one_way",
+                    "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                    "constraints": {
+                      "cabin": "economy",
+                      "maxStops": 1,
+                      "originCode": "LOS",
+                      "destinationCode": "LON"
+                    }
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:38.910Z",
+                  "stage": "candidate_cards_found",
+                  "details": {
+                    "count": 9,
+                    "attempt": 1,
+                    "candidates": [
+                      {
+                        "id": "49ced533818aee50b4b568af",
+                        "index": 0,
+                        "route": "LOS–STN",
+                        "score": 100,
+                        "amount": 396,
+                        "airline": "Royal Air Maroc",
+                        "stopCount": 1,
+                        "departureTime": "7:15 PM",
+                        "durationMinutes": 665
+                      },
+                      {
+                        "id": "f734a5538036fbcf276d9536",
+                        "index": 1,
+                        "route": "LOS–LGW",
+                        "score": 40,
+                        "amount": 422,
+                        "airline": "Royal Air Maroc",
+                        "stopCount": 1,
+                        "departureTime": "6:50 AM",
+                        "durationMinutes": 540
+                      },
+                      {
+                        "id": "4a6ca36c47b134aa22cb218d",
+                        "index": 2,
+                        "route": "LOS–LGW",
+                        "score": 10,
+                        "amount": 441,
+                        "airline": "Qatar AirwaysBritish Airways",
+                        "stopCount": 1,
+                        "departureTime": "2:45 PM",
+                        "durationMinutes": 955
+                      },
+                      {
+                        "id": "9b59fa5f1709cb40a40e5f70",
+                        "index": 3,
+                        "route": "LOS–LGW",
+                        "score": 0,
+                        "amount": 501,
+                        "airline": "Air Peace",
+                        "stopCount": 0,
+                        "departureTime": "11:40 PM",
+                        "durationMinutes": 400
+                      },
+                      {
+                        "id": "3507c4c870c9301bf4fd7809",
+                        "index": 4,
+                        "route": "LOS–LHR",
+                        "score": 0,
+                        "amount": 762,
+                        "airline": "Virgin AtlanticOperated by Operated by Virgin Atlantic International",
+                        "stopCount": 0,
+                        "departureTime": "9:00 AM",
+                        "durationMinutes": 415
+                      },
+                      {
+                        "id": "8517a8e99119f17ed8bda5ad",
+                        "index": 5,
+                        "route": "LOS–LHR",
+                        "score": 10,
+                        "amount": 420,
+                        "airline": "RwandAir",
+                        "stopCount": 1,
+                        "departureTime": "2:45 PM",
+                        "durationMinutes": 1140
+                      },
+                      {
+                        "id": "8360dcb7732080060f40b65a",
+                        "index": 6,
+                        "route": "LOS–LHR",
+                        "score": 10,
+                        "amount": 479,
+                        "airline": "Kenya Airways",
+                        "stopCount": 1,
+                        "departureTime": "10:45 PM",
+                        "durationMinutes": 1050
+                      },
+                      {
+                        "id": "3fc069df99cb44768d980de7",
+                        "index": 7,
+                        "route": "LOS–LGW",
+                        "score": 10,
+                        "amount": 627,
+                        "airline": "Air France",
+                        "stopCount": 1,
+                        "departureTime": "11:50 PM",
+                        "durationMinutes": 575
+                      },
+                      {
+                        "id": "4af648bd68a2b4813b60f4da",
+                        "index": 8,
+                        "route": "LOS–LHR",
+                        "score": 0,
+                        "amount": 1172,
+                        "airline": "British Airways",
+                        "stopCount": 0,
+                        "departureTime": "10:50 PM",
+                        "durationMinutes": 390
+                      }
+                    ]
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:38.910Z",
+                  "stage": "chosen_candidate",
+                  "details": {
+                    "id": "49ced533818aee50b4b568af",
+                    "index": 0,
+                    "route": "LOS–STN",
+                    "score": 100,
+                    "amount": 396,
+                    "airline": "Royal Air Maroc",
+                    "attempt": 1,
+                    "expectedStage": "booking_options"
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:38.992Z",
+                  "stage": "selection_target",
+                  "details": {
+                    "target": "card_action",
+                    "attempt": 1
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:39.344Z",
+                  "stage": "post_click_state",
+                  "details": {
+                    "url": "https://www.google.com/travel/flights/booking?tfs=CBwQAhplEgoyMDI2LTA5LTE3Ih8KA0xPUxIKMjAyNi0wOS0xNxoDQ01OKgJBVDIDNTU2Ih8KA0NNThIKMjAyNi0wOS0xOBoDU1ROKgJBVDIDODA4agcIARIDTE9TcgwIAhIIL20vMDRqcGxAAUgBcAGCAQsI____________AZgBAg&tfu=CnRDalJJZEhaV1lsZEhZMFJKTkVsQlMzbGpTbEZDUnkwdExTMHRMUzE1YVdGbU9DMXVNVUZCUVVGQlIzQnVhR056UjBwYU1qQkJFZ3RCVkRVMU5ueEJWRGd3T0JvTENJVzFBaEFDR2dOVlUwUTRIWENGdFFJPRICCAAiAA&hl=en&curr=USD",
+                    "attempt": 1,
+                    "recovered": false,
+                    "expectedStage": "booking_options"
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:44.607Z",
+                  "stage": "handoff_verified",
+                  "details": {
+                    "stage": "provider_booking",
+                    "hostname": "booking.onesait.com",
+                    "provider": "Royal Air Maroc",
+                    "paymentBoundaryReached": true
+                  }
+                }
+              ],
+              "handoffProvider": "Royal Air Maroc",
+              "paymentBoundaryReached": true
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-27T16:22:45.198Z"
+          },
+          "recoveryCount": 7,
+          "selectedFlight": {
+            "provider": "Google Flights",
+            "resumable": true,
+            "handoffUrl": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+            "observedAt": "2026-07-27T16:22:44.607Z",
+            "handoffStage": "provider_booking",
+            "selectedOption": {
+              "id": "49ced533818aee50b4b568af",
+              "label": "Best overall",
+              "price": "$396",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 396,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            "selectionTrace": [
+              {
+                "at": "2026-07-27T16:22:38.844Z",
+                "stage": "selection_started",
+                "details": {
+                  "optionId": "49ced533818aee50b4b568af",
+                  "tripType": "one_way",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                  "constraints": {
+                    "cabin": "economy",
+                    "maxStops": 1,
+                    "originCode": "LOS",
+                    "destinationCode": "LON"
+                  }
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.910Z",
+                "stage": "candidate_cards_found",
+                "details": {
+                  "count": 9,
+                  "attempt": 1,
+                  "candidates": [
+                    {
+                      "id": "49ced533818aee50b4b568af",
+                      "index": 0,
+                      "route": "LOS–STN",
+                      "score": 100,
+                      "amount": 396,
+                      "airline": "Royal Air Maroc",
+                      "stopCount": 1,
+                      "departureTime": "7:15 PM",
+                      "durationMinutes": 665
+                    },
+                    {
+                      "id": "f734a5538036fbcf276d9536",
+                      "index": 1,
+                      "route": "LOS–LGW",
+                      "score": 40,
+                      "amount": 422,
+                      "airline": "Royal Air Maroc",
+                      "stopCount": 1,
+                      "departureTime": "6:50 AM",
+                      "durationMinutes": 540
+                    },
+                    {
+                      "id": "4a6ca36c47b134aa22cb218d",
+                      "index": 2,
+                      "route": "LOS–LGW",
+                      "score": 10,
+                      "amount": 441,
+                      "airline": "Qatar AirwaysBritish Airways",
+                      "stopCount": 1,
+                      "departureTime": "2:45 PM",
+                      "durationMinutes": 955
+                    },
+                    {
+                      "id": "9b59fa5f1709cb40a40e5f70",
+                      "index": 3,
+                      "route": "LOS–LGW",
+                      "score": 0,
+                      "amount": 501,
+                      "airline": "Air Peace",
+                      "stopCount": 0,
+                      "departureTime": "11:40 PM",
+                      "durationMinutes": 400
+                    },
+                    {
+                      "id": "3507c4c870c9301bf4fd7809",
+                      "index": 4,
+                      "route": "LOS–LHR",
+                      "score": 0,
+                      "amount": 762,
+                      "airline": "Virgin AtlanticOperated by Operated by Virgin Atlantic International",
+                      "stopCount": 0,
+                      "departureTime": "9:00 AM",
+                      "durationMinutes": 415
+                    },
+                    {
+                      "id": "8517a8e99119f17ed8bda5ad",
+                      "index": 5,
+                      "route": "LOS–LHR",
+                      "score": 10,
+                      "amount": 420,
+                      "airline": "RwandAir",
+                      "stopCount": 1,
+                      "departureTime": "2:45 PM",
+                      "durationMinutes": 1140
+                    },
+                    {
+                      "id": "8360dcb7732080060f40b65a",
+                      "index": 6,
+                      "route": "LOS–LHR",
+                      "score": 10,
+                      "amount": 479,
+                      "airline": "Kenya Airways",
+                      "stopCount": 1,
+                      "departureTime": "10:45 PM",
+                      "durationMinutes": 1050
+                    },
+                    {
+                      "id": "3fc069df99cb44768d980de7",
+                      "index": 7,
+                      "route": "LOS–LGW",
+                      "score": 10,
+                      "amount": 627,
+                      "airline": "Air France",
+                      "stopCount": 1,
+                      "departureTime": "11:50 PM",
+                      "durationMinutes": 575
+                    },
+                    {
+                      "id": "4af648bd68a2b4813b60f4da",
+                      "index": 8,
+                      "route": "LOS–LHR",
+                      "score": 0,
+                      "amount": 1172,
+                      "airline": "British Airways",
+                      "stopCount": 0,
+                      "departureTime": "10:50 PM",
+                      "durationMinutes": 390
+                    }
+                  ]
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.910Z",
+                "stage": "chosen_candidate",
+                "details": {
+                  "id": "49ced533818aee50b4b568af",
+                  "index": 0,
+                  "route": "LOS–STN",
+                  "score": 100,
+                  "amount": 396,
+                  "airline": "Royal Air Maroc",
+                  "attempt": 1,
+                  "expectedStage": "booking_options"
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.992Z",
+                "stage": "selection_target",
+                "details": {
+                  "target": "card_action",
+                  "attempt": 1
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:39.344Z",
+                "stage": "post_click_state",
+                "details": {
+                  "url": "https://www.google.com/travel/flights/booking?tfs=CBwQAhplEgoyMDI2LTA5LTE3Ih8KA0xPUxIKMjAyNi0wOS0xNxoDQ01OKgJBVDIDNTU2Ih8KA0NNThIKMjAyNi0wOS0xOBoDU1ROKgJBVDIDODA4agcIARIDTE9TcgwIAhIIL20vMDRqcGxAAUgBcAGCAQsI____________AZgBAg&tfu=CnRDalJJZEhaV1lsZEhZMFJKTkVsQlMzbGpTbEZDUnkwdExTMHRMUzE1YVdGbU9DMXVNVUZCUVVGQlIzQnVhR056UjBwYU1qQkJFZ3RCVkRVMU5ueEJWRGd3T0JvTENJVzFBaEFDR2dOVlUwUTRIWENGdFFJPRICCAAiAA&hl=en&curr=USD",
+                  "attempt": 1,
+                  "recovered": false,
+                  "expectedStage": "booking_options"
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:44.607Z",
+                "stage": "handoff_verified",
+                "details": {
+                  "stage": "provider_booking",
+                  "hostname": "booking.onesait.com",
+                  "provider": "Royal Air Maroc",
+                  "paymentBoundaryReached": true
+                }
+              }
+            ],
+            "handoffProvider": "Royal Air Maroc",
+            "paymentBoundaryReached": true
+          },
+          "workerAttempts": 4,
+          "pendingOperation": null,
+          "canonicalFlightSearch": {
+            "cabin": "economy",
+            "stage": "selecting",
+            "origin": "",
+            "currency": "USD",
+            "maxStops": 1,
+            "departDate": "",
+            "destination": ""
+          }
+        },
+        "payment_boundary_reached": true,
+        "resumable": true,
+        "worker_session_id": "6348027e-8f94-430b-8915-346c23f88312",
+        "last_observed_at": "2026-07-27T16:22:45.198+00:00",
+        "expires_at": "2026-07-27T18:22:45.198+00:00",
+        "created_at": "2026-07-27T16:21:35.773066+00:00",
+        "updated_at": "2026-07-27T16:22:45.526843+00:00"
+      },
+      "watches": []
+    },
+    "recoveryInjected": true,
+    "replied": false,
+    "selected": true,
+    "secondaryEmail": "daviddosuu@gmail.com"
+  },
+  "events": [
+    {
+      "at": "2026-07-27T16:21:31.580815+00:00",
+      "type": "model_decision",
+      "status": "run_started",
+      "detail": {
+        "title": "Prepare recoverable London flight",
+        "category": "Browser"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:35.682149+00:00",
+      "type": "tool",
+      "tool": "browser.start_session",
+      "arguments": {
+        "objective": "Find a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, then select a valid result and proceed to the final safe booking/payment handoff without purchasing or entering payment details.",
+        "allowed_domains": [
+          "www.google.com"
+        ]
+      },
+      "resultType": "succeeded",
+      "providerActionId": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T16:21:37.944334+00:00",
+      "type": "tool",
+      "tool": "browser.search_flights",
+      "arguments": {
+        "cabin": "economy",
+        "currency": "USD",
+        "max_stops": 1,
+        "session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+        "origin_code": "LOS",
+        "return_date": null,
+        "budget_amount": null,
+        "departure_date": "2026-09-17",
+        "destination_code": "LON",
+        "preferred_airlines": []
+      },
+      "resultType": "succeeded",
+      "providerActionId": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T16:22:28.024693+00:00",
+      "type": "tool",
+      "tool": "browser.select_flight",
+      "arguments": {
+        "option_id": "49ced533818aee50b4b568af",
+        "session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      },
+      "resultType": "succeeded",
+      "providerActionId": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T16:21:31.757913+00:00",
+      "type": "agent_run_started",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "strategy": "browser",
+        "capability": "flight_search"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:31.856928+00:00",
+      "type": "task_delegated",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T16:21:35.401582+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3050,
+          "total_tokens": 3147,
+          "output_tokens": 97,
+          "input_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 3047
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 24
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_0bb56aebd0604208016a67858c7a9081a38fde619999726e88",
+        "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/browser-recovery-b0016f5429",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:36.210398+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "12d36b06-0b9e-4d74-b4ac-6225bc8a1192",
+        "tool_name": "browser.start_session"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:37.702715+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3196,
+          "total_tokens": 3290,
+          "output_tokens": 94,
+          "input_tokens_details": {
+            "cached_tokens": 3047,
+            "cache_write_tokens": 146
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "iteration": 1,
+        "response_id": "resp_0bb56aebd0604208016a67859055d081a398e7d87c4a6d0d50",
+        "benchmark_run_id": "shotcount-eval-live-v1/minimal-acceptance/run-1/browser-recovery-b0016f5429",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:38.340115+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "tool_name": "browser.search_flights"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:40.475051+00:00",
+      "type": "agent_browser_session_recycled",
+      "status": "waiting_external",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "sol_invoked": false,
+        "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+        "recovery_count": 1,
+        "canonical_search": {
+          "cabin": "economy",
+          "stage": "searching",
+          "origin": "",
+          "currency": "USD",
+          "maxStops": 1,
+          "departDate": "",
+          "destination": ""
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:40.740932+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:43.37776+00:00",
+      "type": "agent_browser_session_recycled",
+      "status": "waiting_external",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "sol_invoked": false,
+        "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+        "recovery_count": 2,
+        "canonical_search": {
+          "cabin": "economy",
+          "stage": "searching",
+          "origin": "",
+          "currency": "USD",
+          "maxStops": 1,
+          "departDate": "",
+          "destination": ""
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:43.524399+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:48.001621+00:00",
+      "type": "agent_browser_session_recycled",
+      "status": "waiting_external",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "sol_invoked": false,
+        "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+        "recovery_count": 3,
+        "canonical_search": {
+          "cabin": "economy",
+          "stage": "searching",
+          "origin": "",
+          "currency": "USD",
+          "maxStops": 1,
+          "departDate": "",
+          "destination": ""
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:48.192227+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:53.620695+00:00",
+      "type": "agent_browser_session_recycled",
+      "status": "waiting_external",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "sol_invoked": false,
+        "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+        "recovery_count": 4,
+        "canonical_search": {
+          "cabin": "economy",
+          "stage": "searching",
+          "origin": "",
+          "currency": "USD",
+          "maxStops": 1,
+          "departDate": "",
+          "destination": ""
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:53.859728+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:57.020483+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:58.205714+00:00",
+      "type": "agent_browser_session_recycled",
+      "status": "waiting_external",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "sol_invoked": false,
+        "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+        "recovery_count": 5,
+        "canonical_search": {
+          "cabin": "economy",
+          "stage": "searching",
+          "origin": "",
+          "currency": "USD",
+          "maxStops": 1,
+          "departDate": "",
+          "destination": ""
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:21:58.443133+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:03.046472+00:00",
+      "type": "agent_browser_session_recycled",
+      "status": "waiting_external",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "sol_invoked": false,
+        "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+        "recovery_count": 6,
+        "canonical_search": {
+          "cabin": "economy",
+          "stage": "searching",
+          "origin": "",
+          "currency": "USD",
+          "maxStops": 1,
+          "departDate": "",
+          "destination": ""
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:03.299951+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:08.266941+00:00",
+      "type": "agent_browser_session_recycled",
+      "status": "waiting_external",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "sol_invoked": false,
+        "failure_class": "PROVIDER_OR_BROWSER_INFRA",
+        "recovery_count": 7,
+        "canonical_search": {
+          "cabin": "economy",
+          "stage": "searching",
+          "origin": "",
+          "currency": "USD",
+          "maxStops": 1,
+          "departDate": "",
+          "destination": ""
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:08.441787+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:10.760406+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T16:22:09.074Z",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:11.462385+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": true,
+      "recoveryAttempted": false,
+      "metadata": {
+        "retried": true,
+        "action_id": "7cbe530c-c42c-4d3a-bde3-33d2712df0b3",
+        "tool_name": "browser.search_flights"
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:23.506441+00:00",
+      "type": "agent_waiting_for_user",
+      "status": "waiting_for_user",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "live_result_count": 3,
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:28.501957+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "option_id": "49ced533818aee50b4b568af",
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6"
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:48.229065+00:00",
+      "type": "agent_waiting_for_user",
+      "status": "waiting_for_user",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "browser_session_id": "e000fd12-be87-45ad-9656-3246ff19a8f6",
+        "payment_boundary_reached": true
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:51.199Z",
+      "type": "provider_verification",
+      "result": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": null,
+              "budgetAmount": null,
+              "departureDate": "2026-09-17",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "4af648bd68a2b4813b60f4da",
+                "label": "Fastest",
+                "price": "$1,172",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 1172,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "f734a5538036fbcf276d9536",
+                "label": "Also worth considering",
+                "price": "$422",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 422,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "9 hr",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "3:50 PM",
+                "departureTime": "6:50 AM",
+                "durationMinutes": 540
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-27T16:22:19.516Z"
+          },
+          "lastOperation": {
+            "id": "agent:141a9c3a-4f0d-425e-9b65-ccbea6bd8986:2:browser.select_flight:a884146d6f40b6f0d70ff945",
+            "type": "select_flight",
+            "output": {
+              "provider": "Google Flights",
+              "resumable": true,
+              "handoffUrl": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+              "observedAt": "2026-07-27T16:22:44.607Z",
+              "handoffStage": "provider_booking",
+              "selectedOption": {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              "selectionTrace": [
+                {
+                  "at": "2026-07-27T16:22:38.844Z",
+                  "stage": "selection_started",
+                  "details": {
+                    "optionId": "49ced533818aee50b4b568af",
+                    "tripType": "one_way",
+                    "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                    "constraints": {
+                      "cabin": "economy",
+                      "maxStops": 1,
+                      "originCode": "LOS",
+                      "destinationCode": "LON"
+                    }
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:38.910Z",
+                  "stage": "candidate_cards_found",
+                  "details": {
+                    "count": 9,
+                    "attempt": 1,
+                    "candidates": [
+                      {
+                        "id": "49ced533818aee50b4b568af",
+                        "index": 0,
+                        "route": "LOS–STN",
+                        "score": 100,
+                        "amount": 396,
+                        "airline": "Royal Air Maroc",
+                        "stopCount": 1,
+                        "departureTime": "7:15 PM",
+                        "durationMinutes": 665
+                      },
+                      {
+                        "id": "f734a5538036fbcf276d9536",
+                        "index": 1,
+                        "route": "LOS–LGW",
+                        "score": 40,
+                        "amount": 422,
+                        "airline": "Royal Air Maroc",
+                        "stopCount": 1,
+                        "departureTime": "6:50 AM",
+                        "durationMinutes": 540
+                      },
+                      {
+                        "id": "4a6ca36c47b134aa22cb218d",
+                        "index": 2,
+                        "route": "LOS–LGW",
+                        "score": 10,
+                        "amount": 441,
+                        "airline": "Qatar AirwaysBritish Airways",
+                        "stopCount": 1,
+                        "departureTime": "2:45 PM",
+                        "durationMinutes": 955
+                      },
+                      {
+                        "id": "9b59fa5f1709cb40a40e5f70",
+                        "index": 3,
+                        "route": "LOS–LGW",
+                        "score": 0,
+                        "amount": 501,
+                        "airline": "Air Peace",
+                        "stopCount": 0,
+                        "departureTime": "11:40 PM",
+                        "durationMinutes": 400
+                      },
+                      {
+                        "id": "3507c4c870c9301bf4fd7809",
+                        "index": 4,
+                        "route": "LOS–LHR",
+                        "score": 0,
+                        "amount": 762,
+                        "airline": "Virgin AtlanticOperated by Operated by Virgin Atlantic International",
+                        "stopCount": 0,
+                        "departureTime": "9:00 AM",
+                        "durationMinutes": 415
+                      },
+                      {
+                        "id": "8517a8e99119f17ed8bda5ad",
+                        "index": 5,
+                        "route": "LOS–LHR",
+                        "score": 10,
+                        "amount": 420,
+                        "airline": "RwandAir",
+                        "stopCount": 1,
+                        "departureTime": "2:45 PM",
+                        "durationMinutes": 1140
+                      },
+                      {
+                        "id": "8360dcb7732080060f40b65a",
+                        "index": 6,
+                        "route": "LOS–LHR",
+                        "score": 10,
+                        "amount": 479,
+                        "airline": "Kenya Airways",
+                        "stopCount": 1,
+                        "departureTime": "10:45 PM",
+                        "durationMinutes": 1050
+                      },
+                      {
+                        "id": "3fc069df99cb44768d980de7",
+                        "index": 7,
+                        "route": "LOS–LGW",
+                        "score": 10,
+                        "amount": 627,
+                        "airline": "Air France",
+                        "stopCount": 1,
+                        "departureTime": "11:50 PM",
+                        "durationMinutes": 575
+                      },
+                      {
+                        "id": "4af648bd68a2b4813b60f4da",
+                        "index": 8,
+                        "route": "LOS–LHR",
+                        "score": 0,
+                        "amount": 1172,
+                        "airline": "British Airways",
+                        "stopCount": 0,
+                        "departureTime": "10:50 PM",
+                        "durationMinutes": 390
+                      }
+                    ]
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:38.910Z",
+                  "stage": "chosen_candidate",
+                  "details": {
+                    "id": "49ced533818aee50b4b568af",
+                    "index": 0,
+                    "route": "LOS–STN",
+                    "score": 100,
+                    "amount": 396,
+                    "airline": "Royal Air Maroc",
+                    "attempt": 1,
+                    "expectedStage": "booking_options"
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:38.992Z",
+                  "stage": "selection_target",
+                  "details": {
+                    "target": "card_action",
+                    "attempt": 1
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:39.344Z",
+                  "stage": "post_click_state",
+                  "details": {
+                    "url": "https://www.google.com/travel/flights/booking?tfs=CBwQAhplEgoyMDI2LTA5LTE3Ih8KA0xPUxIKMjAyNi0wOS0xNxoDQ01OKgJBVDIDNTU2Ih8KA0NNThIKMjAyNi0wOS0xOBoDU1ROKgJBVDIDODA4agcIARIDTE9TcgwIAhIIL20vMDRqcGxAAUgBcAGCAQsI____________AZgBAg&tfu=CnRDalJJZEhaV1lsZEhZMFJKTkVsQlMzbGpTbEZDUnkwdExTMHRMUzE1YVdGbU9DMXVNVUZCUVVGQlIzQnVhR056UjBwYU1qQkJFZ3RCVkRVMU5ueEJWRGd3T0JvTENJVzFBaEFDR2dOVlUwUTRIWENGdFFJPRICCAAiAA&hl=en&curr=USD",
+                    "attempt": 1,
+                    "recovered": false,
+                    "expectedStage": "booking_options"
+                  }
+                },
+                {
+                  "at": "2026-07-27T16:22:44.607Z",
+                  "stage": "handoff_verified",
+                  "details": {
+                    "stage": "provider_booking",
+                    "hostname": "booking.onesait.com",
+                    "provider": "Royal Air Maroc",
+                    "paymentBoundaryReached": true
+                  }
+                }
+              ],
+              "handoffProvider": "Royal Air Maroc",
+              "paymentBoundaryReached": true
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-27T16:22:45.198Z"
+          },
+          "recoveryCount": 7,
+          "selectedFlight": {
+            "provider": "Google Flights",
+            "resumable": true,
+            "handoffUrl": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+            "observedAt": "2026-07-27T16:22:44.607Z",
+            "handoffStage": "provider_booking",
+            "selectedOption": {
+              "id": "49ced533818aee50b4b568af",
+              "label": "Best overall",
+              "price": "$396",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 396,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            "selectionTrace": [
+              {
+                "at": "2026-07-27T16:22:38.844Z",
+                "stage": "selection_started",
+                "details": {
+                  "optionId": "49ced533818aee50b4b568af",
+                  "tripType": "one_way",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                  "constraints": {
+                    "cabin": "economy",
+                    "maxStops": 1,
+                    "originCode": "LOS",
+                    "destinationCode": "LON"
+                  }
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.910Z",
+                "stage": "candidate_cards_found",
+                "details": {
+                  "count": 9,
+                  "attempt": 1,
+                  "candidates": [
+                    {
+                      "id": "49ced533818aee50b4b568af",
+                      "index": 0,
+                      "route": "LOS–STN",
+                      "score": 100,
+                      "amount": 396,
+                      "airline": "Royal Air Maroc",
+                      "stopCount": 1,
+                      "departureTime": "7:15 PM",
+                      "durationMinutes": 665
+                    },
+                    {
+                      "id": "f734a5538036fbcf276d9536",
+                      "index": 1,
+                      "route": "LOS–LGW",
+                      "score": 40,
+                      "amount": 422,
+                      "airline": "Royal Air Maroc",
+                      "stopCount": 1,
+                      "departureTime": "6:50 AM",
+                      "durationMinutes": 540
+                    },
+                    {
+                      "id": "4a6ca36c47b134aa22cb218d",
+                      "index": 2,
+                      "route": "LOS–LGW",
+                      "score": 10,
+                      "amount": 441,
+                      "airline": "Qatar AirwaysBritish Airways",
+                      "stopCount": 1,
+                      "departureTime": "2:45 PM",
+                      "durationMinutes": 955
+                    },
+                    {
+                      "id": "9b59fa5f1709cb40a40e5f70",
+                      "index": 3,
+                      "route": "LOS–LGW",
+                      "score": 0,
+                      "amount": 501,
+                      "airline": "Air Peace",
+                      "stopCount": 0,
+                      "departureTime": "11:40 PM",
+                      "durationMinutes": 400
+                    },
+                    {
+                      "id": "3507c4c870c9301bf4fd7809",
+                      "index": 4,
+                      "route": "LOS–LHR",
+                      "score": 0,
+                      "amount": 762,
+                      "airline": "Virgin AtlanticOperated by Operated by Virgin Atlantic International",
+                      "stopCount": 0,
+                      "departureTime": "9:00 AM",
+                      "durationMinutes": 415
+                    },
+                    {
+                      "id": "8517a8e99119f17ed8bda5ad",
+                      "index": 5,
+                      "route": "LOS–LHR",
+                      "score": 10,
+                      "amount": 420,
+                      "airline": "RwandAir",
+                      "stopCount": 1,
+                      "departureTime": "2:45 PM",
+                      "durationMinutes": 1140
+                    },
+                    {
+                      "id": "8360dcb7732080060f40b65a",
+                      "index": 6,
+                      "route": "LOS–LHR",
+                      "score": 10,
+                      "amount": 479,
+                      "airline": "Kenya Airways",
+                      "stopCount": 1,
+                      "departureTime": "10:45 PM",
+                      "durationMinutes": 1050
+                    },
+                    {
+                      "id": "3fc069df99cb44768d980de7",
+                      "index": 7,
+                      "route": "LOS–LGW",
+                      "score": 10,
+                      "amount": 627,
+                      "airline": "Air France",
+                      "stopCount": 1,
+                      "departureTime": "11:50 PM",
+                      "durationMinutes": 575
+                    },
+                    {
+                      "id": "4af648bd68a2b4813b60f4da",
+                      "index": 8,
+                      "route": "LOS–LHR",
+                      "score": 0,
+                      "amount": 1172,
+                      "airline": "British Airways",
+                      "stopCount": 0,
+                      "departureTime": "10:50 PM",
+                      "durationMinutes": 390
+                    }
+                  ]
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.910Z",
+                "stage": "chosen_candidate",
+                "details": {
+                  "id": "49ced533818aee50b4b568af",
+                  "index": 0,
+                  "route": "LOS–STN",
+                  "score": 100,
+                  "amount": 396,
+                  "airline": "Royal Air Maroc",
+                  "attempt": 1,
+                  "expectedStage": "booking_options"
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:38.992Z",
+                "stage": "selection_target",
+                "details": {
+                  "target": "card_action",
+                  "attempt": 1
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:39.344Z",
+                "stage": "post_click_state",
+                "details": {
+                  "url": "https://www.google.com/travel/flights/booking?tfs=CBwQAhplEgoyMDI2LTA5LTE3Ih8KA0xPUxIKMjAyNi0wOS0xNxoDQ01OKgJBVDIDNTU2Ih8KA0NNThIKMjAyNi0wOS0xOBoDU1ROKgJBVDIDODA4agcIARIDTE9TcgwIAhIIL20vMDRqcGxAAUgBcAGCAQsI____________AZgBAg&tfu=CnRDalJJZEhaV1lsZEhZMFJKTkVsQlMzbGpTbEZDUnkwdExTMHRMUzE1YVdGbU9DMXVNVUZCUVVGQlIzQnVhR056UjBwYU1qQkJFZ3RCVkRVMU5ueEJWRGd3T0JvTENJVzFBaEFDR2dOVlUwUTRIWENGdFFJPRICCAAiAA&hl=en&curr=USD",
+                  "attempt": 1,
+                  "recovered": false,
+                  "expectedStage": "booking_options"
+                }
+              },
+              {
+                "at": "2026-07-27T16:22:44.607Z",
+                "stage": "handoff_verified",
+                "details": {
+                  "stage": "provider_booking",
+                  "hostname": "booking.onesait.com",
+                  "provider": "Royal Air Maroc",
+                  "paymentBoundaryReached": true
+                }
+              }
+            ],
+            "handoffProvider": "Royal Air Maroc",
+            "paymentBoundaryReached": true
+          },
+          "workerAttempts": 4,
+          "pendingOperation": null,
+          "canonicalFlightSearch": {
+            "cabin": "economy",
+            "stage": "selecting",
+            "origin": "",
+            "currency": "USD",
+            "maxStops": 1,
+            "departDate": "",
+            "destination": ""
+          }
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": true,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "Your selected flight is ready for you.",
+          "sections": [
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $396",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $1,172",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–LGW · 1 stop · 9 hr · $422",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "49ced533818aee50b4b568af",
+              "label": "Best overall",
+              "price": "$396",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 396,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            {
+              "id": "4af648bd68a2b4813b60f4da",
+              "label": "Fastest",
+              "price": "$1,172",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 1172,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "f734a5538036fbcf276d9536",
+              "label": "Also worth considering",
+              "price": "$422",
+              "route": "LOS–LGW",
+              "stops": "1 stop",
+              "amount": 422,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "9 hr",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "3:50 PM",
+              "departureTime": "6:50 AM",
+              "durationMinutes": 540
+            }
+          ],
+          "selectedFlight": {
+            "id": "49ced533818aee50b4b568af",
+            "label": "Best overall",
+            "price": "$396",
+            "route": "LOS–STN",
+            "stops": "1 stop",
+            "amount": 396,
+            "airline": "Royal Air Maroc",
+            "currency": "USD",
+            "duration": "11 hr 5 min",
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "stopCount": 1,
+            "arrivalTime": "6:20 AM+1",
+            "departureTime": "7:15 PM",
+            "durationMinutes": 665
+          },
+          "paymentHandoffUrl": "https://booking.onesait.com/redirect/booking?entityCode=RAM&application=Undefined&languageCode=EN&marketCode=FR&origin=LOS&destination=LON&tripTypeCode=O&ADT=1&CHD=0&INF=0&outboundDate=2026-09-17&cabinClassCode=Y&dateflexible=1&utm_source=googleflight&utm_medium=deeplink&utm_campaign=organic&gclid=ADowPOKlNVFmN9NjMu_xVJ2xgd2P9RwuY3DLB2Dbb295STkJfmNyu7LR0yvMlTS15q8JmTkhyRBBAGvCZRrNTxa-_l3rCxK5y8GnE80PI63MIxE7JZoF&gclsrc=gf",
+          "paymentHandoffStage": "provider_booking",
+          "paymentHandoffProvider": "Royal Air Maroc"
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T16:22:51.201Z",
+      "type": "completion_decision",
+      "status": "waiting_for_user",
+      "verification": {
+        "success": true,
+        "primaryClass": "NONE",
+        "exactMechanism": "",
+        "duplicates": false,
+        "executionPrecision": 1
+      }
+    }
+  ]
+}

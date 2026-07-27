@@ -23,7 +23,7 @@ const selectedScenarios = scenarioArg ? new Set(scenarioArg.split(',').filter(Bo
 
 const sleep = ms => new Promise(resolvePromise => setTimeout(resolvePromise, ms))
 const nonce = () => crypto.randomUUID().replaceAll('-', '').slice(0, 10)
-const runIdFor = (scenario, stamp) => `durable-luna-smoke/${scenario}/shotcount/${stamp}`
+const runIdFor = (scenario, stamp) => `shotcount-eval-live-v1/minimal-acceptance/run-1/${scenario}-${stamp}`
 const fixtureId = source => `shotcount-eval-live-v1/diagnostic/run-1/${source.replaceAll(/[^a-z0-9]/gi, '').slice(-18)}`
 const calendarDescription = 'Controlled Luna diagnostic fixture. Safe to delete.'
 
@@ -66,6 +66,12 @@ const scenarios = secondaryEmail => {
       id: 'email-calendar', category: 'Cross-tool', expected: 'email-calendar',
       title: 'Coordinate controlled meeting', subject: replySubject, eventSummary,
       description: `Email ${secondaryEmail} with subject "${replySubject}" asking whether they are available for a 30-minute meeting next week. Wait for their reply. When they reply that Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos works, check my Calendar and create exactly one 30-minute event titled "${eventSummary}" with them as attendee.`,
+      start: '2026-08-04T14:00:00+01:00', end: '2026-08-04T14:30:00+01:00',
+    },
+    {
+      id: 'stale-gmail', category: 'Cross-tool', expected: 'email-calendar',
+      title: 'Coordinate stale-state meeting', subject: `[Stale Gmail acceptance ${stamp}] availability`, eventSummary: `Stale Gmail acceptance meeting ${stamp}`,
+      description: `Email ${secondaryEmail} asking whether they are available for a 30-minute meeting on Tuesday, August 4, 2026 at 2:00 PM Africa/Lagos. Use subject "[Stale Gmail acceptance ${stamp}] availability". Wait for their reply, then create exactly one 30-minute Calendar event titled "Stale Gmail acceptance meeting ${stamp}" with them as attendee.`,
       start: '2026-08-04T14:00:00+01:00', end: '2026-08-04T14:30:00+01:00',
     },
     {
@@ -171,11 +177,11 @@ async function injectSafeRecovery(admin, state) {
   if (!session?.id || !operation || operation.type !== 'search_flights') return false
   const injected = {
     ...checkpoint,
-    workerAttempts: Math.max(1, Number(checkpoint.workerAttempts ?? 0)),
+    workerAttempts: Math.max(2, Number(checkpoint.workerAttempts ?? 0)),
     pendingOperation: null,
     lastOperation: {
       id: operation.id, type: operation.type, status: 'failed', completedAt: new Date().toISOString(),
-      error: { code: 'browser_target_closed', message: 'Controlled diagnostic recycle during read-only flight search.', retryable: true },
+      error: { code: 'flight_results_timeout', message: 'Controlled provider-result timeout during read-only flight search.', retryable: true },
     },
   }
   const updated = await admin.from('browser_execution_sessions').update({
@@ -212,7 +218,7 @@ async function drive({ admin, accessToken, publicKey, secret, primary, secondary
       continue
     }
     if (state.run.status === 'waiting_external') {
-      if (scenario.id === 'email-calendar' && !replied && state.watches.length) {
+      if (scenario.expected === 'email-calendar' && !replied && state.watches.length) {
         await sendControlledReply(secret, primary, secondary, scenario, runId)
         replied = true
         await sleep(4000)
@@ -251,7 +257,7 @@ async function providerEvidence(secret, primary, secondary, scenario, runId, sta
     }))
     const subjectQuery = scenario.subject
       ? `subject:${JSON.stringify(scenario.subject)}`
-      : JSON.stringify(scenario.movedSummary)
+      : ''
     const sent = await fixture(secret, runId, {
       action: 'google_tool', userId: primary.user_id, toolName: 'gmail.search_messages',
       arguments: { query: `in:sent to:${secondary.account_email} ${subjectQuery} newer_than:1d`, max_results: 10 },
