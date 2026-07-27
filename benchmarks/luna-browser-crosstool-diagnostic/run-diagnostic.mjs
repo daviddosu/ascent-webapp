@@ -119,6 +119,17 @@ async function loadState(admin, runId) {
 async function setupFixture(secret, primary, secondary, scenario, runId) {
   const cleanup = []
   if (scenario.id === 'calendar-email') {
+    const existing = await fixture(secret, runId, {
+      action: 'google_tool', userId: primary.user_id, toolName: 'calendar.list_events',
+      arguments: { calendar_id: 'primary', time_min: '2026-08-05T09:00:00+01:00', time_max: '2026-08-05T13:00:00+01:00', max_results: 100 },
+    })
+    for (const event of existing.value?.events ?? []) {
+      if (event.description !== calendarDescription || !event.id) continue
+      await fixture(secret, `${runId}-stale-fixture`, {
+        action: 'google_tool', userId: primary.user_id, toolName: 'calendar.delete_event',
+        arguments: { calendar_id: 'primary', event_id: event.id, notify_attendees: false },
+      })
+    }
     const created = await fixture(secret, runId, {
       action: 'google_tool', userId: primary.user_id, toolName: 'calendar.create_event',
       arguments: {
