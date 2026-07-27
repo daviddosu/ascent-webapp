@@ -1,0 +1,3449 @@
+{
+  "generated_at": "2026-07-27T10:38:49.277Z",
+  "compressed_time": true,
+  "runs": [
+    {
+      "scenario": "reply-calendar",
+      "harness": "ShotCount",
+      "model": "gpt-5.6-luna",
+      "success": true,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": null,
+      "approval_state_survival": null,
+      "time_to_resume_seconds": 11.46,
+      "inference_cost_usd": 0.010748,
+      "final_state": "completed",
+      "failure_reason": "",
+      "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+      "usage": {
+        "input": 22628,
+        "cached": 20830,
+        "cacheWrite": 1780,
+        "output": 712,
+        "calls": 6
+      },
+      "verification": {
+        "success": true,
+        "sentCount": 1,
+        "calendarCount": 1,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "gmail.send_message",
+            "status": "succeeded",
+            "providerActionId": "19fa31a97242cd25",
+            "arguments": {
+              "draft_id": "r-4752771385881155696",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Reply calendar"
+            }
+          },
+          {
+            "tool": "calendar.create_event",
+            "status": "succeeded",
+            "providerActionId": "9ki0pncs7u2aud3tfl60rb915c",
+            "arguments": {
+              "end": "2026-08-04T14:30:00+01:00",
+              "start": "2026-08-04T14:00:00+01:00",
+              "summary": "Durable Luna reply calendar 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "Meeting scheduled after confirming Tuesday at 2:00 PM Africa/Lagos by email.",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            }
+          }
+        ],
+        "threadId": "19fa31a7dcd531d7",
+        "events": [
+          {
+            "kind": "calendar#event",
+            "etag": "\"3570295766779486\"",
+            "id": "9ki0pncs7u2aud3tfl60rb915c",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=OWtpMHBuY3M3dTJhdWQzdGZsNjByYjkxNWMgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:24:43.000Z",
+            "updated": "2026-07-27T10:24:43.389Z",
+            "summary": "Durable Luna reply calendar 0f100338f9",
+            "description": "Meeting scheduled after confirming Tuesday at 2:00 PM Africa/Lagos by email.",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "9ki0pncs7u2aud3tfl60rb915c@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:4:calendar.create_event:c42043871fcbf5d1485ccf77"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "216a1d3c-a8bc-4266-b3c7-a5db696237ec",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 0,
+          "tool_name": "gmail.create_draft",
+          "model_call_id": "call_svvZVTDCCjAKfRmbF2VW1Ot5",
+          "risk": "prepare",
+          "status": "succeeded",
+          "arguments": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Reply calendar",
+            "body_text": "Hi David,\n\nCould you please share your availability next week (August 3–9) for a meeting?\n\nThanks,",
+            "thread_id": null,
+            "in_reply_to_message_id": null
+          },
+          "output": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Reply calendar",
+            "draft_id": "r-4752771385881155696",
+            "body_text": "Hi David,\r\n\r\nCould you please share your availability next week (August 3–9) for a meeting?\r\n\r\nThanks,",
+            "thread_id": "19fa31a7dcd531d7",
+            "message_id": "19fa31a7dcd531d7",
+            "already_created": false,
+            "message_id_header": "<agent.f26853ae-0c74-4cb0-be9e-50c67e0ac85b.0.gmail.create_draft.2e987739d62e4b9b463ec2eb@shotcount.app>"
+          },
+          "public_summary": "Prepared a Gmail draft for review.",
+          "idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:0:gmail.create_draft:2e987739d62e4b9b463ec2eb",
+          "provider_action_id": "r-4752771385881155696",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:24:10.068+00:00",
+          "created_at": "2026-07-27T10:24:09.228797+00:00",
+          "updated_at": "2026-07-27T10:24:10.135102+00:00"
+        },
+        {
+          "id": "c0c3982b-e7c5-490b-91ad-f900d685417f",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 1,
+          "tool_name": "gmail.send_message",
+          "model_call_id": "call_htJ7xZYiEn3arePOtRgUbSA3",
+          "risk": "external_write",
+          "status": "succeeded",
+          "arguments": {
+            "draft_id": "r-4752771385881155696",
+            "expected_to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "expected_subject": "[Durable Luna 0f100338f9] Reply calendar"
+          },
+          "output": {
+            "thread_id": "19fa31a7dcd531d7",
+            "history_id": "",
+            "message_id": "19fa31a97242cd25",
+            "already_sent": false
+          },
+          "public_summary": "Gmail confirmed the email was sent.",
+          "idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:1:gmail.send_message:0be6f6d74b26cad968aca3a4",
+          "provider_action_id": "19fa31a97242cd25",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T10:24:15.01+00:00",
+          "completed_at": "2026-07-27T10:24:16.771+00:00",
+          "created_at": "2026-07-27T10:24:12.826522+00:00",
+          "updated_at": "2026-07-27T10:24:16.889263+00:00"
+        },
+        {
+          "id": "ed4db5e0-e94c-4653-b1eb-c422c45f639d",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 2,
+          "tool_name": "gmail.wait_for_reply",
+          "model_call_id": "call_89NSN9DmDQLA0DR7sr0sY49w",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "thread_id": "19fa31a7dcd531d7",
+            "timeout_days": 30,
+            "contact_email": "CONTROLLED_SECONDARY@example.invalid",
+            "sent_message_id": "19fa31a97242cd25"
+          },
+          "output": {
+            "watch_id": "dee4c390-723b-4ee2-b519-156d06aad284",
+            "thread_id": "19fa31a7dcd531d7",
+            "expires_at": "2026-08-26T10:24:19.249+00:00",
+            "next_poll_at": "2026-07-27T10:24:19.249+00:00"
+          },
+          "public_summary": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:2:gmail.wait_for_reply:ae418b3bff2b6833b13cb8fb",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending",
+          "error_message": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:24:19.334+00:00",
+          "created_at": "2026-07-27T10:24:19.228716+00:00",
+          "updated_at": "2026-07-27T10:24:19.394543+00:00"
+        },
+        {
+          "id": "dfa7cec3-d682-4006-8a8b-350c8af66906",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 3,
+          "tool_name": "calendar.get_availability",
+          "model_call_id": "call_SBWd7nbfNUjfcxU1rBEGtmLj",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "time_max": "2026-08-04T14:30:00+01:00",
+            "time_min": "2026-08-04T14:00:00+01:00",
+            "timezone": "Africa/Lagos",
+            "calendar_ids": [
+              "primary"
+            ]
+          },
+          "output": {
+            "kind": "calendar#freeBusy",
+            "timeMax": "2026-08-04T13:30:00.000Z",
+            "timeMin": "2026-08-04T13:00:00.000Z",
+            "calendars": {
+              "primary": {
+                "busy": []
+              }
+            }
+          },
+          "public_summary": "Checked calendar availability.",
+          "idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:3:calendar.get_availability:31da97b9f870123b8ca1c948",
+          "provider_action_id": null,
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:24:33.622+00:00",
+          "created_at": "2026-07-27T10:24:33.416853+00:00",
+          "updated_at": "2026-07-27T10:24:33.677243+00:00"
+        },
+        {
+          "id": "9094115e-0dda-462c-a8d5-3f0bb4d33e3f",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 4,
+          "tool_name": "calendar.create_event",
+          "model_call_id": "call_splTs8kkNk0rKG61jrJ6QA0s",
+          "risk": "external_write",
+          "status": "succeeded",
+          "arguments": {
+            "end": "2026-08-04T14:30:00+01:00",
+            "start": "2026-08-04T14:00:00+01:00",
+            "summary": "Durable Luna reply calendar 0f100338f9",
+            "timezone": "Africa/Lagos",
+            "calendar_id": "primary",
+            "description": "Meeting scheduled after confirming Tuesday at 2:00 PM Africa/Lagos by email.",
+            "add_google_meet": false,
+            "attendee_emails": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ]
+          },
+          "output": {
+            "id": "9ki0pncs7u2aud3tfl60rb915c",
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "etag": "\"3570295766779486\"",
+            "kind": "calendar#event",
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "status": "confirmed",
+            "created": "2026-07-27T10:24:43.000Z",
+            "creator": {
+              "self": true,
+              "email": "CONTROLLED_PRIMARY@example.invalid"
+            },
+            "iCalUID": "9ki0pncs7u2aud3tfl60rb915c@google.com",
+            "summary": "Durable Luna reply calendar 0f100338f9",
+            "updated": "2026-07-27T10:24:43.389Z",
+            "htmlLink": "https://www.google.com/calendar/event?eid=OWtpMHBuY3M3dTJhdWQzdGZsNjByYjkxNWMgZG9zdWRhdnlAbQ",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "eventType": "default",
+            "organizer": {
+              "self": true,
+              "email": "CONTROLLED_PRIMARY@example.invalid"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "description": "Meeting scheduled after confirming Tuesday at 2:00 PM Africa/Lagos by email.",
+            "already_created": false,
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:4:calendar.create_event:c42043871fcbf5d1485ccf77"
+              }
+            }
+          },
+          "public_summary": "Google Calendar confirmed the event was created.",
+          "idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:4:calendar.create_event:c42043871fcbf5d1485ccf77",
+          "provider_action_id": "9ki0pncs7u2aud3tfl60rb915c",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T10:24:42.201+00:00",
+          "completed_at": "2026-07-27T10:24:43.445+00:00",
+          "created_at": "2026-07-27T10:24:36.820059+00:00",
+          "updated_at": "2026-07-27T10:24:43.555381+00:00"
+        },
+        {
+          "id": "75f9973d-75e3-47b8-8e9c-80d1bb4ed824",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 5,
+          "tool_name": "agent.complete",
+          "model_call_id": "call_63QzImjDY6hwNamPYu3Meju5",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "drafts": [],
+            "sources": [],
+            "summary": "Meeting coordinated successfully: availability was requested and confirmed, Calendar was checked, and the event was created.",
+            "sections": [
+              {
+                "body": "Sent to CONTROLLED_SECONDARY@example.invalid with subject “[Durable Luna 0f100338f9] Reply calendar.” David confirmed Tuesday at 2:00 PM Africa/Lagos.",
+                "title": "Email"
+              },
+              {
+                "body": "Created exactly one confirmed event for Tuesday, August 4, 2026, 2:00–2:30 PM Africa/Lagos, titled “Durable Luna reply calendar 0f100338f9,” with CONTROLLED_SECONDARY@example.invalid as attendee. The time was free when checked.",
+                "title": "Calendar"
+              }
+            ],
+            "follow_ups": [],
+            "prepared_result": false,
+            "purchase_confirmed": false,
+            "payment_boundary_reached": false,
+            "external_change_confirmed": true
+          },
+          "output": {
+            "accepted": true
+          },
+          "public_summary": "Meeting coordinated successfully: availability was requested and confirmed, Calendar was checked, and the event was created.",
+          "idempotency_key": "agent:f26853ae-0c74-4cb0-be9e-50c67e0ac85b:5:agent.complete:e42d9c7a62fae5556fa35cdc",
+          "provider_action_id": null,
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:24:46.736+00:00",
+          "created_at": "2026-07-27T10:24:46.631051+00:00",
+          "updated_at": "2026-07-27T10:24:46.799059+00:00"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "8807c371-da46-40dc-bdb7-47c8dafb2947",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "action_id": "c0c3982b-e7c5-490b-91ad-f900d685417f",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "status": "approved",
+          "kind": "send_email",
+          "title": "Send this email?",
+          "summary": "Send “[Durable Luna 0f100338f9] Reply calendar” to CONTROLLED_SECONDARY@example.invalid.",
+          "payload": {
+            "preview": {
+              "to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "subject": "[Durable Luna 0f100338f9] Reply calendar",
+              "body_text": "Hi David,\n\nCould you please share your availability next week (August 3–9) for a meeting?\n\nThanks,"
+            },
+            "toolName": "gmail.send_message",
+            "arguments": {
+              "draft_id": "r-4752771385881155696",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Reply calendar"
+            }
+          },
+          "payload_hash": "d0914721fc15b7fcf02a3ba4f447bdfee54a76d5ea5cdb182ccb2143c33378ab",
+          "version": 2,
+          "expires_at": "2026-07-28T10:24:12.922+00:00",
+          "decided_at": "2026-07-27T10:24:14.912+00:00",
+          "created_at": "2026-07-27T10:24:13.008638+00:00",
+          "updated_at": "2026-07-27T10:24:14.974583+00:00"
+        },
+        {
+          "id": "f5f4af29-0745-412f-afd6-de2ab6752755",
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "action_id": "9094115e-0dda-462c-a8d5-3f0bb4d33e3f",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "status": "approved",
+          "kind": "calendar_write",
+          "title": "Create this calendar event?",
+          "summary": "Create this calendar event Roon will use the exact details shown here.",
+          "payload": {
+            "preview": {
+              "end": "2026-08-04T14:30:00+01:00",
+              "start": "2026-08-04T14:00:00+01:00",
+              "summary": "Durable Luna reply calendar 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "Meeting scheduled after confirming Tuesday at 2:00 PM Africa/Lagos by email.",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            },
+            "toolName": "calendar.create_event",
+            "arguments": {
+              "end": "2026-08-04T14:30:00+01:00",
+              "start": "2026-08-04T14:00:00+01:00",
+              "summary": "Durable Luna reply calendar 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "Meeting scheduled after confirming Tuesday at 2:00 PM Africa/Lagos by email.",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            }
+          },
+          "payload_hash": "2004269322138742587496d812b6862bb0d0957d0d66a93065d94f5d518753a3",
+          "version": 2,
+          "expires_at": "2026-07-28T10:24:36.844+00:00",
+          "decided_at": "2026-07-27T10:24:42.078+00:00",
+          "created_at": "2026-07-27T10:24:36.924411+00:00",
+          "updated_at": "2026-07-27T10:24:42.183924+00:00"
+        }
+      ],
+      "events": [
+        {
+          "id": 7633,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "hybrid",
+            "capability": "scheduling"
+          },
+          "created_at": "2026-07-27T10:24:05.832851+00:00"
+        },
+        {
+          "id": 7634,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T10:24:05.951941+00:00"
+        },
+        {
+          "id": 7635,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3104,
+              "total_tokens": 3234,
+              "output_tokens": 130,
+              "input_tokens_details": {
+                "cached_tokens": 2806,
+                "cache_write_tokens": 295
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 39
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0e9f033ecae19d48016a6731c6fa9481a2b09f1b342e65feb2",
+            "benchmark_run_id": "durable-luna-smoke/reply-calendar/shotcount/489d9ee00d",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:08.873588+00:00"
+        },
+        {
+          "id": 7636,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Prepared a Gmail draft for review.",
+          "metadata": {
+            "action_id": "216a1d3c-a8bc-4266-b3c7-a5db696237ec",
+            "tool_name": "gmail.create_draft"
+          },
+          "created_at": "2026-07-27T10:24:10.376588+00:00"
+        },
+        {
+          "id": 7637,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3416,
+              "total_tokens": 3496,
+              "output_tokens": 80,
+              "input_tokens_details": {
+                "cached_tokens": 3101,
+                "cache_write_tokens": 312
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 20
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_0e9f033ecae19d48016a6731ca7fa881a2ad85361b7b41182b",
+            "benchmark_run_id": "durable-luna-smoke/reply-calendar/shotcount/489d9ee00d",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:12.480036+00:00"
+        },
+        {
+          "id": 7638,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_requested",
+          "status": "needs_approval",
+          "message": "Send “[Durable Luna 0f100338f9] Reply calendar” to CONTROLLED_SECONDARY@example.invalid.",
+          "metadata": {
+            "action_id": "c0c3982b-e7c5-490b-91ad-f900d685417f",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T10:24:13.164347+00:00"
+        },
+        {
+          "id": 7639,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_granted",
+          "status": "running",
+          "message": "Send “[Durable Luna 0f100338f9] Reply calendar” to CONTROLLED_SECONDARY@example.invalid.",
+          "metadata": {
+            "action_id": "c0c3982b-e7c5-490b-91ad-f900d685417f"
+          },
+          "created_at": "2026-07-27T10:24:15.36992+00:00"
+        },
+        {
+          "id": 7640,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Gmail confirmed the email was sent.",
+          "metadata": {
+            "approved": true,
+            "action_id": "c0c3982b-e7c5-490b-91ad-f900d685417f",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T10:24:17.258751+00:00"
+        },
+        {
+          "id": 7641,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3544,
+              "total_tokens": 3612,
+              "output_tokens": 68,
+              "input_tokens_details": {
+                "cached_tokens": 3413,
+                "cache_write_tokens": 128
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 7
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0e9f033ecae19d48016a6731d18dac81a2bd6f4866fa32642d",
+            "benchmark_run_id": "durable-luna-smoke/reply-calendar/shotcount/489d9ee00d",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:18.936969+00:00"
+        },
+        {
+          "id": 7642,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "metadata": {
+            "tool_name": "gmail.wait_for_reply"
+          },
+          "created_at": "2026-07-27T10:24:19.591944+00:00"
+        },
+        {
+          "id": 7643,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_resumed",
+          "status": "planning",
+          "message": "A relevant Gmail reply arrived.",
+          "metadata": {
+            "watch_id": "dee4c390-723b-4ee2-b519-156d06aad284",
+            "message_id": "19fa31ab97e5a70a"
+          },
+          "created_at": "2026-07-27T10:24:31.051686+00:00"
+        },
+        {
+          "id": 7644,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3901,
+              "total_tokens": 4004,
+              "output_tokens": 103,
+              "input_tokens_details": {
+                "cached_tokens": 3541,
+                "cache_write_tokens": 357
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 32
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0e9f033ecae19d48016a6731df7b1c81a293d249995fbfc75a",
+            "benchmark_run_id": "durable-luna-smoke/reply-calendar/shotcount/489d9ee00d",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:33.145117+00:00"
+        },
+        {
+          "id": 7645,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Checked calendar availability.",
+          "metadata": {
+            "action_id": "dfa7cec3-d682-4006-8a8b-350c8af66906",
+            "tool_name": "calendar.get_availability"
+          },
+          "created_at": "2026-07-27T10:24:33.943114+00:00"
+        },
+        {
+          "id": 7646,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 4074,
+              "total_tokens": 4204,
+              "output_tokens": 130,
+              "input_tokens_details": {
+                "cached_tokens": 3898,
+                "cache_write_tokens": 173
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 9
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_0e9f033ecae19d48016a6731e2153081a29e17889e224e3e0e",
+            "benchmark_run_id": "durable-luna-smoke/reply-calendar/shotcount/489d9ee00d",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:36.547342+00:00"
+        },
+        {
+          "id": 7647,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_requested",
+          "status": "needs_approval",
+          "message": "Create this calendar event Roon will use the exact details shown here.",
+          "metadata": {
+            "action_id": "9094115e-0dda-462c-a8d5-3f0bb4d33e3f",
+            "tool_name": "calendar.create_event"
+          },
+          "created_at": "2026-07-27T10:24:37.141934+00:00"
+        },
+        {
+          "id": 7648,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_granted",
+          "status": "running",
+          "message": "Create this calendar event Roon will use the exact details shown here.",
+          "metadata": {
+            "action_id": "9094115e-0dda-462c-a8d5-3f0bb4d33e3f"
+          },
+          "created_at": "2026-07-27T10:24:42.464661+00:00"
+        },
+        {
+          "id": 7649,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Google Calendar confirmed the event was created.",
+          "metadata": {
+            "approved": true,
+            "action_id": "9094115e-0dda-462c-a8d5-3f0bb4d33e3f",
+            "tool_name": "calendar.create_event"
+          },
+          "created_at": "2026-07-27T10:24:43.896959+00:00"
+        },
+        {
+          "id": 7650,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 4589,
+              "total_tokens": 4790,
+              "output_tokens": 201,
+              "input_tokens_details": {
+                "cached_tokens": 4071,
+                "cache_write_tokens": 515
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 8
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0e9f033ecae19d48016a6731ec48e881a28bc88369303e3842",
+            "benchmark_run_id": "durable-luna-smoke/reply-calendar/shotcount/489d9ee00d",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:46.361353+00:00"
+        },
+        {
+          "id": 7651,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_completed",
+          "status": "completed",
+          "message": "Meeting coordinated successfully: availability was requested and confirmed, Calendar was checked, and the event was created.",
+          "metadata": {},
+          "created_at": "2026-07-27T10:24:46.955145+00:00"
+        },
+        {
+          "id": 7652,
+          "run_id": "f26853ae-0c74-4cb0-be9e-50c67e0ac85b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_completed_by_agent",
+          "status": "completed",
+          "message": "ShotCount marked the task complete after confirming the intended outcome.",
+          "metadata": {
+            "task_id": "828cd273-c4d5-4cb6-b59a-21a70337a5b8"
+          },
+          "created_at": "2026-07-27T10:24:46.955145+00:00"
+        }
+      ]
+    },
+    {
+      "scenario": "timed-follow-up",
+      "harness": "ShotCount",
+      "model": "gpt-5.6-luna",
+      "success": false,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": null,
+      "approval_state_survival": null,
+      "time_to_resume_seconds": null,
+      "inference_cost_usd": 0.005946,
+      "final_state": "waiting_external",
+      "failure_reason": "timer/deadline handling",
+      "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+      "usage": {
+        "input": 10043,
+        "cached": 9293,
+        "cacheWrite": 741,
+        "output": 482,
+        "calls": 3
+      },
+      "verification": {
+        "success": false,
+        "sentCount": 1,
+        "calendarCount": 0,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "gmail.send_message",
+            "status": "succeeded",
+            "providerActionId": "19fa31b427ade717",
+            "arguments": {
+              "draft_id": "r6838173708162289872",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Timed follow-up"
+            }
+          }
+        ],
+        "threadId": "19fa31b2ed1a3cdd",
+        "events": []
+      },
+      "actions": [
+        {
+          "id": "d46ab60f-d331-4886-a7ab-5cd2c74eeae5",
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 0,
+          "tool_name": "gmail.create_draft",
+          "model_call_id": "call_nmCvmt2yV4rAA6I0pHFqTjMG",
+          "risk": "prepare",
+          "status": "succeeded",
+          "arguments": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Timed follow-up",
+            "body_text": "Hi,\n\nCould you please let me know your availability?\n\nThanks",
+            "thread_id": null,
+            "in_reply_to_message_id": null
+          },
+          "output": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Timed follow-up",
+            "draft_id": "r6838173708162289872",
+            "body_text": "Hi,\r\n\r\nCould you please let me know your availability?\r\n\r\nThanks",
+            "thread_id": "19fa31b2ed1a3cdd",
+            "message_id": "19fa31b2ed1a3cdd",
+            "already_created": false,
+            "message_id_header": "<agent.63a26b57-a7f1-412d-a175-3823ea026cab.0.gmail.create_draft.626384842012ef6048a3c7bb@shotcount.app>"
+          },
+          "public_summary": "Prepared a Gmail draft for review.",
+          "idempotency_key": "agent:63a26b57-a7f1-412d-a175-3823ea026cab:0:gmail.create_draft:626384842012ef6048a3c7bb",
+          "provider_action_id": "r6838173708162289872",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:24:55.519+00:00",
+          "created_at": "2026-07-27T10:24:54.843801+00:00",
+          "updated_at": "2026-07-27T10:24:55.586931+00:00"
+        },
+        {
+          "id": "0466d7af-08ef-48c3-9e25-6e5a59ec69cf",
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 1,
+          "tool_name": "gmail.send_message",
+          "model_call_id": "call_7IoyX3QqZvIIrwjiqHauHHXp",
+          "risk": "external_write",
+          "status": "succeeded",
+          "arguments": {
+            "draft_id": "r6838173708162289872",
+            "expected_to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "expected_subject": "[Durable Luna 0f100338f9] Timed follow-up"
+          },
+          "output": {
+            "thread_id": "19fa31b2ed1a3cdd",
+            "history_id": "",
+            "message_id": "19fa31b427ade717",
+            "already_sent": false
+          },
+          "public_summary": "Gmail confirmed the email was sent.",
+          "idempotency_key": "agent:63a26b57-a7f1-412d-a175-3823ea026cab:1:gmail.send_message:1584dbe54da894ee1eb9fc1a",
+          "provider_action_id": "19fa31b427ade717",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T10:24:59.376+00:00",
+          "completed_at": "2026-07-27T10:25:01.051+00:00",
+          "created_at": "2026-07-27T10:24:57.578779+00:00",
+          "updated_at": "2026-07-27T10:25:01.146205+00:00"
+        },
+        {
+          "id": "cf9ec93f-f44f-40be-9257-8c89d3212a15",
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 2,
+          "tool_name": "gmail.wait_for_reply",
+          "model_call_id": "call_jFU1bQrZPCiuqYgtEE4BdAdL",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "thread_id": "19fa31b2ed1a3cdd",
+            "timeout_days": 1,
+            "contact_email": "CONTROLLED_SECONDARY@example.invalid",
+            "sent_message_id": "19fa31b427ade717"
+          },
+          "output": {
+            "watch_id": "3cc9ddbd-1f84-4e3d-b105-c29cd5d76c57",
+            "thread_id": "19fa31b2ed1a3cdd",
+            "expires_at": "2026-07-28T10:25:05.44+00:00",
+            "next_poll_at": "2026-07-27T10:25:05.44+00:00"
+          },
+          "public_summary": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "idempotency_key": "agent:63a26b57-a7f1-412d-a175-3823ea026cab:2:gmail.wait_for_reply:fbdb7a4bc5635e8dfe8ba481",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending",
+          "error_message": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:25:05.551+00:00",
+          "created_at": "2026-07-27T10:25:05.418958+00:00",
+          "updated_at": "2026-07-27T10:25:05.621648+00:00"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "1a7fdb1e-9ff1-4f64-9d88-caa704300050",
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "action_id": "0466d7af-08ef-48c3-9e25-6e5a59ec69cf",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "status": "approved",
+          "kind": "send_email",
+          "title": "Send this email?",
+          "summary": "Send “[Durable Luna 0f100338f9] Timed follow-up” to CONTROLLED_SECONDARY@example.invalid.",
+          "payload": {
+            "preview": {
+              "to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "subject": "[Durable Luna 0f100338f9] Timed follow-up",
+              "body_text": "Hi,\n\nCould you please let me know your availability?\n\nThanks"
+            },
+            "toolName": "gmail.send_message",
+            "arguments": {
+              "draft_id": "r6838173708162289872",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Timed follow-up"
+            }
+          },
+          "payload_hash": "e79d9cc0a55ad2afe3b92c40345469aa8ce152a47830521364dec181f2a867ec",
+          "version": 2,
+          "expires_at": "2026-07-28T10:24:57.672+00:00",
+          "decided_at": "2026-07-27T10:24:59.286+00:00",
+          "created_at": "2026-07-27T10:24:57.745479+00:00",
+          "updated_at": "2026-07-27T10:24:59.355709+00:00"
+        }
+      ],
+      "events": [
+        {
+          "id": 7653,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "structured",
+            "capability": "calendar"
+          },
+          "created_at": "2026-07-27T10:24:51.67339+00:00"
+        },
+        {
+          "id": 7654,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T10:24:51.831755+00:00"
+        },
+        {
+          "id": 7655,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3063,
+              "total_tokens": 3263,
+              "output_tokens": 200,
+              "input_tokens_details": {
+                "cached_tokens": 2806,
+                "cache_write_tokens": 254
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 119
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0d32200e9faf2546016a6731f44944819fbf2591f71480d1a3",
+            "benchmark_run_id": "durable-luna-smoke/timed-follow-up/shotcount/128b5b4aca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:54.593357+00:00"
+        },
+        {
+          "id": 7656,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Prepared a Gmail draft for review.",
+          "metadata": {
+            "action_id": "d46ab60f-d331-4886-a7ab-5cd2c74eeae5",
+            "tool_name": "gmail.create_draft"
+          },
+          "created_at": "2026-07-27T10:24:55.820142+00:00"
+        },
+        {
+          "id": 7657,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3430,
+              "total_tokens": 3502,
+              "output_tokens": 72,
+              "input_tokens_details": {
+                "cached_tokens": 3060,
+                "cache_write_tokens": 367
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 11
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_0d32200e9faf2546016a6731f7ee7c819f8b4b6a897a956ba4",
+            "benchmark_run_id": "durable-luna-smoke/timed-follow-up/shotcount/128b5b4aca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:24:57.2891+00:00"
+        },
+        {
+          "id": 7658,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_requested",
+          "status": "needs_approval",
+          "message": "Send “[Durable Luna 0f100338f9] Timed follow-up” to CONTROLLED_SECONDARY@example.invalid.",
+          "metadata": {
+            "action_id": "0466d7af-08ef-48c3-9e25-6e5a59ec69cf",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T10:24:57.899439+00:00"
+        },
+        {
+          "id": 7659,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_granted",
+          "status": "running",
+          "message": "Send “[Durable Luna 0f100338f9] Timed follow-up” to CONTROLLED_SECONDARY@example.invalid.",
+          "metadata": {
+            "action_id": "0466d7af-08ef-48c3-9e25-6e5a59ec69cf"
+          },
+          "created_at": "2026-07-27T10:24:59.623707+00:00"
+        },
+        {
+          "id": 7660,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Gmail confirmed the email was sent.",
+          "metadata": {
+            "approved": true,
+            "action_id": "0466d7af-08ef-48c3-9e25-6e5a59ec69cf",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T10:25:01.573702+00:00"
+        },
+        {
+          "id": 7661,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3550,
+              "total_tokens": 3760,
+              "output_tokens": 210,
+              "input_tokens_details": {
+                "cached_tokens": 3427,
+                "cache_write_tokens": 120
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 149
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0d32200e9faf2546016a6731fdf978819fa10fde7e2b493251",
+            "benchmark_run_id": "durable-luna-smoke/timed-follow-up/shotcount/128b5b4aca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:25:05.129354+00:00"
+        },
+        {
+          "id": 7662,
+          "run_id": "63a26b57-a7f1-412d-a175-3823ea026cab",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "metadata": {
+            "tool_name": "gmail.wait_for_reply"
+          },
+          "created_at": "2026-07-27T10:25:05.817538+00:00"
+        }
+      ]
+    },
+    {
+      "scenario": "restart-recovery",
+      "harness": "ShotCount",
+      "model": "gpt-5.6-luna",
+      "success": true,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": true,
+      "approval_state_survival": null,
+      "time_to_resume_seconds": 20.462,
+      "inference_cost_usd": 0.010721,
+      "final_state": "completed",
+      "failure_reason": "",
+      "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+      "usage": {
+        "input": 22605,
+        "cached": 20844,
+        "cacheWrite": 1743,
+        "output": 716,
+        "calls": 6
+      },
+      "verification": {
+        "success": true,
+        "sentCount": 1,
+        "calendarCount": 1,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "gmail.send_message",
+            "status": "succeeded",
+            "providerActionId": "19fa31d98957341f",
+            "arguments": {
+              "draft_id": "r-6825635044134247981",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Restart recovery"
+            }
+          },
+          {
+            "tool": "calendar.create_event",
+            "status": "succeeded",
+            "providerActionId": "5nkeonm9bbbkiepc76v7f00nho",
+            "arguments": {
+              "end": "2026-08-04T14:30:00+01:00",
+              "start": "2026-08-04T14:00:00+01:00",
+              "summary": "Durable Luna restart recovery 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            }
+          }
+        ],
+        "threadId": "19fa31d7ec6f4ff7",
+        "events": [
+          {
+            "kind": "calendar#event",
+            "etag": "\"3570296176309118\"",
+            "id": "5nkeonm9bbbkiepc76v7f00nho",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=NW5rZW9ubTliYmJraWVwYzc2djdmMDBuaG8gZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:28:08.000Z",
+            "updated": "2026-07-27T10:28:08.154Z",
+            "summary": "Durable Luna restart recovery 0f100338f9",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "5nkeonm9bbbkiepc76v7f00nho@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:4:calendar.create_event:eebefa62293e22f77ada5da0"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "667f1587-e3b6-4ef1-8b43-33a721da6909",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 0,
+          "tool_name": "gmail.create_draft",
+          "model_call_id": "call_xvFffeY4Ls1KBCAxiPmogmHa",
+          "risk": "prepare",
+          "status": "succeeded",
+          "arguments": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Restart recovery",
+            "body_text": "Hi David,\n\nCould you please let me know your availability next week? In particular, would Tuesday at 2:00 PM Africa/Lagos work for you?\n\nBest,\n",
+            "thread_id": null,
+            "in_reply_to_message_id": null
+          },
+          "output": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Restart recovery",
+            "draft_id": "r-6825635044134247981",
+            "body_text": "Hi David,\r\n\r\nCould you please let me know your availability next week? In particular, would Tuesday at 2:00 PM Africa/Lagos work for you?\r\n\r\nBest,\r\n",
+            "thread_id": "19fa31d7ec6f4ff7",
+            "message_id": "19fa31d7ec6f4ff7",
+            "already_created": false,
+            "message_id_header": "<agent.afe01d5b-7db7-447c-947e-3b5c4330041b.0.gmail.create_draft.7dae009e0ba9b32e97122f6e@shotcount.app>"
+          },
+          "public_summary": "Prepared a Gmail draft for review.",
+          "idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:0:gmail.create_draft:7dae009e0ba9b32e97122f6e",
+          "provider_action_id": "r-6825635044134247981",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:27:27.1+00:00",
+          "created_at": "2026-07-27T10:27:26.452275+00:00",
+          "updated_at": "2026-07-27T10:27:27.207651+00:00"
+        },
+        {
+          "id": "f4b31ab3-50f4-44e0-b647-f4ef69632907",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 1,
+          "tool_name": "gmail.send_message",
+          "model_call_id": "call_keVGoJdghd5BQZEVCJ9uIfwE",
+          "risk": "external_write",
+          "status": "succeeded",
+          "arguments": {
+            "draft_id": "r-6825635044134247981",
+            "expected_to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "expected_subject": "[Durable Luna 0f100338f9] Restart recovery"
+          },
+          "output": {
+            "thread_id": "19fa31d7ec6f4ff7",
+            "history_id": "",
+            "message_id": "19fa31d98957341f",
+            "already_sent": false
+          },
+          "public_summary": "Gmail confirmed the email was sent.",
+          "idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:1:gmail.send_message:48a7978537b18aea64f90b66",
+          "provider_action_id": "19fa31d98957341f",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T10:27:32.257+00:00",
+          "completed_at": "2026-07-27T10:27:34.067+00:00",
+          "created_at": "2026-07-27T10:27:29.252061+00:00",
+          "updated_at": "2026-07-27T10:27:34.125322+00:00"
+        },
+        {
+          "id": "e7ef8736-6c96-446d-9213-b1af0f7e0946",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 2,
+          "tool_name": "gmail.wait_for_reply",
+          "model_call_id": "call_YUaisDKdDlTV9kxCyJcKOaqx",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "thread_id": "19fa31d7ec6f4ff7",
+            "timeout_days": 30,
+            "contact_email": "CONTROLLED_SECONDARY@example.invalid",
+            "sent_message_id": "19fa31d98957341f"
+          },
+          "output": {
+            "watch_id": "e770b7ce-152d-497f-9326-b9ecb5809d39",
+            "thread_id": "19fa31d7ec6f4ff7",
+            "expires_at": "2026-08-26T10:27:36.266+00:00",
+            "next_poll_at": "2026-07-27T10:27:36.266+00:00"
+          },
+          "public_summary": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:2:gmail.wait_for_reply:cb8344894a2981698bf98344",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending",
+          "error_message": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:27:36.347+00:00",
+          "created_at": "2026-07-27T10:27:36.24438+00:00",
+          "updated_at": "2026-07-27T10:27:36.413525+00:00"
+        },
+        {
+          "id": "a5967eed-6433-4985-a502-c01e03eaccc1",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 3,
+          "tool_name": "calendar.get_availability",
+          "model_call_id": "call_UxgfPFbYH4E2sy7ain3FnEYv",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "time_max": "2026-08-04T14:30:00+01:00",
+            "time_min": "2026-08-04T14:00:00+01:00",
+            "timezone": "Africa/Lagos",
+            "calendar_ids": [
+              "primary"
+            ]
+          },
+          "output": {
+            "kind": "calendar#freeBusy",
+            "timeMax": "2026-08-04T13:30:00.000Z",
+            "timeMin": "2026-08-04T13:00:00.000Z",
+            "calendars": {
+              "primary": {
+                "busy": []
+              }
+            }
+          },
+          "public_summary": "Checked calendar availability.",
+          "idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:3:calendar.get_availability:31da97b9f870123b8ca1c948",
+          "provider_action_id": null,
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:28:01.134+00:00",
+          "created_at": "2026-07-27T10:28:00.922836+00:00",
+          "updated_at": "2026-07-27T10:28:01.198031+00:00"
+        },
+        {
+          "id": "78a101fc-8140-4f81-9d5f-6ee459bb02ac",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 4,
+          "tool_name": "calendar.create_event",
+          "model_call_id": "call_JKG1yacYzPEjBawlwu8T33d0",
+          "risk": "external_write",
+          "status": "succeeded",
+          "arguments": {
+            "end": "2026-08-04T14:30:00+01:00",
+            "start": "2026-08-04T14:00:00+01:00",
+            "summary": "Durable Luna restart recovery 0f100338f9",
+            "timezone": "Africa/Lagos",
+            "calendar_id": "primary",
+            "description": "",
+            "add_google_meet": false,
+            "attendee_emails": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ]
+          },
+          "output": {
+            "id": "5nkeonm9bbbkiepc76v7f00nho",
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "etag": "\"3570296176309118\"",
+            "kind": "calendar#event",
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "status": "confirmed",
+            "created": "2026-07-27T10:28:08.000Z",
+            "creator": {
+              "self": true,
+              "email": "CONTROLLED_PRIMARY@example.invalid"
+            },
+            "iCalUID": "5nkeonm9bbbkiepc76v7f00nho@google.com",
+            "summary": "Durable Luna restart recovery 0f100338f9",
+            "updated": "2026-07-27T10:28:08.154Z",
+            "htmlLink": "https://www.google.com/calendar/event?eid=NW5rZW9ubTliYmJraWVwYzc2djdmMDBuaG8gZG9zdWRhdnlAbQ",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "eventType": "default",
+            "organizer": {
+              "self": true,
+              "email": "CONTROLLED_PRIMARY@example.invalid"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "already_created": false,
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:4:calendar.create_event:eebefa62293e22f77ada5da0"
+              }
+            }
+          },
+          "public_summary": "Google Calendar confirmed the event was created.",
+          "idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:4:calendar.create_event:eebefa62293e22f77ada5da0",
+          "provider_action_id": "5nkeonm9bbbkiepc76v7f00nho",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T10:28:07.248+00:00",
+          "completed_at": "2026-07-27T10:28:08.183+00:00",
+          "created_at": "2026-07-27T10:28:03.385626+00:00",
+          "updated_at": "2026-07-27T10:28:08.253478+00:00"
+        },
+        {
+          "id": "0485b3b0-d1e4-4702-98c4-d07df2c7f035",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 5,
+          "tool_name": "agent.complete",
+          "model_call_id": "call_vuULa3FDOAFVJlEVYi8PIb9o",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "drafts": [],
+            "sources": [],
+            "summary": "Recovery coordination completed: David confirmed Tuesday at 2:00 PM Africa/Lagos, the slot was available, and the meeting was created.",
+            "sections": [
+              {
+                "body": "Sent to CONTROLLED_SECONDARY@example.invalid with subject “[Durable Luna 0f100338f9] Restart recovery” asking for availability next week.",
+                "title": "Email"
+              },
+              {
+                "body": "David confirmed that Tuesday at 2:00 PM Africa/Lagos works.",
+                "title": "Reply"
+              },
+              {
+                "body": "Created exactly one 30-minute event for Tuesday, August 4, 2026, 2:00–2:30 PM Africa/Lagos, titled “Durable Luna restart recovery 0f100338f9,” with CONTROLLED_SECONDARY@example.invalid as attendee. The calendar showed the slot as free.",
+                "title": "Calendar"
+              }
+            ],
+            "follow_ups": [],
+            "prepared_result": false,
+            "purchase_confirmed": false,
+            "payment_boundary_reached": false,
+            "external_change_confirmed": true
+          },
+          "output": {
+            "accepted": true
+          },
+          "public_summary": "Recovery coordination completed: David confirmed Tuesday at 2:00 PM Africa/Lagos, the slot was available, and the meeting was created.",
+          "idempotency_key": "agent:afe01d5b-7db7-447c-947e-3b5c4330041b:5:agent.complete:82131fe5efe4b9d1a43e3ecf",
+          "provider_action_id": null,
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:28:11.635+00:00",
+          "created_at": "2026-07-27T10:28:11.531599+00:00",
+          "updated_at": "2026-07-27T10:28:11.697648+00:00"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "e410b26b-ab53-4f1f-abf2-e0aacd1d4795",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "action_id": "f4b31ab3-50f4-44e0-b647-f4ef69632907",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "status": "approved",
+          "kind": "send_email",
+          "title": "Send this email?",
+          "summary": "Send “[Durable Luna 0f100338f9] Restart recovery” to CONTROLLED_SECONDARY@example.invalid.",
+          "payload": {
+            "preview": {
+              "to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "subject": "[Durable Luna 0f100338f9] Restart recovery",
+              "body_text": "Hi David,\n\nCould you please let me know your availability next week? In particular, would Tuesday at 2:00 PM Africa/Lagos work for you?\n\nBest,\n"
+            },
+            "toolName": "gmail.send_message",
+            "arguments": {
+              "draft_id": "r-6825635044134247981",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Restart recovery"
+            }
+          },
+          "payload_hash": "88b6eba05601ae35124498ef3fc6d8870741ac1678fb2b912ae716bfad7f026b",
+          "version": 2,
+          "expires_at": "2026-07-28T10:27:29.373+00:00",
+          "decided_at": "2026-07-27T10:27:32.151+00:00",
+          "created_at": "2026-07-27T10:27:29.432619+00:00",
+          "updated_at": "2026-07-27T10:27:32.235629+00:00"
+        },
+        {
+          "id": "2188bb73-0c92-480f-97f0-9b75ded134b4",
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "action_id": "78a101fc-8140-4f81-9d5f-6ee459bb02ac",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "status": "approved",
+          "kind": "calendar_write",
+          "title": "Create this calendar event?",
+          "summary": "Create this calendar event Roon will use the exact details shown here.",
+          "payload": {
+            "preview": {
+              "end": "2026-08-04T14:30:00+01:00",
+              "start": "2026-08-04T14:00:00+01:00",
+              "summary": "Durable Luna restart recovery 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            },
+            "toolName": "calendar.create_event",
+            "arguments": {
+              "end": "2026-08-04T14:30:00+01:00",
+              "start": "2026-08-04T14:00:00+01:00",
+              "summary": "Durable Luna restart recovery 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            }
+          },
+          "payload_hash": "0864230b6abf0a58be2decbf7e0614457b2d35ae68bdca518bb2c61bb4a394fb",
+          "version": 2,
+          "expires_at": "2026-07-28T10:28:03.409+00:00",
+          "decided_at": "2026-07-27T10:28:07.161+00:00",
+          "created_at": "2026-07-27T10:28:03.472595+00:00",
+          "updated_at": "2026-07-27T10:28:07.22716+00:00"
+        }
+      ],
+      "events": [
+        {
+          "id": 7663,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "hybrid",
+            "capability": "scheduling"
+          },
+          "created_at": "2026-07-27T10:27:23.538717+00:00"
+        },
+        {
+          "id": 7664,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T10:27:23.677285+00:00"
+        },
+        {
+          "id": 7665,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3102,
+              "total_tokens": 3234,
+              "output_tokens": 132,
+              "input_tokens_details": {
+                "cached_tokens": 2806,
+                "cache_write_tokens": 293
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 30
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_04da6b3057cd1c6a016a67328c3da881a39489463824b6557b",
+            "benchmark_run_id": "durable-luna-smoke/restart-recovery/shotcount/ccece272ca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:27:26.148969+00:00"
+        },
+        {
+          "id": 7666,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Prepared a Gmail draft for review.",
+          "metadata": {
+            "action_id": "667f1587-e3b6-4ef1-8b43-33a721da6909",
+            "tool_name": "gmail.create_draft"
+          },
+          "created_at": "2026-07-27T10:27:27.499428+00:00"
+        },
+        {
+          "id": 7667,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3431,
+              "total_tokens": 3501,
+              "output_tokens": 70,
+              "input_tokens_details": {
+                "cached_tokens": 3099,
+                "cache_write_tokens": 329
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 10
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_04da6b3057cd1c6a016a67328f9c8c81a39cb4cd6345533a72",
+            "benchmark_run_id": "durable-luna-smoke/restart-recovery/shotcount/ccece272ca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:27:28.966913+00:00"
+        },
+        {
+          "id": 7668,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_requested",
+          "status": "needs_approval",
+          "message": "Send “[Durable Luna 0f100338f9] Restart recovery” to CONTROLLED_SECONDARY@example.invalid.",
+          "metadata": {
+            "action_id": "f4b31ab3-50f4-44e0-b647-f4ef69632907",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T10:27:29.683262+00:00"
+        },
+        {
+          "id": 7669,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_granted",
+          "status": "running",
+          "message": "Send “[Durable Luna 0f100338f9] Restart recovery” to CONTROLLED_SECONDARY@example.invalid.",
+          "metadata": {
+            "action_id": "f4b31ab3-50f4-44e0-b647-f4ef69632907"
+          },
+          "created_at": "2026-07-27T10:27:32.495104+00:00"
+        },
+        {
+          "id": 7670,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Gmail confirmed the email was sent.",
+          "metadata": {
+            "approved": true,
+            "action_id": "f4b31ab3-50f4-44e0-b647-f4ef69632907",
+            "tool_name": "gmail.send_message"
+          },
+          "created_at": "2026-07-27T10:27:34.459274+00:00"
+        },
+        {
+          "id": 7671,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3550,
+              "total_tokens": 3619,
+              "output_tokens": 69,
+              "input_tokens_details": {
+                "cached_tokens": 3428,
+                "cache_write_tokens": 119
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 7
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_04da6b3057cd1c6a016a673296c39081a395f85dec3e989aa5",
+            "benchmark_run_id": "durable-luna-smoke/restart-recovery/shotcount/ccece272ca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:27:36.013303+00:00"
+        },
+        {
+          "id": 7672,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Waiting for CONTROLLED_SECONDARY@example.invalid to reply.",
+          "metadata": {
+            "tool_name": "gmail.wait_for_reply"
+          },
+          "created_at": "2026-07-27T10:27:36.563584+00:00"
+        },
+        {
+          "id": 7673,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_resumed",
+          "status": "planning",
+          "message": "A relevant Gmail reply arrived.",
+          "metadata": {
+            "watch_id": "e770b7ce-152d-497f-9326-b9ecb5809d39",
+            "message_id": "19fa31dd8c206ef7"
+          },
+          "created_at": "2026-07-27T10:27:57.025591+00:00"
+        },
+        {
+          "id": 7674,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3900,
+              "total_tokens": 4000,
+              "output_tokens": 100,
+              "input_tokens_details": {
+                "cached_tokens": 3547,
+                "cache_write_tokens": 350
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 29
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_04da6b3057cd1c6a016a6732adb97c81a38945592bcd0d7a95",
+            "benchmark_run_id": "durable-luna-smoke/restart-recovery/shotcount/ccece272ca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:28:00.608955+00:00"
+        },
+        {
+          "id": 7675,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Checked calendar availability.",
+          "metadata": {
+            "action_id": "a5967eed-6433-4985-a502-c01e03eaccc1",
+            "tool_name": "calendar.get_availability"
+          },
+          "created_at": "2026-07-27T10:28:01.467738+00:00"
+        },
+        {
+          "id": 7676,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 4070,
+              "total_tokens": 4188,
+              "output_tokens": 118,
+              "input_tokens_details": {
+                "cached_tokens": 3897,
+                "cache_write_tokens": 170
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 14
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_04da6b3057cd1c6a016a6732b194f881a3bb47b49f56957cd1",
+            "benchmark_run_id": "durable-luna-smoke/restart-recovery/shotcount/ccece272ca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:28:03.118942+00:00"
+        },
+        {
+          "id": 7677,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_requested",
+          "status": "needs_approval",
+          "message": "Create this calendar event Roon will use the exact details shown here.",
+          "metadata": {
+            "action_id": "78a101fc-8140-4f81-9d5f-6ee459bb02ac",
+            "tool_name": "calendar.create_event"
+          },
+          "created_at": "2026-07-27T10:28:03.677737+00:00"
+        },
+        {
+          "id": 7678,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_granted",
+          "status": "running",
+          "message": "Create this calendar event Roon will use the exact details shown here.",
+          "metadata": {
+            "action_id": "78a101fc-8140-4f81-9d5f-6ee459bb02ac"
+          },
+          "created_at": "2026-07-27T10:28:07.493544+00:00"
+        },
+        {
+          "id": 7679,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Google Calendar confirmed the event was created.",
+          "metadata": {
+            "approved": true,
+            "action_id": "78a101fc-8140-4f81-9d5f-6ee459bb02ac",
+            "tool_name": "calendar.create_event"
+          },
+          "created_at": "2026-07-27T10:28:08.676921+00:00"
+        },
+        {
+          "id": 7680,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 4552,
+              "total_tokens": 4779,
+              "output_tokens": 227,
+              "input_tokens_details": {
+                "cached_tokens": 4067,
+                "cache_write_tokens": 482
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 8
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_04da6b3057cd1c6a016a6732b8f93881a38aff6fa16c95942d",
+            "benchmark_run_id": "durable-luna-smoke/restart-recovery/shotcount/ccece272ca",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:28:11.282107+00:00"
+        },
+        {
+          "id": 7682,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_completed_by_agent",
+          "status": "completed",
+          "message": "ShotCount marked the task complete after confirming the intended outcome.",
+          "metadata": {
+            "task_id": "da53e745-ae7d-4493-a400-a522446e3082"
+          },
+          "created_at": "2026-07-27T10:28:11.866139+00:00"
+        },
+        {
+          "id": 7681,
+          "run_id": "afe01d5b-7db7-447c-947e-3b5c4330041b",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_completed",
+          "status": "completed",
+          "message": "Recovery coordination completed: David confirmed Tuesday at 2:00 PM Africa/Lagos, the slot was available, and the meeting was created.",
+          "metadata": {},
+          "created_at": "2026-07-27T10:28:11.866139+00:00"
+        }
+      ]
+    },
+    {
+      "scenario": "approval-persistence",
+      "harness": "ShotCount",
+      "model": "gpt-5.6-luna",
+      "success": true,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": null,
+      "approval_state_survival": true,
+      "time_to_resume_seconds": null,
+      "inference_cost_usd": 0.004062,
+      "final_state": "completed",
+      "failure_reason": "",
+      "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+      "usage": {
+        "input": 6644,
+        "cached": 5866,
+        "cacheWrite": 772,
+        "output": 282,
+        "calls": 2
+      },
+      "verification": {
+        "success": true,
+        "sentCount": 0,
+        "calendarCount": 1,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "calendar.create_event",
+            "status": "succeeded",
+            "providerActionId": "dplga7agu1bk7ura6lf6tvvsmc",
+            "arguments": {
+              "end": "2026-08-05T15:30:00+01:00",
+              "start": "2026-08-05T15:00:00+01:00",
+              "summary": "Durable Luna approval persistence 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            }
+          }
+        ],
+        "threadId": "",
+        "events": [
+          {
+            "kind": "calendar#event",
+            "etag": "\"3570296718493502\"",
+            "id": "dplga7agu1bk7ura6lf6tvvsmc",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=ZHBsZ2E3YWd1MWJrN3VyYTZsZjZ0dnZzbWMgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:32:39.000Z",
+            "updated": "2026-07-27T10:32:39.246Z",
+            "summary": "Durable Luna approval persistence 0f100338f9",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-05T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T15:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "dplga7agu1bk7ura6lf6tvvsmc@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "agent:75050fa4-0f83-4144-9ba8-ac6adfa05606:0:calendar.create_event:d3922d81f1778762ae7a98d3"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "23a40ef9-6c4d-4b1a-9f08-2ed927c71ed5",
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 0,
+          "tool_name": "calendar.create_event",
+          "model_call_id": "call_LFmE168f5dEEdtuTu9jEV4tB",
+          "risk": "external_write",
+          "status": "succeeded",
+          "arguments": {
+            "end": "2026-08-05T15:30:00+01:00",
+            "start": "2026-08-05T15:00:00+01:00",
+            "summary": "Durable Luna approval persistence 0f100338f9",
+            "timezone": "Africa/Lagos",
+            "calendar_id": "primary",
+            "description": "",
+            "add_google_meet": false,
+            "attendee_emails": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ]
+          },
+          "output": {
+            "id": "dplga7agu1bk7ura6lf6tvvsmc",
+            "end": {
+              "dateTime": "2026-08-05T15:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "etag": "\"3570296718493502\"",
+            "kind": "calendar#event",
+            "start": {
+              "dateTime": "2026-08-05T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "status": "confirmed",
+            "created": "2026-07-27T10:32:39.000Z",
+            "creator": {
+              "self": true,
+              "email": "CONTROLLED_PRIMARY@example.invalid"
+            },
+            "iCalUID": "dplga7agu1bk7ura6lf6tvvsmc@google.com",
+            "summary": "Durable Luna approval persistence 0f100338f9",
+            "updated": "2026-07-27T10:32:39.246Z",
+            "htmlLink": "https://www.google.com/calendar/event?eid=ZHBsZ2E3YWd1MWJrN3VyYTZsZjZ0dnZzbWMgZG9zdWRhdnlAbQ",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "eventType": "default",
+            "organizer": {
+              "self": true,
+              "email": "CONTROLLED_PRIMARY@example.invalid"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "already_created": false,
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "agent:75050fa4-0f83-4144-9ba8-ac6adfa05606:0:calendar.create_event:d3922d81f1778762ae7a98d3"
+              }
+            }
+          },
+          "public_summary": "Google Calendar confirmed the event was created.",
+          "idempotency_key": "agent:75050fa4-0f83-4144-9ba8-ac6adfa05606:0:calendar.create_event:d3922d81f1778762ae7a98d3",
+          "provider_action_id": "dplga7agu1bk7ura6lf6tvvsmc",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": "2026-07-27T10:32:38.207+00:00",
+          "completed_at": "2026-07-27T10:32:39.309+00:00",
+          "created_at": "2026-07-27T10:32:30.493112+00:00",
+          "updated_at": "2026-07-27T10:32:39.368297+00:00"
+        },
+        {
+          "id": "226a0b2e-150d-4d97-9a66-80aa3ab1d53d",
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 1,
+          "tool_name": "agent.complete",
+          "model_call_id": "call_a4QICxv2MFMbESsMONILpZAs",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "drafts": [],
+            "sources": [],
+            "summary": "Calendar event created and confirmed.",
+            "sections": [
+              {
+                "body": "“Durable Luna approval persistence 0f100338f9” is scheduled for August 5, 2026, from 3:00 PM to 3:30 PM Africa/Lagos, with CONTROLLED_SECONDARY@example.invalid invited.",
+                "title": "Created event"
+              }
+            ],
+            "follow_ups": [],
+            "prepared_result": true,
+            "purchase_confirmed": false,
+            "payment_boundary_reached": false,
+            "external_change_confirmed": true
+          },
+          "output": {
+            "accepted": true
+          },
+          "public_summary": "Calendar event created and confirmed.",
+          "idempotency_key": "agent:75050fa4-0f83-4144-9ba8-ac6adfa05606:1:agent.complete:3807d2fedc7cba334f5d1962",
+          "provider_action_id": null,
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T10:32:42.021+00:00",
+          "created_at": "2026-07-27T10:32:41.860501+00:00",
+          "updated_at": "2026-07-27T10:32:42.087708+00:00"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "cad9a807-481c-4f1a-bc7a-8aa5093703ec",
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "action_id": "23a40ef9-6c4d-4b1a-9f08-2ed927c71ed5",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "status": "approved",
+          "kind": "calendar_write",
+          "title": "Create this calendar event?",
+          "summary": "Create this calendar event Roon will use the exact details shown here.",
+          "payload": {
+            "preview": {
+              "end": "2026-08-05T15:30:00+01:00",
+              "start": "2026-08-05T15:00:00+01:00",
+              "summary": "Durable Luna approval persistence 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            },
+            "toolName": "calendar.create_event",
+            "arguments": {
+              "end": "2026-08-05T15:30:00+01:00",
+              "start": "2026-08-05T15:00:00+01:00",
+              "summary": "Durable Luna approval persistence 0f100338f9",
+              "timezone": "Africa/Lagos",
+              "calendar_id": "primary",
+              "description": "",
+              "add_google_meet": false,
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ]
+            }
+          },
+          "payload_hash": "8123f31c2a3f62c8004d6dbb7be8e065cc22232744c92be94b957cb312b5657c",
+          "version": 2,
+          "expires_at": "2026-07-28T10:32:30.522+00:00",
+          "decided_at": "2026-07-27T10:32:38.08+00:00",
+          "created_at": "2026-07-27T10:32:30.586966+00:00",
+          "updated_at": "2026-07-27T10:32:38.181563+00:00"
+        }
+      ],
+      "events": [
+        {
+          "id": 7687,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "hybrid",
+            "capability": "scheduling"
+          },
+          "created_at": "2026-07-27T10:32:27.082684+00:00"
+        },
+        {
+          "id": 7688,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T10:32:27.203957+00:00"
+        },
+        {
+          "id": 7689,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3063,
+              "total_tokens": 3214,
+              "output_tokens": 151,
+              "input_tokens_details": {
+                "cached_tokens": 2806,
+                "cache_write_tokens": 254
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 47
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0f595609d95ddab3016a6733bbbf0881a0ac3af9a081881d47",
+            "benchmark_run_id": "durable-luna-smoke/approval-persistence/shotcount/10c0c7b469",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:32:30.139501+00:00"
+        },
+        {
+          "id": 7690,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_requested",
+          "status": "needs_approval",
+          "message": "Create this calendar event Roon will use the exact details shown here.",
+          "metadata": {
+            "action_id": "23a40ef9-6c4d-4b1a-9f08-2ed927c71ed5",
+            "tool_name": "calendar.create_event"
+          },
+          "created_at": "2026-07-27T10:32:30.814626+00:00"
+        },
+        {
+          "id": 7691,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_approval_granted",
+          "status": "running",
+          "message": "Create this calendar event Roon will use the exact details shown here.",
+          "metadata": {
+            "action_id": "23a40ef9-6c4d-4b1a-9f08-2ed927c71ed5"
+          },
+          "created_at": "2026-07-27T10:32:38.460354+00:00"
+        },
+        {
+          "id": 7692,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Google Calendar confirmed the event was created.",
+          "metadata": {
+            "approved": true,
+            "action_id": "23a40ef9-6c4d-4b1a-9f08-2ed927c71ed5",
+            "tool_name": "calendar.create_event"
+          },
+          "created_at": "2026-07-27T10:32:39.734597+00:00"
+        },
+        {
+          "id": 7693,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3581,
+              "total_tokens": 3712,
+              "output_tokens": 131,
+              "input_tokens_details": {
+                "cached_tokens": 3060,
+                "cache_write_tokens": 518
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 7
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0f595609d95ddab3016a6733c808f881a0affa51f7709c22f3",
+            "benchmark_run_id": "durable-luna-smoke/approval-persistence/shotcount/10c0c7b469",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T10:32:41.609338+00:00"
+        },
+        {
+          "id": 7694,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_completed",
+          "status": "completed",
+          "message": "Calendar event created and confirmed.",
+          "metadata": {},
+          "created_at": "2026-07-27T10:32:42.241906+00:00"
+        },
+        {
+          "id": 7695,
+          "run_id": "75050fa4-0f83-4144-9ba8-ac6adfa05606",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_completed_by_agent",
+          "status": "completed",
+          "message": "ShotCount marked the task complete after confirming the intended outcome.",
+          "metadata": {
+            "task_id": "bc9200b4-36b3-4110-97fc-f3f4584a20cc"
+          },
+          "created_at": "2026-07-27T10:32:42.241906+00:00"
+        }
+      ]
+    },
+    {
+      "scenario": "reply-calendar",
+      "harness": "Minimal generic OpenAI agent",
+      "model": "gpt-5.6-luna",
+      "success": true,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": null,
+      "approval_state_survival": null,
+      "time_to_resume_seconds": 10.516,
+      "inference_cost_usd": 0.009552,
+      "final_state": "completed",
+      "failure_reason": "",
+      "run_id": "durable-luna-smoke/reply-calendar/generic/a99b35f973",
+      "conversation_id": "",
+      "usage": {
+        "input": 19222,
+        "cached": 17787,
+        "cacheWrite": 1417,
+        "output": 679,
+        "calls": 6
+      },
+      "verification": {
+        "success": true,
+        "sentCount": 1,
+        "calendarCount": 1,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "gmail.send_message",
+            "status": "succeeded",
+            "providerActionId": "19fa3248b10fc623",
+            "arguments": {
+              "draft_id": "r515288205204373387",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Reply calendar"
+            },
+            "output": {
+              "message_id": "19fa3248b10fc623",
+              "thread_id": "19fa3247999e325d",
+              "history_id": "",
+              "already_sent": false
+            },
+            "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:1:gmail.send_message"
+          },
+          {
+            "tool": "calendar.create_event",
+            "status": "succeeded",
+            "providerActionId": "jfdl1nlov0osqn7odd5v8udk5g",
+            "arguments": {
+              "calendar_id": "primary",
+              "summary": "Durable Luna reply calendar 0f100338f9",
+              "description": "30-minute meeting coordinated by email.",
+              "start": "2026-08-04T14:00:00+01:00",
+              "end": "2026-08-04T14:30:00+01:00",
+              "timezone": "Africa/Lagos",
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "add_google_meet": false
+            },
+            "output": {
+              "kind": "calendar#event",
+              "etag": "\"3570297055647614\"",
+              "id": "jfdl1nlov0osqn7odd5v8udk5g",
+              "status": "confirmed",
+              "htmlLink": "https://www.google.com/calendar/event?eid=amZkbDFubG92MG9zcW43b2RkNXY4dWRrNWcgZG9zdWRhdnlAbQ",
+              "created": "2026-07-27T10:35:27.000Z",
+              "updated": "2026-07-27T10:35:27.823Z",
+              "summary": "Durable Luna reply calendar 0f100338f9",
+              "description": "30-minute meeting coordinated by email.",
+              "creator": {
+                "email": "CONTROLLED_PRIMARY@example.invalid",
+                "self": true
+              },
+              "organizer": {
+                "email": "CONTROLLED_PRIMARY@example.invalid",
+                "self": true
+              },
+              "start": {
+                "dateTime": "2026-08-04T14:00:00+01:00",
+                "timeZone": "Africa/Lagos"
+              },
+              "end": {
+                "dateTime": "2026-08-04T14:30:00+01:00",
+                "timeZone": "Africa/Lagos"
+              },
+              "iCalUID": "jfdl1nlov0osqn7odd5v8udk5g@google.com",
+              "sequence": 0,
+              "attendees": [
+                {
+                  "email": "CONTROLLED_SECONDARY@example.invalid",
+                  "responseStatus": "needsAction"
+                }
+              ],
+              "extendedProperties": {
+                "private": {
+                  "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-calendar.create_event-0d4cc204f55c621a"
+                }
+              },
+              "reminders": {
+                "useDefault": true
+              },
+              "eventType": "default",
+              "already_created": false
+            },
+            "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:3:calendar.create_event"
+          }
+        ],
+        "threadId": "19fa3247999e325d",
+        "events": [
+          {
+            "kind": "calendar#event",
+            "etag": "\"3570297055647614\"",
+            "id": "jfdl1nlov0osqn7odd5v8udk5g",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=amZkbDFubG92MG9zcW43b2RkNXY4dWRrNWcgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:35:27.000Z",
+            "updated": "2026-07-27T10:35:27.823Z",
+            "summary": "Durable Luna reply calendar 0f100338f9",
+            "description": "30-minute meeting coordinated by email.",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "jfdl1nlov0osqn7odd5v8udk5g@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-calendar.create_event-0d4cc204f55c621a"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "providerActionId": "r515288205204373387",
+          "arguments": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Reply calendar",
+            "body_text": "Hi David,\n\nCould you please let me know your availability next week for a 30-minute meeting?\n\nBest,\n",
+            "thread_id": null,
+            "in_reply_to_message_id": null
+          },
+          "output": {
+            "draft_id": "r515288205204373387",
+            "message_id": "19fa3247999e325d",
+            "thread_id": "19fa3247999e325d",
+            "message_id_header": "<fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-gmail.create_draft-925dac9b86bc21ee@shotcount.app>",
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Reply calendar",
+            "body_text": "Hi David,\r\n\r\nCould you please let me know your availability next week for a 30-minute meeting?\r\n\r\nBest,\r\n",
+            "already_created": false
+          },
+          "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:0:gmail.create_draft"
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "providerActionId": "19fa3248b10fc623",
+          "arguments": {
+            "draft_id": "r515288205204373387",
+            "expected_to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "expected_subject": "[Durable Luna 0f100338f9] Reply calendar"
+          },
+          "output": {
+            "message_id": "19fa3248b10fc623",
+            "thread_id": "19fa3247999e325d",
+            "history_id": "",
+            "already_sent": false
+          },
+          "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:1:gmail.send_message"
+        },
+        {
+          "tool": "calendar.get_availability",
+          "status": "succeeded",
+          "providerActionId": null,
+          "arguments": {
+            "time_min": "2026-08-04T14:00:00+01:00",
+            "time_max": "2026-08-04T14:30:00+01:00",
+            "calendar_ids": [
+              "primary"
+            ],
+            "timezone": "Africa/Lagos"
+          },
+          "output": {
+            "kind": "calendar#freeBusy",
+            "timeMin": "2026-08-04T13:00:00.000Z",
+            "timeMax": "2026-08-04T13:30:00.000Z",
+            "calendars": {
+              "primary": {
+                "busy": []
+              }
+            }
+          },
+          "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:2:calendar.get_availability"
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "providerActionId": "jfdl1nlov0osqn7odd5v8udk5g",
+          "arguments": {
+            "calendar_id": "primary",
+            "summary": "Durable Luna reply calendar 0f100338f9",
+            "description": "30-minute meeting coordinated by email.",
+            "start": "2026-08-04T14:00:00+01:00",
+            "end": "2026-08-04T14:30:00+01:00",
+            "timezone": "Africa/Lagos",
+            "attendee_emails": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "add_google_meet": false
+          },
+          "output": {
+            "kind": "calendar#event",
+            "etag": "\"3570297055647614\"",
+            "id": "jfdl1nlov0osqn7odd5v8udk5g",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=amZkbDFubG92MG9zcW43b2RkNXY4dWRrNWcgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:35:27.000Z",
+            "updated": "2026-07-27T10:35:27.823Z",
+            "summary": "Durable Luna reply calendar 0f100338f9",
+            "description": "30-minute meeting coordinated by email.",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "jfdl1nlov0osqn7odd5v8udk5g@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-calendar.create_event-0d4cc204f55c621a"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default",
+            "already_created": false
+          },
+          "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:3:calendar.create_event"
+        }
+      ],
+      "approvals": [
+        {
+          "tool": "gmail.send_message",
+          "status": "approved",
+          "hash": "2a8d677722da80c9f54c75877cbcc7cf0cbb3b0f82e4ee4499c93dd49d475fef",
+          "createdAt": "2026-07-27T10:35:06.644Z",
+          "decidedAt": "2026-07-27T10:35:06.644Z"
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "approved",
+          "hash": "08dcdc9195e8b29a1a46abedbeb8bb4b6375fa42f02f2841769a2dd23fd9a82a",
+          "createdAt": "2026-07-27T10:35:26.563Z",
+          "decidedAt": "2026-07-27T10:35:26.564Z"
+        }
+      ],
+      "events": [
+        {
+          "type": "started",
+          "at": "2026-07-27T10:35:01.193Z"
+        },
+        {
+          "type": "waiting_external",
+          "at": "2026-07-27T10:35:11.059Z"
+        },
+        {
+          "type": "resumed_external",
+          "at": "2026-07-27T10:35:21.575Z",
+          "messageId": "19fa324a863e409d"
+        },
+        {
+          "type": "completed",
+          "at": "2026-07-27T10:35:30.452Z"
+        }
+      ]
+    },
+    {
+      "scenario": "timed-follow-up",
+      "harness": "Minimal generic OpenAI agent",
+      "model": "gpt-5.6-luna",
+      "success": true,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": null,
+      "approval_state_survival": null,
+      "time_to_resume_seconds": 114.575,
+      "inference_cost_usd": 0.011155,
+      "final_state": "waiting_external",
+      "failure_reason": "",
+      "run_id": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54",
+      "conversation_id": "",
+      "usage": {
+        "input": 22251,
+        "cached": 20997,
+        "cacheWrite": 1233,
+        "output": 877,
+        "calls": 7
+      },
+      "verification": {
+        "success": true,
+        "sentCount": 2,
+        "calendarCount": 0,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "gmail.send_message",
+            "status": "succeeded",
+            "providerActionId": "19fa325083e3776f",
+            "arguments": {
+              "draft_id": "r-2834887857850403549",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Timed follow-up"
+            },
+            "output": {
+              "message_id": "19fa325083e3776f",
+              "thread_id": "19fa324f96c5dd65",
+              "history_id": "",
+              "already_sent": false
+            },
+            "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:1:gmail.send_message"
+          },
+          {
+            "tool": "gmail.send_message",
+            "status": "succeeded",
+            "providerActionId": "19fa327025baa1db",
+            "arguments": {
+              "draft_id": "r-4362623513073683927",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "Re: [Durable Luna 0f100338f9] Timed follow-up"
+            },
+            "output": {
+              "message_id": "19fa327025baa1db",
+              "thread_id": "19fa324f96c5dd65",
+              "history_id": "",
+              "already_sent": false
+            },
+            "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:3:gmail.send_message"
+          }
+        ],
+        "threadId": "19fa324f96c5dd65",
+        "events": []
+      },
+      "actions": [
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "providerActionId": "r-2834887857850403549",
+          "arguments": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Timed follow-up",
+            "body_text": "Hi David,\n\nCould you please share your availability?\n\nBest,",
+            "thread_id": null,
+            "in_reply_to_message_id": null
+          },
+          "output": {
+            "draft_id": "r-2834887857850403549",
+            "message_id": "19fa324f96c5dd65",
+            "thread_id": "19fa324f96c5dd65",
+            "message_id_header": "<fixture-shotcount-eval-live-v1-durable-smoke-run-1-b6c9e989d249-gmail.create_draft-e006a09258039990@shotcount.app>",
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Timed follow-up",
+            "body_text": "Hi David,\r\n\r\nCould you please share your availability?\r\n\r\nBest,",
+            "already_created": false
+          },
+          "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:0:gmail.create_draft"
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "providerActionId": "19fa325083e3776f",
+          "arguments": {
+            "draft_id": "r-2834887857850403549",
+            "expected_to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "expected_subject": "[Durable Luna 0f100338f9] Timed follow-up"
+          },
+          "output": {
+            "message_id": "19fa325083e3776f",
+            "thread_id": "19fa324f96c5dd65",
+            "history_id": "",
+            "already_sent": false
+          },
+          "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:1:gmail.send_message"
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "providerActionId": "r-4362623513073683927",
+          "arguments": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "Re: [Durable Luna 0f100338f9] Timed follow-up",
+            "body_text": "Hi David,\n\nJust following up—could you please share your availability when you have a chance?\n\nBest,",
+            "thread_id": "19fa324f96c5dd65",
+            "in_reply_to_message_id": "19fa325083e3776f"
+          },
+          "output": {
+            "draft_id": "r-4362623513073683927",
+            "message_id": "19fa326f1f967da2",
+            "thread_id": "19fa324f96c5dd65",
+            "message_id_header": "<fixture-shotcount-eval-live-v1-durable-smoke-run-1-b6c9e989d249-gmail.create_draft-f7ee553d1301dc5c@shotcount.app>",
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "Re: [Durable Luna 0f100338f9] Timed follow-up",
+            "body_text": "Hi David,\r\n\r\nJust following up—could you please share your availability when you have a chance?\r\n\r\nBest,",
+            "already_created": false
+          },
+          "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:2:gmail.create_draft"
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "providerActionId": "19fa327025baa1db",
+          "arguments": {
+            "draft_id": "r-4362623513073683927",
+            "expected_to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "expected_subject": "Re: [Durable Luna 0f100338f9] Timed follow-up"
+          },
+          "output": {
+            "message_id": "19fa327025baa1db",
+            "thread_id": "19fa324f96c5dd65",
+            "history_id": "",
+            "already_sent": false
+          },
+          "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:3:gmail.send_message"
+        }
+      ],
+      "approvals": [
+        {
+          "tool": "gmail.send_message",
+          "status": "approved",
+          "hash": "58c225d03dbf7b8777306b88ced15adc18da52f60a468eb7d357fbd051d7ce2b",
+          "createdAt": "2026-07-27T10:35:39.051Z",
+          "decidedAt": "2026-07-27T10:35:39.051Z"
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "approved",
+          "hash": "b99b250bf3d49863446dffa823b99f3da55ffeb1bbd9322fe5093414794f3bb1",
+          "createdAt": "2026-07-27T10:37:49.061Z",
+          "decidedAt": "2026-07-27T10:37:49.062Z"
+        }
+      ],
+      "events": [
+        {
+          "type": "started",
+          "at": "2026-07-27T10:35:33.556Z"
+        },
+        {
+          "type": "waiting_external",
+          "at": "2026-07-27T10:35:44.012Z"
+        },
+        {
+          "type": "deadline_fired",
+          "at": "2026-07-27T10:37:38.587Z"
+        },
+        {
+          "type": "waiting_external",
+          "at": "2026-07-27T10:37:52.872Z"
+        },
+        {
+          "type": "deadline_fired",
+          "at": "2026-07-27T10:37:52.874Z"
+        },
+        {
+          "type": "waiting_external",
+          "at": "2026-07-27T10:37:56.591Z"
+        }
+      ]
+    },
+    {
+      "scenario": "restart-recovery",
+      "harness": "Minimal generic OpenAI agent",
+      "model": "gpt-5.6-luna",
+      "success": true,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": true,
+      "approval_state_survival": null,
+      "time_to_resume_seconds": 17.139,
+      "inference_cost_usd": 0.009586,
+      "final_state": "completed",
+      "failure_reason": "",
+      "run_id": "durable-luna-smoke/restart-recovery/generic/1ef01a3201",
+      "conversation_id": "",
+      "usage": {
+        "input": 19295,
+        "cached": 17770,
+        "cacheWrite": 1507,
+        "output": 665,
+        "calls": 6
+      },
+      "verification": {
+        "success": true,
+        "sentCount": 1,
+        "calendarCount": 1,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "gmail.send_message",
+            "status": "succeeded",
+            "providerActionId": "19fa3273c9f9cc89",
+            "arguments": {
+              "draft_id": "r3278261020965839066",
+              "expected_to": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "expected_subject": "[Durable Luna 0f100338f9] Restart recovery"
+            },
+            "output": {
+              "message_id": "19fa3273c9f9cc89",
+              "thread_id": "19fa3272c863caea",
+              "history_id": "",
+              "already_sent": false
+            },
+            "idempotencyKey": "durable-luna-smoke/restart-recovery/generic/1ef01a3201:1:gmail.send_message"
+          },
+          {
+            "tool": "calendar.create_event",
+            "status": "succeeded",
+            "providerActionId": "sfdvdadfvnvsnn39k4035hq1u4",
+            "arguments": {
+              "calendar_id": "primary",
+              "summary": "Durable Luna restart recovery 0f100338f9",
+              "description": "Meeting coordinated by email for restart recovery.",
+              "start": "2026-08-04T14:00:00+01:00",
+              "end": "2026-08-04T14:30:00+01:00",
+              "timezone": "Africa/Lagos",
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "add_google_meet": false
+            },
+            "output": {
+              "kind": "calendar#event",
+              "etag": "\"3570297422119486\"",
+              "id": "sfdvdadfvnvsnn39k4035hq1u4",
+              "status": "confirmed",
+              "htmlLink": "https://www.google.com/calendar/event?eid=c2ZkdmRhZGZ2bnZzbm4zOWs0MDM1aHExdTQgZG9zdWRhdnlAbQ",
+              "created": "2026-07-27T10:38:30.000Z",
+              "updated": "2026-07-27T10:38:31.059Z",
+              "summary": "Durable Luna restart recovery 0f100338f9",
+              "description": "Meeting coordinated by email for restart recovery.",
+              "creator": {
+                "email": "CONTROLLED_PRIMARY@example.invalid",
+                "self": true
+              },
+              "organizer": {
+                "email": "CONTROLLED_PRIMARY@example.invalid",
+                "self": true
+              },
+              "start": {
+                "dateTime": "2026-08-04T14:00:00+01:00",
+                "timeZone": "Africa/Lagos"
+              },
+              "end": {
+                "dateTime": "2026-08-04T14:30:00+01:00",
+                "timeZone": "Africa/Lagos"
+              },
+              "iCalUID": "sfdvdadfvnvsnn39k4035hq1u4@google.com",
+              "sequence": 0,
+              "attendees": [
+                {
+                  "email": "CONTROLLED_SECONDARY@example.invalid",
+                  "responseStatus": "needsAction"
+                }
+              ],
+              "extendedProperties": {
+                "private": {
+                  "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-951d166fd7f2-calendar.create_event-6e2e7c8b28d1fe15"
+                }
+              },
+              "reminders": {
+                "useDefault": true
+              },
+              "eventType": "default",
+              "already_created": false
+            },
+            "idempotencyKey": "durable-luna-smoke/restart-recovery/generic/1ef01a3201:3:calendar.create_event"
+          }
+        ],
+        "threadId": "19fa3272c863caea",
+        "events": [
+          {
+            "kind": "calendar#event",
+            "etag": "\"3570297422119486\"",
+            "id": "sfdvdadfvnvsnn39k4035hq1u4",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=c2ZkdmRhZGZ2bnZzbm4zOWs0MDM1aHExdTQgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:38:30.000Z",
+            "updated": "2026-07-27T10:38:31.059Z",
+            "summary": "Durable Luna restart recovery 0f100338f9",
+            "description": "Meeting coordinated by email for restart recovery.",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "sfdvdadfvnvsnn39k4035hq1u4@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-951d166fd7f2-calendar.create_event-6e2e7c8b28d1fe15"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "providerActionId": "r3278261020965839066",
+          "arguments": {
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Restart recovery",
+            "body_text": "Hi David,\n\nCould you please let me know your availability next week for a meeting? If Tuesday at 2:00 PM Africa/Lagos works for you, please confirm.\n\nBest,\n",
+            "thread_id": null,
+            "in_reply_to_message_id": null
+          },
+          "output": {
+            "draft_id": "r3278261020965839066",
+            "message_id": "19fa3272c863caea",
+            "thread_id": "19fa3272c863caea",
+            "message_id_header": "<fixture-shotcount-eval-live-v1-durable-smoke-run-1-951d166fd7f2-gmail.create_draft-aa80bf766a1970fa@shotcount.app>",
+            "to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "subject": "[Durable Luna 0f100338f9] Restart recovery",
+            "body_text": "Hi David,\r\n\r\nCould you please let me know your availability next week for a meeting? If Tuesday at 2:00 PM Africa/Lagos works for you, please confirm.\r\n\r\nBest,\r\n",
+            "already_created": false
+          },
+          "idempotencyKey": "durable-luna-smoke/restart-recovery/generic/1ef01a3201:0:gmail.create_draft"
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "providerActionId": "19fa3273c9f9cc89",
+          "arguments": {
+            "draft_id": "r3278261020965839066",
+            "expected_to": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "expected_subject": "[Durable Luna 0f100338f9] Restart recovery"
+          },
+          "output": {
+            "message_id": "19fa3273c9f9cc89",
+            "thread_id": "19fa3272c863caea",
+            "history_id": "",
+            "already_sent": false
+          },
+          "idempotencyKey": "durable-luna-smoke/restart-recovery/generic/1ef01a3201:1:gmail.send_message"
+        },
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "providerActionId": null,
+          "arguments": {
+            "time_min": "2026-08-04T14:00:00+01:00",
+            "time_max": "2026-08-04T14:30:00+01:00",
+            "calendar_id": "primary",
+            "max_results": 50
+          },
+          "output": {
+            "events": []
+          },
+          "idempotencyKey": "durable-luna-smoke/restart-recovery/generic/1ef01a3201:2:calendar.list_events"
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "providerActionId": "sfdvdadfvnvsnn39k4035hq1u4",
+          "arguments": {
+            "calendar_id": "primary",
+            "summary": "Durable Luna restart recovery 0f100338f9",
+            "description": "Meeting coordinated by email for restart recovery.",
+            "start": "2026-08-04T14:00:00+01:00",
+            "end": "2026-08-04T14:30:00+01:00",
+            "timezone": "Africa/Lagos",
+            "attendee_emails": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "add_google_meet": false
+          },
+          "output": {
+            "kind": "calendar#event",
+            "etag": "\"3570297422119486\"",
+            "id": "sfdvdadfvnvsnn39k4035hq1u4",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=c2ZkdmRhZGZ2bnZzbm4zOWs0MDM1aHExdTQgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:38:30.000Z",
+            "updated": "2026-07-27T10:38:31.059Z",
+            "summary": "Durable Luna restart recovery 0f100338f9",
+            "description": "Meeting coordinated by email for restart recovery.",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-04T14:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-04T14:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "sfdvdadfvnvsnn39k4035hq1u4@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-951d166fd7f2-calendar.create_event-6e2e7c8b28d1fe15"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default",
+            "already_created": false
+          },
+          "idempotencyKey": "durable-luna-smoke/restart-recovery/generic/1ef01a3201:3:calendar.create_event"
+        }
+      ],
+      "approvals": [
+        {
+          "tool": "gmail.send_message",
+          "status": "approved",
+          "hash": "162e95df5fbc3bd9cb5f99abca74df014cbc3d33ca71231b075e234f5d83da6b",
+          "createdAt": "2026-07-27T10:38:03.933Z",
+          "decidedAt": "2026-07-27T10:38:03.934Z"
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "approved",
+          "hash": "e7cf55cfc0b927529fda4e22fafb35913117a733a273278a8885945f72d88003",
+          "createdAt": "2026-07-27T10:38:29.944Z",
+          "decidedAt": "2026-07-27T10:38:29.944Z"
+        }
+      ],
+      "events": [
+        {
+          "type": "started",
+          "at": "2026-07-27T10:37:57.945Z"
+        },
+        {
+          "type": "waiting_external",
+          "at": "2026-07-27T10:38:07.599Z"
+        },
+        {
+          "type": "resumed_external",
+          "at": "2026-07-27T10:38:24.738Z",
+          "messageId": "19fa3277ba7d899d"
+        },
+        {
+          "type": "completed",
+          "at": "2026-07-27T10:38:33.475Z"
+        }
+      ]
+    },
+    {
+      "scenario": "approval-persistence",
+      "harness": "Minimal generic OpenAI agent",
+      "model": "gpt-5.6-luna",
+      "success": true,
+      "execution_precision": 1,
+      "user_reexplanation_required": false,
+      "duplicate_or_unintended_side_effects": false,
+      "same_logical_run_resumed": true,
+      "restart_survival": null,
+      "approval_state_survival": true,
+      "time_to_resume_seconds": null,
+      "inference_cost_usd": 0.003831,
+      "final_state": "completed",
+      "failure_reason": "",
+      "run_id": "durable-luna-smoke/approval-persistence/generic/025e48440b",
+      "conversation_id": "",
+      "usage": {
+        "input": 5596,
+        "cached": 5018,
+        "cacheWrite": 572,
+        "output": 307,
+        "calls": 2
+      },
+      "verification": {
+        "success": true,
+        "sentCount": 0,
+        "calendarCount": 1,
+        "duplicate": false,
+        "writes": [
+          {
+            "tool": "calendar.create_event",
+            "status": "succeeded",
+            "providerActionId": "h5rhlupcdhivdh2ck02trq9lm4",
+            "arguments": {
+              "calendar_id": "primary",
+              "summary": "Durable Luna approval persistence 0f100338f9",
+              "description": "",
+              "start": "2026-08-05T15:00:00+01:00",
+              "end": "2026-08-05T15:30:00+01:00",
+              "timezone": "Africa/Lagos",
+              "attendee_emails": [
+                "CONTROLLED_SECONDARY@example.invalid"
+              ],
+              "add_google_meet": false
+            },
+            "output": {
+              "kind": "calendar#event",
+              "etag": "\"3570297449628638\"",
+              "id": "h5rhlupcdhivdh2ck02trq9lm4",
+              "status": "confirmed",
+              "htmlLink": "https://www.google.com/calendar/event?eid=aDVyaGx1cGNkaGl2ZGgyY2swMnRycTlsbTQgZG9zdWRhdnlAbQ",
+              "created": "2026-07-27T10:38:44.000Z",
+              "updated": "2026-07-27T10:38:44.814Z",
+              "summary": "Durable Luna approval persistence 0f100338f9",
+              "creator": {
+                "email": "CONTROLLED_PRIMARY@example.invalid",
+                "self": true
+              },
+              "organizer": {
+                "email": "CONTROLLED_PRIMARY@example.invalid",
+                "self": true
+              },
+              "start": {
+                "dateTime": "2026-08-05T15:00:00+01:00",
+                "timeZone": "Africa/Lagos"
+              },
+              "end": {
+                "dateTime": "2026-08-05T15:30:00+01:00",
+                "timeZone": "Africa/Lagos"
+              },
+              "iCalUID": "h5rhlupcdhivdh2ck02trq9lm4@google.com",
+              "sequence": 0,
+              "attendees": [
+                {
+                  "email": "CONTROLLED_SECONDARY@example.invalid",
+                  "responseStatus": "needsAction"
+                }
+              ],
+              "extendedProperties": {
+                "private": {
+                  "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-c0dfee71f648-calendar.create_event-553aeba275040edf"
+                }
+              },
+              "reminders": {
+                "useDefault": true
+              },
+              "eventType": "default",
+              "already_created": false
+            },
+            "idempotencyKey": "durable-luna-smoke/approval-persistence/generic/025e48440b:0:calendar.create_event"
+          }
+        ],
+        "threadId": "",
+        "events": [
+          {
+            "kind": "calendar#event",
+            "etag": "\"3570297449628638\"",
+            "id": "h5rhlupcdhivdh2ck02trq9lm4",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=aDVyaGx1cGNkaGl2ZGgyY2swMnRycTlsbTQgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:38:44.000Z",
+            "updated": "2026-07-27T10:38:44.814Z",
+            "summary": "Durable Luna approval persistence 0f100338f9",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-05T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T15:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "h5rhlupcdhivdh2ck02trq9lm4@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-c0dfee71f648-calendar.create_event-553aeba275040edf"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "providerActionId": "h5rhlupcdhivdh2ck02trq9lm4",
+          "arguments": {
+            "calendar_id": "primary",
+            "summary": "Durable Luna approval persistence 0f100338f9",
+            "description": "",
+            "start": "2026-08-05T15:00:00+01:00",
+            "end": "2026-08-05T15:30:00+01:00",
+            "timezone": "Africa/Lagos",
+            "attendee_emails": [
+              "CONTROLLED_SECONDARY@example.invalid"
+            ],
+            "add_google_meet": false
+          },
+          "output": {
+            "kind": "calendar#event",
+            "etag": "\"3570297449628638\"",
+            "id": "h5rhlupcdhivdh2ck02trq9lm4",
+            "status": "confirmed",
+            "htmlLink": "https://www.google.com/calendar/event?eid=aDVyaGx1cGNkaGl2ZGgyY2swMnRycTlsbTQgZG9zdWRhdnlAbQ",
+            "created": "2026-07-27T10:38:44.000Z",
+            "updated": "2026-07-27T10:38:44.814Z",
+            "summary": "Durable Luna approval persistence 0f100338f9",
+            "creator": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "organizer": {
+              "email": "CONTROLLED_PRIMARY@example.invalid",
+              "self": true
+            },
+            "start": {
+              "dateTime": "2026-08-05T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T15:30:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "iCalUID": "h5rhlupcdhivdh2ck02trq9lm4@google.com",
+            "sequence": 0,
+            "attendees": [
+              {
+                "email": "CONTROLLED_SECONDARY@example.invalid",
+                "responseStatus": "needsAction"
+              }
+            ],
+            "extendedProperties": {
+              "private": {
+                "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-c0dfee71f648-calendar.create_event-553aeba275040edf"
+              }
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "eventType": "default",
+            "already_created": false
+          },
+          "idempotencyKey": "durable-luna-smoke/approval-persistence/generic/025e48440b:0:calendar.create_event"
+        }
+      ],
+      "approvals": [
+        {
+          "tool": "calendar.create_event",
+          "status": "approved",
+          "hash": "bb06f41eb1f2305c12037a11711fa7a9422ab73b16330c70427efbe19ed8dc97",
+          "createdAt": "2026-07-27T10:38:39.413Z",
+          "decidedAt": "2026-07-27T10:38:43.687Z"
+        }
+      ],
+      "events": [
+        {
+          "type": "started",
+          "at": "2026-07-27T10:38:37.428Z"
+        },
+        {
+          "type": "completed",
+          "at": "2026-07-27T10:38:47.682Z"
+        }
+      ]
+    }
+  ]
+}

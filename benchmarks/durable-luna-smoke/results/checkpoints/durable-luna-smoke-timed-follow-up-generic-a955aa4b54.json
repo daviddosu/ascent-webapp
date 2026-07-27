@@ -1,0 +1,291 @@
+{
+  "id": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54",
+  "scenarioId": "timed-follow-up",
+  "conversationId": "",
+  "status": "waiting_external",
+  "actions": [
+    {
+      "tool": "gmail.create_draft",
+      "status": "succeeded",
+      "providerActionId": "r-2834887857850403549",
+      "arguments": {
+        "to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "subject": "[Durable Luna 0f100338f9] Timed follow-up",
+        "body_text": "Hi David,\n\nCould you please share your availability?\n\nBest,",
+        "thread_id": null,
+        "in_reply_to_message_id": null
+      },
+      "output": {
+        "draft_id": "r-2834887857850403549",
+        "message_id": "19fa324f96c5dd65",
+        "thread_id": "19fa324f96c5dd65",
+        "message_id_header": "<fixture-shotcount-eval-live-v1-durable-smoke-run-1-b6c9e989d249-gmail.create_draft-e006a09258039990@shotcount.app>",
+        "to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "subject": "[Durable Luna 0f100338f9] Timed follow-up",
+        "body_text": "Hi David,\r\n\r\nCould you please share your availability?\r\n\r\nBest,",
+        "already_created": false
+      },
+      "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:0:gmail.create_draft"
+    },
+    {
+      "tool": "gmail.send_message",
+      "status": "succeeded",
+      "providerActionId": "19fa325083e3776f",
+      "arguments": {
+        "draft_id": "r-2834887857850403549",
+        "expected_to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "expected_subject": "[Durable Luna 0f100338f9] Timed follow-up"
+      },
+      "output": {
+        "message_id": "19fa325083e3776f",
+        "thread_id": "19fa324f96c5dd65",
+        "history_id": "",
+        "already_sent": false
+      },
+      "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:1:gmail.send_message"
+    },
+    {
+      "tool": "gmail.create_draft",
+      "status": "succeeded",
+      "providerActionId": "r-4362623513073683927",
+      "arguments": {
+        "to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "subject": "Re: [Durable Luna 0f100338f9] Timed follow-up",
+        "body_text": "Hi David,\n\nJust following up—could you please share your availability when you have a chance?\n\nBest,",
+        "thread_id": "19fa324f96c5dd65",
+        "in_reply_to_message_id": "19fa325083e3776f"
+      },
+      "output": {
+        "draft_id": "r-4362623513073683927",
+        "message_id": "19fa326f1f967da2",
+        "thread_id": "19fa324f96c5dd65",
+        "message_id_header": "<fixture-shotcount-eval-live-v1-durable-smoke-run-1-b6c9e989d249-gmail.create_draft-f7ee553d1301dc5c@shotcount.app>",
+        "to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "subject": "Re: [Durable Luna 0f100338f9] Timed follow-up",
+        "body_text": "Hi David,\r\n\r\nJust following up—could you please share your availability when you have a chance?\r\n\r\nBest,",
+        "already_created": false
+      },
+      "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:2:gmail.create_draft"
+    },
+    {
+      "tool": "gmail.send_message",
+      "status": "succeeded",
+      "providerActionId": "19fa327025baa1db",
+      "arguments": {
+        "draft_id": "r-4362623513073683927",
+        "expected_to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "expected_subject": "Re: [Durable Luna 0f100338f9] Timed follow-up"
+      },
+      "output": {
+        "message_id": "19fa327025baa1db",
+        "thread_id": "19fa324f96c5dd65",
+        "history_id": "",
+        "already_sent": false
+      },
+      "idempotencyKey": "durable-luna-smoke/timed-follow-up/generic/a955aa4b54:3:gmail.send_message"
+    }
+  ],
+  "events": [
+    {
+      "type": "started",
+      "at": "2026-07-27T10:35:33.556Z"
+    },
+    {
+      "type": "waiting_external",
+      "at": "2026-07-27T10:35:44.012Z"
+    },
+    {
+      "type": "deadline_fired",
+      "at": "2026-07-27T10:37:38.587Z"
+    },
+    {
+      "type": "waiting_external",
+      "at": "2026-07-27T10:37:52.872Z"
+    },
+    {
+      "type": "deadline_fired",
+      "at": "2026-07-27T10:37:52.874Z"
+    },
+    {
+      "type": "waiting_external",
+      "at": "2026-07-27T10:37:56.591Z"
+    }
+  ],
+  "approvals": [
+    {
+      "tool": "gmail.send_message",
+      "status": "approved",
+      "hash": "58c225d03dbf7b8777306b88ced15adc18da52f60a468eb7d357fbd051d7ce2b",
+      "createdAt": "2026-07-27T10:35:39.051Z",
+      "decidedAt": "2026-07-27T10:35:39.051Z"
+    },
+    {
+      "tool": "gmail.send_message",
+      "status": "approved",
+      "hash": "b99b250bf3d49863446dffa823b99f3da55ffeb1bbd9322fe5093414794f3bb1",
+      "createdAt": "2026-07-27T10:37:49.061Z",
+      "decidedAt": "2026-07-27T10:37:49.062Z"
+    }
+  ],
+  "pendingCall": null,
+  "waitingCall": {
+    "callId": "call_NiALUoLI78qMuS59uLN9uUC3",
+    "threadId": "19fa324f96c5dd65",
+    "sentMessageId": "19fa327025baa1db",
+    "contactEmail": "CONTROLLED_SECONDARY@example.invalid",
+    "since": "2026-07-27T10:37:56.591Z"
+  },
+  "usage": {
+    "input": 22251,
+    "cached": 20997,
+    "cacheWrite": 1233,
+    "output": 877,
+    "calls": 7
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "TITLE\nFollow up once after two minutes\n\nDESCRIPTION\nEmail CONTROLLED_SECONDARY@example.invalid with subject \"[Durable Luna 0f100338f9] Timed follow-up\" asking for availability. If no reply arrives within 2 minutes, send exactly one follow-up in the same thread. Do not send another follow-up. Keep the task waiting because the dependency remains unresolved.\n\nCURRENT CONTEXT\nDate: 2026-07-27\nTimezone: Africa/Lagos"
+        }
+      ]
+    },
+    {
+      "id": "rs_017103af4667d5ef016a673476ba3481a29b87881d70182e5b",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzR4vCkDl5OfPJVgaY8uusn2EcwSE-wbH8MUMcRkfM9dy00Rw7OgLmGrlSh92y3rLtwADJkoSzEeEd2XYqeAYDOS2uSnev8lvthBp8jMYBdZVRboR4yPx3VlxIUSXGNLc3oGqQkQN6_p8GlzyGwTWzjv6z7dIIYR4pKI7mtY40QSywAK9WnlHzCa_YUNEGRG1R7azxRnx6iOYxNu3SSosce-XBoHQLfVzwtZSAwkBN6HbzRHNZhKOlWNpA-BYVn9gUT38SpNJshwpTKssVdEUjUwXWO0VzJZT9XhIuf8oNERIm7KOYcor45T17L1c4waDKuh9kN9tLrBA-S3yuZ_IJN9zlEUe-cpT06p2Jh8GtrJ4g7jOSKAbaY4ovmyGlhtwuPc4_dWtXbTP507fDEa6ZpeqByJG98bH5QjzD1R1BJ7v9TlIrB7vGPaFYsAklQzMYmdIWSamj0C4_L_NasKXi6S2FdNd4uSXeehg7qETdbbdeoeYmM1LEkxfpdhLXquWPDhz9MMcyxab2-GzP7UzrfmdWS_NgN1iVUUXmw_K4bjQKJiv8-EX_iFmwtfxgWDkBiGdmSzcQxsvzF5dEdj8c7awu9yDdUY7MEmN4PVacyyk9QL515iN8lBFfjCDrYYSCAB-qPCpGzvtVsXwoUWpgafunC00Uo-Aj6j3iTNNZeYxV53Yj7D7FIbd_s8EGr4oo9Jzeenp4WcD02FRDo8JgR8R1NFNBD_GJerKujTV2IGevYiFgX9ckJ9teDAXz1rOrfdbUjSnysXuYSaGATRn_BVhwvQrsi0lyO-AS4hiz3cs1phBT8wuBJ7DsoI17261z5RuNQ8IoauZ7FAshuC5aeej9FoU1D1hvO7wcBL5J-eV9BaCJ2tIa5ZdZSqNCOYImZfPO6egx1zM916iodxRRWvYSVTBaJOyoA-DfJ7M862TLX8eGqxDbJCZfoKvgpCnFKTAtdjyX2yDu23CCkFZS-S3qCCoTUzYYwBwOatU3RpdUunn3YkppUOgzEhcca_2CjkJlyGiWWGuzKP-WaptMMJ1V4CiHatdjBupiY0cEoDmJVpm6xKNpNY9l5IQidBATELUVnFge9CwCFQlKZx3Vze5w==",
+      "summary": []
+    },
+    {
+      "id": "fc_017103af4667d5ef016a67347736dc81a2968f3262ab4aad93",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"subject\":\"[Durable Luna 0f100338f9] Timed follow-up\",\"body_text\":\"Hi David,\\n\\nCould you please share your availability?\\n\\nBest,\",\"thread_id\":null,\"in_reply_to_message_id\":null}",
+      "call_id": "call_HwVNdbUBzHMtrq8qPdXtfFr0",
+      "name": "gmail__create_draft"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_HwVNdbUBzHMtrq8qPdXtfFr0",
+      "output": "{\"draft_id\":\"r-2834887857850403549\",\"message_id\":\"19fa324f96c5dd65\",\"thread_id\":\"19fa324f96c5dd65\",\"message_id_header\":\"<fixture-shotcount-eval-live-v1-durable-smoke-run-1-b6c9e989d249-gmail.create_draft-e006a09258039990@shotcount.app>\",\"to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"subject\":\"[Durable Luna 0f100338f9] Timed follow-up\",\"body_text\":\"Hi David,\\r\\n\\r\\nCould you please share your availability?\\r\\n\\r\\nBest,\",\"already_created\":false}"
+    },
+    {
+      "id": "fc_017103af4667d5ef016a67347a886881a285e7050cb091c003",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"draft_id\":\"r-2834887857850403549\",\"expected_to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"expected_subject\":\"[Durable Luna 0f100338f9] Timed follow-up\"}",
+      "call_id": "call_wEExFQcnMi4vh5wHWNLdhGge",
+      "name": "gmail__send_message"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_wEExFQcnMi4vh5wHWNLdhGge",
+      "output": "{\"message_id\":\"19fa325083e3776f\",\"thread_id\":\"19fa324f96c5dd65\",\"history_id\":\"\",\"already_sent\":false}"
+    },
+    {
+      "id": "rs_017103af4667d5ef016a67347e427881a2a1c9dc0d5d2f9f5f",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzR_PoSxopX_NEiHwLGBvl-8InDIATQoHdY_uj6qcDQyj8Vpl6lbDLZptN114kjfQ_UskyiY_FGYEoTF8E80QUDxZ1CToQM3sZ0hHG4K93fuzFVUrJGoxBXBaFcLwoVgOlDgbrQgWEfQpbR8ARBDVnmeUgp_SnLBNDR9eHCR3gLly82tbvO96zECf4EetpisJXmxp5uenH_Wj8vqJDHFc4tzfBq11kktAKCde-ypWFKncI1Lov5D__axHTgsZFJcKITwuSFY9HDK4K3_ke1357meYpPw4yKGGIgYj5yk59bjlRi4QQiAWie0Lzg71VdX_-T4hgFVgxDvcet45Ujh0hhYxjW5QIbeBngAPJc-3r0tmSyPA-NsIPPdMkuyBDCmkdoNJUxiGCaEvsbSUH8tPDI7Qaipc6buP-4wx8KflayoW_MUk36b8ffk8ETVvafI-tLF-xupmcGhB_8XrRdNF02KtCAaKLg57UAE-Oas7ptUvo3cQPS1p8ewy1qvntn0O-hBVYJB9-WBIC86gE0qOX4xG6knpo0cZPUlIhFOS6CgBABQA1RD_Orm6NeLnbScLmqBaCqvOJIQFoVeK5pUYbMf7nn-JQr-_rI_w7E9Exe7EXyRqEFPxPhugS-dF7yd2uJnSg95SD0iorCBOlepG7UCupBhsccLZCXcKk5MfFcs4gT0ZuIaTCi10BEEOaUCLo5ZRyqm1UQt0APHzWPp2vbMk3KWWNiGWaWFPIk2Ci0dUgQLzy3hNydRvOujRlBj8_IYeyrDowbG2K0OlTHmZHzwOtL_cbQiKEDpNL947Lo_TaMGAgycVcKSb3MCtpgosRXg_2cYqcwjmmuMzzXvpUnS2ar0rVtI70RNzunNwXlh6_TyB1ie2Lqoegyu3qnIJ0IMiCJkgDu55wbetg8oHeF-DP5UQ5O37o88l_dxdLXWqQ57OaBS-SZaiekzeqKvS81gkuF9pJwrv9cRCR4hF-EF-Bkp16-LKpoCLmi1t0c80tAEWoMzVwsZqh2fz3sd7wQtuPGaDS4QyJHAFUhrhZqFz-qgQD18pt1v6bHrb5CI37VlV0SEEpZIVktXpAXk_Jo1OHdgBYmX1vxjOVK-MWd7KUu_pkw16iPwBnUugqxm50amVDvkqZYLwl4TXA44BLHx2Q_xPYZYgxdpHrMBSkLt60YT7v06xne5A16ktohjTwJJ9r2is7KGd76CoWBro2EucEQtKKaNxun7ttK7Gwditkisnxd5ev7WmJekgj-W6b2wpXhAurLRiKLwcm2bxxoGtxRunflEBP5Gt8x9MdMDbPcfoHSqShO4NaPu1covwYE-Cx4dmfqc8srjbsNZt0CIdjzSaPVquK4rBwVtzq7EY_ip06KppWP40T2eyJJH9o7LrVtpcOi6VR2gQ4OAtdsyyRGU8ka61Z7PKGSeoSDHG6SSCDmgbjLEumSbGIQc7Pimk3M3F4Jvo3Cce-2ewjQcsyJRvSFRErg7_FUKRxSQKJtwcrrAZZTvmSeFDw8Me_Gi7EJxuF-lSNlmNhiJRPmeFq5NJCu0AC067Q42fny508uaNT-iqYnklwWnp_qftsQKJmwG0fMFDviLgxXK8Cr0l-72LeHUQ5dEslzhnjqMMagxDtFzWOUpq4qsTldevLeCL_9j280cReE5N6BoRKP1aIeEIvE62p94e-sCGfdKJEWzY1_YltXbZMiYAxchBBM=",
+      "summary": []
+    },
+    {
+      "id": "fc_017103af4667d5ef016a67347f995c81a2804e6d77390d6134",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"thread_id\":\"19fa324f96c5dd65\",\"sent_message_id\":\"19fa325083e3776f\",\"contact_email\":\"CONTROLLED_SECONDARY@example.invalid\",\"timeout_days\":1}",
+      "call_id": "call_SPrretlcAwQHMMmZmDH69cA0",
+      "name": "gmail__wait_for_reply"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_SPrretlcAwQHMMmZmDH69cA0",
+      "output": "{\"reply_received\":false,\"deadline_elapsed\":true,\"elapsed_minutes\":2,\"thread_id\":\"19fa324f96c5dd65\"}"
+    },
+    {
+      "id": "rs_017103af4667d5ef016a6734f635b881a29ac4688436e2dfd4",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzT4RtDFg9O8BBJX3dea0vHTDH-BcJpYUwNwrC1OHJne5grN5U3RgmFXPubWJ4NAqj9lg2FT1b6jwNdDOEmOek3_XbPU-GA6T0uLmVRMUr_mTJHcerhxNe7BWJihx58-TfF4dP5Lipkwa8Gp20Sobx3dfdfmBjCJKS0QS-G7CLK-mGrdimd0Jwgyp7eLTBoKVXRftMCT-WB84zzO5MPsXCZQWWIrEj-oNq6o-4s1sd630Ep4uAaU6JO0Xh7BkfSS1h48SDifjuFHrf7iA0YP42npUCKGTA0FxqL7rvkPAPaAqv2cwGWfrny42AmUf1YFZxf4a1YNG_ZZLdAI-Dru-mekZhDKLqJTW4gNNUi1u3botHIdVsXGfntMEzENq5Btbxq7F2lenFg8bx1kutHf9_ZXr4NoBT7hhqh61k2kgiT3pvWShIaQb4lbUEruikylfIajTzsIS2tAYEmxT9bI_07lse6cyc1JO5hnB2D10NyA2T6JdvckE9aL1vM9MApnQJAiC5VTqqIYKfsZrfka6mTkS9MQmAMLBnmR-IAuZYSPYLCCwZfW0nSd3s0QOP5BLBIiYh5HF41loUkD3pxGq8ncGHekiLnDoorEqetxK92rT_UNESJZ1aiakoJo-Pn_9J407-13Bq_zeF5_ECPbhN5q7TA8LWxejLA7vtmiJKtETw-2eYe_GkgT8WlSv-rmo6g-_cKE_os43vAgF2_2rCgeZVd0__qQ7eiJBp_yzYTB7-LBzqb-Bi1ZJ0S5He-1qRgnDzWmXksOMRtM9svP_qnZiMn1G1SWnpmKri8-HFOJcHOWX04QMhHxrXEV0Nj8ZU42rH86bc_GTgBCSFX1ulupo4d9TQunL0ApTDNmGR1a1a8gnO3bN3StwDrim_h8jzNBsgq7CW0cb0IOB-U59PuIT3Gpb344jLtHJDBInM96kAKu-04D3W6j5KZJC2kmfzlJVlmUdE8zKM2Tcw-5IL9Z9fMNpMCI2c4V7uOfwxwVXuulQzpCidqMQJ5le6YIBEwx",
+      "summary": []
+    },
+    {
+      "id": "fc_017103af4667d5ef016a6734f69b1881a2a5dc3bed465e9565",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"subject\":\"Re: [Durable Luna 0f100338f9] Timed follow-up\",\"body_text\":\"Hi David,\\n\\nJust following up—could you please share your availability when you have a chance?\\n\\nBest,\",\"thread_id\":\"19fa324f96c5dd65\",\"in_reply_to_message_id\":\"19fa325083e3776f\"}",
+      "call_id": "call_WIVa32nwfT2CEUwSKNHyx92c",
+      "name": "gmail__create_draft"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_WIVa32nwfT2CEUwSKNHyx92c",
+      "output": "{\"draft_id\":\"r-4362623513073683927\",\"message_id\":\"19fa326f1f967da2\",\"thread_id\":\"19fa324f96c5dd65\",\"message_id_header\":\"<fixture-shotcount-eval-live-v1-durable-smoke-run-1-b6c9e989d249-gmail.create_draft-f7ee553d1301dc5c@shotcount.app>\",\"to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"subject\":\"Re: [Durable Luna 0f100338f9] Timed follow-up\",\"body_text\":\"Hi David,\\r\\n\\r\\nJust following up—could you please share your availability when you have a chance?\\r\\n\\r\\nBest,\",\"already_created\":false}"
+    },
+    {
+      "id": "fc_017103af4667d5ef016a6734fbf9f481a2aa3ea1697645b11c",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"draft_id\":\"r-4362623513073683927\",\"expected_to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"expected_subject\":\"Re: [Durable Luna 0f100338f9] Timed follow-up\"}",
+      "call_id": "call_4ptNy6GwTfscWZLERBL1KfIR",
+      "name": "gmail__send_message"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_4ptNy6GwTfscWZLERBL1KfIR",
+      "output": "{\"message_id\":\"19fa327025baa1db\",\"thread_id\":\"19fa324f96c5dd65\",\"history_id\":\"\",\"already_sent\":false}"
+    },
+    {
+      "id": "rs_017103af4667d5ef016a6735000fcc81a297ced8cf2b22674c",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzUANjiQUJRdQgu9KgCq4iXMetdlyZC_ICYKUcKey9jP8gDasjwE7SQEIySFQ7AODxj4ReBsrpa1SaGQMJ-iv2kNluniyxurLWVHgnBbEt8bekKF4lvOzz_wR89jqd6lKs6GV73jn9d_iIWk8m6NIbTDfR83QMn8GsFXbeKKfEdXLX_cqEUT1VY8EDOtgF8K8n-lVWrLTYbnw-V6hyxJ2_tk9WvrQRaOZlxQakKCZaf4aYT0o_pIoVbLbhWiBBoyAGj0N0m98lLwJMrvwA3z1BYcO7Vop9lgwHEWNUjax_XrJlcLfQpHYLk9rCPmR5IyKerzjfYbyrd1WWUGjd51Z1ybrhYjBtATq0_d3GvYETkdUmJHLwbg4_ibnzslnHeJ6Bdg4XZvumg1oDLOCfUCuH-Zm-49ym6wQME0jeK40GmEpTdj62wefbJKtctJeFQf_aAITt9FkgJ9lKa7SD0ZWQ6-dtPdKSiPpA2r7hKwXcmiSvkOzGgWcLjQKqhN9kcFjASLpdeaKKazsaizEabqv5IYl5G9siDWLYqOYX2XZfAutkf3meUEnCpV5m8FUtI661H7pGJIe1R5ExTuXb_6DyUKgXuT_-0KN05GHZt8Vi_NDz_v_ybRRq5bElcuWmE7Qa4Cf8vLg8yOT0JbIlBcAihTAFwtGsEQ5LBCCsAQMFZT7dgg1teYJRTwo5lrhoWrJ0f3SoSTPVw3mU13uU8NuIjQ6twWqi0OluuLZi2tH60P_nUDsB_rGyuQCbhibZx_g0_GmJSXP8UCCfV14EXMhEE9-75rRGzBX_j6B4U0Mcl-vps1fz5m-TVKgUruZh7TdJMRPiVm2q1LPtK3yvf3JZlq5fXiXgHRWLH22UqI4384C78OaE-rNgPtOXVSoWMtrZsPTJY4APOeAQTTQog6fDqr-tmccHi0gkDqK9oihp-7IdJ2o6iStJc-To62kdiojMmOYlhL0u1LUNJim2QyUn2W-qU4yE839Og5jNMaPgsfLQD6oV9TQi3yPmmgmnH583H3",
+      "summary": []
+    },
+    {
+      "id": "fc_017103af4667d5ef016a6735005cb881a2b89cd8b9cd35ce89",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"thread_id\":\"19fa324f96c5dd65\",\"sent_message_id\":\"19fa327025baa1db\",\"contact_email\":\"CONTROLLED_SECONDARY@example.invalid\",\"timeout_days\":1}",
+      "call_id": "call_6BZRigJIfaltPYtCT1RaaWKP",
+      "name": "gmail__wait_for_reply"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_6BZRigJIfaltPYtCT1RaaWKP",
+      "output": "{\"reply_received\":false,\"deadline_elapsed\":true,\"elapsed_minutes\":2,\"thread_id\":\"19fa324f96c5dd65\"}"
+    },
+    {
+      "id": "rs_017103af4667d5ef016a673502645081a2afd20cda0fa8d433",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzUE-eqp6BXSSsUKqn95p7ykGYMjD1yCbLkK0o4R6PCqJauJnrY_cFK0QZJ88NRvkH5pTdoD98_muSAYDiMsv7Jts7RS33J8eZoc4Y9xijoIAhKaHdx2S7A0CbS1hngzjH2Gf7m-VM8r3X7bFAt_klAQO8aO_rYOa-NohABi2A60hI1kvenkHf7X-32vTm-q3O3jHwkx2l1MmfRdL4HMDd9VXeQAh7lOKeihVs2uSSzmw1tvR1ykwGKJ6W2Lf5dsRO9LDOnmyz9Bq33GJezgEvt2yK0YonEXw2MNEZe0M0vuCtWfacBOmGJGMqOPNqHV7ko_df0GsCobejw7TSCNheTMhMq793F2VH_Pu9k2usGFW-wM0goVe--VeC6XMKetwzrsIPhWhJteRzEnabfL7BefSQ2_JdOH0KpkXy0X35mnPqWWUy3K6PSrYbvKQSYPXzkK_UP27tPS_BpU29Ms4cacIMUQRCTlAA6RITdaAveTu087wif3ZgIs07Zxh5xZVw3zI0xyoe2PNu40kny_a7ZsBQHSDBkiF0Uwu5LFlOMGtKrwHhk2AakSzFIlLHRYy-pNv0bsfkVsSATrQBVhd8H5REl3ck79S304I795Rrv7aREkKJG45uyIishtU3nDwdPvo3BBU_2AxD3nhHe3hYhCNtcVLr9dK7ZGOD4M7FRPJqq7Hde29o-qwn-KiGLcTedPpZqlZJpDXaMTsDHUYXKDGiX-jtmFaKmb0_7INs88O8wr-lBp-TEmhkUfDg09fNWdBA0X54MNqY79DoeW1hSUpR7LQV3doLBXv3hqpZGNflZgpdGshLLaT9JqxR7SN-4aRMbElZPdYYqEt5M3MGrOu7qsQeQAZIeWpMS6gT-s8Al_EaBA2mm6qPsMWSUA1B0AJiLDUXOaEZYjB0OCdohmNB8azJhLpIImsmZzEcBPwC7Xc4kpVtQBLfuTPZHXGguABsy31CYZFtzrp_Sj3-5HipksozLwJezR5kbLmImltA2Ze88Y2d1QO2P4ALiyc44O99vcP98jFtnAFba_vngzM59v-R9P1Q78npoquiadBbD1X41al8hPJ676invzjcj7TLPLx4mmCNzvb3sVKQRKF-W7suLpCGsz_gv2XLR7fJnNLa2F2943xtm0tpXS_GTaQBAoigw7VsNzEuZfpJOwtM5et5I3Y8wWvjQkKQ1GrJURutxSic6ARCnq2MGzXsjyvdG1S2Km5rfwR09RwNa725fEeD-761F4mOGgTR8sd__-uxXDCv6yFt1tenA4nijNLhqvaiWSSVeF1E-XQzLfA0hSYWAJJnrG-thPGZ_qBgXfX_BtQOJ_oCZrufBsT2u1WAnSNBWZSrTT2bLDxbbGu36LEzo-M_5lqT6u_l9_dsfLNQXzo0zyc-WwZ7qJui4NRzziGlzanIj8oeCnFoWPy5GhczieMt7yq7ARHSbqdTEaAC7TUSKha0QzXc2Bug3fU9lNAS79lZDHCrlyPYQDHnHXfMNtvs7Ri3G7znHF_eB3aXwXbIZZe7U9wwC6e-erRYEkf1DpVrkuMt7WijDZ54QyeomfiODj3vu7_CBZjYoCxUZviJRmnxLWDMwQHTpPiHopbr1ma2w_0Q8FixWSUOZvuEH1TWsiB5JsmD2POQc9i1ijMeTMomEgG513XgBLKzlhrOAe3oNXW3VpLkU-3zavnFD1PE0Tc3ipX81aBacqFvy3JJAtr6CDYwiV6zxL3oLaGJlcGP_TLX-MTxxikWR3WrFC0svlWvGpq4ViYDf3NAhvzcoCSkjqFWNgEx6ccG_MArElWBphiT7N6tIufJQJHUI4u0RobLaeoBoWgOWCpHghnOXBR-i70F6MnkWWF_5xOuzTk6UDyB4Js7dgPtGjb88p9wyYZMrxgrxTfB0jv0uufGqHQOq_y0IpEfMpG5Qq_kwAoDO2Q3L14RPDzRs7xTjJMciJZnzMEC6FH3-7l07Agjrn6rJIk6VXAjGZvbHKLGLrlpahCVIWt0fP7Mwqgt3aLmLP3WZm0WQ_wk-pnN7kCdzCtAMWqbT62uepsvCZQowsTv0qweOAFDjwMv8LD11ubYOTLHfSnsRJa3qCPOrSVf6msDM9VMda_ygJ5GVS3sK0NPuuYH-YIvLj_qSqHKwkSf64tLNusTP_MlFV4Jd9PJyKqgux3X-6cjzoY_esvxHjCKrY2UGe-gAh-UAuxUtjMkcJdQjPWLq-dWep3SyUX5EbIw3PGwRXO27dI1bgkUwECV9Z7u4Jhi-WUnsteY2iqq2PWQJo92WL7unnZdEvXdr12nHxmWsBrs2u",
+      "summary": []
+    },
+    {
+      "id": "fc_017103af4667d5ef016a6735043b6081a2921ea54abe3838e5",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"thread_id\":\"19fa324f96c5dd65\",\"sent_message_id\":\"19fa327025baa1db\",\"contact_email\":\"CONTROLLED_SECONDARY@example.invalid\",\"timeout_days\":1}",
+      "call_id": "call_NiALUoLI78qMuS59uLN9uUC3",
+      "name": "gmail__wait_for_reply"
+    }
+  ],
+  "completedSummary": "",
+  "failure": ""
+}

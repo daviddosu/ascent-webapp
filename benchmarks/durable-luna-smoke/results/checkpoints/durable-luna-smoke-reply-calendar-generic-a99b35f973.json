@@ -1,0 +1,313 @@
+{
+  "id": "durable-luna-smoke/reply-calendar/generic/a99b35f973",
+  "scenarioId": "reply-calendar",
+  "conversationId": "",
+  "status": "completed",
+  "actions": [
+    {
+      "tool": "gmail.create_draft",
+      "status": "succeeded",
+      "providerActionId": "r515288205204373387",
+      "arguments": {
+        "to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "subject": "[Durable Luna 0f100338f9] Reply calendar",
+        "body_text": "Hi David,\n\nCould you please let me know your availability next week for a 30-minute meeting?\n\nBest,\n",
+        "thread_id": null,
+        "in_reply_to_message_id": null
+      },
+      "output": {
+        "draft_id": "r515288205204373387",
+        "message_id": "19fa3247999e325d",
+        "thread_id": "19fa3247999e325d",
+        "message_id_header": "<fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-gmail.create_draft-925dac9b86bc21ee@shotcount.app>",
+        "to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "subject": "[Durable Luna 0f100338f9] Reply calendar",
+        "body_text": "Hi David,\r\n\r\nCould you please let me know your availability next week for a 30-minute meeting?\r\n\r\nBest,\r\n",
+        "already_created": false
+      },
+      "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:0:gmail.create_draft"
+    },
+    {
+      "tool": "gmail.send_message",
+      "status": "succeeded",
+      "providerActionId": "19fa3248b10fc623",
+      "arguments": {
+        "draft_id": "r515288205204373387",
+        "expected_to": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "expected_subject": "[Durable Luna 0f100338f9] Reply calendar"
+      },
+      "output": {
+        "message_id": "19fa3248b10fc623",
+        "thread_id": "19fa3247999e325d",
+        "history_id": "",
+        "already_sent": false
+      },
+      "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:1:gmail.send_message"
+    },
+    {
+      "tool": "calendar.get_availability",
+      "status": "succeeded",
+      "providerActionId": null,
+      "arguments": {
+        "time_min": "2026-08-04T14:00:00+01:00",
+        "time_max": "2026-08-04T14:30:00+01:00",
+        "calendar_ids": [
+          "primary"
+        ],
+        "timezone": "Africa/Lagos"
+      },
+      "output": {
+        "kind": "calendar#freeBusy",
+        "timeMin": "2026-08-04T13:00:00.000Z",
+        "timeMax": "2026-08-04T13:30:00.000Z",
+        "calendars": {
+          "primary": {
+            "busy": []
+          }
+        }
+      },
+      "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:2:calendar.get_availability"
+    },
+    {
+      "tool": "calendar.create_event",
+      "status": "succeeded",
+      "providerActionId": "jfdl1nlov0osqn7odd5v8udk5g",
+      "arguments": {
+        "calendar_id": "primary",
+        "summary": "Durable Luna reply calendar 0f100338f9",
+        "description": "30-minute meeting coordinated by email.",
+        "start": "2026-08-04T14:00:00+01:00",
+        "end": "2026-08-04T14:30:00+01:00",
+        "timezone": "Africa/Lagos",
+        "attendee_emails": [
+          "CONTROLLED_SECONDARY@example.invalid"
+        ],
+        "add_google_meet": false
+      },
+      "output": {
+        "kind": "calendar#event",
+        "etag": "\"3570297055647614\"",
+        "id": "jfdl1nlov0osqn7odd5v8udk5g",
+        "status": "confirmed",
+        "htmlLink": "https://www.google.com/calendar/event?eid=amZkbDFubG92MG9zcW43b2RkNXY4dWRrNWcgZG9zdWRhdnlAbQ",
+        "created": "2026-07-27T10:35:27.000Z",
+        "updated": "2026-07-27T10:35:27.823Z",
+        "summary": "Durable Luna reply calendar 0f100338f9",
+        "description": "30-minute meeting coordinated by email.",
+        "creator": {
+          "email": "CONTROLLED_PRIMARY@example.invalid",
+          "self": true
+        },
+        "organizer": {
+          "email": "CONTROLLED_PRIMARY@example.invalid",
+          "self": true
+        },
+        "start": {
+          "dateTime": "2026-08-04T14:00:00+01:00",
+          "timeZone": "Africa/Lagos"
+        },
+        "end": {
+          "dateTime": "2026-08-04T14:30:00+01:00",
+          "timeZone": "Africa/Lagos"
+        },
+        "iCalUID": "jfdl1nlov0osqn7odd5v8udk5g@google.com",
+        "sequence": 0,
+        "attendees": [
+          {
+            "email": "CONTROLLED_SECONDARY@example.invalid",
+            "responseStatus": "needsAction"
+          }
+        ],
+        "extendedProperties": {
+          "private": {
+            "shotcount_idempotency_key": "fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-calendar.create_event-0d4cc204f55c621a"
+          }
+        },
+        "reminders": {
+          "useDefault": true
+        },
+        "eventType": "default",
+        "already_created": false
+      },
+      "idempotencyKey": "durable-luna-smoke/reply-calendar/generic/a99b35f973:3:calendar.create_event"
+    }
+  ],
+  "events": [
+    {
+      "type": "started",
+      "at": "2026-07-27T10:35:01.193Z"
+    },
+    {
+      "type": "waiting_external",
+      "at": "2026-07-27T10:35:11.059Z"
+    },
+    {
+      "type": "resumed_external",
+      "at": "2026-07-27T10:35:21.575Z",
+      "messageId": "19fa324a863e409d"
+    },
+    {
+      "type": "completed",
+      "at": "2026-07-27T10:35:30.452Z"
+    }
+  ],
+  "approvals": [
+    {
+      "tool": "gmail.send_message",
+      "status": "approved",
+      "hash": "2a8d677722da80c9f54c75877cbcc7cf0cbb3b0f82e4ee4499c93dd49d475fef",
+      "createdAt": "2026-07-27T10:35:06.644Z",
+      "decidedAt": "2026-07-27T10:35:06.644Z"
+    },
+    {
+      "tool": "calendar.create_event",
+      "status": "approved",
+      "hash": "08dcdc9195e8b29a1a46abedbeb8bb4b6375fa42f02f2841769a2dd23fd9a82a",
+      "createdAt": "2026-07-27T10:35:26.563Z",
+      "decidedAt": "2026-07-27T10:35:26.564Z"
+    }
+  ],
+  "pendingCall": null,
+  "waitingCall": null,
+  "usage": {
+    "input": 19222,
+    "cached": 17787,
+    "cacheWrite": 1417,
+    "output": 679,
+    "calls": 6
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "TITLE\nCoordinate a 30-minute meeting\n\nDESCRIPTION\nEmail CONTROLLED_SECONDARY@example.invalid with subject \"[Durable Luna 0f100338f9] Reply calendar\" asking for availability next week. Wait for the reply. When they confirm Tuesday at 2:00 PM Africa/Lagos, check Calendar and create exactly one 30-minute event titled \"Durable Luna reply calendar 0f100338f9\" with them as attendee.\n\nCURRENT CONTEXT\nDate: 2026-07-27\nTimezone: Africa/Lagos"
+        }
+      ]
+    },
+    {
+      "id": "rs_017977cdbefadc74016a6734569fb4819c89497b1adb174054",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzRXLwnG3RuacffjnzhUUWsiLEd_EuNfyL7jlLGDGOX6xH1_DkODIGgNawF-a3RXXgIEvVvJIVrCs4MORKtug6JIjN7aZ_8uSo93cecnzdlFfKRoe5e4FGzXgnv8rxXLihoq0Z35-M79RJV29rzTuFYEPW4p8jyU9G48naoxtFcjhZZAg-96hqW3kza63miHVgzGDueCrMgVcf2PapDnWhlOm4kK4urZUElvb8awIFVqYkLoT9QYQ1sqMWS2g8O2t-AIWit7yVi0ztZPMDueY-QE3Z4WRZ5RR0ImrRAQNb3AHJ8U5azDr9G0pzcDgPKHlSR-mmS2ygAf-0j5K-r_2nCrTfUDU4cr-sOJ-nYD37F1ORHYsSgCsHvtyZggjrsP18Ux5W5WvwqoM0loy6xTc77QbyVgyLEJtJANHp5sTlqxGXaGzjvZZ3njFlzJ2ANcj4FYuR7iJwaMsCCo6z31lI5I9Y2o_DRjZO7BRndGZjnKHed8Pob7EvGQPc0Gi3VFirJkNH3jJxJ9yNkzXBVDjcAD9kAvPU5ULE9lglmuwtig9h45LE2tpQDoNdlQBCKc3XL6m5yqog74bmKAqD6qzaVUAlAo-ZI3DlHE8RrlBxCI_jAVQPdRMkThCfV7UG2Ok_fENgsC4M8jBK2VkD2hUjztWq2pRDO_HvhQi8Gb4ct24tGv_eTxKMFEWhdeoez7gwyr7L7tcoeaYcIF49TfLLd1Trd0sRmDyv3wFXsZbSTJgNoCi0MNIOOMcG3WLwJQyGIDVHRnOazyS2bWMub_8aYuWq2jXqT3QwCMVLku5qWfzDiIQrTogODbwzZbE1K5zmOG8lHphQCU8q8jxMuw37MDRQ7BM1DxD2gjd3on_pIgTECVmU3Ol-lJwCJmXFKEctJ0LAMvTML2ALVp59cwV_MrThJu8KkIsxJBt5q7iaFFMjDOodhhHoTHZ3uq6gSJjBvwFIvqhB_hiF6zJoTa3ES9lX3Ri_BEiUeyS7swuHBCtAYoC3YD0q8NymCf0YITtmQr-zNhs986CSq0u0-5eSopy1CSE2GqqzXwfIBJ_zvqUPA_gMgdn7FExGuNAtZlacBW",
+      "summary": []
+    },
+    {
+      "id": "fc_017977cdbefadc74016a673456fb78819ca020f4d3e30d3deb",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"subject\":\"[Durable Luna 0f100338f9] Reply calendar\",\"body_text\":\"Hi David,\\n\\nCould you please let me know your availability next week for a 30-minute meeting?\\n\\nBest,\\n\",\"thread_id\":null,\"in_reply_to_message_id\":null}",
+      "call_id": "call_McSoe8NHvJwLeznwaF7glUx7",
+      "name": "gmail__create_draft"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_McSoe8NHvJwLeznwaF7glUx7",
+      "output": "{\"draft_id\":\"r515288205204373387\",\"message_id\":\"19fa3247999e325d\",\"thread_id\":\"19fa3247999e325d\",\"message_id_header\":\"<fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-gmail.create_draft-925dac9b86bc21ee@shotcount.app>\",\"to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"subject\":\"[Durable Luna 0f100338f9] Reply calendar\",\"body_text\":\"Hi David,\\r\\n\\r\\nCould you please let me know your availability next week for a 30-minute meeting?\\r\\n\\r\\nBest,\\r\\n\",\"already_created\":false}"
+    },
+    {
+      "id": "rs_017977cdbefadc74016a673459da68819c819a903e2e1b2956",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzRaLoJjMyEePdObeS2eFTHyoYHg711_wHjX662aQFezDUVZBd9kKO2Y1E_ybkLrbmWv27x_WCvh6OSobZhqjOOPnuw5NPll81oHAS3VPoz_EPNg2D_xm0rngcUPZQMETeH6LfBNl93tnNO0qpMMXiKs1gYnW9Y4ziteKlsshSJNUI6UtS0BEAIMdVwScN3EAXUVEoogdn2eUbOTUQ8X1Cqa_5ycU14yJS8MeNicHcB__4XL4Vjpto4fE5eraLdMMeJ8WEC_-D3LN68-W8zrPQlhASrnDWOQQastjDcmldhK08mtaQZRhO6xnEbdf1qcd-6x19Ycu3pl8mQW8UCXhqaKQ_CpoZxxxPUwv5q35Gj9YFGzsVbEQxdO472gIGqHtvVxwZzyzc52cMynfRuh5oPdFH85bapJolBavaL3_88Fi-1PrpmkraLLRucJFAte2HgUeIKaXKzoKX5P5ktMHDc6X-gFDs7WseZqZa-a9lF7ZvSN_7TU_UrbAxGdF-UTTtDh2xayQHG1eFbcwNAsMUZ-9iILe6H6IfO5tYVnGyfAOLAMrOR_TeuIk5BeiXtW1qcZwS2b9MyQLcVIpS_mzoWh60XXFtr5yCCG29-8sAp8U6HZviuIuZlmgze4tCiTeINMvUoXZjyvyEMrA88c31xWoBuyqvxQ4CCwkaKYhw7tqX8tM7xbIBzqz3E5XkyJKYGN6m8kDayMnryXu7chDRyipEOClL_qNXVvIC68uu4AOad6Df4BZX_xAgl8HBK1RPTH-wSS_eJ6SRV8VkO0BpIg18zg4zVEQtQK-NMP-6LR_b3pBj_9WSmNuVsarlAIwSpuKF3pfA5t8ad0tvINu7FRM6sc_DF3d2OXi5xTSlCo8WOMjbx9QI4mhnUYbFQ43OHGRzcpDMwNM1QTRHqgJlJuk5Jq28Dyes-o1mZvLzTSf_ekZX8lQ0orqFNXk4oOoTtJhmCXq6t9CTMKxooPLWRyIg==",
+      "summary": []
+    },
+    {
+      "id": "fc_017977cdbefadc74016a67345a1d78819c91b552db93a15b9a",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"draft_id\":\"r515288205204373387\",\"expected_to\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"expected_subject\":\"[Durable Luna 0f100338f9] Reply calendar\"}",
+      "call_id": "call_rbK9NCYb5e5F9zTQYNkE7pdo",
+      "name": "gmail__send_message"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_rbK9NCYb5e5F9zTQYNkE7pdo",
+      "output": "{\"message_id\":\"19fa3248b10fc623\",\"thread_id\":\"19fa3247999e325d\",\"history_id\":\"\",\"already_sent\":false}"
+    },
+    {
+      "id": "rs_017977cdbefadc74016a67345e49b0819c973b60fc8a0c3a1c",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzRfN0HKG2ckZDFHqnD4rtz3iUQ6HAx4JF_XgRYIGo9g-ezDPj1vwwWdYpicId4h7l6R4KcXf6e5z127e_ntQPJLTFTzotpduvQ3Ykhbg0kon1Hi1gYQdYwKSoaOHTKxL687yUWfmVZv-qCXnU-6TBxJkEqqNiM8KQa8EacGPk_l7SsiWqjfgX8IuTLEame-yyVzq873givMUypYXck9VxnGudD_3220ROQ0MYwKkronKeylVwMTbdMFmcC0dg6DDAS4OcrkRc7kR488pgMJtfW7zKZyELY1xDflK4kf2P9C5tjFpBB_DB1OLfkRAXi6AFhYmKRqGD_wTjXk8blX8_u_m_q6tjeX-TGOYMMefBkWALthoRRFxS-nWSILlGNuLvbErGbCc2q1pfAfDaWCai328IFAb1MCfh4u7BYIYRCG3taluBqLoJzeq6Xc7wbIQ94jClM75_k03xf4xLMXrKSj8u8T5Z8tqsA2SxgYiUgO_OQVaCOWGkLq9d9-ssmwy6OYCXaS86fE-ewSzOXCcztr4wOPNJsTK6yKziq0ouFX4Cz0NNeYMEwny-BiAQLftdmTBYuCGka0wYcLfa_iqrRmN8VmwcPECGxAiKlfDij3oO-xI63KF2pvGgi_HOhni2s4v3DCU3drwl1jyBvL3alus00mPHbY0tqoynG9SEwUzXDv2y8DDP0jtyuQohWkfmsIe5cnOwS05vtw3uY4mLjo_vJL7cwjkar7xtcxZJNyOT8hRe2SxkGCZIPNLt-dHWVeUySZK2JlH2HWgc0bpKm5aHDVUs8ypPYMKBqHBsBAptEpYT0JdiUZrKX7Xwk9V_NBFOOkpYB7CqgTNutWhfMLNF_W6kF4JQk8jGzdJq9sCCt-nPZ3K1saY6T71sPWC4ewGrerFrjgOIxpHpQj6dfesS11XlZK1ft2uyQi5OffLrfI7hdN9TlidLK850Y7CgeR",
+      "summary": []
+    },
+    {
+      "id": "fc_017977cdbefadc74016a67345e7978819ca49378b02ef4f525",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"thread_id\":\"19fa3247999e325d\",\"sent_message_id\":\"19fa3248b10fc623\",\"contact_email\":\"CONTROLLED_SECONDARY@example.invalid\",\"timeout_days\":30}",
+      "call_id": "call_SNZfjy1gW93dnePIsjijk8KA",
+      "name": "gmail__wait_for_reply"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_SNZfjy1gW93dnePIsjijk8KA",
+      "output": "{\"reply_received\":true,\"thread_id\":\"19fa3247999e325d\",\"message\":{\"id\":\"19fa324a863e409d\",\"thread_id\":\"19fa3247999e325d\",\"history_id\":\"8789276\",\"labels\":[\"UNREAD\",\"IMPORTANT\",\"CATEGORY_PERSONAL\",\"INBOX\"],\"from\":\"David Dosu <CONTROLLED_SECONDARY@example.invalid>\",\"to\":\"CONTROLLED_PRIMARY@example.invalid\",\"cc\":\"\",\"subject\":\"Re: [Durable Luna 0f100338f9] Reply calendar\",\"date\":\"Mon, 27 Jul 2026 03:35:15 -0700\",\"message_id_header\":\"<CAFqZKTOT_7uQGD+HNO7+-qYs+uowKVr5ozmSC6DT8PiC-Y40pQ@mail.gmail.com>\",\"in_reply_to\":\"<CACLYxkSqGQCxN-oyptq_LthTHkzWKG6eEed3evjVqUQFPj9ciQ@mail.gmail.com>\",\"body_text\":\"Tuesday at 2:00 PM Africa/Lagos works for me.\\r\\n\",\"snippet\":\"Tuesday at 2:00 PM Africa/Lagos works for me.\",\"attachments\":[]},\"untrusted_external_content\":true}"
+    },
+    {
+      "id": "rs_017977cdbefadc74016a67346b1870819c9e104d02b844d5ad",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzRrmUWh1cltZiDAO0Q2Sir1daspuPz2_3iklE-gKJR9UDXHK21967s4e2oVNuMzGoXoGiiuSjrpzd8Jy8fZq8nDGDiKPTPzyWsi0FhH15CY1zvdLHaRIxdMVTsxIXsd6WEUVy9ewAEq5ez3bAYPk5CGtHF_dXfvhThjYvLr8yVgyPAEX7Ct7KbNm-bikTZq4ivkM6QVMCzl7KeFdCSVJ1l00oZYuw2BvZnUY4oPkn_-ajpKJXjU91nGcC7sMKA2G3YmwyPw0gktO8SdhThs9ZML_k9sRJoFZJL025S-TIfTfPXVNEQHQIjfiBCX_8c9By17DmwY-waaB_ZAzCcjsi2ROwJsx_4MmgHvRHBAKHPZPwieE8bRA33ljqFJ056Dt6zKlpXOeM3yLVjV9hulFMSFKXo0b46e9S8w1iUpb9AsPyKKjusai0-lGHzORfUU89FPwt8lLsB475MyLB1xOnT_Ke2w2Gq3Gnbf833m-jWq5xtBbXW3HF9N8Y6FgJ9uNYwBKDy0g4Hi7SL53kKGRfuoSTdVH6iEfSFuXpaXEg63ZGfWHyJOuUx7Db2VeueASIIbPHa_aLGxZMzIGvPB8CDzXP3lulyWlKdMql0_Wf8WK2vGN17ytoQwQqaRsLwhWLg7KjkT0HvHFtRTJD5aH0XGQmNXrcz__jkYy1fXK2gyHLGxj3cgVNkofy05cdWvFbhmXSYDhWHqNMQWfYYXY5KhGfxDcnuHr5wBIuNiEJhw-2KIqrM4cwgIw0c3GogfBfv4C058DDAo1SrozuropFu4HDstpaoCdEWblYoWxre-gzchwhsrXfb13cP9sERUU6haXQLV5f9RCvBRirvLRPwOQJBfwCxhZgj8M-Vag-hH133s5N-AyaOUG3R8dc7hIGqyiW-CyUynwpqISBp-lVITP0SOlEqW5e-B22Fk6A34C9Pfc5ZIC1omaLerUlmWMpgcp07SggT0blq27B1S5sLVbx0uC0BIcIZzGgwlto2-ECGEycpdMey2Tujg0BNVVWvuuWj-Y4ypB3zUsavkrD3zQb6K6UxKVtrK0O-zhE75dQc-nDSTqOrRNnOPB41RjQJ5ycjxjm_sYz2J0x53HrJz7vAlvd3dNy0EZliQON7TAps=",
+      "summary": []
+    },
+    {
+      "id": "fc_017977cdbefadc74016a67346b8398819cb7cd9026de018be6",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"time_min\":\"2026-08-04T14:00:00+01:00\",\"time_max\":\"2026-08-04T14:30:00+01:00\",\"calendar_ids\":[\"primary\"],\"timezone\":\"Africa/Lagos\"}",
+      "call_id": "call_8wlrNTnQ6VwtR5yhthzHONoQ",
+      "name": "calendar__get_availability"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_8wlrNTnQ6VwtR5yhthzHONoQ",
+      "output": "{\"kind\":\"calendar#freeBusy\",\"timeMin\":\"2026-08-04T13:00:00.000Z\",\"timeMax\":\"2026-08-04T13:30:00.000Z\",\"calendars\":{\"primary\":{\"busy\":[]}}}"
+    },
+    {
+      "id": "rs_017977cdbefadc74016a67346db7ec819cacf6b59fdfc9e3f9",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzRu8zO_6Ucb6Bp7-7pFyYZNDA0_42P_4tzWnxGiysBxQEQQ7mXj0rXXJP6DcwhS74ualQ38ya9AVxsBe0Lkik6zrZoT9_ZiZqiSLCDCjUomlSM6DcGhpDnWplts9FHoCRXvFt3XvB2-pTUCnp62DUqwFUJjlqleJtZ13rC1Se5NbSEmIC3BUCPF8P00JYEYgKQ4t22kLXA76Ltl2lRC91W_PXBIs_PMonKBuKyWF47daQUyZiL6fAJSJ6a7FEt9vORAJQYrexa4Gmy9WXhnGgz4ZXn57PS5Ny4jDyy_rnalUwf1vKgWtLdIoOOuB3DgeBn1JDAxkX3nUg7cwtjrOa5wVLk-vbdV2F9U6s9KSPM09kEuXhWOfjjjeMwpbVF6JkaFtqYYdE_5Zd3l5W-5fpXFY5TCVlmt_aAzDUjSTEkV_izsmLNNkxN4lk5aNcIcOm1WdclMh9SjTtOmvA4TOlP8THEEB0Ji0bGvWAYY5KLvgtM_Xb2FaZO6SyNHavnASmBSxeCJz_fVaMgPdQuCXY2zy35JyvJ4WUkbF7Ivc-e8nt-U_VZc7_ngDB1Zl-TDfjmnFHVHL2MHeswB9bQsdf1x7uPIbNE3Fd922RF-ydlFBoNRExqRX2ttDibvnoXqqRaSJDl304-IFnP2bOjZU3lz0Bccd5a7C1cJZQBm4yFuMaSbAOuY7KnmtvgJsLW57NOLJBbAA6XReZfIsXKUKvDkaTQ0yIk_NWYljP1PSTjGrQdcGOwJD_drmgMnyxhtMUr8hi11WmJ7iMQI2EdHfVlicHpM0fwHAeejam3IXmR6V1-2bLmxQcIzSRtm2Q0-ZrYRfPQbehs03ji3ZLRYT3OzFQhHHqqAjy5YcQciZEXtVItCWTwE2D9gQa2O50xssEiNFQjvnakmRpkWqbC3ZoulwYwYY1qTbTPn_sVeiZ1RBTGKQj9A48oQzBvaA1ypOIyNdUvEJbGdEZBUSGB2jmPTqonCQaECy0C7XhwfdSiUTb_QWJXRcOkoYZ-UMiE_nfg3",
+      "summary": []
+    },
+    {
+      "id": "fc_017977cdbefadc74016a67346df398819cad5a6cf6043fe57f",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"calendar_id\":\"primary\",\"summary\":\"Durable Luna reply calendar 0f100338f9\",\"description\":\"30-minute meeting coordinated by email.\",\"start\":\"2026-08-04T14:00:00+01:00\",\"end\":\"2026-08-04T14:30:00+01:00\",\"timezone\":\"Africa/Lagos\",\"attendee_emails\":[\"CONTROLLED_SECONDARY@example.invalid\"],\"add_google_meet\":false}",
+      "call_id": "call_ZcVzjWzuTFp66T7I7F3vLkcR",
+      "name": "calendar__create_event"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_ZcVzjWzuTFp66T7I7F3vLkcR",
+      "output": "{\"kind\":\"calendar#event\",\"etag\":\"\\\"3570297055647614\\\"\",\"id\":\"jfdl1nlov0osqn7odd5v8udk5g\",\"status\":\"confirmed\",\"htmlLink\":\"https://www.google.com/calendar/event?eid=amZkbDFubG92MG9zcW43b2RkNXY4dWRrNWcgZG9zdWRhdnlAbQ\",\"created\":\"2026-07-27T10:35:27.000Z\",\"updated\":\"2026-07-27T10:35:27.823Z\",\"summary\":\"Durable Luna reply calendar 0f100338f9\",\"description\":\"30-minute meeting coordinated by email.\",\"creator\":{\"email\":\"CONTROLLED_PRIMARY@example.invalid\",\"self\":true},\"organizer\":{\"email\":\"CONTROLLED_PRIMARY@example.invalid\",\"self\":true},\"start\":{\"dateTime\":\"2026-08-04T14:00:00+01:00\",\"timeZone\":\"Africa/Lagos\"},\"end\":{\"dateTime\":\"2026-08-04T14:30:00+01:00\",\"timeZone\":\"Africa/Lagos\"},\"iCalUID\":\"jfdl1nlov0osqn7odd5v8udk5g@google.com\",\"sequence\":0,\"attendees\":[{\"email\":\"CONTROLLED_SECONDARY@example.invalid\",\"responseStatus\":\"needsAction\"}],\"extendedProperties\":{\"private\":{\"shotcount_idempotency_key\":\"fixture-shotcount-eval-live-v1-durable-smoke-run-1-46f60c7e4275-calendar.create_event-0d4cc204f55c621a\"}},\"reminders\":{\"useDefault\":true},\"eventType\":\"default\",\"already_created\":false}"
+    },
+    {
+      "id": "rs_017977cdbefadc74016a6734712070819cb41c13b1ffcac369",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqZzRyKKAv8gdkEznbY8XV-B4NkfvptdO5noPXmBet5wo12LH6xfLfjQPrG2c2kxMfXhdqWjUpqkUmIa_iypBgeEHo5Lzqqz177LNK3VtG4qzufcRffP73g4hdrLWWbH144RLLz9Lsunaw3fIRV8-y6ZI9YZ3MJpCgVnlH2BhXtEVQSnwGfKewETLxESQV4hfiRkHf3M1tQw4WjZRfjyPdKw0Ve2LlRw5HKHhHMGdktJ0Kk9BRZLRR3nhFIoQmTOQbn1UuEPnkIl_JzHytkfJsspn7k_sK95o39RKykVISj2EWAA1N_8RI5ODYL7o_qT_rJcjRTw4rRHm90ygkmgHG3MGYEZlQGtVWzRMB6bviPorcdvKEWiV_Dg1S3A7si1WqN0H5z72iOpR618DaXLIhUcJSjMKmloHyIoeRgekZTFkh2Z-BwLIhAppNiRbaiHmw4BlKilWMv3y8UX1Qo5n8kYWiCLDA9riiEDQjYcw6W-LIPf-K3oSy5z7Dm-N0JpChR8EXGzQ0WPI5lH3pjJhSePZa9gxwm0j_VD9IFoi9fhyVwzF66vCDSsKhmvpWqbkEqYTcK6Y6ucbaKlQ7r7OIBZDrYKYK5SeQGsPOTErHAHJm_rNvHvECCQ7_pV7sfJAFXcMUG20An5DjLg0ud0fqHO02QnfNK34KbSj4zl5N4tTIWoFxBcBdMWwwRfiEMCwDS-QThOOLs0GVAlBNViAzRCE0tyeOAH_IhFPSPQiiBAZx4yZTboaI56ioytvo-xDnNx_wIORLl59QPiwRRHlqpd1B5pJbLrhYfXLJdaRUKgzjX3n9_COgZ2P12oWLE3-2wRlErzIBt6GptgyLB-vRiEI5cQx0QQOb06Ysq9pVp0FsLgyqqyHZ4jXs1eKLIGlPT3So2rlgkJgnzUb-oanJHcG0Xt7o6_TZQ99rADMBCKO60Y8=",
+      "summary": []
+    },
+    {
+      "id": "fc_017977cdbefadc74016a6734714fe4819c9781bca0f214b28a",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"summary\":\"Meeting coordinated successfully: David replied with Tuesday at 2:00 PM Africa/Lagos, the time was available, and exactly one Calendar event was created.\",\"sections\":[{\"title\":\"Email\",\"body\":\"Sent the availability request to CONTROLLED_SECONDARY@example.invalid and received a reply confirming Tuesday at 2:00 PM Africa/Lagos.\"},{\"title\":\"Calendar\",\"body\":\"Created exactly one confirmed 30-minute event for Tuesday, August 4, 2026, from 2:00–2:30 PM Africa/Lagos, titled “Durable Luna reply calendar 0f100338f9,” with CONTROLLED_SECONDARY@example.invalid as attendee.\"}],\"drafts\":[],\"follow_ups\":[],\"sources\":[],\"prepared_result\":false,\"external_change_confirmed\":true,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+      "call_id": "call_hJjSBAVJjyQHBCeIPJNN8Ldb",
+      "name": "agent__complete"
+    }
+  ],
+  "completedSummary": "Meeting coordinated successfully: David replied with Tuesday at 2:00 PM Africa/Lagos, the time was available, and exactly one Calendar event was created.",
+  "failure": ""
+}
