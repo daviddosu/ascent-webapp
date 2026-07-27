@@ -12,14 +12,11 @@ export function sameInstant(actual, expected) {
 function zonedParts(value, timezone) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
-    year: 'numeric', month: 'long', day: 'numeric',
-    hour: 'numeric', minute: '2-digit', hour12: true,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
   }).formatToParts(new Date(value))
   const part = type => parts.find(item => item.type === type)?.value ?? ''
-  return {
-    year: part('year'), month: part('month'), day: part('day'),
-    hour: part('hour'), minute: part('minute'), dayPeriod: part('dayPeriod').toUpperCase(),
-  }
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`
 }
 
 function timeMinutes(value) {
@@ -39,9 +36,14 @@ function mentionedTimes(value) {
 
 export function calendarEventMatches(event, expected, timezone = 'Africa/Lagos') {
   if (!event || event.summary !== expected.summary) return false
-  if (!sameInstant(event.start?.dateTime, expected.start) || !sameInstant(event.end?.dateTime, expected.end)) return false
   const providerTimezone = event.start?.timeZone || event.end?.timeZone
-  if (providerTimezone && providerTimezone !== timezone) return false
+  if (providerTimezone !== timezone) return false
+  if (!sameInstant(event.start?.dateTime, expected.start) || !sameInstant(event.end?.dateTime, expected.end)) return false
+  if (zonedParts(event.start?.dateTime, timezone) !== zonedParts(expected.start, timezone)) return false
+  if (zonedParts(event.end?.dateTime, timezone) !== zonedParts(expected.end, timezone)) return false
+  const expectedDuration = Date.parse(expected.end) - Date.parse(expected.start)
+  const observedDuration = Date.parse(event.end?.dateTime ?? '') - Date.parse(event.start?.dateTime ?? '')
+  if (!Number.isFinite(expectedDuration) || expectedDuration <= 0 || observedDuration !== expectedDuration) return false
   const expectedAttendees = normalizedEmails(expected.attendees ?? [])
   if (expectedAttendees.length) {
     const actualAttendees = normalizedEmails((event.attendees ?? []).map(item => item.email))

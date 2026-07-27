@@ -3,6 +3,10 @@ import { reasoningFallbackAllowed, verifiedCrossToolStage } from './execution-or
 
 Deno.test('blocks out-of-order and premature cross-tool completion', () => {
   assertEquals(verifiedCrossToolStage([]).stage, 'calendar_required')
+  assertEquals(verifiedCrossToolStage([
+    { tool_name: 'calendar.update_event', status: 'succeeded', provider_action_id: 'event', completed_at: '2026-09-17T10:00:00Z' },
+    { tool_name: 'gmail.create_draft', status: 'succeeded', provider_action_id: 'draft', completed_at: '2026-09-17T10:01:00Z' },
+  ]).complete, false)
   assertEquals(verifiedCrossToolStage([{ tool_name: 'calendar.update_event', status: 'succeeded', provider_action_id: 'event', completed_at: '2026-09-17T10:00:00Z' }]).stage, 'notification_required')
   assertEquals(verifiedCrossToolStage([
     { tool_name: 'gmail.send_message', status: 'succeeded', provider_action_id: 'mail', completed_at: '2026-09-17T09:59:00Z' },

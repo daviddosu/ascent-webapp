@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-27T20:35:02.385Z",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 1.25,
+    "cachedInput": 0.125,
+    "cacheWrite": 1.5625,
+    "output": 7.5
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "cross-03-acceptance",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "6fad1c9",
+      "benchmark_commit": "6fad1c9",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "cross-03",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "f75070fe68",
+      "agent_run_id": "30e5e1d4-d406-43cc-b436-80c7de894931",
+      "success": 0,
+      "execution_precision": 1,
+      "first_attempt_success": 0,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 23.303,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 4,
+      "failure_reason": "verification mismatch",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 5,
+      "input_tokens": 20201,
+      "cached_input_tokens": 15142,
+      "cache_write_tokens": 5044,
+      "output_tokens": 629,
+      "inference_cost_usd": 0.01451,
+      "started_at": "2026-07-27T20:34:38.304Z",
+      "finished_at": "2026-07-27T20:35:01.607Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa4221af1d4b5f",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "rj5fhnoroqiig25lcosqrsa5ss",
+            "status": "confirmed",
+            "summary": "Team Sync",
+            "start": {
+              "dateTime": "2026-08-05T11:00:00+02:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T11:45:00+02:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    }
+  ]
+}

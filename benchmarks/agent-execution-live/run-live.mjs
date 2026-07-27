@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { buildLiveTasks, liveTaskIds } from './live-tasks.mjs'
+import { calendarEventMatches } from '../_shared/semantic-verifier.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -11,8 +12,10 @@ const projectRef = 'bhhutexqrxzbbhatepmh'
 const supabaseUrl = `https://${projectRef}.supabase.co`
 const taskAgentUrl = `${supabaseUrl}/functions/v1/task-agent`
 const fixtureUrl = `${supabaseUrl}/functions/v1/agent-benchmark-fixtures`
-const model = 'gpt-5.6-sol'
-const pricing = { input: 5, cachedInput: 0.5, cacheWrite: 6.25, output: 30 }
+const model = process.env.SHOTCOUNT_LIVE_MODEL || 'gpt-5.6-sol'
+const pricing = model === 'gpt-5.6-luna'
+  ? { input: 1.25, cachedInput: 0.125, cacheWrite: 1.5625, output: 7.5 }
+  : { input: 5, cachedInput: 0.5, cacheWrite: 6.25, output: 30 }
 const maxCostUsd = 31.25 // Conservative £25 gate at $1.25/£.
 
 function parseArgs() {
@@ -387,8 +390,7 @@ function verifyRun(task, state, providerState) {
     else if (task.expected.state === 'cancelled') success = succeeded('calendar.delete_event').length === 1 && matchingEvents.length === 0
     else success = succeeded('calendar.create_event').length + succeeded('calendar.update_event').length === 1 &&
       matchingEvents.length === task.expected.count &&
-      matchingEvents[0]?.start?.dateTime === task.expected.start &&
-      matchingEvents[0]?.end?.dateTime === task.expected.end
+      calendarEventMatches(matchingEvents[0], task.expected, 'Africa/Lagos')
     reason = success ? '' : 'verification mismatch'
   } else if (task.category === 'cross_tool') {
     success = succeeded('gmail.send_message').length >= 1 && (succeeded('calendar.create_event').length + succeeded('calendar.update_event').length) >= 1

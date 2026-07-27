@@ -1254,7 +1254,8 @@ async function completionSatisfied(
       /\b(?:meet|meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/.test(objective)
     ) requiredExternalEffects.push('gmail_send')
   }
-  const actions = run.task_completion_policy === 'external_change'
+  const requiresProviderEvidence = run.task_completion_policy === 'external_change' || requiredExternalEffects.length > 0
+  const actions = requiresProviderEvidence
     ? await admin
       .from('agent_actions')
       .select('tool_name,status,provider_action_id,completed_at')
@@ -1265,13 +1266,20 @@ async function completionSatisfied(
     : { data: [], error: null }
   if (actions.error) throw new Error(actions.error.message)
 
+  // A prepared Gmail draft is never evidence of a required send. Keep this
+  // explicit so cross-tool completion cannot regress if evidence mapping grows.
+  const confirmedTools = new Set((actions.data ?? []).map(action => safeString(action.tool_name, 120)))
+  if (requiredExternalEffects.includes('gmail_send') &&
+      confirmedTools.has('gmail.create_draft') &&
+      !confirmedTools.has('gmail.send_message')) return false
+
   const requiresOrderedChangeNotification = run.capability === 'scheduling' &&
     requiredExternalEffects.includes('gmail_send') &&
     /\b(?:move|moved|reschedule|rescheduled|change|changed|update|updated)\b/i.test(objective)
   if (requiresOrderedChangeNotification && !verifiedCrossToolStage(actions.data ?? []).complete) return false
 
   return agentCompletionEvidenceSatisfied({
-    taskCompletionPolicy: run.task_completion_policy,
+    taskCompletionPolicy: requiredExternalEffects.length > 0 ? 'external_change' : run.task_completion_policy,
     capability: run.capability,
     preparedResult: argumentsValue.prepared_result === true,
     externalChangeConfirmed: argumentsValue.external_change_confirmed === true,
