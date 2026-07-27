@@ -22,3 +22,20 @@ The deployed browser worker requires a database-backed session linked to an Agen
 Preflight validated read-only tools, approval-gated Gmail and Calendar writes, controlled external replies, missing-context handling, and the same live browser worker. Preflight results are excluded from the benchmark. After adapter validation, both conditions were frozen before the 120 counted runs.
 
 The estimated incremental inference cost was $3–$5, below the $10 autonomous cost cap.
+
+## Counted runs and invalidated starts
+
+The final dataset contains 120 counted runs: 60 per harness. Every counted failure remains in place, and neither harness was changed after the freeze at commit `bd221bfdb0f492cfb3b13eb6123936a64b2d0d99`.
+
+Two incomplete starts were excluded before their conditions were restarted from zero:
+
+- The first ShotCount start found a stale controlled Calendar event in a target verification window. That made one frozen Calendar case deterministically conflict with prior benchmark state. The exact stale fixture was deleted, the window was verified empty, and all ShotCount slots were restarted fresh.
+- The first Generic start ended after 20 attempted slots when host DNS resolution for the shared Supabase provider failed during external-state collection. The partial set was quarantined, connectivity was restored, and all Generic slots were restarted fresh without code or configuration changes.
+
+These were environment-invalidated incomplete sets, not failed cases removed from the final 60-run conditions.
+
+## Measurement and interpretation
+
+Mandatory approvals are not counted as user intervention. Success is determined only by the shared external-state verifier. Distance-to-Done uses the frozen 0–5 definition and retains failed runs. Inference cost is calculated from measured input, cached-input, and output token use; it excludes provider infrastructure and browser-worker compute.
+
+Failure mechanisms in the report are classified from the recorded action trace and final state using the requested common taxonomy. The raw runner reason is preserved in both JSON files.

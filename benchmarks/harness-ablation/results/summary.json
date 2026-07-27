@@ -1,0 +1,259 @@
+{
+  "frozenCommit": "bd221bfdb0f492cfb3b13eb6123936a64b2d0d99",
+  "model": "gpt-5.6-sol",
+  "reasoningEffort": "low",
+  "totalRuns": 120,
+  "metrics": {
+    "shotcount": {
+      "runs": 60,
+      "passed": 51,
+      "success": 0.85,
+      "category": {
+        "email": {
+          "runs": 15,
+          "passed": 14,
+          "success": 0.9333333333333333,
+          "distance": 4.866666666666666
+        },
+        "calendar": {
+          "runs": 15,
+          "passed": 15,
+          "success": 1,
+          "distance": 5
+        },
+        "cross_tool": {
+          "runs": 15,
+          "passed": 11,
+          "success": 0.7333333333333333,
+          "distance": 4.733333333333333
+        },
+        "browser": {
+          "runs": 15,
+          "passed": 11,
+          "success": 0.7333333333333333,
+          "distance": 3.933333333333333
+        }
+      },
+      "precision": 1,
+      "interventions": {
+        "median": 0,
+        "average": 0.1,
+        "averageSuccessful": 0.11764705882352941
+      },
+      "clarificationRate": 0.1,
+      "correctionRate": 0,
+      "distance": 4.633333333333334,
+      "firstAttempt": 0.85,
+      "retries": 8,
+      "time": {
+        "activeTotal": 1241.5999999999997,
+        "activeAverage": 20.693333333333328,
+        "externalTotal": 959.293
+      },
+      "tokens": {
+        "input": 870879,
+        "cachedInput": 796362,
+        "cacheWrite": 73833,
+        "output": 24460,
+        "total": 895339
+      },
+      "cost": 1.5968560000000005,
+      "costPerRun": 0.026614266666666674,
+      "costPerSuccess": 0.03131090196078432,
+      "successPerDollar": 31.93775769386844,
+      "failures": [
+        {
+          "task": "email-01",
+          "run": 1,
+          "taxonomy": "state loss",
+          "recordedReason": "verification mismatch",
+          "finalState": "needs_approval"
+        },
+        {
+          "task": "cross-03",
+          "run": 1,
+          "taxonomy": "premature completion",
+          "recordedReason": "verification mismatch",
+          "finalState": "completed"
+        },
+        {
+          "task": "cross-01",
+          "run": 2,
+          "taxonomy": "async resumption",
+          "recordedReason": "verification mismatch",
+          "finalState": "needs_approval"
+        },
+        {
+          "task": "browser-01",
+          "run": 2,
+          "taxonomy": "timeout",
+          "recordedReason": "timeout/network",
+          "finalState": "failed"
+        },
+        {
+          "task": "browser-02",
+          "run": 2,
+          "taxonomy": "timeout",
+          "recordedReason": "timeout/network",
+          "finalState": "failed"
+        },
+        {
+          "task": "cross-01",
+          "run": 3,
+          "taxonomy": "async resumption",
+          "recordedReason": "verification mismatch",
+          "finalState": "failed"
+        },
+        {
+          "task": "cross-03",
+          "run": 3,
+          "taxonomy": "premature completion",
+          "recordedReason": "verification mismatch",
+          "finalState": "completed"
+        },
+        {
+          "task": "browser-02",
+          "run": 3,
+          "taxonomy": "timeout",
+          "recordedReason": "timeout/network",
+          "finalState": "failed"
+        },
+        {
+          "task": "browser-03",
+          "run": 3,
+          "taxonomy": "timeout",
+          "recordedReason": "timeout/network",
+          "finalState": "failed"
+        }
+      ],
+      "taxonomy": {
+        "async resumption": 2,
+        "premature completion": 2,
+        "state loss": 1,
+        "timeout": 4
+      }
+    },
+    "generic": {
+      "runs": 60,
+      "passed": 52,
+      "success": 0.8666666666666667,
+      "category": {
+        "email": {
+          "runs": 15,
+          "passed": 15,
+          "success": 1,
+          "distance": 5
+        },
+        "calendar": {
+          "runs": 15,
+          "passed": 15,
+          "success": 1,
+          "distance": 5
+        },
+        "cross_tool": {
+          "runs": 15,
+          "passed": 10,
+          "success": 0.6666666666666666,
+          "distance": 4.133333333333334
+        },
+        "browser": {
+          "runs": 15,
+          "passed": 12,
+          "success": 0.8,
+          "distance": 4.266666666666667
+        }
+      },
+      "precision": 1,
+      "interventions": {
+        "median": 0,
+        "average": 0.1,
+        "averageSuccessful": 0.11538461538461539
+      },
+      "clarificationRate": 0.05,
+      "correctionRate": 0,
+      "distance": 4.6,
+      "firstAttempt": 0.85,
+      "retries": 2,
+      "time": {
+        "activeTotal": 1586.8360000000002,
+        "activeAverage": 26.44726666666667,
+        "externalTotal": 0
+      },
+      "tokens": {
+        "input": 905016,
+        "cachedInput": 820813,
+        "cacheWrite": 83399,
+        "output": 24784,
+        "total": 929800
+      },
+      "cost": 1.679189,
+      "costPerRun": 0.027986483333333333,
+      "costPerSuccess": 0.03229209615384616,
+      "successPerDollar": 30.96733006230984,
+      "failures": [
+        {
+          "task": "cross-04",
+          "run": 1,
+          "taxonomy": "provider failure",
+          "recordedReason": "verification mismatch",
+          "finalState": "failed"
+        },
+        {
+          "task": "cross-05",
+          "run": 1,
+          "taxonomy": "premature completion",
+          "recordedReason": "missing context",
+          "finalState": "completed"
+        },
+        {
+          "task": "browser-02",
+          "run": 1,
+          "taxonomy": "provider failure",
+          "recordedReason": "verification mismatch",
+          "finalState": "failed"
+        },
+        {
+          "task": "cross-04",
+          "run": 2,
+          "taxonomy": "provider failure",
+          "recordedReason": "verification mismatch",
+          "finalState": "failed"
+        },
+        {
+          "task": "cross-05",
+          "run": 2,
+          "taxonomy": "premature completion",
+          "recordedReason": "missing context",
+          "finalState": "completed"
+        },
+        {
+          "task": "browser-02",
+          "run": 2,
+          "taxonomy": "provider failure",
+          "recordedReason": "verification mismatch",
+          "finalState": "failed"
+        },
+        {
+          "task": "browser-04",
+          "run": 2,
+          "taxonomy": "browser failure",
+          "recordedReason": "browser failure",
+          "finalState": "failed"
+        },
+        {
+          "task": "cross-05",
+          "run": 3,
+          "taxonomy": "premature completion",
+          "recordedReason": "missing context",
+          "finalState": "completed"
+        }
+      ],
+      "taxonomy": {
+        "browser failure": 1,
+        "premature completion": 3,
+        "provider failure": 4
+      }
+    }
+  },
+  "costPerSuccessDifferenceShotCountVsGeneric": -0.030384964431767636
+}
