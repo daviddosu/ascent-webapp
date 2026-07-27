@@ -1,0 +1,142 @@
+{
+  "label": "Luna + ShotCount Harness",
+  "config": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "low",
+    "store": false,
+    "toolChoice": "automatic",
+    "parallelToolCalls": false,
+    "maxOutputTokens": 2400
+  },
+  "source": "/Users/daviddosu/Documents/ascent/.worktrees/agentic-execution/benchmarks/luna-final/results/final-60-2/latest.json",
+  "metrics": {
+    "runs": 60,
+    "successfulRuns": 52,
+    "successRate": 0.8666666666666667,
+    "categories": {
+      "email": {
+        "runs": 15,
+        "successfulRuns": 15,
+        "successRate": 1
+      },
+      "calendar": {
+        "runs": 15,
+        "successfulRuns": 15,
+        "successRate": 1
+      },
+      "cross_tool": {
+        "runs": 15,
+        "successfulRuns": 13,
+        "successRate": 0.8666666666666667
+      },
+      "browser": {
+        "runs": 15,
+        "successfulRuns": 9,
+        "successRate": 0.6
+      }
+    },
+    "executionPrecision": 1,
+    "medianNonApprovalInterventions": 0,
+    "averageNonApprovalInterventions": 0.1,
+    "distanceToDone": 4.533333333333333,
+    "firstAttemptSuccess": 0.8,
+    "retryCount": 17,
+    "activeExecutionTimeSeconds": {
+      "total": 1349.9499999999998,
+      "average": 22.499166666666664,
+      "median": 17.868499999999997
+    },
+    "tokens": {
+      "input": 914881,
+      "cachedInput": 835936,
+      "cacheWrite": 78240,
+      "output": 27955,
+      "total": 942836
+    },
+    "measuredInferenceCostUsd": 0.4372850000000001,
+    "costPerRunUsd": 0.007288083333333335,
+    "costPerSuccessfulRunUsd": 0.008409326923076926
+  },
+  "failures": [
+    {
+      "taskId": "browser-04",
+      "category": "browser",
+      "runNumber": 1,
+      "failureReason": "timeout/network",
+      "finalState": "failed",
+      "retryCount": 2
+    },
+    {
+      "taskId": "cross-03",
+      "category": "cross_tool",
+      "runNumber": 2,
+      "failureReason": "verification mismatch",
+      "finalState": "waiting_for_user",
+      "retryCount": 0
+    },
+    {
+      "taskId": "cross-04",
+      "category": "cross_tool",
+      "runNumber": 2,
+      "failureReason": "verification mismatch",
+      "finalState": "running",
+      "retryCount": 0
+    },
+    {
+      "taskId": "browser-04",
+      "category": "browser",
+      "runNumber": 2,
+      "failureReason": "timeout/network",
+      "finalState": "failed",
+      "retryCount": 2
+    },
+    {
+      "taskId": "browser-01",
+      "category": "browser",
+      "runNumber": 3,
+      "failureReason": "timeout/network",
+      "finalState": "failed",
+      "retryCount": 2
+    },
+    {
+      "taskId": "browser-02",
+      "category": "browser",
+      "runNumber": 3,
+      "failureReason": "timeout/network",
+      "finalState": "failed",
+      "retryCount": 2
+    },
+    {
+      "taskId": "browser-03",
+      "category": "browser",
+      "runNumber": 3,
+      "failureReason": "timeout/network",
+      "finalState": "failed",
+      "retryCount": 2
+    },
+    {
+      "taskId": "browser-04",
+      "category": "browser",
+      "runNumber": 3,
+      "failureReason": "timeout/network",
+      "finalState": "failed",
+      "retryCount": 2
+    }
+  ],
+  "failureTaxonomy": {
+    "timeout/network": 6,
+    "verification mismatch": 2
+  },
+  "decisionGates": {
+    "overallSuccessAtLeast95": false,
+    "executionPrecision100": true,
+    "medianInterventionsZero": true,
+    "distanceToDoneAtLeast485": false,
+    "emailAtLeast95": true,
+    "calendarAtLeast95": true,
+    "crossToolAtLeast90": false,
+    "browserAtLeast90": false,
+    "noSystemicDuplicateSideEffects": true
+  },
+  "sufficientForSoleDefault": false
+}

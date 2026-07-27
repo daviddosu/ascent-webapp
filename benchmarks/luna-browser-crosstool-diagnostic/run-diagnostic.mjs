@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { fixture as liveFixture } from '../agent-execution-live/run-live.mjs'
+import { calendarEventMatches, verifyScheduleEmailFacts } from '../_shared/semantic-verifier.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -170,6 +171,7 @@ async function injectSafeRecovery(admin, state) {
   if (!session?.id || !operation || operation.type !== 'search_flights') return false
   const injected = {
     ...checkpoint,
+    workerAttempts: Math.max(1, Number(checkpoint.workerAttempts ?? 0)),
     pendingOperation: null,
     lastOperation: {
       id: operation.id, type: operation.type, status: 'failed', completedAt: new Date().toISOString(),
@@ -247,11 +249,24 @@ async function providerEvidence(secret, primary, secondary, scenario, runId, sta
       id: event.id, summary: event.summary, start: event.start, end: event.end,
       attendees: (event.attendees ?? []).map(attendee => ({ email: attendee.email, responseStatus: attendee.responseStatus })),
     }))
+    const subjectQuery = scenario.subject
+      ? `subject:${JSON.stringify(scenario.subject)}`
+      : JSON.stringify(scenario.movedSummary)
     const sent = await fixture(secret, runId, {
       action: 'google_tool', userId: primary.user_id, toolName: 'gmail.search_messages',
-      arguments: { query: `in:sent to:${secondary.account_email} ${scenario.subject ? `subject:${JSON.stringify(scenario.subject)}` : `subject:${JSON.stringify(`Updated meeting time: ${scenario.movedSummary}`)}`} newer_than:1d`, max_results: 10 },
+      arguments: { query: `in:sent to:${secondary.account_email} ${subjectQuery} newer_than:1d`, max_results: 10 },
     })
-    evidence.sentMessages = (sent.value?.messages ?? []).map(message => ({ id: message.id, thread_id: message.thread_id, subject: message.subject }))
+    evidence.sentMessages = []
+    for (const message of sent.value?.messages ?? []) {
+      const read = await fixture(secret, runId, {
+        action: 'google_tool', userId: primary.user_id, toolName: 'gmail.read_message',
+        arguments: { message_id: message.id },
+      })
+      evidence.sentMessages.push({
+        id: message.id, thread_id: message.thread_id, subject: read.value?.subject ?? message.subject,
+        to: read.value?.to ?? [secondary.account_email], bodyText: read.value?.body_text ?? read.value?.snippet ?? '',
+      })
+    }
   } else {
     evidence.browserCheckpoint = state.browser?.checkpoint ?? null
     evidence.browserResult = state.run.result ?? null
@@ -281,8 +296,17 @@ function classify(scenario, state, evidence, controls) {
       matching.length === 1 && matching[0]?.start?.dateTime === scenario.start && matching[0]?.end?.dateTime === scenario.end && state.run.status === 'completed'
   } else {
     const matching = (evidence.calendarEvents ?? []).filter(event => event.summary === scenario.movedSummary)
+    const calendarMatches = matching.length === 1 && calendarEventMatches(matching[0], {
+      summary: scenario.movedSummary, start: scenario.start, end: scenario.end,
+      attendees: [controls.secondaryEmail].filter(Boolean),
+    })
+    const emailMatches = (evidence.sentMessages ?? []).some(message => verifyScheduleEmailFacts(message, {
+      attendeeEmails: [controls.secondaryEmail].filter(Boolean),
+      oldStart: scenario.originalStart, oldEnd: scenario.originalEnd,
+      newStart: scenario.start, newEnd: scenario.end, timezone: 'Africa/Lagos',
+    }).valid)
     success = succeeded('calendar.update_event').length === 1 && succeeded('gmail.send_message').length === 1 &&
-      matching.length === 1 && matching[0]?.start?.dateTime === scenario.start && matching[0]?.end?.dateTime === scenario.end && state.run.status === 'completed'
+      calendarMatches && emailMatches && state.run.status === 'completed'
   }
   if (!success) {
     const browserError = state.browser?.checkpoint?.lastOperation?.error
@@ -361,6 +385,7 @@ async function main() {
         context: '', due: '2026-07-27', timezone: 'Africa/Lagos', benchmarkRunId,
       })
       driven = await drive({ admin, accessToken, publicKey, secret, primary, secondary, scenario, runId: start.id })
+      driven.secondaryEmail = secondary.account_email
       const evidence = await providerEvidence(secret, primary, secondary, scenario, benchmarkRunId, driven.state)
       const verification = classify(scenario, driven.state, evidence, driven)
       const measuredUsage = usage(driven.state.events)

@@ -1,0 +1,491 @@
+{
+  "scenario": "browser-recovery",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "runId": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+  "browserSessionId": "2a1410df-87fc-4bf5-be46-d6241849b042",
+  "controls": {
+    "state": {
+      "run": {
+        "id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+        "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+        "task_id": "000d6123-fad0-444d-9dcb-41b073c0218a",
+        "status": "failed",
+        "objective": "Prepare recoverable London flight",
+        "context": {
+          "due": "2026-07-27",
+          "goal_id": null,
+          "timezone": "Africa/Lagos",
+          "description": "Find a one-way economy flight from Lagos to London on 2026-09-17. Maximum one stop. Choose a valid result and continue only to the final safe booking or payment handoff. Do not purchase or enter payment details.",
+          "user_context": "",
+          "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/33033812f0",
+          "user_preferences": {
+            "timezone": "Africa/Lagos",
+            "home_airport": null,
+            "working_hours": {
+              "end": "17:00",
+              "start": "09:00"
+            },
+            "preferred_cabin": "economy",
+            "preferred_currency": "USD",
+            "default_meeting_minutes": 30
+          },
+          "execution_date_context": {
+            "timezone": "Africa/Lagos",
+            "utc_time": "2026-07-27T13:46:26.189Z",
+            "local_date": "2026-07-27",
+            "relative_dates": []
+          }
+        },
+        "capability": "flight_search",
+        "progress": [
+          "Started an isolated browser session."
+        ],
+        "result": null,
+        "error": "Controlled diagnostic recycle during read-only flight search.",
+        "created_at": "2026-07-27T13:46:26.300749+00:00",
+        "updated_at": "2026-07-27T13:46:34.366227+00:00",
+        "strategy": "browser",
+        "intent": {
+          "strategy": "browser",
+          "capability": "flight_search",
+          "outcomeType": "payment_handoff"
+        },
+        "plan": [],
+        "current_step": 1,
+        "waiting_reason": "",
+        "task_completion_policy": "payment_handoff",
+        "openai_response_id": "resp_015716ac790d08f2016a676133320c81a38d990620f18a497d",
+        "browser_session_id": "2a1410df-87fc-4bf5-be46-d6241849b042",
+        "external_correlation_id": "browser-session:2a1410df-87fc-4bf5-be46-d6241849b042",
+        "lease_owner": null,
+        "lease_expires_at": null,
+        "attempt_count": 1,
+        "retryable": true,
+        "error_code": "browser_target_closed",
+        "started_at": "2026-07-27T13:46:26.709+00:00",
+        "completed_at": null,
+        "cancelled_at": null,
+        "version": 6
+      },
+      "actions": [
+        {
+          "id": "e5231d56-5f93-46ee-b73f-c3713a96ea28",
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "step_index": 0,
+          "tool_name": "browser.start_session",
+          "model_call_id": "call_Wn2lRdz3BprrRuhtVJfXNIaA",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "objective": "Search for a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, then select a valid result and continue to the final safe booking/payment handoff without purchasing.",
+            "allowed_domains": [
+              "www.google.com"
+            ]
+          },
+          "output": {
+            "status": "planning",
+            "resumable": true,
+            "session_id": "2a1410df-87fc-4bf5-be46-d6241849b042"
+          },
+          "public_summary": "Started an isolated browser session.",
+          "idempotency_key": "agent:4bf78057-91a3-470c-9b06-9c4bdec6257c:0:browser.start_session:472bc4d1e0218e284b079bb9",
+          "provider_action_id": "2a1410df-87fc-4bf5-be46-d6241849b042",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T13:46:29.675+00:00",
+          "created_at": "2026-07-27T13:46:29.502279+00:00",
+          "updated_at": "2026-07-27T13:46:29.732523+00:00"
+        },
+        {
+          "id": "68267990-4d8e-4c7a-aa9e-fdf229bd026e",
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "step_index": 1,
+          "tool_name": "browser.search_flights",
+          "model_call_id": "call_IuoIYJGMcygcyBHqs8Q9kf4H",
+          "risk": "read",
+          "status": "failed",
+          "arguments": {
+            "cabin": "economy",
+            "currency": "USD",
+            "max_stops": 1,
+            "session_id": "2a1410df-87fc-4bf5-be46-d6241849b042",
+            "origin_code": "LOS",
+            "return_date": null,
+            "budget_amount": null,
+            "departure_date": "2026-09-17",
+            "destination_code": "LON",
+            "preferred_airlines": []
+          },
+          "output": {
+            "queued": true,
+            "session_id": "2a1410df-87fc-4bf5-be46-d6241849b042",
+            "operation_id": "agent:4bf78057-91a3-470c-9b06-9c4bdec6257c:1:browser.search_flights:18a1a6a37d7879f3f7f23a89"
+          },
+          "public_summary": "Searching live flight options.",
+          "idempotency_key": "agent:4bf78057-91a3-470c-9b06-9c4bdec6257c:1:browser.search_flights:18a1a6a37d7879f3f7f23a89",
+          "provider_action_id": null,
+          "error_code": "browser_target_closed",
+          "error_message": "Controlled diagnostic recycle during read-only flight search.",
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T13:46:34.22+00:00",
+          "created_at": "2026-07-27T13:46:32.18334+00:00",
+          "updated_at": "2026-07-27T13:46:34.278126+00:00"
+        }
+      ],
+      "approvals": [],
+      "events": [
+        {
+          "id": 7907,
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "browser",
+            "capability": "flight_search"
+          },
+          "created_at": "2026-07-27T13:46:26.460936+00:00"
+        },
+        {
+          "id": 7908,
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T13:46:26.552397+00:00"
+        },
+        {
+          "id": 7909,
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3044,
+              "total_tokens": 3127,
+              "output_tokens": 83,
+              "input_tokens_details": {
+                "cached_tokens": 2806,
+                "cache_write_tokens": 235
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 13
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_015716ac790d08f2016a676133320c81a38d990620f18a497d",
+            "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/33033812f0",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T13:46:29.257272+00:00"
+        },
+        {
+          "id": 7910,
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Started an isolated browser session.",
+          "metadata": {
+            "action_id": "e5231d56-5f93-46ee-b73f-c3713a96ea28",
+            "tool_name": "browser.start_session"
+          },
+          "created_at": "2026-07-27T13:46:30.036083+00:00"
+        },
+        {
+          "id": 7911,
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3175,
+              "total_tokens": 3268,
+              "output_tokens": 93,
+              "input_tokens_details": {
+                "cached_tokens": 3041,
+                "cache_write_tokens": 131
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 0
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_015716ac790d08f2016a6761362b6c81a3bf057dd70aa86383",
+            "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/33033812f0",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T13:46:31.843901+00:00"
+        },
+        {
+          "id": 7912,
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Searching live flight options.",
+          "metadata": {
+            "tool_name": "browser.search_flights"
+          },
+          "created_at": "2026-07-27T13:46:32.658434+00:00"
+        },
+        {
+          "id": 7913,
+          "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+          "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+          "event_type": "agent_failed",
+          "status": "failed",
+          "message": "Controlled diagnostic recycle during read-only flight search.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "browser_session_id": "2a1410df-87fc-4bf5-be46-d6241849b042"
+          },
+          "created_at": "2026-07-27T13:46:34.462901+00:00"
+        }
+      ],
+      "browser": {
+        "id": "2a1410df-87fc-4bf5-be46-d6241849b042",
+        "run_id": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+        "user_id": "81d33eeb-8ac6-44f5-8bba-645014974b8d",
+        "status": "failed",
+        "allowed_domains": [
+          "www.google.com"
+        ],
+        "current_domain": null,
+        "current_url": null,
+        "objective": "Search for a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, then select a valid result and continue to the final safe booking/payment handoff without purchasing.",
+        "checkpoint": {
+          "lastOperation": {
+            "id": "agent:4bf78057-91a3-470c-9b06-9c4bdec6257c:1:browser.search_flights:18a1a6a37d7879f3f7f23a89",
+            "type": "search_flights",
+            "error": {
+              "code": "browser_target_closed",
+              "message": "Controlled diagnostic recycle during read-only flight search.",
+              "retryable": true
+            },
+            "status": "failed",
+            "completedAt": "2026-07-27T13:46:33.322Z"
+          },
+          "pendingOperation": null
+        },
+        "payment_boundary_reached": false,
+        "resumable": true,
+        "worker_session_id": "2b714a15-3c6c-40e0-97e3-750f4ac8c7fe",
+        "last_observed_at": "2026-07-27T13:46:33.322+00:00",
+        "expires_at": null,
+        "created_at": "2026-07-27T13:46:29.581706+00:00",
+        "updated_at": "2026-07-27T13:46:33.535833+00:00"
+      },
+      "watches": []
+    },
+    "recoveryInjected": true,
+    "replied": false,
+    "selected": false,
+    "secondaryEmail": "dosudavy@gmail.com"
+  },
+  "events": [
+    {
+      "at": "2026-07-27T13:46:26.300749+00:00",
+      "type": "model_decision",
+      "status": "run_started",
+      "detail": {
+        "title": "Prepare recoverable London flight",
+        "category": "Browser"
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:29.502279+00:00",
+      "type": "tool",
+      "tool": "browser.start_session",
+      "arguments": {
+        "objective": "Search for a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, then select a valid result and continue to the final safe booking/payment handoff without purchasing.",
+        "allowed_domains": [
+          "www.google.com"
+        ]
+      },
+      "resultType": "succeeded",
+      "providerActionId": "2a1410df-87fc-4bf5-be46-d6241849b042",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T13:46:32.18334+00:00",
+      "type": "tool",
+      "tool": "browser.search_flights",
+      "arguments": {
+        "cabin": "economy",
+        "currency": "USD",
+        "max_stops": 1,
+        "session_id": "2a1410df-87fc-4bf5-be46-d6241849b042",
+        "origin_code": "LOS",
+        "return_date": null,
+        "budget_amount": null,
+        "departure_date": "2026-09-17",
+        "destination_code": "LON",
+        "preferred_airlines": []
+      },
+      "resultType": "failed",
+      "providerActionId": null,
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T13:46:26.460936+00:00",
+      "type": "agent_run_started",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "strategy": "browser",
+        "capability": "flight_search"
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:26.552397+00:00",
+      "type": "task_delegated",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T13:46:29.257272+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3044,
+          "total_tokens": 3127,
+          "output_tokens": 83,
+          "input_tokens_details": {
+            "cached_tokens": 2806,
+            "cache_write_tokens": 235
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 13
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_015716ac790d08f2016a676133320c81a38d990620f18a497d",
+        "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/33033812f0",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:30.036083+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "e5231d56-5f93-46ee-b73f-c3713a96ea28",
+        "tool_name": "browser.start_session"
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:31.843901+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3175,
+          "total_tokens": 3268,
+          "output_tokens": 93,
+          "input_tokens_details": {
+            "cached_tokens": 3041,
+            "cache_write_tokens": 131
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "iteration": 1,
+        "response_id": "resp_015716ac790d08f2016a6761362b6c81a3bf057dd70aa86383",
+        "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/33033812f0",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:32.658434+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "tool_name": "browser.search_flights"
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:34.462901+00:00",
+      "type": "agent_failed",
+      "status": "failed",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "browser_session_id": "2a1410df-87fc-4bf5-be46-d6241849b042"
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:36.021Z",
+      "type": "provider_verification",
+      "result": {
+        "browserCheckpoint": {
+          "lastOperation": {
+            "id": "agent:4bf78057-91a3-470c-9b06-9c4bdec6257c:1:browser.search_flights:18a1a6a37d7879f3f7f23a89",
+            "type": "search_flights",
+            "error": {
+              "code": "browser_target_closed",
+              "message": "Controlled diagnostic recycle during read-only flight search.",
+              "retryable": true
+            },
+            "status": "failed",
+            "completedAt": "2026-07-27T13:46:33.322Z"
+          },
+          "pendingOperation": null
+        },
+        "browserResult": null
+      }
+    },
+    {
+      "at": "2026-07-27T13:46:36.021Z",
+      "type": "completion_decision",
+      "status": "failed",
+      "verification": {
+        "success": false,
+        "primaryClass": "B. BROWSER INFRASTRUCTURE",
+        "exactMechanism": "browser_target_closed: Controlled diagnostic recycle during read-only flight search.",
+        "duplicates": false,
+        "executionPrecision": 1
+      }
+    }
+  ]
+}

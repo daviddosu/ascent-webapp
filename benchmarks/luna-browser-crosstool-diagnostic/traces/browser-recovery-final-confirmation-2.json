@@ -1,0 +1,1371 @@
+{
+  "scenario": "browser-recovery",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "runId": "91db8b7b-b646-443d-997e-265c98ca49dd",
+  "browserSessionId": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+  "controls": {
+    "state": {
+      "run": {
+        "id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+        "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+        "task_id": "4d1e50ac-487d-4a2c-a570-b0bf146a60ba",
+        "status": "waiting_for_user",
+        "objective": "Prepare recoverable London flight",
+        "context": {
+          "due": "2026-07-27",
+          "goal_id": null,
+          "timezone": "Africa/Lagos",
+          "description": "Find a one-way economy flight from Lagos to London on 2026-09-17. Maximum one stop. Choose a valid result and continue only to the final safe booking or payment handoff. Do not purchase or enter payment details.",
+          "user_context": "",
+          "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/9026d1e321",
+          "user_preferences": {
+            "timezone": "Africa/Lagos",
+            "home_airport": null,
+            "working_hours": {
+              "end": "17:00",
+              "start": "09:00"
+            },
+            "preferred_cabin": "economy",
+            "preferred_currency": "USD",
+            "default_meeting_minutes": 30
+          },
+          "execution_date_context": {
+            "timezone": "Africa/Lagos",
+            "utc_time": "2026-07-27T13:48:54.355Z",
+            "local_date": "2026-07-27",
+            "relative_dates": []
+          }
+        },
+        "capability": "flight_search",
+        "progress": [
+          "Started an isolated browser session.",
+          "Compared live flight options."
+        ],
+        "result": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": false,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "3 live flight options are ready.",
+          "sections": [
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $396",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $1,172",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–LGW · 1 stop · 9 hr · $423",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "49ced533818aee50b4b568af",
+              "label": "Best overall",
+              "price": "$396",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 396,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            {
+              "id": "4af648bd68a2b4813b60f4da",
+              "label": "Fastest",
+              "price": "$1,172",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 1172,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "8a565a5072ddf74ec7f575f9",
+              "label": "Also worth considering",
+              "price": "$423",
+              "route": "LOS–LGW",
+              "stops": "1 stop",
+              "amount": 423,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "9 hr",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "3:50 PM",
+              "departureTime": "6:50 AM",
+              "durationMinutes": 540
+            }
+          ]
+        },
+        "error": "Google Flights took too long to return live options. Try again in a moment.",
+        "created_at": "2026-07-27T13:48:54.442547+00:00",
+        "updated_at": "2026-07-27T13:51:20.117176+00:00",
+        "strategy": "browser",
+        "intent": {
+          "strategy": "browser",
+          "capability": "flight_search",
+          "outcomeType": "payment_handoff"
+        },
+        "plan": [],
+        "current_step": 2,
+        "waiting_reason": "Google Flights took too long to return live options. Try again in a moment.",
+        "task_completion_policy": "payment_handoff",
+        "openai_response_id": "resp_0a665edd07775996016a6761c73bc481a2be381001965eca34",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+        "external_correlation_id": "browser-session:c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+        "lease_owner": null,
+        "lease_expires_at": null,
+        "attempt_count": 1,
+        "retryable": true,
+        "error_code": "flight_results_timeout",
+        "started_at": "2026-07-27T13:48:54.816+00:00",
+        "completed_at": null,
+        "cancelled_at": null,
+        "version": 21
+      },
+      "actions": [
+        {
+          "id": "488d4564-bf93-454c-a1ae-20022d72ba7a",
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 0,
+          "tool_name": "browser.start_session",
+          "model_call_id": "call_4lY8zOmgNSbSHPpyC1v6wSUJ",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "objective": "Find a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, and select a valid result to reach the final safe booking/payment handoff without purchasing.",
+            "allowed_domains": [
+              "www.google.com"
+            ]
+          },
+          "output": {
+            "status": "planning",
+            "resumable": true,
+            "session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "public_summary": "Started an isolated browser session.",
+          "idempotency_key": "agent:91db8b7b-b646-443d-997e-265c98ca49dd:0:browser.start_session:d6494003b9e80f90ff9c61ff",
+          "provider_action_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T13:48:58.206+00:00",
+          "created_at": "2026-07-27T13:48:57.997699+00:00",
+          "updated_at": "2026-07-27T13:48:58.261492+00:00"
+        },
+        {
+          "id": "0fad4837-a634-41b0-9c8c-3d6e4ab2a999",
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 1,
+          "tool_name": "browser.search_flights",
+          "model_call_id": "call_WjaTb8LgAvVJUxUTNfEBnFsT",
+          "risk": "read",
+          "status": "succeeded",
+          "arguments": {
+            "cabin": "economy",
+            "currency": "USD",
+            "max_stops": 1,
+            "session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+            "origin_code": "LOS",
+            "return_date": null,
+            "budget_amount": null,
+            "departure_date": "2026-09-17",
+            "destination_code": "LON",
+            "preferred_airlines": []
+          },
+          "output": {
+            "options": [
+              {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "4af648bd68a2b4813b60f4da",
+                "label": "Fastest",
+                "price": "$1,172",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 1172,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "8a565a5072ddf74ec7f575f9",
+                "label": "Also worth considering",
+                "price": "$423",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 423,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "9 hr",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "3:50 PM",
+                "departureTime": "6:50 AM",
+                "durationMinutes": 540
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-27T13:49:06.666Z"
+          },
+          "public_summary": "Compared live flight options.",
+          "idempotency_key": "agent:91db8b7b-b646-443d-997e-265c98ca49dd:1:browser.search_flights:65973e55efd90de47f8232c6",
+          "provider_action_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+          "error_code": null,
+          "error_message": null,
+          "retryable": true,
+          "started_at": null,
+          "completed_at": "2026-07-27T13:49:09.652+00:00",
+          "created_at": "2026-07-27T13:49:01.549611+00:00",
+          "updated_at": "2026-07-27T13:49:09.715955+00:00"
+        },
+        {
+          "id": "da4ce756-225e-4607-a45f-afb7d57a1b99",
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "step_index": 2,
+          "tool_name": "browser.select_flight",
+          "model_call_id": null,
+          "risk": "prepare",
+          "status": "failed",
+          "arguments": {
+            "option_id": "49ced533818aee50b4b568af",
+            "session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "output": {
+            "queued": true,
+            "session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+            "operation_id": "agent:91db8b7b-b646-443d-997e-265c98ca49dd:2:browser.select_flight:cd5f2a1c7db53918042af5a0"
+          },
+          "public_summary": "Preparing the selected itinerary.",
+          "idempotency_key": "agent:91db8b7b-b646-443d-997e-265c98ca49dd:2:browser.select_flight:cd5f2a1c7db53918042af5a0",
+          "provider_action_id": null,
+          "error_code": "flight_results_timeout",
+          "error_message": "Google Flights took too long to return live options. Try again in a moment.",
+          "retryable": true,
+          "started_at": "2026-07-27T13:50:33.716+00:00",
+          "completed_at": "2026-07-27T13:51:19.878+00:00",
+          "created_at": "2026-07-27T13:49:13.378975+00:00",
+          "updated_at": "2026-07-27T13:51:20.009171+00:00"
+        }
+      ],
+      "approvals": [],
+      "events": [
+        {
+          "id": 7935,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_run_started",
+          "status": "planning",
+          "message": "Roon accepted the task.",
+          "metadata": {
+            "strategy": "browser",
+            "capability": "flight_search"
+          },
+          "created_at": "2026-07-27T13:48:54.571474+00:00"
+        },
+        {
+          "id": 7936,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "task_delegated",
+          "status": "planning",
+          "message": "Task delegated to Roon.",
+          "metadata": {},
+          "created_at": "2026-07-27T13:48:54.697167+00:00"
+        },
+        {
+          "id": 7937,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3045,
+              "total_tokens": 3139,
+              "output_tokens": 94,
+              "input_tokens_details": {
+                "cached_tokens": 2806,
+                "cache_write_tokens": 236
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 26
+              }
+            },
+            "iteration": 0,
+            "response_id": "resp_0a665edd07775996016a6761c73bc481a2be381001965eca34",
+            "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/9026d1e321",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T13:48:57.730518+00:00"
+        },
+        {
+          "id": 7938,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_tool_called",
+          "status": "running",
+          "message": "Started an isolated browser session.",
+          "metadata": {
+            "action_id": "488d4564-bf93-454c-a1ae-20022d72ba7a",
+            "tool_name": "browser.start_session"
+          },
+          "created_at": "2026-07-27T13:48:58.521412+00:00"
+        },
+        {
+          "id": 7939,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_model_response",
+          "status": "completed",
+          "message": "Recorded a production model response for SHOTCOUNT-EVAL LIVE v1.",
+          "metadata": {
+            "model": "gpt-5.6-luna",
+            "usage": {
+              "input_tokens": 3189,
+              "total_tokens": 3284,
+              "output_tokens": 95,
+              "input_tokens_details": {
+                "cached_tokens": 3042,
+                "cache_write_tokens": 144
+              },
+              "output_tokens_details": {
+                "reasoning_tokens": 0
+              }
+            },
+            "iteration": 1,
+            "response_id": "resp_0a665edd07775996016a6761cac99881a2b7793e7b2a67e105",
+            "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/9026d1e321",
+            "reasoning_effort": "low"
+          },
+          "created_at": "2026-07-27T13:49:01.270828+00:00"
+        },
+        {
+          "id": 7940,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Searching live flight options.",
+          "metadata": {
+            "tool_name": "browser.search_flights"
+          },
+          "created_at": "2026-07-27T13:49:01.951925+00:00"
+        },
+        {
+          "id": 7941,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 1,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:49:10.661Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:49:03.904439+00:00"
+        },
+        {
+          "id": 7942,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "search_flights",
+            "worker_attempt": 1,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:49:10.661Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:49:06.138595+00:00"
+        },
+        {
+          "id": 7943,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_for_user",
+          "status": "waiting_for_user",
+          "message": "Choose a flight option to continue.",
+          "metadata": {
+            "live_result_count": 3,
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:49:09.894756+00:00"
+        },
+        {
+          "id": 7944,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Preparing the selected itinerary.",
+          "metadata": {
+            "option_id": "49ced533818aee50b4b568af",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:49:13.732794+00:00"
+        },
+        {
+          "id": 7945,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:49:59.630083+00:00"
+        },
+        {
+          "id": 7946,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:03.581341+00:00"
+        },
+        {
+          "id": 7947,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:04.951236+00:00"
+        },
+        {
+          "id": 7948,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:08.336601+00:00"
+        },
+        {
+          "id": 7949,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:12.27861+00:00"
+        },
+        {
+          "id": 7950,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:16.255565+00:00"
+        },
+        {
+          "id": 7951,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:20.316646+00:00"
+        },
+        {
+          "id": 7952,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:24.45892+00:00"
+        },
+        {
+          "id": 7953,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:28.268318+00:00"
+        },
+        {
+          "id": 7954,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "The live browser step will retry automatically.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "worker_attempt": 2,
+            "automatic_retry": true,
+            "retry_not_before": "2026-07-27T13:50:28.548Z",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:50:33.600391+00:00"
+        },
+        {
+          "id": 7955,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_external",
+          "status": "waiting_external",
+          "message": "Preparing the selected itinerary.",
+          "metadata": {
+            "retried": true,
+            "action_id": "da4ce756-225e-4607-a45f-afb7d57a1b99",
+            "tool_name": "browser.select_flight"
+          },
+          "created_at": "2026-07-27T13:50:34.221937+00:00"
+        },
+        {
+          "id": 7956,
+          "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+          "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+          "event_type": "agent_waiting_for_user",
+          "status": "waiting_for_user",
+          "message": "Google Flights took too long to return live options. Try again in a moment.",
+          "metadata": {
+            "retryable": true,
+            "operation_type": "select_flight",
+            "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+          },
+          "created_at": "2026-07-27T13:51:20.28146+00:00"
+        }
+      ],
+      "browser": {
+        "id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+        "run_id": "91db8b7b-b646-443d-997e-265c98ca49dd",
+        "user_id": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+        "status": "failed",
+        "allowed_domains": [
+          "www.google.com"
+        ],
+        "current_domain": "www.google.com",
+        "current_url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+        "objective": "Find a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, and select a valid result to reach the final safe booking/payment handoff without purchasing.",
+        "checkpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": null,
+              "budgetAmount": null,
+              "departureDate": "2026-09-17",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "4af648bd68a2b4813b60f4da",
+                "label": "Fastest",
+                "price": "$1,172",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 1172,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "8a565a5072ddf74ec7f575f9",
+                "label": "Also worth considering",
+                "price": "$423",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 423,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "9 hr",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "3:50 PM",
+                "departureTime": "6:50 AM",
+                "durationMinutes": 540
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-27T13:49:06.666Z"
+          },
+          "lastOperation": {
+            "id": "agent:91db8b7b-b646-443d-997e-265c98ca49dd:2:browser.select_flight:cd5f2a1c7db53918042af5a0",
+            "type": "select_flight",
+            "error": {
+              "code": "flight_results_timeout",
+              "details": {
+                "selectionTrace": []
+              },
+              "message": "Google Flights took too long to return live options. Try again in a moment.",
+              "retryable": true
+            },
+            "status": "failed",
+            "completedAt": "2026-07-27T13:51:18.776Z"
+          },
+          "workerAttempts": 3,
+          "pendingOperation": null
+        },
+        "payment_boundary_reached": false,
+        "resumable": true,
+        "worker_session_id": "319bb8bc-4609-4d5e-b9a3-0e43a1178c90",
+        "last_observed_at": "2026-07-27T13:51:18.776+00:00",
+        "expires_at": "2026-07-27T15:49:07.44+00:00",
+        "created_at": "2026-07-27T13:48:58.089177+00:00",
+        "updated_at": "2026-07-27T13:51:19.192637+00:00"
+      },
+      "watches": []
+    },
+    "recoveryInjected": true,
+    "replied": false,
+    "selected": true,
+    "secondaryEmail": "daviddosuu@gmail.com"
+  },
+  "events": [
+    {
+      "at": "2026-07-27T13:48:54.442547+00:00",
+      "type": "model_decision",
+      "status": "run_started",
+      "detail": {
+        "title": "Prepare recoverable London flight",
+        "category": "Browser"
+      }
+    },
+    {
+      "at": "2026-07-27T13:48:57.997699+00:00",
+      "type": "tool",
+      "tool": "browser.start_session",
+      "arguments": {
+        "objective": "Find a one-way economy flight from Lagos to London on 2026-09-17, maximum one stop, and select a valid result to reach the final safe booking/payment handoff without purchasing.",
+        "allowed_domains": [
+          "www.google.com"
+        ]
+      },
+      "resultType": "succeeded",
+      "providerActionId": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T13:49:01.549611+00:00",
+      "type": "tool",
+      "tool": "browser.search_flights",
+      "arguments": {
+        "cabin": "economy",
+        "currency": "USD",
+        "max_stops": 1,
+        "session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+        "origin_code": "LOS",
+        "return_date": null,
+        "budget_amount": null,
+        "departure_date": "2026-09-17",
+        "destination_code": "LON",
+        "preferred_airlines": []
+      },
+      "resultType": "succeeded",
+      "providerActionId": "c409ce0b-a1ec-44bc-b001-28f8e569f76d",
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T13:49:13.378975+00:00",
+      "type": "tool",
+      "tool": "browser.select_flight",
+      "arguments": {
+        "option_id": "49ced533818aee50b4b568af",
+        "session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      },
+      "resultType": "failed",
+      "providerActionId": null,
+      "retryAttempted": false
+    },
+    {
+      "at": "2026-07-27T13:48:54.571474+00:00",
+      "type": "agent_run_started",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "strategy": "browser",
+        "capability": "flight_search"
+      }
+    },
+    {
+      "at": "2026-07-27T13:48:54.697167+00:00",
+      "type": "task_delegated",
+      "status": "planning",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {}
+    },
+    {
+      "at": "2026-07-27T13:48:57.730518+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3045,
+          "total_tokens": 3139,
+          "output_tokens": 94,
+          "input_tokens_details": {
+            "cached_tokens": 2806,
+            "cache_write_tokens": 236
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 26
+          }
+        },
+        "iteration": 0,
+        "response_id": "resp_0a665edd07775996016a6761c73bc481a2be381001965eca34",
+        "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/9026d1e321",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T13:48:58.521412+00:00",
+      "type": "agent_tool_called",
+      "status": "running",
+      "checkpointSaved": false,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "action_id": "488d4564-bf93-454c-a1ae-20022d72ba7a",
+        "tool_name": "browser.start_session"
+      }
+    },
+    {
+      "at": "2026-07-27T13:49:01.270828+00:00",
+      "type": "agent_model_response",
+      "status": "completed",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "model": "gpt-5.6-luna",
+        "usage": {
+          "input_tokens": 3189,
+          "total_tokens": 3284,
+          "output_tokens": 95,
+          "input_tokens_details": {
+            "cached_tokens": 3042,
+            "cache_write_tokens": 144
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "iteration": 1,
+        "response_id": "resp_0a665edd07775996016a6761cac99881a2b7793e7b2a67e105",
+        "benchmark_run_id": "durable-luna-smoke/browser-recovery/shotcount/9026d1e321",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "at": "2026-07-27T13:49:01.951925+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "tool_name": "browser.search_flights"
+      }
+    },
+    {
+      "at": "2026-07-27T13:49:03.904439+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 1,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:49:10.661Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:49:06.138595+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "search_flights",
+        "worker_attempt": 1,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:49:10.661Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:49:09.894756+00:00",
+      "type": "agent_waiting_for_user",
+      "status": "waiting_for_user",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "live_result_count": 3,
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:49:13.732794+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "option_id": "49ced533818aee50b4b568af",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:49:59.630083+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:03.581341+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:04.951236+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:08.336601+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:12.27861+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:16.255565+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:20.316646+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:24.45892+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:28.268318+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:33.600391+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": true,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "worker_attempt": 2,
+        "automatic_retry": true,
+        "retry_not_before": "2026-07-27T13:50:28.548Z",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:50:34.221937+00:00",
+      "type": "agent_waiting_external",
+      "status": "waiting_external",
+      "checkpointSaved": true,
+      "retryAttempted": true,
+      "recoveryAttempted": false,
+      "metadata": {
+        "retried": true,
+        "action_id": "da4ce756-225e-4607-a45f-afb7d57a1b99",
+        "tool_name": "browser.select_flight"
+      }
+    },
+    {
+      "at": "2026-07-27T13:51:20.28146+00:00",
+      "type": "agent_waiting_for_user",
+      "status": "waiting_for_user",
+      "checkpointSaved": true,
+      "retryAttempted": false,
+      "recoveryAttempted": false,
+      "metadata": {
+        "retryable": true,
+        "operation_type": "select_flight",
+        "browser_session_id": "c409ce0b-a1ec-44bc-b001-28f8e569f76d"
+      }
+    },
+    {
+      "at": "2026-07-27T13:51:23.844Z",
+      "type": "provider_verification",
+      "result": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": null,
+              "budgetAmount": null,
+              "departureDate": "2026-09-17",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "49ced533818aee50b4b568af",
+                "label": "Best overall",
+                "price": "$396",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 396,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              },
+              {
+                "id": "4af648bd68a2b4813b60f4da",
+                "label": "Fastest",
+                "price": "$1,172",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 1172,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "8a565a5072ddf74ec7f575f9",
+                "label": "Also worth considering",
+                "price": "$423",
+                "route": "LOS–LGW",
+                "stops": "1 stop",
+                "amount": 423,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "9 hr",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "3:50 PM",
+                "departureTime": "6:50 AM",
+                "durationMinutes": 540
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-27T13:49:06.666Z"
+          },
+          "lastOperation": {
+            "id": "agent:91db8b7b-b646-443d-997e-265c98ca49dd:2:browser.select_flight:cd5f2a1c7db53918042af5a0",
+            "type": "select_flight",
+            "error": {
+              "code": "flight_results_timeout",
+              "details": {
+                "selectionTrace": []
+              },
+              "message": "Google Flights took too long to return live options. Try again in a moment.",
+              "retryable": true
+            },
+            "status": "failed",
+            "completedAt": "2026-07-27T13:51:18.776Z"
+          },
+          "workerAttempts": 3,
+          "pendingOperation": null
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": false,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "3 live flight options are ready.",
+          "sections": [
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $396",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $1,172",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–LGW · 1 stop · 9 hr · $423",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "49ced533818aee50b4b568af",
+              "label": "Best overall",
+              "price": "$396",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 396,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            },
+            {
+              "id": "4af648bd68a2b4813b60f4da",
+              "label": "Fastest",
+              "price": "$1,172",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 1172,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "8a565a5072ddf74ec7f575f9",
+              "label": "Also worth considering",
+              "price": "$423",
+              "route": "LOS–LGW",
+              "stops": "1 stop",
+              "amount": 423,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "9 hr",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-09-17+one+way+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "3:50 PM",
+              "departureTime": "6:50 AM",
+              "durationMinutes": 540
+            }
+          ]
+        }
+      }
+    },
+    {
+      "at": "2026-07-27T13:51:23.844Z",
+      "type": "completion_decision",
+      "status": "waiting_for_user",
+      "verification": {
+        "success": false,
+        "primaryClass": "B. BROWSER INFRASTRUCTURE",
+        "exactMechanism": "flight_results_timeout: Google Flights took too long to return live options. Try again in a moment.",
+        "duplicates": false,
+        "executionPrecision": 1
+      }
+    }
+  ]
+}

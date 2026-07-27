@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-27T14:35:55.425Z",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 1.25,
+    "cachedInput": 0.125,
+    "cacheWrite": 1.5625,
+    "output": 7.5
+  },
+  "costGateUsd": 16,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "preflight-cross",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "c7f1df990927ee8b362e26d998204ef183626b58",
+      "benchmark_commit": "c7f1df990927ee8b362e26d998204ef183626b58",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "cross-01",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "354dccd384",
+      "agent_run_id": "c4fa5523-c719-4671-a2e7-706b15d0fbed",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 41.902,
+      "external_wait_time_seconds": 13.794,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 7,
+      "input_tokens": 26620,
+      "cached_input_tokens": 24539,
+      "cache_write_tokens": 2060,
+      "output_tokens": 1055,
+      "inference_cost_usd": 0.014225,
+      "started_at": "2026-07-27T14:34:59.727Z",
+      "finished_at": "2026-07-27T14:35:55.423Z",
+      "actions": [
+        {
+          "tool": "contacts.find_contact",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.get_availability",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r-2670813908165332828",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19fa4007ade5b91f",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.wait_for_reply",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending"
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "fmcpm5d3q9l394b7pr2fmc91b8",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {}
+    }
+  ]
+}

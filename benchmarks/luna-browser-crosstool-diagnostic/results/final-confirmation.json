@@ -1,0 +1,72 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "evaluatedCommit": "c7f1df990927ee8b362e26d998204ef183626b58",
+  "runs": [
+    {
+      "scenario": "browser-handoff",
+      "category": "Browser",
+      "result": "PASS",
+      "primaryFailureClass": "NONE",
+      "exactMechanism": "",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.006836,
+      "usage": {
+        "calls": 2,
+        "input": 6238,
+        "cached": 3041,
+        "cacheWrite": 3191,
+        "output": 195
+      },
+      "finalState": "waiting_for_user",
+      "runId": "b781a233-1fd0-4983-9cde-3914f5179836",
+      "browserSessionId": "e80de1c7-13ae-4098-808e-7febbde6b1a5",
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T13:45:38.222Z",
+      "finishedAt": "2026-07-27T13:46:25.626Z"
+    },
+    {
+      "scenario": "browser-recovery",
+      "category": "Browser",
+      "result": "FAIL",
+      "primaryFailureClass": "B. BROWSER INFRASTRUCTURE",
+      "exactMechanism": "browser_target_closed: Controlled diagnostic recycle during read-only flight search.",
+      "harnessFixJustified": true,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.00263,
+      "usage": {
+        "calls": 2,
+        "input": 6219,
+        "cached": 5847,
+        "cacheWrite": 366,
+        "output": 176
+      },
+      "finalState": "failed",
+      "runId": "4bf78057-91a3-470c-9b06-9c4bdec6257c",
+      "browserSessionId": "2a1410df-87fc-4bf5-be46-d6241849b042",
+      "recoveryInjected": true,
+      "startedAt": "2026-07-27T13:46:25.627Z",
+      "finishedAt": "2026-07-27T13:46:36.023Z"
+    },
+    {
+      "scenario": "calendar-email",
+      "category": "Cross-tool",
+      "result": "FAIL",
+      "primaryFailureClass": "F. PROVIDER",
+      "exactMechanism": "values.map is not a function",
+      "harnessFixJustified": false,
+      "executionPrecision": 1,
+      "duplicateOrUnintendedSideEffects": false,
+      "inferenceCostUsd": 0.013277,
+      "finalState": "completed",
+      "runId": "55aaf83d-3d80-4e29-8cf7-e0a55b854102",
+      "browserSessionId": null,
+      "recoveryInjected": false,
+      "startedAt": "2026-07-27T13:46:38.358Z",
+      "finishedAt": "2026-07-27T13:47:11.739Z"
+    }
+  ]
+}

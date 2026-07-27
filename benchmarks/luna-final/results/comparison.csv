@@ -1,0 +1,11 @@
+metric,luna_primitive,luna_plus_harness
+overall_success,0.9,0.8666666666666667
+email_success,1,1
+calendar_success,1,1
+cross_tool_success,0.8,0.8666666666666667
+browser_success,0.8,0.6
+execution_precision,1,1
+distance_to_done,4.8,4.533333333333333
+first_attempt_success,0.9,0.8
+measured_inference_cost_usd,0.4178280000000001,0.4372850000000001
+cost_per_success_usd,0.007737555555555557,0.008409326923076926
