@@ -1,0 +1,5 @@
+{
+  "lunaDirect": 50,
+  "lunaHarnessRecovered": 3,
+  "method": "Successful runs with persisted recovery/resumption events are harness-recovered; remaining successes are direct."
+}

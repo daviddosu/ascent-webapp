@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-28T00:29:13.803Z",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 1.25,
+    "cachedInput": 0.125,
+    "cacheWrite": 1.5625,
+    "output": 7.5
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "final-tightening-acceptance-cross04",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "f03fd261ac67224c898ae7e1e42fdedbbd6b6b6b",
+      "benchmark_commit": "f03fd261ac67224c898ae7e1e42fdedbbd6b6b6b",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "cross-04",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "08c5220cf7",
+      "agent_run_id": "aa88c04d-70cc-4915-82a1-f121094cc095",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 42.515,
+      "external_wait_time_seconds": 17.651,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 9,
+      "input_tokens": 37935,
+      "cached_input_tokens": 35274,
+      "cache_write_tokens": 2634,
+      "output_tokens": 935,
+      "inference_cost_usd": 0.015571,
+      "started_at": "2026-07-28T00:28:12.830Z",
+      "finished_at": "2026-07-28T00:29:12.996Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19fa61f496d11ece",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa61f496d11ece",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r-6985319072886458979",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19fa61f8b5bf68e2",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.wait_for_reply",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": "gmail_reply_pending"
+        },
+        {
+          "tool": "calendar.get_availability",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "calendar.create_event",
+          "status": "succeeded",
+          "provider_action_id": "t4nrlsplgcqfp9a6q50mao20rs",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": []
+      }
+    }
+  ]
+}

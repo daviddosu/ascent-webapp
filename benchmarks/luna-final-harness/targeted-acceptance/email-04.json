@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-28T00:01:27.396Z",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 1.25,
+    "cachedInput": 0.125,
+    "cacheWrite": 1.5625,
+    "output": 7.5
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "final-tightening-acceptance-email04",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "099b2c73ca37f7a409b05be256a300ceab3a0280",
+      "benchmark_commit": "099b2c73ca37f7a409b05be256a300ceab3a0280",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "email-04",
+      "category": "email",
+      "run_number": 1,
+      "run_nonce": "161ddbf37f",
+      "agent_run_id": "863a55fb-b8f4-4c48-8419-15c8a9a9245f",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 33.774,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 10,
+      "input_tokens": 60357,
+      "cached_input_tokens": 54885,
+      "cache_write_tokens": 5442,
+      "output_tokens": 1104,
+      "inference_cost_usd": 0.023681,
+      "started_at": "2026-07-28T00:00:52.922Z",
+      "finished_at": "2026-07-28T00:01:26.696Z",
+      "actions": [
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa422e1df3dfae",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa5f1082dc7b45",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa5ed7195afa0c",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa6064b876af42",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r6408253210546354064",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "gmailQuery": "in:drafts newer_than:1d",
+        "gmailMessages": [
+          {
+            "id": "19fa606ad81129f7",
+            "thread_id": "19fa6064b876af42"
+          },
+          {
+            "id": "19fa3d87691eb4d6",
+            "thread_id": "19fa3d87691eb4d6"
+          },
+          {
+            "id": "19fa3226dd2f377b",
+            "thread_id": "19fa3226dd2f377b"
+          },
+          {
+            "id": "19fa1149fc67f093",
+            "thread_id": "19fa1149fc67f093"
+          }
+        ]
+      }
+    }
+  ]
+}
