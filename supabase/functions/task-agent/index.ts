@@ -775,7 +775,43 @@ async function pauseForApproval(
   const payload = await approvalPayload(admin, run, toolName, argumentsValue)
   const payloadHash = await hashValue(payload)
   const policy = policyForAgentTool(toolName)
-  const { error } = await admin.from('agent_approvals').upsert({
+  const existingApprovalResult = await admin
+    .from('agent_approvals')
+    .select('id, status, version')
+    .eq('action_id', action.id)
+    .eq('user_id', run.user_id)
+    .maybeSingle()
+  if (existingApprovalResult.error) throw new Error(existingApprovalResult.error.message)
+  const existingApproval = existingApprovalResult.data
+  if (existingApproval?.status === 'rejected' && action.status === 'cancelled') {
+    const reopened = await admin.from('agent_approvals').update({
+      status: 'pending',
+      title: approvalTitle(toolName),
+      summary: approvalSummary(toolName, argumentsValue),
+      payload,
+      payload_hash: payloadHash,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      decided_at: null,
+      version: existingApproval.version + 1,
+    })
+      .eq('id', existingApproval.id)
+      .eq('user_id', run.user_id)
+      .eq('status', 'rejected')
+      .eq('version', existingApproval.version)
+      .select('id')
+      .maybeSingle()
+    if (reopened.error || !reopened.data) {
+      throw new Error(reopened.error?.message ?? 'Could not reopen the approval.')
+    }
+    const actionReopened = await admin.from('agent_actions').update({
+      status: 'awaiting_approval',
+      completed_at: null,
+    }).eq('id', action.id).eq('user_id', run.user_id).eq('status', 'cancelled').select('id').maybeSingle()
+    if (actionReopened.error || !actionReopened.data) {
+      throw new Error(actionReopened.error?.message ?? 'Could not reopen the agent action.')
+    }
+  } else {
+    const { error } = await admin.from('agent_approvals').upsert({
     run_id: run.id,
     action_id: action.id,
     user_id: run.user_id,
@@ -786,8 +822,9 @@ async function pauseForApproval(
     payload,
     payload_hash: payloadHash,
     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  }, { onConflict: 'action_id', ignoreDuplicates: true })
-  if (error) throw new Error(error.message)
+    }, { onConflict: 'action_id', ignoreDuplicates: true })
+    if (error) throw new Error(error.message)
+  }
   const updated = await updateRun(admin, run, {
     status: 'needs_approval',
     waiting_reason: approvalTitle(toolName),
@@ -797,6 +834,72 @@ async function pauseForApproval(
   await addEvent(admin, updated, 'agent_approval_requested', 'needs_approval', approvalSummary(toolName, argumentsValue), {
     action_id: action.id,
     tool_name: toolName,
+  })
+  return updated
+}
+
+async function reopenRejectedApproval(admin: AdminClient, run: AgentRunRow) {
+  const approvalResult = await admin
+    .from('agent_approvals')
+    .select('*')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('status', 'rejected')
+    .order('decided_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (approvalResult.error) throw new Error(approvalResult.error.message)
+  const approval = approvalResult.data
+  if (!approval) return null
+  const actionResult = await admin
+    .from('agent_actions')
+    .select('id')
+    .eq('id', approval.action_id)
+    .eq('user_id', run.user_id)
+    .eq('status', 'cancelled')
+    .maybeSingle()
+  if (actionResult.error) throw new Error(actionResult.error.message)
+  if (!actionResult.data) return null
+
+  const reopened = await admin.from('agent_approvals').update({
+    status: 'pending',
+    decided_at: null,
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    version: approval.version + 1,
+  })
+    .eq('id', approval.id)
+    .eq('user_id', run.user_id)
+    .eq('status', 'rejected')
+    .eq('version', approval.version)
+    .select('id')
+    .maybeSingle()
+  if (reopened.error || !reopened.data) {
+    throw new Error(reopened.error?.message ?? 'Could not reopen the approval.')
+  }
+  const actionReopened = await admin.from('agent_actions').update({
+    status: 'awaiting_approval',
+    completed_at: null,
+  })
+    .eq('id', actionResult.data.id)
+    .eq('user_id', run.user_id)
+    .eq('status', 'cancelled')
+    .select('id')
+    .maybeSingle()
+  if (actionReopened.error || !actionReopened.data) {
+    throw new Error(actionReopened.error?.message ?? 'Could not reopen the agent action.')
+  }
+  const updated = await updateRun(admin, run, {
+    status: 'needs_approval',
+    waiting_reason: approval.title,
+    error: null,
+    error_code: null,
+    retryable: true,
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await addEvent(admin, updated, 'agent_approval_requested', updated.status, approval.summary, {
+    action_id: actionResult.data.id,
+    retried: true,
   })
   return updated
 }
@@ -3256,9 +3359,25 @@ Deno.serve(async request => {
         }
       } else if (action === 'resume') {
         let recoverSavedAction = false
+        let approvalReopened = false
         if (run.status === 'needs_context') {
           run = await resumeWithContext(admin, run, body.context ?? '')
-        } else if (['failed', 'waiting_for_user'].includes(run.status)) {
+        } else if (run.status === 'waiting_for_user') {
+          const reopened = await reopenRejectedApproval(admin, run)
+          if (reopened) {
+            run = reopened
+            approvalReopened = true
+          } else {
+            run = await updateRun(admin, run, {
+              status: 'planning',
+              waiting_reason: '',
+              error: null,
+              error_code: null,
+              retryable: true,
+            })
+            recoverSavedAction = true
+          }
+        } else if (run.status === 'failed') {
           run = await updateRun(admin, run, {
             status: 'planning',
             waiting_reason: '',
@@ -3268,9 +3387,11 @@ Deno.serve(async request => {
           })
           recoverSavedAction = true
         }
-        run = recoverSavedAction
-          ? await recoverStalledRun(admin, run, openaiKey)
-          : await advanceRun(admin, run, openaiKey)
+        if (!approvalReopened) {
+          run = recoverSavedAction
+            ? await recoverStalledRun(admin, run, openaiKey)
+            : await advanceRun(admin, run, openaiKey)
+        }
         await addEvent(admin, run, 'agent_resumed', run.status, 'Roon resumed the task.')
       } else if (action === 'poll') {
         run = ['planning', 'running'].includes(run.status)

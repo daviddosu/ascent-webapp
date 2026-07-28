@@ -1072,11 +1072,19 @@ async function syncAgentApproval(run: AgentRun) {
     agentApprovals.delete(run.id)
     return
   }
-  try {
-    const pending = (await loadAgentApprovals(run.id)).find(approval => approval.status === 'pending')
-    if (pending) agentApprovals.set(run.id, pending)
-  } catch {
-    // Realtime or the next refresh can recover approval details.
+  // The run can reach needs_approval just before its approval row is committed.
+  // Retry briefly so the panel does not get stuck on the generic waiting state.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const pending = (await loadAgentApprovals(run.id)).find(approval => approval.status === 'pending')
+      if (pending) {
+        agentApprovals.set(run.id, pending)
+        return
+      }
+    } catch {
+      // A later attempt, realtime update, or refresh can recover the details.
+    }
+    await new Promise(resolve => window.setTimeout(resolve, 250 * (attempt + 1)))
   }
 }
 
