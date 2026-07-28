@@ -55,6 +55,11 @@ export type AgentRun = {
   status: AgentRunStatus
   objective: string
   context: string
+  recipientResolution?: {
+    state?: string
+    recipient?: string
+    candidates?: Array<{ name?: string; email?: string; evidence?: string }>
+  } | null
   capability: AgentCapability
   intent: AgentIntent
   currentStep: number
@@ -97,7 +102,8 @@ type AgentRunRow = {
   task_id: string
   status: AgentRunStatus
   objective: string
-  context: { description?: string; user_context?: string } | null
+  context: { description?: string; user_context?: string; recipient_resolution_pending?: AgentRun['recipientResolution'] } | null
+  recipientResolution?: AgentRun['recipientResolution']
   capability: AgentCapability
   intent: AgentIntent | null
   current_step: number
@@ -137,6 +143,7 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     status: row.status,
     objective: row.objective,
     context: row.context?.user_context || row.context?.description || '',
+    recipientResolution: row.recipientResolution ?? row.context?.recipient_resolution_pending ?? null,
     capability: row.capability,
     intent,
     currentStep: row.current_step,
@@ -332,6 +339,10 @@ async function invokeRunAction(
 
 export function resumeAgentRun(runId: string, context = '') {
   return invokeRunAction({ action: 'resume', runId, context }, 'Roon could not resume this task.')
+}
+
+export function selectAgentRecipient(runId: string, recipientEmail: string) {
+  return invokeRunAction({ action: 'select_recipient', runId, recipientEmail }, 'Roon could not select that recipient.')
 }
 
 export function pollAgentRun(runId: string) {

@@ -21,11 +21,12 @@ import {
 } from '../_shared/schedule-notification.ts'
 
 type RequestBody = {
-  action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'cancel' | 'select_flight' | 'simulate_reply' | 'plan_tasks'
+  action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'cancel' | 'select_flight' | 'select_recipient' | 'simulate_reply' | 'plan_tasks'
   runId?: string
   approvalId?: string
   approvalVersion?: number
   optionId?: string
+  recipientEmail?: string
   simulationReply?: string
   taskId?: string
   title?: string
@@ -376,6 +377,7 @@ function serializeRun(run: AgentRunRow) {
     status: run.status,
     objective: run.objective,
     context: safeString(context.user_context || context.description),
+    recipientResolution: context.recipient_resolution_pending ?? null,
     capability: run.capability,
     intent: run.intent,
     currentStep: run.current_step,
@@ -1399,7 +1401,7 @@ function agentInstructions() {
     'Never purchase, enter payment data, or claim a purchase without observed provider confirmation.',
     'Ask only one concise context question when a genuinely required fact is missing.',
     'Never call agent__request_context to ask permission or approval. Prepare the exact action and call its approval-gated tool so ShotCount can show the normal lightweight approval card.',
-    'For a named person in a Gmail or scheduling task, call contacts__find_contact before asking the user for an email address. Ask only if the connected contacts and recent correspondence cannot resolve one unambiguous person.',
+    'For compatibility with existing task flows, call contacts__find_contact before asking the user for an email address; then use contacts__resolve_recipient as the authoritative decision. Before preparing any Gmail draft or calendar invite, call contacts__resolve_recipient once for every individual recipient named in the task (unless the task gives an explicit email or this run already has a selected canonical recipient). Treat its state as authoritative: explicit and resolved_single may be used; ambiguous requires one concise question listing compact name/email choices; not_found requires one concise context question; provider_unavailable asks the user to reconnect Google or provide an email. Never guess, and never use Gmail message bodies to resolve a recipient. Preserve returned email, evidence, and thread ID in the same run; a selected canonical recipient must be used unchanged for all later draft/send steps unless the user explicitly changes it. Use a returned thread only for a reply/follow-up, never to turn a new email into a reply.',
     'After sending scheduling outreach, call gmail__wait_for_reply only when a reply is still required to determine or confirm the remaining Calendar action. A notification-only email after a completed Calendar change does not require a reply watch.',
     'A scheduling task is complete only after both the required Gmail send and Calendar write are provider-confirmed. If either obligation remains, continue with that tool instead of completing.',
     'When the instruction explicitly says consequential meeting details such as duration or topic are missing and must not be guessed, request that context from the user. Do not silently invent it or complete with only a private draft.',
@@ -1525,6 +1527,54 @@ async function resumeWithContext(
     lease_expires_at: null,
   })
   await saveModelHistory(admin, updated, history)
+  return updated
+}
+
+function selectedRecipientCandidate(run: AgentRunRow, email: string) {
+  const pending = run.context?.recipient_resolution_pending as Record<string, unknown> | undefined
+  const candidates = Array.isArray(pending?.candidates) ? pending.candidates : []
+  return candidates.find(candidate =>
+    candidate && typeof candidate === 'object' &&
+    safeString((candidate as Record<string, unknown>).email, 320).toLocaleLowerCase() === email.toLocaleLowerCase(),
+  ) as Record<string, unknown> | undefined
+}
+
+async function selectRecipient(
+  admin: AdminClient,
+  run: AgentRunRow,
+  email: string,
+) {
+  const candidate = selectedRecipientCandidate(run, email)
+  if (!candidate) throw new Error('That recipient choice is no longer available. Refresh the task and try again.')
+  const selected = {
+    ...candidate,
+    state: 'selected',
+    recipient: safeString((run.context?.recipient_resolution_pending as Record<string, unknown> | undefined)?.recipient, 300),
+    selected_at: new Date().toISOString(),
+  }
+  let history = await loadModelHistory(admin, run)
+  history = [...history, {
+    role: 'user',
+    content: [{ type: 'input_text', text: `Recipient selected: ${safeString(candidate.name, 300)} <${safeString(candidate.email, 320)}>. Continue the same task using this canonical recipient.` }],
+  }]
+  const updated = await updateRun(admin, run, {
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    context: {
+      ...(run.context ?? {}),
+      recipient_resolution_pending: null,
+      recipient_resolutions: [
+        ...((Array.isArray(run.context?.recipient_resolutions) ? run.context.recipient_resolutions : []) as unknown[]),
+        selected,
+      ].slice(-20),
+    },
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await saveModelHistory(admin, updated, history)
+  await addEvent(admin, updated, 'recipient_selected', updated.status, `Recipient selected: ${safeString(candidate.name, 300)}.`, { recipient: selected })
   return updated
 }
 
@@ -2781,6 +2831,42 @@ async function advanceRun(
       return current
     }
 
+    const recipientState = toolName === 'contacts.resolve_recipient'
+      ? safeString(toolOutput.value.state, 80)
+      : ''
+    if (recipientState === 'ambiguous') {
+      const recipient = safeString(toolOutput.value.recipient, 300) || 'recipient'
+      await admin.from('agent_actions').update({
+        status: 'succeeded', output: toolOutput.value, public_summary: toolOutput.publicSummary,
+        completed_at: new Date().toISOString(),
+      }).eq('id', action.id)
+      current = await updateRun(admin, current, {
+        status: 'needs_context',
+        waiting_reason: `Which ${recipient}?`,
+        context: { ...(current.context ?? {}), recipient_resolution_pending: toolOutput.value },
+        lease_owner: null, lease_expires_at: null,
+      })
+      await addEvent(admin, current, 'recipient_ambiguous', current.status, current.waiting_reason, { recipient_resolution: toolOutput.value })
+      return current
+    }
+    if (recipientState === 'not_found') {
+      const recipient = safeString(toolOutput.value.recipient, 300) || 'this person'
+      const message = `I couldn't find anyone matching “${recipient}” in your contacts or email history. What's their email address or full name?`
+      await admin.from('agent_actions').update({
+        status: 'succeeded', output: toolOutput.value, public_summary: toolOutput.publicSummary,
+        completed_at: new Date().toISOString(),
+      }).eq('id', action.id)
+      current = await updateRun(admin, current, {
+        status: 'needs_context', waiting_reason: message,
+        context: { ...(current.context ?? {}), recipient_resolution_pending: toolOutput.value },
+        lease_owner: null, lease_expires_at: null,
+      })
+      await addEvent(admin, current, 'agent_context_requested', current.status, message, { recipient_resolution: toolOutput.value })
+      return current
+    }
+    const resolvedRecipient = toolName === 'contacts.resolve_recipient'
+      ? toolOutput.value
+      : null
     await admin.from('agent_actions').update({
       status: 'succeeded',
       output: toolOutput.value,
@@ -2796,6 +2882,19 @@ async function advanceRun(
     current = await updateRun(admin, current, {
       current_step: current.current_step + 1,
       progress: [...(Array.isArray(current.progress) ? current.progress : []), toolOutput.publicSummary],
+      ...(resolvedRecipient
+        ? {
+            context: {
+              ...(current.context ?? {}),
+              recipient_resolutions: [
+                ...((Array.isArray(current.context?.recipient_resolutions)
+                  ? current.context.recipient_resolutions
+                  : []) as unknown[]),
+                resolvedRecipient,
+              ].slice(-20),
+            },
+          }
+        : {}),
       openai_response_id: response.id ?? null,
     })
     await saveModelHistory(admin, current, history, response.id)
@@ -3162,6 +3261,9 @@ Deno.serve(async request => {
         )
       } else if (action === 'select_flight') {
         run = await selectFlightOption(admin, run, body.optionId?.trim() ?? '')
+      } else if (action === 'select_recipient') {
+        run = await selectRecipient(admin, run, safeString(body.recipientEmail, 320).trim())
+        run = await advanceRun(admin, run, openaiKey)
       } else if (action === 'cancel') {
         if (!['completed', 'cancelled'].includes(run.status)) {
           run = await updateRun(admin, run, {

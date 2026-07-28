@@ -1,5 +1,6 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
 import { cloudEnabled, connectGoogleCalendar, currentUser, getCloudClient, hasGoogleIdentity, signOut as signOutCloud } from './data/cloud'
+import { appendTranscript, prepareDescriptionTranscription, transcribeDescriptionAudio } from './data/transcription'
 import {
   loadGoogleCalendarEvents,
   loadGoogleCalendarSyncState,
@@ -55,6 +56,7 @@ import {
   taskReminderDeliveryKey,
 } from './data/reminders'
 import { CloudPlannerRepository, createSupabasePlannerAdapter } from './data/sync'
+import { roonCapabilityForTask } from './data/roon-capabilities'
 import type { SyncState } from './data/contracts'
 import { normalizeGoal, normalizeTask, normalizeTaskVisibility, type Goal, type PlannerKind, type Task, type TaskVisibility } from './data/planner-model'
 import {
@@ -67,6 +69,7 @@ import {
   loadAgentRuns,
   pollAgentRun,
   resumeAgentRun,
+  selectAgentRecipient,
   selectAgentFlight,
   simulateAgentReply,
   subscribeToAgentRuns,
@@ -226,6 +229,9 @@ function readStoredView(): View {
     return previewView
   }
 
+  const routeView = workspaceViewFromPathname(window.location.pathname)
+  if (routeView) return routeView
+
   try {
     const stored = readStoredValue(window.sessionStorage, viewStorageKey)
     return stored === 'today' || stored === 'upcoming' || stored === 'calendar' || stored === 'sticky' ? stored : 'today'
@@ -240,6 +246,32 @@ function rememberView(nextView: View) {
     window.sessionStorage.setItem(viewStorageKey, nextView)
   } catch {
     // Some browser contexts block storage, so we quietly keep going.
+  }
+}
+
+function workspaceViewFromPathname(pathname: string): View | null {
+  const normalized = pathname.replace(/\/+$/, '') || '/'
+  if (normalized === '/app' || normalized === '/workspace') return 'today'
+  if (normalized === '/app/upcoming') return 'upcoming'
+  if (normalized === '/app/calendar') return 'calendar'
+  if (normalized === '/app/community') return 'sticky'
+  return null
+}
+
+function workspacePathForView(nextView: View) {
+  if (nextView === 'upcoming') return '/app/upcoming'
+  if (nextView === 'calendar') return '/app/calendar'
+  if (nextView === 'sticky') return '/app/community'
+  return '/app'
+}
+
+function navigateWorkspaceView(nextView: View) {
+  rememberView(nextView)
+  const url = new URL(window.location.href)
+  const pathname = workspacePathForView(nextView)
+  if (url.pathname !== pathname) {
+    url.pathname = pathname
+    window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
   }
 }
 
@@ -409,6 +441,8 @@ let toast = googleAgentOAuthStatus === 'connected'
   : googleAgentOAuthStatus === 'error'
     ? 'Google could not be connected. Please try again.'
     : ''
+let toastTimer: number | undefined
+let observedToast = ''
 let calendarMode: CalendarMode = 'month'
 let calendarDate = new Date(now)
 let calendarComposer: { date: string; time: string; taskId?: string } | null = null
@@ -558,6 +592,20 @@ let browserPushBusy = false
 let islandCompletions: CreatorCompletion[] = []
 let queuedCompletions: CreatorCompletion[] = []
 let completionBatchTimer = 0
+const MAX_DESCRIPTION_RECORDING_MS = 2 * 60 * 1000
+let descriptionRecorder: MediaRecorder | null = null
+let descriptionRecordingTaskId: string | null = null
+let descriptionRecordingTimer: number | undefined
+let descriptionRecordingStartedAt = 0
+let descriptionRecordingStopPending = false
+let descriptionAudioContext: AudioContext | null = null
+let descriptionAudioSource: MediaStreamAudioSourceNode | null = null
+let descriptionAudioProcessor: ScriptProcessorNode | null = null
+let descriptionAudioSink: GainNode | null = null
+let descriptionPcmChunks: Float32Array[] = []
+let descriptionPcmSampleRate = 0
+let descriptionPcmPeak = 0
+let descriptionTranscribingTaskId: string | null = null
 let islandDismissTimer = 0
 let completionSubscription: (() => void) | null = null
 let agentRunSubscription: (() => void) | null = null
@@ -585,6 +633,7 @@ const icons: Record<string, string> = {
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.25 2.46 3.4 5.46 3.4 9S14.25 18.54 12 21c-2.25-2.46-3.4-5.46-3.4-9S9.75 5.46 12 3Z"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
+  mic: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M8.5 21h7"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
 }
 
@@ -855,7 +904,7 @@ function closeCreatorToday() {
   selectedCreatorTaskId = ''
   mobileInspectorOpen = false
   const url = new URL(window.location.href)
-  if (creatorSlugFromPathname(url.pathname)) url.pathname = '/'
+  if (creatorSlugFromPathname(url.pathname)) url.pathname = '/app/community'
   window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
   rememberView('sticky')
   render()
@@ -912,10 +961,46 @@ function clearAgentToast(expected: string) {
     if (toast !== expected) return
     toast = ''
     render()
-  }, 2400)
+  }, 1200)
+}
+
+function ensureToastDismissal() {
+  if (!toast) {
+    observedToast = ''
+    return
+  }
+  if (toast === observedToast) return
+  observedToast = toast
+  if (toastTimer !== undefined) window.clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => {
+    if (toast === observedToast) {
+      toast = ''
+      observedToast = ''
+      render()
+    }
+  }, 1200)
+}
+
+function showTransientToast(message: string, duration = 1200) {
+  toast = message
+  observedToast = message
+  if (toastTimer !== undefined) window.clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => {
+    if (toast === message) {
+      toast = ''
+      render()
+    }
+  }, duration)
+  render()
 }
 
 async function startAgentRun(task: Task, context = '') {
+  if (!roonCapabilityForTask(task)) {
+    toast = 'Roon cannot delegate this type of task yet.'
+    render()
+    clearAgentToast(toast)
+    return
+  }
   const existing = agentRuns.get(task.id)
   if (context && existing?.status === 'needs_context' && existing.durable && activeUser) {
     agentDecisionBusy.add(existing.id)
@@ -1048,6 +1133,26 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
     toast = updated.result?.paymentHandoffUrl ? 'Flight ready for you' : agentUpdateToast(updated)
   } catch (error) {
     toast = error instanceof Error ? error.message : 'Roon could not continue with this flight.'
+  } finally {
+    agentDecisionBusy.delete(run.id)
+    persistAgentRuns()
+    render()
+    if (toast) clearAgentToast(toast)
+  }
+}
+
+async function chooseAgentRecipient(taskId: string, recipientEmail: string) {
+  const run = agentRuns.get(taskId)
+  if (!run || agentDecisionBusy.has(run.id)) return
+  agentDecisionBusy.add(run.id)
+  render()
+  try {
+    const updated = await selectAgentRecipient(run.id, recipientEmail)
+    agentRuns.set(taskId, updated)
+    await syncAgentApproval(updated)
+    toast = agentUpdateToast(updated)
+  } catch (error) {
+    toast = error instanceof Error ? error.message : 'Roon could not select that recipient.'
   } finally {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
@@ -1258,6 +1363,7 @@ function render() {
     app.innerHTML = renderLanding()
     return
   }
+  ensureToastDismissal()
   refreshDateContext(now)
   refreshCounts()
   const todaySelection = tasksForToday()
@@ -2026,7 +2132,7 @@ function resolveCreatorIntent() {
   const target = communityProfiles.find(profile => profile.username === pendingCreatorSlug)
   if (!target) {
     if (communityState === 'ready') {
-      toast = `We could not find @${pendingCreatorSlug}.`
+      showTransientToast(`We could not find @${pendingCreatorSlug}.`)
       clearCreatorIntentFromUrl()
     }
     return
@@ -2039,7 +2145,7 @@ function resolveCreatorIntent() {
     return
   }
   if (target.followed) {
-    toast = `You already follow ${target.name}.`
+    showTransientToast(`You already follow ${target.name}.`)
     clearCreatorIntentFromUrl()
     void openCreatorToday(target)
     return
@@ -2471,10 +2577,15 @@ function renderTaskRow(task: Task, selected = false) {
           ${renderVisibilityIndicator(task.visibility)}
         </small>
       </button>
-      ${renderAgentPill(task)}
-      <button class="task-chevron" data-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
+      ${renderTaskTrailingAction(task)}
     </div>
   `
+}
+
+function renderTaskTrailingAction(task: Task) {
+  const agentAction = renderAgentPill(task)
+  if (agentAction) return `<div class="task-trailing-action">${agentAction}</div>`
+  return `<button class="task-chevron" data-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>`
 }
 
 function taskIsExecutableToday(task: Task) {
@@ -2484,6 +2595,7 @@ function taskIsExecutableToday(task: Task) {
 function renderAgentPill(task: Task) {
   const run = agentRuns.get(task.id)
   if (!taskIsExecutableToday(task)) return ''
+  if (!run && !roonCapabilityForTask(task)) return ''
   const displayStatus = isPreviewMode && previewAgentState !== 'error' && run?.status === 'failed' ? 'running' : run?.status
   const label =
     displayStatus === 'completed' ? (run?.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review') :
@@ -2498,7 +2610,7 @@ function renderAgentPill(task: Task) {
     displayStatus === 'completed' ? '<span aria-hidden="true">✓</span>' :
       ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '') ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
       `<span class="agent-icon-wrap">${agentSparkleIcon()}</span>`
-  return `<button type="button" class="task-agent-pill task-agent-pill--${displayStatus ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}">${mark}${label}</button>`
+  return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}" title="${label}">${mark}</button>`
 }
 
 function safeAgentUrl(value: string) {
@@ -2672,11 +2784,14 @@ function renderAgentPanel(task: Task) {
 
   if (run.status === 'needs_context') {
     const contextPrompt = run.waitingReason.trim() || 'Add the missing details to the task Description.'
+    const candidates = run.recipientResolution?.state === 'ambiguous'
+      ? (run.recipientResolution.candidates ?? []).filter(candidate => candidate.email)
+      : []
     return `<section class="task-agent-card task-agent-card--context">
       <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>Needs context</em></header>
       <p>${escapeHtml(contextPrompt)}</p>
-      <small>Add the answer in Description, then save. Roon will continue this same task.</small>
-      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button><button class="agent-primary" type="button" data-action="focus-task-description" data-task-id="${task.id}">Add details</button></footer>
+      ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${task.id}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. Roon will continue this same task.</small>` : `<small>Add the answer in Description, then save. Roon will continue this same task.</small>`}
+      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>${candidates.length ? '' : '<button class="agent-primary" type="button" data-action="focus-task-description" data-task-id="' + task.id + '">Add details</button>'}</footer>
     </section>`
   }
 
@@ -2721,13 +2836,21 @@ function renderInspector(task: Task) {
   }))
   task.subtaskItems = subtasks
   const goal = goals.find(item => item.id === task.goalId)
+  const recording = descriptionRecordingTaskId === task.id
+  const transcribing = descriptionTranscribingTaskId === task.id
   return `
     <aside class="inspector">
       <button type="button" class="inspector-close" data-action="close-inspector" aria-label="Close task details">${icon('chevron')}</button>
       <div class="inspector-content">
         <h2>Task:</h2>
         <input class="inspector-title" value="${escapeHtml(task.title)}" aria-label="Task title" />
-        <textarea class="inspector-description" aria-label="Description" placeholder="Description" rows="3">${escapeHtml(task.description ?? '')}</textarea>
+        <div class="inspector-description-wrap">
+          <textarea class="inspector-description" aria-label="Description" placeholder="Description" rows="3">${escapeHtml(task.description ?? '')}</textarea>
+          <button type="button" class="description-voice-input ${recording ? 'is-recording' : ''}" data-action="toggle-description-voice" aria-label="${recording ? 'Stop voice input' : transcribing ? 'Transcribing description' : 'Add voice input to description'}" aria-pressed="${recording}" ${transcribing ? 'disabled' : ''}>
+            ${recording ? '<span aria-hidden="true">■</span>' : transcribing ? '<span aria-hidden="true">…</span>' : icon('mic')}
+          </button>
+        </div>
+        ${renderInspectorRoonAction(task)}
 
         <div class="inspector-fields">
           <label><span>Goal</span><button data-action="cycle-goal">${escapeHtml(goal?.name ?? goals[0]?.name ?? 'No goal')} ${icon('down')}</button></label>
@@ -2754,6 +2877,13 @@ function renderInspector(task: Task) {
       </div>
     </aside>
   `
+}
+
+function renderInspectorRoonAction(task: Task) {
+  const run = agentRuns.get(task.id)
+  if (run && run.status !== 'failed' && run.status !== 'cancelled') return ''
+  if (!roonCapabilityForTask(task)) return ''
+  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${task.id}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Delegate to Roon</button>`
 }
 
 function renderSubtask(task: Task, subtask: NonNullable<Task['subtaskItems']>[number]) {
@@ -3403,7 +3533,7 @@ function selectedTask() {
 function persistInspectorDraft() {
   const task = selectedTask()
   if (!task) return
-  const title = document.querySelector<HTMLInputElement>('.inspector-title')?.value.trim()
+  const title = document.querySelector<HTMLInputElement>('.inspector-title')?.value?.trim()
   const description = document.querySelector<HTMLTextAreaElement>('.inspector textarea')?.value
   const due = document.querySelector<HTMLInputElement>('.inspector-date')?.value
   const time = document.querySelector<HTMLInputElement>('.inspector-time')?.value
@@ -3417,6 +3547,206 @@ function persistInspectorDraft() {
   }
   if (visibility !== undefined) task.visibility = normalizeTaskVisibility(visibility)
   persistPlanner()
+}
+
+async function startDescriptionPcmCapture(stream: MediaStream) {
+  const context = new AudioContext()
+  await context.resume()
+  const source = context.createMediaStreamSource(stream)
+  const processor = context.createScriptProcessor(4096, 1, 1)
+  const sink = context.createGain()
+  sink.gain.value = 0
+  descriptionPcmChunks = []
+  descriptionPcmSampleRate = context.sampleRate
+  descriptionPcmPeak = 0
+  processor.onaudioprocess = event => {
+    const input = event.inputBuffer.getChannelData(0)
+    const chunk = new Float32Array(input)
+    for (const sample of chunk) descriptionPcmPeak = Math.max(descriptionPcmPeak, Math.abs(sample))
+    descriptionPcmChunks.push(chunk)
+  }
+  source.connect(processor)
+  processor.connect(sink)
+  sink.connect(context.destination)
+  descriptionAudioContext = context
+  descriptionAudioSource = source
+  descriptionAudioProcessor = processor
+  descriptionAudioSink = sink
+}
+
+async function finishDescriptionPcmCapture() {
+  descriptionAudioProcessor?.disconnect()
+  descriptionAudioSource?.disconnect()
+  descriptionAudioSink?.disconnect()
+  if (descriptionAudioProcessor) descriptionAudioProcessor.onaudioprocess = null
+  await descriptionAudioContext?.close().catch(() => undefined)
+  descriptionAudioContext = null
+  descriptionAudioSource = null
+  descriptionAudioProcessor = null
+  descriptionAudioSink = null
+}
+
+function descriptionPcmWav() {
+  const sourceRate = descriptionPcmSampleRate || 48_000
+  const targetRate = 16_000
+  const sourceLength = descriptionPcmChunks.reduce((total, chunk) => total + chunk.length, 0)
+  const source = new Float32Array(sourceLength)
+  let sourceOffset = 0
+  for (const chunk of descriptionPcmChunks) {
+    source.set(chunk, sourceOffset)
+    sourceOffset += chunk.length
+  }
+  const ratio = sourceRate / targetRate
+  const sampleCount = Math.floor(source.length / ratio)
+  const buffer = new ArrayBuffer(44 + sampleCount * 2)
+  const view = new DataView(buffer)
+  const writeText = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index))
+  }
+  writeText(0, 'RIFF')
+  view.setUint32(4, 36 + sampleCount * 2, true)
+  writeText(8, 'WAVE')
+  writeText(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, targetRate, true)
+  view.setUint32(28, targetRate * 2, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  writeText(36, 'data')
+  view.setUint32(40, sampleCount * 2, true)
+  for (let index = 0; index < sampleCount; index += 1) {
+    const start = Math.floor(index * ratio)
+    const end = Math.max(start + 1, Math.floor((index + 1) * ratio))
+    let sample = 0
+    for (let cursor = start; cursor < end && cursor < source.length; cursor += 1) sample += source[cursor]
+    sample = Math.max(-1, Math.min(1, sample / (end - start)))
+    view.setInt16(44 + index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true)
+  }
+  return new Blob([buffer], { type: 'audio/wav' })
+}
+
+async function toggleDescriptionVoiceInput() {
+  const task = selectedTask()
+  if (!task) return
+  if (descriptionRecorder) {
+    if (
+      descriptionRecordingTaskId === task.id
+      && descriptionRecorder.state === 'recording'
+      && !descriptionRecordingStopPending
+    ) {
+      descriptionRecordingStopPending = true
+      // Flush audio still held by the encoder before stopping. Without this,
+      // short recordings can arrive as a valid container containing no speech.
+      descriptionRecorder.requestData()
+      window.setTimeout(() => {
+        if (descriptionRecorder?.state === 'recording') descriptionRecorder.stop()
+      }, 120)
+    }
+    return
+  }
+  // Keep typed text before a recording-state render replaces the inspector DOM.
+  persistInspectorDraft()
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    toast = 'Voice input is not available in this browser.'
+    render()
+    return
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    })
+    const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(type => MediaRecorder.isTypeSupported(type))
+    const recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128_000 })
+      : new MediaRecorder(stream, { audioBitsPerSecond: 128_000 })
+    const chunks: Blob[] = []
+    await startDescriptionPcmCapture(stream)
+    descriptionRecorder = recorder
+    descriptionRecordingTaskId = task.id
+    descriptionRecordingStartedAt = Date.now()
+    descriptionRecordingStopPending = false
+    recorder.addEventListener('dataavailable', event => { if (event.data.size) chunks.push(event.data) })
+    recorder.addEventListener('stop', () => void finishDescriptionVoiceInput(task.id, stream, chunks, recorder.mimeType))
+    // Periodic chunks make short dictation reliable across Chromium and WebKit.
+    recorder.start(250)
+    void prepareDescriptionTranscription()
+    descriptionRecordingTimer = window.setTimeout(() => {
+      toast = 'Recording stopped after two minutes.'
+      if (recorder.state === 'recording') recorder.stop()
+    }, MAX_DESCRIPTION_RECORDING_MS)
+    render()
+  } catch (error) {
+    toast = error instanceof DOMException && error.name === 'NotAllowedError'
+      ? 'Microphone access is needed for voice input.'
+      : 'We could not start the microphone. Try again or type your description.'
+    render()
+  }
+}
+
+async function finishDescriptionVoiceInput(taskId: string, stream: MediaStream, chunks: Blob[], mimeType: string) {
+  const recordingDuration = Date.now() - descriptionRecordingStartedAt
+  await finishDescriptionPcmCapture()
+  stream.getTracks().forEach(track => track.stop())
+  if (descriptionRecordingTimer !== undefined) window.clearTimeout(descriptionRecordingTimer)
+  descriptionRecordingTimer = undefined
+  descriptionRecorder = null
+  descriptionRecordingTaskId = null
+  descriptionRecordingStartedAt = 0
+  descriptionRecordingStopPending = false
+  if (recordingDuration < 600) {
+    toast = 'Keep the microphone on while you speak, then tap it again to finish.'
+    render()
+    return
+  }
+  const pcmAudio = descriptionPcmChunks.length ? descriptionPcmWav() : null
+  const capturedPeak = descriptionPcmPeak
+  descriptionPcmChunks = []
+  descriptionPcmSampleRate = 0
+  descriptionPcmPeak = 0
+  if (capturedPeak < 0.0005) {
+    toast = 'The selected microphone is sending silence. Check your browser microphone input and try again.'
+    render()
+    return
+  }
+  if (!pcmAudio && !chunks.length) {
+    toast = 'No audio was captured. Please try again.'
+    render()
+    return
+  }
+  const audio = pcmAudio ?? new Blob(chunks, { type: mimeType || chunks[0]?.type || 'audio/webm' })
+  if (!audio.size) {
+    toast = 'No audio was captured. Please try again.'
+    render()
+    return
+  }
+  descriptionTranscribingTaskId = taskId
+  render()
+  try {
+    const transcript = await transcribeDescriptionAudio(audio)
+    const task = tasks.find(item => item.id === taskId)
+    if (task) {
+      task.description = appendTranscript(task.description ?? '', transcript)
+      persistPlanner()
+    }
+    descriptionTranscribingTaskId = null
+    render()
+    queueMicrotask(() => {
+      const field = document.querySelector<HTMLTextAreaElement>('.inspector-description')
+      field?.focus()
+      field?.setSelectionRange(field.value.length, field.value.length)
+    })
+  } catch (error) {
+    descriptionTranscribingTaskId = null
+    toast = error instanceof Error ? error.message : 'Transcription failed. Please try again.'
+    render()
+  }
 }
 
 function openCalendarComposer(date = calendarDateKey(), time = '09:00', taskId?: string) {
@@ -3721,6 +4051,13 @@ app.addEventListener('input', event => {
   }
 })
 
+app.addEventListener('focusout', event => {
+  const target = event.target as HTMLElement
+  if (target.closest('.inspector-title, .inspector-description, .inspector-date, .inspector-time')) {
+    persistInspectorDraft()
+  }
+})
+
 app.addEventListener('change', event => {
   const profilePhoto = (event.target as HTMLElement).closest<HTMLInputElement>('[data-profile-photo]')
   if (profilePhoto) {
@@ -3866,6 +4203,8 @@ app.addEventListener('click', async event => {
 
   const nextView = target.closest<HTMLElement>('[data-view]')?.dataset.view as View | undefined
   if (nextView) {
+    persistInspectorDraft()
+    pendingCreatorSlug = ''
     creatorTodayState = null
     mobileInspectorOpen = false
     if (nextView !== 'calendar') {
@@ -3876,7 +4215,7 @@ app.addEventListener('click', async event => {
       todayGoalCreatorOpen = false
       resetTodayComposerDraft()
     }
-    rememberView(nextView)
+    navigateWorkspaceView(nextView)
     render()
     if (nextView === 'calendar') void populateGoogleCalendarForExistingUser()
     return
@@ -3935,7 +4274,7 @@ app.addEventListener('click', async event => {
     selectedTaskId = task.id
     mobileInspectorOpen = true
     const run = agentRuns.get(task.id)
-    if (!run || run.status === 'failed' || run.status === 'cancelled') void startAgentRun(task)
+    if ((!run || run.status === 'failed' || run.status === 'cancelled') && roonCapabilityForTask(task)) void startAgentRun(task)
     else render()
     return
   }
@@ -3953,6 +4292,7 @@ app.addEventListener('click', async event => {
 
   const taskId = target.closest<HTMLElement>('[data-task]')?.dataset.task
   if (taskId) {
+    persistInspectorDraft()
     selectedTaskId = taskId
     mobileInspectorOpen = true
     render()
@@ -4008,6 +4348,11 @@ app.addEventListener('click', async event => {
     return
   }
 
+  if (action === 'toggle-description-voice') {
+    void toggleDescriptionVoiceInput()
+    return
+  }
+
   if (action === 'approve-agent-approval' || action === 'reject-agent-approval') {
     const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
     if (taskId) {
@@ -4021,6 +4366,14 @@ app.addEventListener('click', async event => {
     const taskId = control?.dataset.taskId
     const optionId = control?.dataset.flightOptionId
     if (taskId && optionId) void chooseAgentFlight(taskId, optionId)
+    return
+  }
+
+  if (action === 'select-agent-recipient') {
+    const control = target.closest<HTMLElement>('[data-recipient-email]')
+    const taskId = control?.dataset.taskId
+    const recipientEmail = control?.dataset.recipientEmail
+    if (taskId && recipientEmail) void chooseAgentRecipient(taskId, recipientEmail)
     return
   }
 
@@ -4220,6 +4573,7 @@ app.addEventListener('click', async event => {
     return
   }
   if (action === 'close-inspector') {
+    persistInspectorDraft()
     mobileInspectorOpen = false
     render()
     return

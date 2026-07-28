@@ -355,6 +355,15 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'contacts.resolve_recipient',
+    description: 'Deterministically resolve one named email recipient before drafting. It checks Contacts first, then only Gmail From/To headers and Sent history. It returns explicit, resolved_single, ambiguous, not_found, or provider_unavailable; never guess when ambiguous.',
+    parameters: objectSchema({
+      recipient: stringValue('The person name or explicit email address from the user’s task.', 300),
+    }, ['recipient']),
+    strict: true,
+  },
+  {
+    type: 'function',
     name: 'calendar.list_events',
     description: 'List connected calendar events in a bounded time window.',
     parameters: objectSchema({
@@ -562,6 +571,7 @@ const policies: Record<string, ToolPolicy> = {
   'gmail.send_message': { risk: 'external_write', approvalKind: 'send_email' },
   'gmail.wait_for_reply': { risk: 'read', approvalKind: null },
   'contacts.find_contact': { risk: 'read', approvalKind: null },
+  'contacts.resolve_recipient': { risk: 'read', approvalKind: null },
   'calendar.list_events': { risk: 'read', approvalKind: null },
   'calendar.get_availability': { risk: 'read', approvalKind: null },
   'calendar.create_event': { risk: 'external_write', approvalKind: 'calendar_write' },
@@ -708,6 +718,8 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         Number.isInteger(value.max_results) &&
         Number(value.max_results) >= 1 &&
         Number(value.max_results) <= 10
+    case 'contacts.resolve_recipient':
+      return validateString(value.recipient, 300)
     case 'calendar.list_events':
       return validateIso(value.time_min) &&
         validateIso(value.time_max) &&

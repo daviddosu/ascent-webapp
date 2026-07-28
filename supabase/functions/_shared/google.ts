@@ -910,6 +910,85 @@ async function contactsFind(admin: AdminClient, userId: string, argumentsValue: 
   }
 }
 
+function recipientEmail(value: string) {
+  const match = value.match(/<([^>\s]+@[^>\s]+)>/)?.[1] ?? value.trim()
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(match) ? match.toLocaleLowerCase() : ''
+}
+
+function normalizedPersonName(value: string) {
+  return value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ')
+}
+
+async function gmailRecipientHeaderMatches(
+  admin: AdminClient,
+  userId: string,
+  query: string,
+) {
+  // Gmail's from:/to: operators constrain this lookup to message headers. We
+  // deliberately do not use message bodies as recipient identity evidence.
+  const searches = await Promise.all([
+    gmailSearch(admin, userId, `from:"${query.replaceAll('"', '')}"`, 10),
+    gmailSearch(admin, userId, `in:sent to:"${query.replaceAll('"', '')}"`, 10),
+  ])
+  const seen = new Set<string>()
+  const matches: Array<{ email: string; name: string; thread_id: string; evidence: string }> = []
+  for (const search of searches) {
+    for (const message of search.messages) {
+      if (!message.id || seen.has(message.id)) continue
+      seen.add(message.id)
+      const gmailMessage = await googleRequest<GmailMessage>(
+        admin,
+        userId,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(message.id)}?format=metadata&metadataHeaders=From&metadataHeaders=To`,
+      )
+      for (const [header, evidence] of [[headerValue(gmailMessage, 'From'), 'gmail_from_header'], [headerValue(gmailMessage, 'To'), 'gmail_sent_to_header']] as const) {
+        const email = recipientEmail(header)
+        if (!email || !normalizedPersonName(header).includes(normalizedPersonName(query))) continue
+        matches.push({ email, name: header.replace(/<[^>]+>/, '').trim() || query, thread_id: message.thread_id, evidence })
+      }
+    }
+  }
+  return matches
+}
+
+async function resolveRecipient(admin: AdminClient, userId: string, recipient: string) {
+  const explicit = recipientEmail(recipient)
+  if (explicit) return { state: 'explicit', recipient: explicit, email: explicit, evidence: 'task_explicit_email', candidates: [] }
+  const query = recipient.trim()
+  try {
+    const contactResult = await contactsFind(admin, userId, { query, max_results: 10 })
+    const exactContacts = contactResult.contacts.filter(contact =>
+      normalizedPersonName(String(contact.name ?? '')) === normalizedPersonName(query),
+    )
+    const contactCandidates = exactContacts.flatMap(contact =>
+      (Array.isArray(contact.emails) ? contact.emails : []).map(email => ({
+        email: recipientEmail(String(email)), name: String(contact.name ?? query), thread_id: '', evidence: 'google_contact',
+      })).filter(candidate => candidate.email),
+    )
+    const uniqueContacts = [...new Map(contactCandidates.map(candidate => [candidate.email, candidate])).values()]
+    if (uniqueContacts.length === 1) {
+      const candidate = uniqueContacts[0]
+      return { state: 'resolved_single', recipient: query, email: candidate.email, evidence: candidate.evidence, thread_id: '', candidates: uniqueContacts }
+    }
+    if (uniqueContacts.length > 1) {
+      return { state: 'ambiguous', recipient: query, candidates: uniqueContacts }
+    }
+    const headerCandidates = await gmailRecipientHeaderMatches(admin, userId, query)
+    const uniqueHeaders = [...new Map(headerCandidates.map(candidate => [candidate.email, candidate])).values()]
+    if (uniqueHeaders.length === 1) {
+      const candidate = uniqueHeaders[0]
+      return { state: 'resolved_single', recipient: query, email: candidate.email, evidence: candidate.evidence, thread_id: candidate.thread_id, candidates: uniqueHeaders }
+    }
+    if (uniqueHeaders.length > 1) return { state: 'ambiguous', recipient: query, candidates: uniqueHeaders }
+    return { state: 'not_found', recipient: query, candidates: [] }
+  } catch (error) {
+    if (error instanceof GoogleIntegrationError) {
+      return { state: 'provider_unavailable', recipient: query, candidates: [], provider_error_code: error.code }
+    }
+    throw error
+  }
+}
+
 export async function executeGoogleTool(
   admin: AdminClient,
   userId: string,
@@ -941,6 +1020,11 @@ export async function executeGoogleTool(
     case 'contacts.find_contact': {
       const value = await contactsFind(admin, userId, argumentsValue)
       return { value, publicSummary: `Found ${value.contacts.length} matching contacts.` }
+    }
+    case 'contacts.resolve_recipient': {
+      const value = await resolveRecipient(admin, userId, String(argumentsValue.recipient))
+      const state = String(value.state).replaceAll('_', ' ')
+      return { value, publicSummary: `Recipient resolution: ${state}.` }
     }
     case 'calendar.list_events': {
       const value = await calendarListEvents(admin, userId, argumentsValue)

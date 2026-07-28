@@ -22,6 +22,7 @@ const allowedTools = new Set([
   'gmail.create_draft',
   'gmail.send_message',
   'contacts.find_contact',
+  'contacts.resolve_recipient',
   'calendar.list_events',
   'calendar.get_availability',
   'calendar.create_event',
