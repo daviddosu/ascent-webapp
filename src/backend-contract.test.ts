@@ -33,6 +33,7 @@ const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf
 const publicBrowser = readFileSync(resolve(root, 'api/_public-browser.ts'), 'utf8')
 const agentClient = readFileSync(resolve(root, 'src/data/agent.ts'), 'utf8')
 const mainUi = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
+const transcriptionFunction = readFileSync(resolve(root, 'supabase/functions/transcribe-description/index.ts'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -86,6 +87,19 @@ describe('database security contract', () => {
     ]) {
       expect(migration).toContain(`create index ${index}`)
     }
+  })
+})
+
+describe('description transcription contract', () => {
+  it('keeps OpenAI transcription server-side and requires an authenticated user', () => {
+    expect(transcriptionFunction).toContain("Deno.env.get('OPENAI_API_KEY')")
+    expect(transcriptionFunction).toContain('userClient.auth.getUser()')
+    expect(transcriptionFunction).toContain('gpt-4o-mini-transcribe')
+    expect(transcriptionFunction).toContain('MAX_AUDIO_BYTES')
+  })
+
+  it('does not expose the transcription secret in browser code', () => {
+    expect(mainUi).not.toContain('OPENAI_API_KEY')
   })
 })
 

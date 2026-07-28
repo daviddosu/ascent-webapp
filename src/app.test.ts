@@ -84,9 +84,20 @@ describe('reference screens', () => {
     expect(document.querySelector('.today-task-group--today h2')?.textContent).toBe('Today')
     expect(document.querySelectorAll('.today-task-group--today .task-row')).toHaveLength(4)
     expect(document.querySelector('.inspector-title')?.getAttribute('value')).toBe("Renew driver's license")
-    expect(document.querySelector('.task-row.selected .task-agent-pill')?.textContent).toContain('Delegate')
+    expect(document.querySelector('.task-row.selected .task-agent-icon')?.getAttribute('aria-label')).toContain('Delegate')
     expect(document.querySelector('.inspector .task-agent-card')).toBeNull()
     expect(document.querySelector<HTMLTextAreaElement>('.inspector-description')?.rows).toBe(3)
+    expect(document.querySelector<HTMLButtonElement>('[data-action="toggle-description-voice"]')?.getAttribute('aria-label')).toBe('Add voice input to description')
+    expect(document.querySelector<HTMLButtonElement>('[data-action="delegate-task"]')?.textContent).toContain('Delegate to Roon')
+  })
+
+  it('persists description edits when the field loses focus', () => {
+    const description = document.querySelector<HTMLTextAreaElement>('.inspector-description')!
+    description.value = 'Shortened description'
+    description.dispatchEvent(new Event('input', { bubbles: true }))
+    description.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    const stored = JSON.parse(window.localStorage.getItem('shotcount-workspace-current-v1:planner') ?? '[]') as Array<{ id: string; description?: string }>
+    expect(stored.find(task => task.id === 'license')?.description).toBe('Shortened description')
   })
 
   it('keeps manual creation separate from the Ask Roon planner', () => {
@@ -271,7 +282,7 @@ describe('reference screens', () => {
     expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-row.selected')).not.toBeNull()
     expect(document.querySelector('.inspector .task-agent-card')).toBeNull()
     expect(document.querySelector('.inspector [data-action="delegate-task"]')).toBeNull()
-    expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-agent-pill')).toBeNull()
+    expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-agent-icon')).toBeNull()
   })
 
   it('routes a future-dated task from Today into This Week', () => {
@@ -527,6 +538,7 @@ describe('reference screens', () => {
 
   it('opens Community and can follow a profile', async () => {
     document.querySelector<HTMLButtonElement>('[data-view="sticky"]')!.click()
+    expect(window.location.pathname).toBe('/app/community')
     expect(document.querySelector('.community-title h1')?.textContent).toBe('Community')
     expect(document.querySelectorAll('.spotlight-card')).toHaveLength(1)
     expect(document.querySelector('.spotlight-card .community-launch-popover h4')?.textContent).toBe('Amara Okafor')
@@ -547,14 +559,17 @@ describe('reference screens', () => {
     expect(document.querySelector('.creator-today-screen input, .creator-today-screen textarea, .creator-today-screen select')).toBeNull()
     expect(window.location.pathname).toBe('/maya')
 
-    document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
+    document.querySelector<HTMLButtonElement>('[data-view="today"]')!.click()
+    expect(window.location.pathname).toBe('/app')
+    expect(document.querySelector('.today-screen .screen-title h1')?.textContent).toBe('Today')
+    document.querySelector<HTMLButtonElement>('[data-view="sticky"]')!.click()
     document.querySelector<HTMLButtonElement>('[data-follow="maya"]')!.click()
     await vi.waitFor(() => {
       expect(document.querySelector('[data-follow="maya"]')?.getAttribute('aria-pressed')).toBe('true')
     })
   })
 
-  it('shows one Shotcount Island and opens its creator’s read-only Today screen', () => {
+  it('keeps completion updates out of the workspace after the Island is deactivated', () => {
     const hook = window as Window & { __shotcountShowCompletion?: (items?: Array<Record<string, unknown>>) => void }
     hook.__shotcountShowCompletion?.([{
       id: 'amara-complete',
@@ -568,20 +583,10 @@ describe('reference screens', () => {
       taskTitle: 'Approve the onboarding flow',
     }])
 
-    expect(document.querySelectorAll('.shotcount-island')).toHaveLength(1)
-    expect(document.querySelector('.island-identity strong')?.textContent).toBe('Amara Okafor')
-    expect(document.querySelector('.island-task strong')?.textContent).toBe('Approve the onboarding flow')
-    expect(document.querySelector('.island-portrait .community-portrait-art')).not.toBeNull()
-    expect(document.querySelector('.shotcount-island')?.textContent).toContain('6/6')
-    document.querySelector<HTMLButtonElement>('.shotcount-island')!.click()
-    expect(document.querySelector('.creator-today-screen .screen-title h1')?.textContent).toBe('Today')
-    expect(document.querySelector('.creator-context-row')?.textContent).toContain('Amara Okafor')
-    expect(document.querySelector('[data-action="add-task"]')).toBeNull()
     expect(document.querySelector('.shotcount-island')).toBeNull()
-    document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
   })
 
-  it('combines several completion alerts into one Island', () => {
+  it('does not render batched completion Islands', () => {
     const hook = window as Window & { __shotcountShowCompletion?: (items?: Array<Record<string, unknown>>) => void }
     hook.__shotcountShowCompletion?.([
       { id: 'batch-amara', creatorId: 'amara', username: 'amara', displayName: 'Amara Okafor', avatarUrl: '', completedCount: 6, totalCount: 6, completedAt: new Date().toISOString() },
@@ -589,12 +594,7 @@ describe('reference screens', () => {
       { id: 'batch-maya', creatorId: 'maya', username: 'maya', displayName: 'Maya Raman', avatarUrl: '', completedCount: 3, totalCount: 3, completedAt: new Date().toISOString() },
     ])
 
-    expect(document.querySelectorAll('.shotcount-island')).toHaveLength(1)
-    expect(document.querySelector('.shotcount-island')?.textContent).toContain('Amara and 2 others completed today')
-    expect(document.querySelector('.island-result strong')?.textContent).toBe('3')
-    expect(document.querySelector('.island-result small')?.textContent).toBe('PEOPLE')
-    document.querySelector<HTMLButtonElement>('.shotcount-island')!.click()
-    document.querySelector<HTMLButtonElement>('[data-action="close-creator-today"]')!.click()
+    expect(document.querySelector('.shotcount-island')).toBeNull()
   })
 
   it('keeps creator muting on the creator page without a notification settings screen', async () => {

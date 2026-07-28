@@ -211,4 +211,42 @@ describe('cloud planner repository', () => {
     expect(state).toBe('saved')
     expect(saved.tasks[0]?.completedAt).toBe('2026-07-14T14:30:00.000Z')
   })
+
+  it('does not overwrite a newer description edit with an older cloud snapshot', async () => {
+    const cloud = new MemoryCloud()
+    const repository = new CloudPlannerRepository({
+      userId: 'description-race-user', storage: new MemoryStorage(), adapter: cloud,
+      now: clock(Date.UTC(2026, 6, 14, 15)), isOnline: () => true,
+    })
+    const local = await repository.initialize(workspace())
+
+    let blockRead = false
+    let releaseRead: (() => void) | undefined
+    let notifyRead: (() => void) | undefined
+    const readBlocked = new Promise<void>(resolve => { notifyRead = resolve })
+    const readRelease = new Promise<void>(resolve => { releaseRead = resolve })
+    const listRecords = cloud.listRecords.bind(cloud)
+    cloud.listRecords = async userId => {
+      const snapshot = await listRecords(userId)
+      if (blockRead) {
+        blockRead = false
+        notifyRead?.()
+        await readRelease
+      }
+      return snapshot
+    }
+
+    local.tasks[0]!.description = 'Transcript text'
+    blockRead = true
+    repository.save(local)
+    await readBlocked
+
+    local.tasks[0]!.description = 'Edited description'
+    repository.save(local)
+    releaseRead?.()
+
+    await repository.syncNow()
+    const saved = await repository.refresh()
+    expect(saved.tasks[0]?.description).toBe('Edited description')
+  })
 })

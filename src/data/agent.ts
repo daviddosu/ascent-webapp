@@ -375,6 +375,16 @@ export function decideAgentApproval(approval: AgentApproval, decision: 'approve'
   }, 'Roon could not apply this approval decision.')
 }
 
+export function editAgentEmailApproval(approval: AgentApproval, subject: string, emailBody: string) {
+  return invokeRunAction({
+    action: 'edit_email_approval',
+    approvalId: approval.id,
+    approvalVersion: approval.version,
+    emailSubject: subject,
+    emailBody,
+  }, 'Roon could not save the edited email.')
+}
+
 export async function subscribeToAgentRuns(onChange: () => void) {
   const client = await getCloudClient()
   const user = await currentUser()

@@ -256,6 +256,7 @@ export class CloudPlannerRepository implements PlannerRepository {
   private unsubscribe: (() => void) | null = null
   private state: SyncState = { status: 'loading', message: 'Loading your workspace…', pending: 0 }
   private syncing: Promise<void> | null = null
+  private saveRevision = 0
 
   constructor(options: PlannerSyncOptions) {
     this.options = options
@@ -397,6 +398,7 @@ export class CloudPlannerRepository implements PlannerRepository {
   }
 
   save(workspace: PlannerWorkspace) {
+    this.saveRevision += 1
     this.queueWorkspace(workspace)
     if (!this.pending.length) return
     if (!this.online()) {
@@ -428,11 +430,23 @@ export class CloudPlannerRepository implements PlannerRepository {
       }
       try {
         if (this.pending.length) this.setState('saving', 'Saving…')
-        await this.flushPending()
-        this.records = await this.options.adapter.listRecords(this.options.userId)
-        this.writeCache()
-        this.setState('saved', 'Saved to cloud')
-        this.notifyWorkspace()
+        let observedRevision = this.saveRevision
+        while (true) {
+          await this.flushPending()
+          const remote = await this.options.adapter.listRecords(this.options.userId)
+          // A save can happen while the cloud read is in flight. Do not render
+          // that older snapshot over the new local edit; sync again first.
+          if (this.pending.length || observedRevision !== this.saveRevision) {
+            this.records = remote
+            observedRevision = this.saveRevision
+            continue
+          }
+          this.records = remote
+          this.writeCache()
+          this.setState('saved', 'Saved to cloud')
+          this.notifyWorkspace()
+          break
+        }
       } catch (error) {
         this.writeCache()
         this.setState('failed', error instanceof Error ? error.message : 'Cloud save failed')

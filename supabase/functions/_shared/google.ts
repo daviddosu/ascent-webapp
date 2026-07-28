@@ -435,6 +435,69 @@ async function gmailCreateDraft(
   }
 }
 
+export async function updatePreparedGmailDraft(
+  admin: AdminClient,
+  userId: string,
+  draftId: string,
+  subjectValue: string,
+  bodyValue: string,
+) {
+  const draftRecord = await preparedDraftRecord(admin, userId, draftId)
+  if (!draftRecord?.arguments || !draftRecord.output) {
+    throw new GoogleIntegrationError('gmail_draft_record_missing', 'The prepared Gmail draft is no longer available.', false)
+  }
+  if (draftRecord.arguments.benchmark_attachment_name || draftRecord.arguments.benchmark_attachment_base64) {
+    throw new GoogleIntegrationError('gmail_draft_attachment_edit_unsupported', 'Drafts with attachments cannot be edited here yet.', false)
+  }
+  const to = (draftRecord.arguments.to as string[]).map(safeHeader)
+  const subject = safeHeader(subjectValue).trim()
+  const bodyText = String(bodyValue ?? '').trim().replace(/\r?\n/g, '\r\n')
+  if (!subject) throw new GoogleIntegrationError('gmail_subject_required', 'Add an email subject before sending.', false)
+  if (!bodyText) throw new GoogleIntegrationError('gmail_body_required', 'Add an email body before sending.', false)
+  const threadId = draftRecord.arguments.thread_id as string | null
+  const reply = await replyHeaders(admin, userId, draftRecord.arguments.in_reply_to_message_id as string | null)
+  const messageIdHeader = safeHeader(draftRecord.output.message_id_header)
+  const headers = [
+    `To: ${to.join(', ')}`,
+    `Subject: ${encodeHeader(subject)}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: 8bit',
+    ...(messageIdHeader ? [`Message-ID: ${messageIdHeader}`] : []),
+    ...(reply.inReplyTo ? [`In-Reply-To: ${reply.inReplyTo}`] : []),
+    ...(reply.references ? [`References: ${reply.references}`] : []),
+  ]
+  const raw = base64UrlEncode(`${headers.join('\r\n')}\r\n\r\n${bodyText}`)
+  const updated = await googleRequest<GmailDraft>(
+    admin,
+    userId,
+    `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({
+        id: draftId,
+        message: {
+          raw,
+          ...(threadId ? { threadId } : {}),
+        },
+      }),
+    },
+  )
+  if (!updated.id || !updated.message) {
+    throw new GoogleIntegrationError('gmail_draft_update_unconfirmed', 'Gmail did not confirm the draft update.')
+  }
+  return {
+    draft_id: updated.id,
+    message_id: updated.message.id ?? '',
+    thread_id: updated.message.threadId ?? threadId ?? '',
+    message_id_header: messageIdHeader,
+    to,
+    subject,
+    body_text: bodyText,
+    already_created: true,
+  }
+}
+
 function normalizedEmails(value: string) {
   return value
     .split(',')

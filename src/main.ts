@@ -63,6 +63,7 @@ import {
   cancelAgentRunRemote,
   createAgentRun,
   decideAgentApproval,
+  editAgentEmailApproval,
   executeAgentRun,
   generateRoonPlan,
   loadAgentApprovals,
@@ -612,6 +613,7 @@ let agentRunSubscription: (() => void) | null = null
 let lastCompletionCheck = new Date(Date.now() - 15_000).toISOString()
 let notificationAudioContext: AudioContext | null = null
 const islandPreview = previewParams.get('previewIsland')
+const dynamicIslandEnabled = false
 const islandHook = window as Window & {
   __shotcountShowCompletion?: (items?: CreatorCompletion[]) => void
 }
@@ -790,6 +792,7 @@ function playShotcountChime() {
 }
 
 function queueCompletionAlerts(items: CreatorCompletion[], immediate = false) {
+  if (!dynamicIslandEnabled) return
   if (!notificationPreferences.completionAlerts || isQuietTime()) return
   const knownIds = new Set([...queuedCompletions, ...islandCompletions].map(item => item.id))
   const allowed = items.filter(item => !knownIds.has(item.id) && !notificationPreferences.mutedCreatorIds.includes(item.creatorId))
@@ -825,6 +828,21 @@ async function startNotificationSystem() {
   }
 }
 
+function applyCompletedAgentTasks(runs: AgentRun[]) {
+  let changed = false
+  for (const run of runs) {
+    if (run.status !== 'completed') continue
+    const task = tasks.find(item => item.id === run.taskId)
+    if (!task || task.completedAt) continue
+    task.completedAt = run.updatedAt || new Date().toISOString()
+    completedTaskIds.add(task.id)
+    changed = true
+  }
+  if (!changed) return
+  persistPlanner()
+  refreshCounts()
+}
+
 async function refreshAgentRuns() {
   if (!activeUser) return
   try {
@@ -836,6 +854,7 @@ async function refreshAgentRuns() {
     )).flat().filter(approval => approval.status === 'pending')
     agentRuns.clear()
     durableRuns.forEach(run => agentRuns.set(run.taskId, run))
+    applyCompletedAgentTasks(durableRuns)
     agentApprovals.clear()
     pendingApprovals.forEach(approval => agentApprovals.set(approval.runId, approval))
     persistAgentRuns()
@@ -1092,11 +1111,31 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
   const run = agentRuns.get(taskId)
   const approval = run ? agentApprovals.get(run.id) : null
   if (!run || !approval || agentDecisionBusy.has(approval.id)) return
+  const editedSubject = approval.kind === 'send_email'
+    ? document.querySelector<HTMLInputElement>(`[data-agent-email-subject="${taskId}"]`)?.value.trim() ?? ''
+    : ''
+  const editedBody = approval.kind === 'send_email'
+    ? document.querySelector<HTMLTextAreaElement>(`[data-agent-email-body="${taskId}"]`)?.value.trim() ?? ''
+    : ''
   agentDecisionBusy.add(approval.id)
   render()
   try {
-    const updated = await decideAgentApproval(approval, decision)
+    let approvalToDecide = approval
+    if (decision === 'approve' && approval.kind === 'send_email') {
+      if (!editedSubject || !editedBody) throw new Error('Add both a subject and email body before sending.')
+      const currentSubject = String(approvalPreviewValue(approval, 'subject') ?? '').trim()
+      const currentBody = String(approvalPreviewValue(approval, 'body_text') ?? '').trim()
+      if (editedSubject !== currentSubject || editedBody !== currentBody) {
+        await editAgentEmailApproval(approval, editedSubject, editedBody)
+        const refreshed = (await loadAgentApprovals(run.id)).find(item => item.status === 'pending')
+        if (!refreshed) throw new Error('The edited email approval could not be reloaded.')
+        agentApprovals.set(run.id, refreshed)
+        approvalToDecide = refreshed
+      }
+    }
+    const updated = await decideAgentApproval(approvalToDecide, decision)
     agentRuns.set(taskId, updated)
+    applyCompletedAgentTasks([updated])
     agentApprovals.delete(run.id)
     await syncAgentApproval(updated)
     toast = decision === 'approve'
@@ -1417,7 +1456,7 @@ function render() {
       ${showCreatorInspector && creatorSelected ? renderCreatorInspector(creatorSelected) : ''}
     </div>
     <div class="toast ${toast ? 'show' : ''}" role="status">${escapeHtml(toast)}</div>
-    ${renderAgentIsland() || renderShotcountIsland()}
+    ${dynamicIslandEnabled ? renderAgentIsland() || renderShotcountIsland() : ''}
     ${renderDailyPlanningPrompt()}
     ${renderProfileModal()}
     ${renderRoonPlanner()}
@@ -2613,9 +2652,11 @@ function renderAgentPill(task: Task) {
   if (!taskIsExecutableToday(task)) return ''
   if (!run && !roonCapabilityForTask(task)) return ''
   const displayStatus = isPreviewMode && previewAgentState !== 'error' && run?.status === 'failed' ? 'running' : run?.status
+  // Task completion is already shown by the normal checkbox. Do not add a
+  // second Roon-specific completion control to the same row.
+  if (displayStatus === 'completed') return ''
   const label =
-    displayStatus === 'completed' ? (run?.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review') :
-      displayStatus === 'planning' || displayStatus === 'running' ? 'In progress' :
+    displayStatus === 'planning' || displayStatus === 'running' ? 'In progress' :
         displayStatus === 'needs_approval' ? 'Approval needed' :
           displayStatus === 'waiting_external' ? 'Waiting' :
             displayStatus === 'waiting_for_user' ? 'Needs you' :
@@ -2623,7 +2664,6 @@ function renderAgentPill(task: Task) {
           displayStatus === 'failed' ? 'Needs attention' :
             'Delegate'
   const mark = displayStatus === 'planning' || displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
-    displayStatus === 'completed' ? '<span aria-hidden="true">✓</span>' :
       ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '') ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
       `<span class="agent-icon-wrap">${agentSparkleIcon()}</span>`
   return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}" title="${label}">${mark}</button>`
@@ -2724,7 +2764,9 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
     <p>${escapeHtml(approval.title)}</p>
     <div class="task-agent-approval-detail">
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
-      ${title ? `<dl><dt>${approval.kind === 'calendar_write' ? 'Event' : 'Subject'}</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
+      ${title ? approval.kind === 'send_email'
+        ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${task.id}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject"></label>`
+        : `<dl><dt>Event</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
       ${startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
       ${destination ? `<dl><dt>Page</dt><dd>${escapeHtml(String(destination))}</dd></dl>` : ''}
       ${browserTarget ? `<dl><dt>Submit</dt><dd>${escapeHtml(String(browserTarget))}</dd></dl>` : ''}
@@ -2733,7 +2775,9 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
         const value = item as Record<string, unknown>
         return `<dl><dt>${escapeHtml(String(value.field ?? 'Field'))}</dt><dd>${escapeHtml(String(value.value ?? ''))}</dd></dl>`
       }).join('') : ''}
-      ${body ? `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
+      ${body ? approval.kind === 'send_email'
+        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${task.id}" rows="9" maxlength="20000" aria-label="Email body">${escapeHtml(String(body))}</textarea></label>`
+        : `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
     </div>
     <small>Only this exact action is approved. Any change requires a new review.</small>
     <footer>

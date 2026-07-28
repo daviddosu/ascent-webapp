@@ -11,6 +11,7 @@ import {
 import {
   executeGoogleTool,
   GoogleIntegrationError,
+  updatePreparedGmailDraft,
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, needsSharedAgentContext } from '../_shared/agent-intent.ts'
 import { browserFailureClass, canonicalFlightSearch, isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
@@ -21,10 +22,12 @@ import {
 } from '../_shared/schedule-notification.ts'
 
 type RequestBody = {
-  action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'cancel' | 'select_flight' | 'select_recipient' | 'simulate_reply' | 'plan_tasks'
+  action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'edit_email_approval' | 'cancel' | 'select_flight' | 'select_recipient' | 'simulate_reply' | 'plan_tasks'
   runId?: string
   approvalId?: string
   approvalVersion?: number
+  emailSubject?: string
+  emailBody?: string
   optionId?: string
   recipientEmail?: string
   simulationReply?: string
@@ -160,6 +163,8 @@ type BrowserCheckpoint = {
 
 type ReusableAgentContext = {
   timezone: string
+  display_name: string
+  first_name: string
   home_airport: string | null
   default_meeting_minutes: number
   working_hours: {
@@ -331,7 +336,7 @@ async function loadReusableAgentContext(
       .maybeSingle(),
     admin
       .from('profiles')
-      .select('timezone')
+      .select('timezone,display_name')
       .eq('id', userId)
       .maybeSingle(),
   ])
@@ -342,12 +347,15 @@ async function loadReusableAgentContext(
   const storedTimezone = validTimezone(preference?.timezone)
   const profileTimezone = validTimezone(profileResult.data?.timezone)
   const clientTimezone = validTimezone(requestedTimezone)
+  const displayName = safeString(profileResult.data?.display_name, 160).trim()
   const timezone = storedTimezone && storedTimezone !== 'UTC'
     ? storedTimezone
     : profileTimezone || clientTimezone || storedTimezone || 'UTC'
 
   return {
     timezone,
+    display_name: displayName,
+    first_name: displayName.split(/\s+/)[0] ?? '',
     home_airport: /^[A-Z]{3}$/.test(safeString(preference?.home_airport, 3).toUpperCase())
       ? safeString(preference?.home_airport, 3).toUpperCase()
       : null,
@@ -1389,6 +1397,44 @@ async function requiredEffectLedger(
   return { required, effects, actions: actions.data ?? [] }
 }
 
+async function completeProviderConfirmedRun(admin: AdminClient, run: AgentRunRow) {
+  if (run.task_completion_policy !== 'external_change') return run
+  const ledger = await requiredEffectLedger(admin, run)
+  if (!ledger.required.length || Object.values(ledger.effects).some(value => !value)) return run
+  const requiresOrderedChangeNotification = run.capability === 'scheduling' &&
+    ledger.required.includes('gmail_send') &&
+    /\b(?:move|moved|reschedule|rescheduled|change|changed|update|updated)\b/i.test(
+      `${run.objective} ${safeString(run.context?.description, 4000)}`,
+    )
+  if (requiresOrderedChangeNotification && !verifiedCrossToolStage(ledger.actions).complete) return run
+  const result = {
+    summary: `Completed: ${run.objective}`,
+    sections: [{
+      title: 'Completed by Roon',
+      body: 'The required external action was confirmed by the provider.',
+    }],
+    drafts: [],
+    followUps: [],
+    sources: [],
+    outcome: {
+      preparedResult: false,
+      externalChangeConfirmed: true,
+      paymentBoundaryReached: false,
+      purchaseConfirmed: false,
+    },
+  }
+  const completed = await admin.rpc('complete_agent_run', {
+    p_run_id: run.id,
+    p_result: result,
+    p_expected_version: run.version,
+    p_mark_task_complete: true,
+  })
+  if (completed.error || !completed.data) {
+    throw new Error(completed.error?.message ?? 'Could not mark the provider-confirmed task complete.')
+  }
+  return completed.data as AgentRunRow
+}
+
 function unresolvedEffectMessage(ledger: Awaited<ReturnType<typeof requiredEffectLedger>>) {
   const completed = [
     ledger.effects.CALENDAR_EVENT_UPDATED ? 'CALENDAR_EVENT_UPDATED' : null,
@@ -1504,6 +1550,8 @@ function agentInstructions() {
     'Never purchase, enter payment data, or claim a purchase without observed provider confirmation.',
     'Ask only one concise context question when a genuinely required fact is missing.',
     'Never call agent__request_context to ask permission or approval. Prepare the exact action and call its approval-gated tool so ShotCount can show the normal lightweight approval card.',
+    'For every email, write a concise, specific subject that tells the recipient the actual topic or requested outcome. Never copy a clumsy task title, use a vague subject such as “Follow up”, or include internal ShotCount wording unless the user explicitly asks. For replies, preserve the existing conversation subject with the normal Re: prefix.',
+    'End email bodies with a natural professional sign-off such as “Best,” or “Kind regards,” followed by the sender first_name from task_context.user_preferences. Never leave a sign-off blank, invent a sender name, or use the recipient’s name as the signature.',
     'For compatibility with existing task flows, call contacts__find_contact before asking the user for an email address; then use contacts__resolve_recipient as the authoritative decision. Before preparing any Gmail draft or calendar invite, call contacts__resolve_recipient once for every individual recipient named in the task (unless the task gives an explicit email or this run already has a selected canonical recipient). Treat its state as authoritative: explicit and resolved_single may be used; ambiguous requires one concise question listing compact name/email choices; not_found requires one concise context question; provider_unavailable asks the user to reconnect Google or provide an email. Never guess, and never use Gmail message bodies to resolve a recipient. Preserve returned email, evidence, and thread ID in the same run; a selected canonical recipient must be used unchanged for all later draft/send steps unless the user explicitly changes it. Use a returned thread only for a reply/follow-up, never to turn a new email into a reply.',
     'After sending scheduling outreach, call gmail__wait_for_reply only when a reply is still required to determine or confirm the remaining Calendar action. A notification-only email after a completed Calendar change does not require a reply watch.',
     'A scheduling task is complete only after both the required Gmail send and Calendar write are provider-confirmed. If either obligation remains, continue with that tool instead of completing.',
@@ -3162,8 +3210,68 @@ async function approveOrReject(
     action_id: action.id,
     approved: true,
   })
+  run = await completeProviderConfirmedRun(admin, run)
   // Keep approval requests bounded. The normal poll path resumes the same AgentRun
   // after the provider-confirmed write instead of holding one Edge request open.
+  return run
+}
+
+async function editEmailApproval(admin: AdminClient, userId: string, body: RequestBody) {
+  if (!body.approvalId || !Number.isInteger(body.approvalVersion)) {
+    throw new Error('Approval ID and version are required.')
+  }
+  const subject = safeString(body.emailSubject, 998).trim()
+  const emailBody = safeString(body.emailBody, 20_000).trim()
+  if (!subject || !emailBody) throw new Error('Add both a subject and email body before saving.')
+  const approvalResult = await admin.from('agent_approvals').select('*')
+    .eq('id', body.approvalId).eq('user_id', userId).eq('status', 'pending').maybeSingle()
+  const approval = approvalResult.data
+  if (approvalResult.error || !approval || approval.kind !== 'send_email') {
+    throw new Error('This email approval is unavailable or already decided.')
+  }
+  if (approval.version !== body.approvalVersion) throw new Error('This approval changed. Review it again.')
+  const sendActionResult = await admin.from('agent_actions').select('*')
+    .eq('id', approval.action_id).eq('user_id', userId).eq('status', 'awaiting_approval').maybeSingle()
+  const sendAction = sendActionResult.data
+  if (sendActionResult.error || !sendAction) throw new Error('The prepared send action is unavailable.')
+  const run = await loadOwnedRun(admin, userId, approval.run_id)
+  if (!run) throw new Error('Agent run not found.')
+  const sendArguments = sendAction.arguments as Record<string, unknown>
+  const draftId = safeString(sendArguments.draft_id, 256)
+  const draftActionResult = await admin.from('agent_actions').select('*')
+    .eq('run_id', run.id).eq('user_id', userId).eq('tool_name', 'gmail.create_draft')
+    .eq('status', 'succeeded').eq('output->>draft_id', draftId).maybeSingle()
+  const draftAction = draftActionResult.data
+  if (draftActionResult.error || !draftAction) throw new Error('The prepared Gmail draft is unavailable.')
+  const updatedDraft = await updatePreparedGmailDraft(admin, userId, draftId, subject, emailBody)
+  const updatedDraftArguments = { ...(draftAction.arguments as Record<string, unknown>), subject, body_text: emailBody }
+  const updatedSendArguments = { ...sendArguments, expected_subject: subject }
+  const draftUpdate = await admin.from('agent_actions').update({
+    arguments: updatedDraftArguments,
+    output: updatedDraft,
+    updated_at: new Date().toISOString(),
+  }).eq('id', draftAction.id).eq('user_id', userId).select('id').maybeSingle()
+  if (draftUpdate.error || !draftUpdate.data) throw new Error(draftUpdate.error?.message ?? 'Could not save the edited draft.')
+  const sendUpdate = await admin.from('agent_actions').update({
+    arguments: updatedSendArguments,
+    updated_at: new Date().toISOString(),
+  }).eq('id', sendAction.id).eq('user_id', userId).eq('status', 'awaiting_approval').select('id').maybeSingle()
+  if (sendUpdate.error || !sendUpdate.data) throw new Error(sendUpdate.error?.message ?? 'Could not update the send approval.')
+  const payload = await approvalPayload(admin, run, sendAction.tool_name, updatedSendArguments)
+  const payloadHash = await hashValue(payload)
+  const approvalUpdate = await admin.from('agent_approvals').update({
+    summary: approvalSummary(sendAction.tool_name, updatedSendArguments),
+    payload,
+    payload_hash: payloadHash,
+    version: approval.version + 1,
+  }).eq('id', approval.id).eq('user_id', userId).eq('status', 'pending')
+    .eq('version', approval.version).select('id').maybeSingle()
+  if (approvalUpdate.error || !approvalUpdate.data) {
+    throw new Error(approvalUpdate.error?.message ?? 'Could not refresh the edited approval.')
+  }
+  await addEvent(admin, run, 'agent_approval_edited', run.status, 'Updated the prepared email before approval.', {
+    action_id: sendAction.id,
+  })
   return run
 }
 
@@ -3328,6 +3436,8 @@ Deno.serve(async request => {
       if (run.status === 'planning') run = await advanceRun(admin, run, openaiKey)
     } else if (action === 'approve' || action === 'reject') {
       run = await approveOrReject(admin, user.id, body, action === 'approve' ? 'approved' : 'rejected', openaiKey)
+    } else if (action === 'edit_email_approval') {
+      run = await editEmailApproval(admin, user.id, body)
     } else {
       if (!body.runId) return jsonResponse(request, { error: 'Run ID is required' }, 400)
       run = await loadOwnedRun(admin, user.id, body.runId)

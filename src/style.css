@@ -1034,6 +1034,32 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
 }
 .task-agent-approval-detail dt { color: #858589; }
 .task-agent-approval-detail dd { margin: 0; overflow-wrap: anywhere; }
+.task-agent-email-field {
+  display: grid;
+  gap: 5px;
+  color: #858589;
+  font-size: 9px;
+}
+.task-agent-email-field input,
+.task-agent-email-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(175, 175, 180, .55);
+  border-radius: 7px;
+  background: #fff;
+  color: #2f2f32;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.5;
+  outline: none;
+}
+.task-agent-email-field input { padding: 8px 9px; }
+.task-agent-email-field textarea { min-height: 118px; padding: 9px; resize: vertical; }
+.task-agent-email-field input:focus,
+.task-agent-email-field textarea:focus {
+  border-color: #77777d;
+  box-shadow: 0 0 0 2px rgba(40, 40, 44, .08);
+}
 .task-agent-approval-detail blockquote {
   margin: 2px 0 0;
   padding: 10px;
@@ -1456,6 +1482,12 @@ body[data-theme='dark'] .task-agent-approval-detail blockquote {
   border-left-color: #efefef;
   background: rgba(255, 255, 255, .06);
   color: #dedede;
+}
+body[data-theme='dark'] .task-agent-email-field input,
+body[data-theme='dark'] .task-agent-email-field textarea {
+  border-color: rgba(255, 255, 255, .16);
+  background: rgba(0, 0, 0, .18);
+  color: #f0f0f0;
 }
 
 @media (max-width: 620px) {
