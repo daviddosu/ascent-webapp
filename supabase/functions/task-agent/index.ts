@@ -1354,6 +1354,7 @@ async function completeRun(
   run: AgentRunRow,
   argumentsValue: Record<string, unknown>,
 ) {
+  const ledger = await requiredEffectLedger(admin, run)
   if (!await completionSatisfied(admin, run, argumentsValue)) {
     return updateRun(admin, run, {
       status: 'waiting_for_user',
@@ -1378,9 +1379,17 @@ async function completeRun(
     })
   }
 
+  // The database completion RPC predates contract-derived required effects and
+  // may still carry a prepared_result policy for a cross-tool intent. Once the
+  // ledger has provider-confirmed every required effect, pass an explicit,
+  // computed external-change confirmation rather than trusting the model flag.
+  const providerConfirmedResult = ledger.required.length
+    ? { ...argumentsValue, external_change_confirmed: true }
+    : argumentsValue
+
   const { data, error } = await admin.rpc('complete_agent_run', {
     p_run_id: run.id,
-    p_result: completionResult(argumentsValue),
+    p_result: completionResult(providerConfirmedResult),
     p_expected_version: run.version,
     p_mark_task_complete: true,
   })
