@@ -1,0 +1,45 @@
+{
+  "systems": [
+    {
+      "name": "Primitive Luna",
+      "cost": 0.417828,
+      "success": 90,
+      "dtd": "4.80/5",
+      "color": "#6f365e",
+      "dx": 20,
+      "dy": 52,
+      "anchor": "start"
+    },
+    {
+      "name": "Luna + ShotCount",
+      "cost": 0.566067,
+      "success": 96.7,
+      "dtd": "4.93/5",
+      "color": "#bd4f91",
+      "dx": 24,
+      "dy": -48,
+      "anchor": "start"
+    },
+    {
+      "name": "Terra",
+      "cost": 0.880455,
+      "success": 91.7,
+      "dtd": "4.85/5",
+      "color": "#9a9a9a",
+      "dx": 22,
+      "dy": 58,
+      "anchor": "start"
+    },
+    {
+      "name": "Sol",
+      "cost": 1.666533,
+      "success": 98.3,
+      "dtd": "4.93/5",
+      "color": "#353535",
+      "dx": -20,
+      "dy": -42,
+      "anchor": "end"
+    }
+  ],
+  "reductionVsSolPercent": 66.03325586712054
+}
