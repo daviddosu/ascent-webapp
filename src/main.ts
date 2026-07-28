@@ -1041,8 +1041,16 @@ async function startAgentRun(task: Task, context = '') {
   render()
 
   try {
-    const completed = await executeAgentRun(task, run)
+    let completed = await executeAgentRun(task, run)
     if (agentRuns.get(task.id)?.status === 'cancelled') return
+    if (
+      completed.status === 'needs_context' &&
+      /^Which .+\?$/.test(completed.waitingReason) &&
+      !completed.recipientResolution
+    ) {
+      const persisted = (await loadAgentRuns()).find(candidate => candidate.id === completed.id)
+      if (persisted) completed = persisted
+    }
     agentRuns.set(task.id, completed)
     await syncAgentApproval(completed)
     toast = agentUpdateToast(completed)
