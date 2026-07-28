@@ -1193,7 +1193,7 @@ async function executeProviderTool(
       }
     } catch (error) {
       if (!(error instanceof GoogleIntegrationError)) throw error
-      if (toolName === 'gmail.read_message' && /(?:404|not_found|missing)/i.test(error.code)) {
+      if (['gmail.read_message', 'gmail.read_thread'].includes(toolName) && /(?:404|not_found|missing)/i.test(error.code)) {
         const priorSearch = await admin.from('agent_actions')
           .select('arguments,output')
           .eq('run_id', run.id).eq('user_id', run.user_id)
@@ -1206,15 +1206,20 @@ async function executeProviderTool(
             query, max_results: Number(priorSearch.data?.arguments?.max_results ?? 20),
           }, `${idempotencyKey}:freshness`)
           const fresh = Array.isArray(refreshed.value.messages) ? refreshed.value.messages : []
-          const canonical = reconcileGmailIdentity(safeString(argumentsValue.message_id, 256), cached, fresh)
-          const staleIdentity = cached.find((message: { id?: string }) => message.id === safeString(argumentsValue.message_id, 256))
+          const requestedId = safeString(argumentsValue.message_id ?? argumentsValue.thread_id, 256)
+          const canonical = toolName === 'gmail.read_message'
+            ? reconcileGmailIdentity(requestedId, cached, fresh)
+            : fresh.find((message: { thread_id?: string; id?: string }) => message.thread_id === requestedId) ?? null
+          const staleIdentity = toolName === 'gmail.read_message'
+            ? cached.find((message: { id?: string }) => message.id === requestedId)
+            : cached.find((message: { thread_id?: string }) => message.thread_id === requestedId)
           if (canonical || staleIdentity?.thread_id) {
-            const reconciled = canonical
+            const reconciled = toolName === 'gmail.read_message' && canonical
               ? await executeGoogleTool(admin, run.user_id, 'gmail.read_message', { message_id: canonical.id }, `${idempotencyKey}:reconciled`)
-              : await executeGoogleTool(admin, run.user_id, 'gmail.read_thread', { thread_id: staleIdentity.thread_id }, `${idempotencyKey}:reconciled-thread`)
+              : await executeGoogleTool(admin, run.user_id, 'gmail.read_thread', { thread_id: canonical?.thread_id ?? staleIdentity.thread_id }, `${idempotencyKey}:reconciled-thread`)
             const currentMessage = canonical ?? (Array.isArray(reconciled.value.messages) ? reconciled.value.messages.at(-1) : null)
             await addEvent(admin, run, 'agent_provider_state_reconciled', 'succeeded', 'Refreshed stale Gmail state and continued with the canonical message identity.', {
-              provider: 'gmail', stale_message_id: safeString(argumentsValue.message_id, 256),
+              provider: 'gmail', stale_message_id: requestedId,
               canonical_message_id: currentMessage?.id ?? null, canonical_thread_id: canonical?.thread_id ?? staleIdentity.thread_id, sol_invoked: false,
             })
             return { kind: 'output', value: { ...reconciled.value, reconciled_from_stale_message_id: safeString(argumentsValue.message_id, 256) }, providerActionId: reconciled.providerActionId, publicSummary: 'Refreshed Gmail and read the current message.' }
@@ -1243,7 +1248,10 @@ async function executeProviderTool(
 function requiredEffectsForRun(run: AgentRunRow): Array<'gmail_send' | 'calendar_write'> {
   const objective = `${run.objective} ${safeString(run.context?.description, 4000)}`.toLocaleLowerCase()
   const requiredExternalEffects: Array<'gmail_send' | 'calendar_write'> = []
-  if (run.capability === 'scheduling') {
+  // Derive required effects from the task contract, not the model's capability
+  // label. Cross-tool runs may be classified as gmail while still requiring a
+  // Calendar write and a sent notification.
+  if (run.capability === 'scheduling' || /\b(?:calendar|meeting|event|schedule|move|moved|reschedule|rescheduled)\b/.test(objective)) {
     requiredExternalEffects.push('calendar_write')
     if (
       /\b(?:email|reply|respond|notify|message|follow[\s-]?up|outreach)\b/.test(objective) ||
