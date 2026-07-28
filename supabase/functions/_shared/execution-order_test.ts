@@ -44,4 +44,5 @@ Deno.test('conditional ledger does not intercept read-only Calendar availability
   assertEquals(requiredEffectsForObjective('Find a conflict-free one-hour slot on my calendar. Do not create an event.'), [])
   assertEquals(requiredEffectsForObjective('Create a 45-minute meeting on my calendar.'), ['calendar_write'])
   assertEquals(requiredEffectsForObjective('Move the meeting and email the attendee.'), ['calendar_write', 'gmail_send'])
+  assertEquals(requiredEffectsForObjective('Find a thread and prepare a response without sending it.'), [])
 })

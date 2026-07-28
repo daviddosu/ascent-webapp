@@ -1384,7 +1384,7 @@ async function completeRun(
   // ledger has provider-confirmed every required effect, pass an explicit,
   // computed external-change confirmation rather than trusting the model flag.
   const providerConfirmedResult = ledger.required.length
-    ? { ...argumentsValue, external_change_confirmed: true }
+    ? { ...argumentsValue, prepared_result: true, external_change_confirmed: true }
     : argumentsValue
 
   const { data, error } = await admin.rpc('complete_agent_run', {

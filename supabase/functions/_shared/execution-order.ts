@@ -20,7 +20,7 @@ export function requiredEffectsForObjective(objective: string) {
     required.push('calendar_write')
   }
   const gmailSend = !/\b(?:do not|don't|without|never)\s+(?:send|reply|respond|notify|email|message)\b/.test(text) &&
-    /\b(?:send|sent|reply|respond|notify|notification|outreach|follow[\s-]?up)\b/.test(text) ||
+    /\b(?:send|sent|reply|respond|notify|notification|outreach|follow[\s-]?up|email|e-mail)\b/.test(text) ||
     /\bemail\s+(?:the\s+)?(?:options|attendee|participant)\b/.test(text)
   if (gmailSend) required.push('gmail_send')
   return required
