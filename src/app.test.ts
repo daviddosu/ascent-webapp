@@ -84,6 +84,9 @@ describe('reference screens', () => {
     expect(document.querySelector('.today-task-group--today h2')?.textContent).toBe('Today')
     expect(document.querySelectorAll('.today-task-group--today .task-row')).toHaveLength(4)
     expect(document.querySelector('.inspector-title')?.getAttribute('value')).toBe("Renew driver's license")
+    expect(document.querySelector('.task-row.selected .task-agent-pill')?.textContent).toContain('Delegate')
+    expect(document.querySelector('.inspector .task-agent-card')).toBeNull()
+    expect(document.querySelector<HTMLTextAreaElement>('.inspector-description')?.rows).toBe(3)
   })
 
   it('keeps manual creation separate from the Ask Roon planner', () => {
@@ -266,7 +269,7 @@ describe('reference screens', () => {
     expect(document.querySelector('.reference-app')?.classList.contains('with-inspector')).toBe(true)
     expect(document.querySelector<HTMLInputElement>('.inspector-title')?.value).toBe(expectedTitle)
     expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-row.selected')).not.toBeNull()
-    expect(document.querySelector('.inspector .task-agent-card')?.textContent).toContain('Available on the due date')
+    expect(document.querySelector('.inspector .task-agent-card')).toBeNull()
     expect(document.querySelector('.inspector [data-action="delegate-task"]')).toBeNull()
     expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-agent-pill')).toBeNull()
   })

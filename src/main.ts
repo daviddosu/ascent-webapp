@@ -2668,19 +2668,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
 
 function renderAgentPanel(task: Task) {
   const run = agentRuns.get(task.id)
-  if (!taskIsExecutableToday(task)) {
-    return `<section class="task-agent-card task-agent-card--delegate task-agent-card--scheduled">
-      <span class="task-agent-mark">${agentSparkleIcon()}</span>
-      <div><strong>Available on the due date</strong><p>You can edit or reschedule this task now. Roon can execute it when it appears in Today.</p></div>
-    </section>`
-  }
-  if (!run || run.status === 'cancelled') {
-    return `<section class="task-agent-card task-agent-card--delegate">
-      <span class="task-agent-mark">${agentSparkleIcon()}</span>
-      <div><strong>Let Roon move this forward</strong><p>Delegate research or drafting. You review the result before anything goes anywhere.</p></div>
-      <button type="button" data-action="delegate-task" data-task-id="${task.id}">Delegate</button>
-    </section>`
-  }
+  if (!run || run.status === 'cancelled') return ''
 
   if (run.status === 'needs_context') {
     const contextPrompt = run.waitingReason.trim() || 'Add the missing details to the task Description.'
@@ -2739,7 +2727,7 @@ function renderInspector(task: Task) {
       <div class="inspector-content">
         <h2>Task:</h2>
         <input class="inspector-title" value="${escapeHtml(task.title)}" aria-label="Task title" />
-        <textarea aria-label="Description" placeholder="Description">${escapeHtml(task.description ?? '')}</textarea>
+        <textarea class="inspector-description" aria-label="Description" placeholder="Description" rows="3">${escapeHtml(task.description ?? '')}</textarea>
 
         <div class="inspector-fields">
           <label><span>Goal</span><button data-action="cycle-goal">${escapeHtml(goal?.name ?? goals[0]?.name ?? 'No goal')} ${icon('down')}</button></label>

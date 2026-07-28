@@ -312,7 +312,8 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("Roon can execute tasks only when they appear in Today.")
     expect(taskAgentFunction).toContain('due > todayInExecutionTimezone')
     expect(mainUi).toContain("if (!taskIsExecutableToday(task)) return ''")
-    expect(mainUi).toContain('Available on the due date')
+    expect(mainUi).toContain("if (!run || run.status === 'cancelled') return ''")
+    expect(mainUi).not.toContain('Available on the due date')
   })
 
   it('resolves named scheduling contacts before asking the user for an email address', () => {

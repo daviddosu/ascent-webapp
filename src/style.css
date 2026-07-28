@@ -686,7 +686,18 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
 .inspector-title { height: 38px; }
-.inspector textarea { height: 74px; margin-top: 12px; padding-block: 9px; resize: vertical; }
+.inspector textarea {
+  min-height: 74px;
+  max-height: 180px;
+  height: auto;
+  margin-top: 12px;
+  padding-block: 9px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  resize: vertical;
+  field-sizing: content;
+}
 .inspector-title:focus,
 .inspector textarea:focus {
   border-color: #858585;
