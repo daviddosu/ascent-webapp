@@ -14,7 +14,7 @@ import {
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, needsSharedAgentContext } from '../_shared/agent-intent.ts'
 import { browserFailureClass, canonicalFlightSearch, isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
-import { reasoningFallbackAllowed, requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
+import { requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
 import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
   verifyScheduleNotificationDraft,
@@ -1452,34 +1452,6 @@ async function callOpenAI(
   return payload
 }
 
-async function callSolScheduleRepair(
-  openaiKey: string,
-  run: AgentRunRow,
-  canonical: Record<string, unknown>,
-  issues: string[],
-) {
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'gpt-5.6-sol', reasoning: { effort: 'low' }, store: false,
-      max_output_tokens: 600, parallel_tool_calls: false, tool_choice: 'none',
-      instructions: 'Repair only the rejected schedule-notification wording. Use the canonical provider-confirmed facts exactly. Return JSON only.',
-      input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify({ objective: run.objective, canonical, rejectedIssues: issues }) }] }],
-      text: { format: { type: 'json_schema', name: 'schedule_notification_repair', strict: true, schema: {
-        type: 'object', additionalProperties: false,
-        properties: { subject: { type: 'string' }, body_text: { type: 'string' } },
-        required: ['subject', 'body_text'],
-      } } },
-      metadata: { agent_run_id: run.id, task_id: run.task_id, fallback_scope: 'schedule_notification_wording' },
-    }),
-  })
-  const payload = await response.json() as OpenAIResponse
-  if (!response.ok) throw new Error(payload.error?.message ?? `Sol fallback failed with ${response.status}.`)
-  const output = safeString(payload.output_text, 20_000) || payload.output?.flatMap(item => item.content ?? []).map(item => safeString(item.text, 20_000)).find(Boolean) || ''
-  return { candidate: JSON.parse(output) as Record<string, unknown>, response: payload }
-}
-
 function historyHasToolOutput(history: OpenAIOutputItem[], callId: string) {
   return Boolean(callId) && history.some(item =>
     item.type === 'function_call_output' && item.call_id === callId
@@ -2662,7 +2634,6 @@ async function advanceRun(
       const verification = await verifyPreparedScheduleNotification(admin, current, argumentsValue)
       if (verification.applicable && !verification.valid) {
         const failureClass = verification.issues.includes('calendar_confirmation_missing') ? 'STATE_ORDERING' : 'MODEL_REASONING'
-        const allowSol = reasoningFallbackAllowed(failureClass, Boolean(verification.canonical && verification.change))
         await addEvent(
           admin,
           current,
@@ -2674,39 +2645,22 @@ async function advanceRun(
             canonical: verification.canonical,
             failure_class: failureClass,
             model_reasoning_mismatch: failureClass === 'MODEL_REASONING',
-            sol_escalation_eligible: allowSol,
+            luna_retry_required: true,
           },
         )
-        if (!allowSol) {
-          history.push({
-            type: 'function_call_output',
-            call_id: safeString(call.call_id, 256),
-            output: JSON.stringify({
-              ok: false,
-              error_code: 'calendar_confirmation_required',
-              error_message: 'Calendar provider confirmation must be persisted before preparing or sending the notification.',
-              issues: verification.issues,
-            }),
-          })
-          await saveModelHistory(admin, current, history, response.id)
-          continue
-        }
-        const repair = await callSolScheduleRepair(openaiKey, current, verification.canonical!, verification.issues)
-        const repairedVerification = verifyScheduleNotificationDraft({
-          to: verification.change!.attendeeEmails,
-          subject: safeString(repair.candidate.subject, 998),
-          bodyText: safeString(repair.candidate.body_text, 20_000),
-        }, verification.change!)
-        await addEvent(admin, current, 'agent_reasoning_fallback', repairedVerification.valid ? 'succeeded' : 'failed', 'Sol repaired one deterministically rejected schedule-notification step.', {
-          model: 'gpt-5.6-sol', scope: 'schedule_notification_wording', issues_before: verification.issues,
-          issues_after: repairedVerification.issues, usage: repair.response.usage ?? null,
-        })
-        if (!repairedVerification.valid) throw new Error('The bounded Sol schedule-notification repair did not pass deterministic verification.')
         history.push({
-          type: 'function_call_output', call_id: safeString(call.call_id, 256),
-          output: JSON.stringify({ ok: false, error_code: 'schedule_notification_repaired', error_message: 'Create a replacement Gmail draft with this verified content, then request the normal send approval.', verified_candidate: repair.candidate, canonical_schedule_values: verification.canonical }),
+          type: 'function_call_output',
+          call_id: safeString(call.call_id, 256),
+          output: JSON.stringify({
+            ok: false,
+            error_code: failureClass === 'STATE_ORDERING'
+              ? 'calendar_confirmation_required'
+              : 'schedule_notification_mismatch',
+            error_message: 'Use the canonical provider-confirmed schedule values and prepare a corrected Gmail draft before requesting send approval.',
+            issues: verification.issues,
+            canonical_schedule_values: verification.canonical,
+          }),
         })
-        current = await updateRun(admin, current, { context: { ...(current.context ?? {}), sol_reasoning_fallbacks: Number(current.context?.sol_reasoning_fallbacks ?? 0) + 1 } })
         await saveModelHistory(admin, current, history, response.id)
         continue
       }
