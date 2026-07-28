@@ -1578,6 +1578,28 @@ async function selectRecipient(
   return updated
 }
 
+function namedRecipientFromObjective(objective: string) {
+  const match = objective.trim().match(/^(?:email|message|reply\s+to|follow[\s-]?up\s+with)\s+(.+?)(?:\s+(?:about|regarding|re:)\b|$)/i)
+  return safeString(match?.[1], 300).trim()
+}
+
+async function resolveNamedRecipientBeforeModel(admin: AdminClient, run: AgentRunRow) {
+  if (run.capability !== 'gmail' || Array.isArray(run.context?.recipient_resolutions) || run.context?.recipient_resolution_pending) return run
+  const recipient = namedRecipientFromObjective(run.objective)
+  if (!recipient) return run
+  const action = await recordAction(admin, run, 'contacts.resolve_recipient', '', { recipient }, 'running')
+  const result = await executeGoogleTool(admin, run.user_id, 'contacts.resolve_recipient', { recipient }, String(action.idempotency_key))
+  const state = safeString(result.value.state, 80)
+  await admin.from('agent_actions').update({ status: 'succeeded', output: result.value, public_summary: result.publicSummary, completed_at: new Date().toISOString() }).eq('id', action.id)
+  if (state === 'ambiguous') {
+    return await updateRun(admin, run, { status: 'needs_context', waiting_reason: `Which ${recipient}?`, context: { ...(run.context ?? {}), recipient_resolution_pending: result.value }, lease_owner: null, lease_expires_at: null })
+  }
+  if (state === 'not_found') {
+    return await updateRun(admin, run, { status: 'needs_context', waiting_reason: `I couldn't find anyone matching “${recipient}” in your contacts or email history. What's their email address or full name?`, context: { ...(run.context ?? {}), recipient_resolution_pending: result.value }, lease_owner: null, lease_expires_at: null })
+  }
+  return await updateRun(admin, run, { context: { ...(run.context ?? {}), recipient_resolutions: [result.value] } })
+}
+
 function normalizedSender(value: unknown) {
   const header = safeString(value, 1000).toLocaleLowerCase()
   return header.match(/<([^>]+)>/)?.[1]?.trim() ?? header.trim()
@@ -3245,6 +3267,7 @@ Deno.serve(async request => {
         strategy: intent.strategy,
       })
       await addEvent(admin, run, 'task_delegated', run.status, 'Task delegated to Roon.')
+      if (run.status === 'planning') run = await resolveNamedRecipientBeforeModel(admin, run)
       if (run.status === 'planning') run = await advanceRun(admin, run, openaiKey)
     } else if (action === 'approve' || action === 'reject') {
       run = await approveOrReject(admin, user.id, body, action === 'approve' ? 'approved' : 'rejected', openaiKey)
