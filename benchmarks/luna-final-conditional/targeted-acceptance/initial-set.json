@@ -1,0 +1,660 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-28T07:51:31.382Z",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 1.25,
+    "cachedInput": 0.125,
+    "cacheWrite": 1.5625,
+    "output": 7.5
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "conditional-acceptance-1a6e70d",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "benchmark_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "calendar-02",
+      "category": "calendar",
+      "run_number": 1,
+      "run_nonce": "e67d68b442",
+      "agent_run_id": "0563b6a0-2db7-4389-a6ae-6b5235732b89",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 12.772,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6826,
+      "cached_input_tokens": 3027,
+      "cache_write_tokens": 3793,
+      "output_tokens": 254,
+      "inference_cost_usd": 0.008217,
+      "started_at": "2026-07-28T07:48:45.898Z",
+      "finished_at": "2026-07-28T07:48:58.670Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "r2b1ttkl3mq3jpsoa1lg01as3k",
+            "status": "confirmed",
+            "summary": "Controlled busy window 1",
+            "start": {
+              "dateTime": "2026-08-05T13:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T15:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          },
+          {
+            "id": "3dqc8h1c640j989nvmevri9o0o",
+            "status": "confirmed",
+            "summary": "Controlled busy window 2",
+            "start": {
+              "dateTime": "2026-08-05T16:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T17:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "benchmark_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "cross-03",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "647f7e5336",
+      "agent_run_id": "a2ba7fc0-b28e-4afc-aa45-3a66df2445a7",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 41.571,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "failed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 7,
+      "input_tokens": 30723,
+      "cached_input_tokens": 27940,
+      "cache_write_tokens": 2762,
+      "output_tokens": 789,
+      "inference_cost_usd": 0.013752,
+      "started_at": "2026-07-28T07:49:02.040Z",
+      "finished_at": "2026-07-28T07:49:43.611Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa644cd24061e2",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r1536016460058179023",
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "ovjkcov0pdd4s1nuh7qpevshuc",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19fa7b3514e45af9",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "ovjkcov0pdd4s1nuh7qpevshuc",
+            "status": "confirmed",
+            "summary": "Team Sync",
+            "start": {
+              "dateTime": "2026-08-05T11:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T11:45:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "benchmark_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "browser-01",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "2c4cdd52e3",
+      "agent_run_id": "300e72f1-a31d-490e-b278-4cfbdd2be1e8",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 9.676,
+      "external_wait_time_seconds": 13.372,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6204,
+      "cached_input_tokens": 5828,
+      "cache_write_tokens": 370,
+      "output_tokens": 204,
+      "inference_cost_usd": 0.002844,
+      "started_at": "2026-07-28T07:49:46.264Z",
+      "finished_at": "2026-07-28T07:50:09.312Z",
+      "actions": [
+        {
+          "tool": "browser.start_session",
+          "status": "succeeded",
+          "provider_action_id": "9755a639-87ad-4b2b-a0d1-57d6f0bddf5e",
+          "error_code": null
+        },
+        {
+          "tool": "browser.search_flights",
+          "status": "succeeded",
+          "provider_action_id": "9755a639-87ad-4b2b-a0d1-57d6f0bddf5e",
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 1,
+              "originCode": "LOS",
+              "returnDate": "2026-08-16",
+              "budgetAmount": null,
+              "departureDate": "2026-08-13",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "df2ce1da7340753d9d0570a1",
+                "label": "Best overall",
+                "price": "$986",
+                "route": "LOS–LHR",
+                "stops": "1 stop",
+                "amount": 986,
+                "airline": "Ethiopian",
+                "currency": "USD",
+                "duration": "17 hr 20 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "7:00 AM+1",
+                "departureTime": "1:40 PM",
+                "durationMinutes": 1040
+              },
+              {
+                "id": "e0ddb2dc39af95bbce470b28",
+                "label": "Fastest",
+                "price": "$2,522",
+                "route": "LOS–LHR",
+                "stops": "Nonstop",
+                "amount": 2522,
+                "airline": "British Airways",
+                "currency": "USD",
+                "duration": "6 hr 30 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                "stopCount": 0,
+                "arrivalTime": "5:20 AM+1",
+                "departureTime": "10:50 PM",
+                "durationMinutes": 390
+              },
+              {
+                "id": "0402d4c0784cfacf9114ec83",
+                "label": "Also worth considering",
+                "price": "$1,006",
+                "route": "LOS–STN",
+                "stops": "1 stop",
+                "amount": 1006,
+                "airline": "Royal Air Maroc",
+                "currency": "USD",
+                "duration": "11 hr 5 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "6:20 AM+1",
+                "departureTime": "7:15 PM",
+                "durationMinutes": 665
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-28T07:50:03.146Z"
+          },
+          "lastOperation": {
+            "id": "agent:300e72f1-a31d-490e-b278-4cfbdd2be1e8:1:browser.search_flights:34d47acea0d28838119053df",
+            "type": "search_flights",
+            "output": {
+              "options": [
+                {
+                  "id": "df2ce1da7340753d9d0570a1",
+                  "label": "Best overall",
+                  "price": "$986",
+                  "route": "LOS–LHR",
+                  "stops": "1 stop",
+                  "amount": 986,
+                  "airline": "Ethiopian",
+                  "currency": "USD",
+                  "duration": "17 hr 20 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "7:00 AM+1",
+                  "departureTime": "1:40 PM",
+                  "durationMinutes": 1040
+                },
+                {
+                  "id": "e0ddb2dc39af95bbce470b28",
+                  "label": "Fastest",
+                  "price": "$2,522",
+                  "route": "LOS–LHR",
+                  "stops": "Nonstop",
+                  "amount": 2522,
+                  "airline": "British Airways",
+                  "currency": "USD",
+                  "duration": "6 hr 30 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                  "stopCount": 0,
+                  "arrivalTime": "5:20 AM+1",
+                  "departureTime": "10:50 PM",
+                  "durationMinutes": 390
+                },
+                {
+                  "id": "0402d4c0784cfacf9114ec83",
+                  "label": "Also worth considering",
+                  "price": "$1,006",
+                  "route": "LOS–STN",
+                  "stops": "1 stop",
+                  "amount": 1006,
+                  "airline": "Royal Air Maroc",
+                  "currency": "USD",
+                  "duration": "11 hr 5 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "6:20 AM+1",
+                  "departureTime": "7:15 PM",
+                  "durationMinutes": 665
+                }
+              ],
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "observedAt": "2026-07-28T07:50:03.146Z"
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-28T07:50:04.063Z"
+          },
+          "workerAttempts": 1,
+          "pendingOperation": null,
+          "canonicalFlightSearch": {
+            "cabin": "economy",
+            "stage": "searching",
+            "origin": "LOS",
+            "currency": "USD",
+            "maxStops": 1,
+            "departDate": "2026-08-13",
+            "returnDate": "2026-08-16",
+            "destination": "LON"
+          }
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": false,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "3 live flight options are ready.",
+          "sections": [
+            {
+              "body": "Ethiopian · LOS–LHR · 1 stop · 17 hr 20 min · $986",
+              "title": "Best overall"
+            },
+            {
+              "body": "British Airways · LOS–LHR · Nonstop · 6 hr 30 min · $2,522",
+              "title": "Fastest"
+            },
+            {
+              "body": "Royal Air Maroc · LOS–STN · 1 stop · 11 hr 5 min · $1,006",
+              "title": "Also worth considering"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "df2ce1da7340753d9d0570a1",
+              "label": "Best overall",
+              "price": "$986",
+              "route": "LOS–LHR",
+              "stops": "1 stop",
+              "amount": 986,
+              "airline": "Ethiopian",
+              "currency": "USD",
+              "duration": "17 hr 20 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "7:00 AM+1",
+              "departureTime": "1:40 PM",
+              "durationMinutes": 1040
+            },
+            {
+              "id": "e0ddb2dc39af95bbce470b28",
+              "label": "Fastest",
+              "price": "$2,522",
+              "route": "LOS–LHR",
+              "stops": "Nonstop",
+              "amount": 2522,
+              "airline": "British Airways",
+              "currency": "USD",
+              "duration": "6 hr 30 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "stopCount": 0,
+              "arrivalTime": "5:20 AM+1",
+              "departureTime": "10:50 PM",
+              "durationMinutes": 390
+            },
+            {
+              "id": "0402d4c0784cfacf9114ec83",
+              "label": "Also worth considering",
+              "price": "$1,006",
+              "route": "LOS–STN",
+              "stops": "1 stop",
+              "amount": 1006,
+              "airline": "Royal Air Maroc",
+              "currency": "USD",
+              "duration": "11 hr 5 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "6:20 AM+1",
+              "departureTime": "7:15 PM",
+              "durationMinutes": 665
+            }
+          ]
+        }
+      }
+    },
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "benchmark_commit": "1a6e70dab5d993ffef1f80841311f854cab32bad",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "browser-02",
+      "category": "browser",
+      "run_number": 1,
+      "run_nonce": "803b5d8848",
+      "agent_run_id": "8a952cde-d77f-4290-b16f-97588d0c031e",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 0,
+      "active_execution_time_seconds": 46.127,
+      "external_wait_time_seconds": 35.934,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 2,
+      "input_tokens": 6187,
+      "cached_input_tokens": 5833,
+      "cache_write_tokens": 348,
+      "output_tokens": 178,
+      "inference_cost_usd": 0.002615,
+      "started_at": "2026-07-28T07:50:09.320Z",
+      "finished_at": "2026-07-28T07:51:31.381Z",
+      "actions": [
+        {
+          "tool": "browser.start_session",
+          "status": "succeeded",
+          "provider_action_id": "92e906a7-3e9c-4bed-b07c-5d1091fad58f",
+          "error_code": null
+        },
+        {
+          "tool": "browser.search_flights",
+          "status": "succeeded",
+          "provider_action_id": "92e906a7-3e9c-4bed-b07c-5d1091fad58f",
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "browserCheckpoint": {
+          "flightSearch": {
+            "input": {
+              "cabin": "economy",
+              "currency": "USD",
+              "maxStops": 2,
+              "originCode": "LOS",
+              "returnDate": "2026-08-16",
+              "budgetAmount": 1000,
+              "departureDate": "2026-08-13",
+              "destinationCode": "LON",
+              "preferredAirlines": []
+            },
+            "options": [
+              {
+                "id": "df2ce1da7340753d9d0570a1",
+                "label": "Best overall",
+                "price": "$986",
+                "route": "LOS–LHR",
+                "stops": "1 stop",
+                "amount": 986,
+                "airline": "Ethiopian",
+                "currency": "USD",
+                "duration": "17 hr 20 min",
+                "provider": "Google Flights",
+                "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                "stopCount": 1,
+                "arrivalTime": "7:00 AM+1",
+                "departureTime": "1:40 PM",
+                "durationMinutes": 1040
+              }
+            ],
+            "provider": "Google Flights",
+            "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+            "observedAt": "2026-07-28T07:50:20.093Z"
+          },
+          "lastOperation": {
+            "id": "agent:8a952cde-d77f-4290-b16f-97588d0c031e:1:browser.search_flights:e61207d2b760a4194148589f",
+            "type": "search_flights",
+            "output": {
+              "options": [
+                {
+                  "id": "df2ce1da7340753d9d0570a1",
+                  "label": "Best overall",
+                  "price": "$986",
+                  "route": "LOS–LHR",
+                  "stops": "1 stop",
+                  "amount": 986,
+                  "airline": "Ethiopian",
+                  "currency": "USD",
+                  "duration": "17 hr 20 min",
+                  "provider": "Google Flights",
+                  "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+                  "stopCount": 1,
+                  "arrivalTime": "7:00 AM+1",
+                  "departureTime": "1:40 PM",
+                  "durationMinutes": 1040
+                }
+              ],
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "observedAt": "2026-07-28T07:50:20.093Z"
+            },
+            "status": "succeeded",
+            "completedAt": "2026-07-28T07:50:21.040Z"
+          },
+          "workerAttempts": 1,
+          "pendingOperation": null,
+          "canonicalFlightSearch": {
+            "cabin": "economy",
+            "stage": "searching",
+            "origin": "LOS",
+            "currency": "USD",
+            "maxPrice": 1000,
+            "maxStops": 2,
+            "departDate": "2026-08-13",
+            "returnDate": "2026-08-16",
+            "destination": "LON"
+          }
+        },
+        "browserResult": {
+          "drafts": [],
+          "outcome": {
+            "preparedResult": true,
+            "purchaseConfirmed": false,
+            "paymentBoundaryReached": false,
+            "externalChangeConfirmed": false
+          },
+          "sources": [
+            {
+              "url": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "title": "Google Flights live search"
+            }
+          ],
+          "summary": "1 live flight option is ready.",
+          "sections": [
+            {
+              "body": "Ethiopian · LOS–LHR · 1 stop · 17 hr 20 min · $986",
+              "title": "Best overall"
+            }
+          ],
+          "followUps": [],
+          "flightOptions": [
+            {
+              "id": "df2ce1da7340753d9d0570a1",
+              "label": "Best overall",
+              "price": "$986",
+              "route": "LOS–LHR",
+              "stops": "1 stop",
+              "amount": 986,
+              "airline": "Ethiopian",
+              "currency": "USD",
+              "duration": "17 hr 20 min",
+              "provider": "Google Flights",
+              "searchUrl": "https://www.google.com/travel/flights?q=Flights+from+LOS+to+LON+on+2026-08-13+returning+2026-08-16+economy&curr=USD&hl=en",
+              "stopCount": 1,
+              "arrivalTime": "7:00 AM+1",
+              "departureTime": "1:40 PM",
+              "durationMinutes": 1040
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

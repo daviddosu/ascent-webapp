@@ -1,0 +1,122 @@
+{
+  "primitive": {
+    "runs": 60,
+    "successfulRuns": 54,
+    "successRate": 0.9,
+    "categories": {
+      "email": {
+        "runs": 15,
+        "successfulRuns": 15,
+        "successRate": 1
+      },
+      "calendar": {
+        "runs": 15,
+        "successfulRuns": 15,
+        "successRate": 1
+      },
+      "cross_tool": {
+        "runs": 15,
+        "successfulRuns": 12,
+        "successRate": 0.8
+      },
+      "browser": {
+        "runs": 15,
+        "successfulRuns": 12,
+        "successRate": 0.8
+      }
+    },
+    "executionPrecision": 1,
+    "medianNonApprovalInterventions": 0,
+    "averageNonApprovalInterventions": 0.1,
+    "distanceToDone": 4.8,
+    "firstAttemptSuccess": 0.9,
+    "retryCount": 3,
+    "activeExecutionTimeSeconds": 1054.6910000000003,
+    "externalWaitTimeSeconds": 512.986,
+    "tokens": {
+      "input": 896095,
+      "cachedInput": 816250,
+      "cacheWrite": 79149,
+      "output": 25501,
+      "total": 921596
+    },
+    "measuredInferenceCostUsd": 0.4178280000000001,
+    "costPerRunUsd": 0.006963800000000002,
+    "costPerSuccessfulRunUsd": 0.007737555555555557
+  },
+  "harness": {
+    "runs": 60,
+    "successfulRuns": 58,
+    "successRate": 0.9666666666666667,
+    "categories": {
+      "email": {
+        "runs": 15,
+        "successfulRuns": 15,
+        "successRate": 1
+      },
+      "calendar": {
+        "runs": 15,
+        "successfulRuns": 15,
+        "successRate": 1
+      },
+      "cross_tool": {
+        "runs": 15,
+        "successfulRuns": 14,
+        "successRate": 0.9333333333333333
+      },
+      "browser": {
+        "runs": 15,
+        "successfulRuns": 14,
+        "successRate": 0.9333333333333333
+      }
+    },
+    "executionPrecision": 1,
+    "medianNonApprovalInterventions": 0,
+    "averageNonApprovalInterventions": 0.1,
+    "distanceToDone": 4.933333333333334,
+    "firstAttemptSuccess": 0.9666666666666667,
+    "retryCount": 1,
+    "activeExecutionTimeSeconds": 1491.179,
+    "externalWaitTimeSeconds": 512.817,
+    "tokens": {
+      "input": 1250151,
+      "cachedInput": 1152606,
+      "cacheWrite": 96648,
+      "output": 35981,
+      "total": 1286132
+    },
+    "measuredInferenceCostUsd": 0.5660670000000001,
+    "costPerRunUsd": 0.009434450000000002,
+    "costPerSuccessfulRunUsd": 0.009759775862068967
+  },
+  "failures": [
+    {
+      "taskId": "cross-04",
+      "runNumber": 3,
+      "category": "cross_tool",
+      "reason": "verification mismatch",
+      "state": "needs_approval",
+      "retryCount": 0
+    },
+    {
+      "taskId": "browser-04",
+      "runNumber": 3,
+      "category": "browser",
+      "reason": "browser/page change",
+      "state": "waiting_for_user",
+      "retryCount": 1
+    }
+  ],
+  "gates": {
+    "overall": true,
+    "precision": true,
+    "distance": true,
+    "email": true,
+    "calendar": true,
+    "cross_tool": true,
+    "browser": true
+  },
+  "benchmarkCommit": "dde71e7",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low"
+}
