@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { reasoningFallbackAllowed, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from './execution-order.ts'
+import { reasoningFallbackAllowed, requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from './execution-order.ts'
 
 Deno.test('blocks out-of-order and premature cross-tool completion', () => {
   assertEquals(verifiedCrossToolStage([]).stage, 'calendar_required')
@@ -38,4 +38,10 @@ Deno.test('required-effect ledger preserves completed Calendar work during conti
   const confirmed = ['calendar.update_event']
   assertEquals(unresolvedRequiredEffects([...required], confirmed), ['gmail_send'])
   assertEquals(confirmed.includes('calendar.update_event'), true)
+})
+
+Deno.test('conditional ledger does not intercept read-only Calendar availability tasks', () => {
+  assertEquals(requiredEffectsForObjective('Find a conflict-free one-hour slot on my calendar. Do not create an event.'), [])
+  assertEquals(requiredEffectsForObjective('Create a 45-minute meeting on my calendar.'), ['calendar_write'])
+  assertEquals(requiredEffectsForObjective('Move the meeting and email the attendee.'), ['calendar_write', 'gmail_send'])
 })

@@ -14,7 +14,7 @@ import {
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, needsSharedAgentContext } from '../_shared/agent-intent.ts'
 import { browserFailureClass, canonicalFlightSearch, isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
-import { reasoningFallbackAllowed, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
+import { reasoningFallbackAllowed, requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
 import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
   verifyScheduleNotificationDraft,
@@ -413,7 +413,16 @@ async function hashValue(value: unknown) {
 
 async function actionIdempotencyKey(run: AgentRunRow, toolName: string, argumentsValue: unknown) {
   const digest = await hashValue(argumentsValue)
-  return `agent:${run.id}:${run.current_step}:${toolName}:${digest.slice(0, 24)}`
+  const consequential = new Set([
+    'gmail.create_draft', 'gmail.send_message',
+    'calendar.create_event', 'calendar.update_event', 'calendar.delete_event',
+    'browser.select_flight', 'browser.submit',
+  ])
+  // Consequential writes must retain one identity across approval/resume and
+  // same-run continuation. Including current_step lets a stale callback turn
+  // the exact same write into a second provider action.
+  const scope = consequential.has(toolName) ? run.id : `${run.id}:${run.current_step}`
+  return `agent:${scope}:${toolName}:${digest.slice(0, 24)}`
 }
 
 function approvalTitle(toolName: string) {
@@ -1247,19 +1256,9 @@ async function executeProviderTool(
 
 function requiredEffectsForRun(run: AgentRunRow): Array<'gmail_send' | 'calendar_write'> {
   const objective = `${run.objective} ${safeString(run.context?.description, 4000)}`.toLocaleLowerCase()
-  const requiredExternalEffects: Array<'gmail_send' | 'calendar_write'> = []
-  // Derive required effects from the task contract, not the model's capability
-  // label. Cross-tool runs may be classified as gmail while still requiring a
-  // Calendar write and a sent notification.
-  if (run.capability === 'scheduling' || /\b(?:calendar|meeting|event|schedule|move|moved|reschedule|rescheduled)\b/.test(objective)) {
-    requiredExternalEffects.push('calendar_write')
-    if (
-      /\b(?:email|reply|respond|notify|message|follow[\s-]?up|outreach)\b/.test(objective) ||
-      /\b(?:set\s*up|arrange|coordinate|schedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(objective) ||
-      /\b(?:meet|meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/.test(objective)
-    ) requiredExternalEffects.push('gmail_send')
-  }
-  return requiredExternalEffects
+  // Derive effects from the task contract, never from a broad capability
+  // label. Read-only availability/listing tasks stay on Luna's direct path.
+  return requiredEffectsForObjective(objective)
 }
 
 async function requiredEffectLedger(
@@ -2696,6 +2695,32 @@ async function advanceRun(
         continue
       }
       return completeRun(admin, current, argumentsValue)
+    }
+
+    // A consequential action may be replayed by a stale continuation after
+    // approval/resume. Reuse the provider-confirmed result instead of issuing
+    // another external write; the action idempotency key is stable across
+    // current-step changes for these tools.
+    if (action.status === 'succeeded' && action.provider_action_id && action.output) {
+      const reusedSummary = safeString(action.public_summary, 1200) || `Reused the confirmed ${toolName} result.`
+      history.push({
+        type: 'function_call_output',
+        call_id: safeString(call.call_id, 256),
+        output: JSON.stringify(action.output),
+      })
+      current = await updateRun(admin, current, {
+        current_step: current.current_step + 1,
+        progress: [...(Array.isArray(current.progress) ? current.progress : []), reusedSummary],
+        openai_response_id: response.id ?? null,
+      })
+      await saveModelHistory(admin, current, history, response.id)
+      await addEvent(admin, current, 'agent_action_reused', current.status, reusedSummary, {
+        tool_name: toolName,
+        action_id: action.id,
+        provider_action_id: action.provider_action_id,
+        reason: 'stable_consequential_idempotency_key',
+      })
+      continue
     }
 
     const toolOutput = await executeProviderTool(
