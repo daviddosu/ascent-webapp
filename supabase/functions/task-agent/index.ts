@@ -2152,12 +2152,18 @@ async function recoverStalledRun(
     if (!validateAgentToolArguments('agent.complete', argumentsValue)) {
       throw new Error('The saved completion action is invalid.')
     }
+    const accepted = await completionSatisfied(admin, run, argumentsValue)
     await admin.from('agent_actions').update({
       status: 'succeeded',
-      output: { accepted: await completionSatisfied(admin, run, argumentsValue) },
+      output: { accepted },
       public_summary: safeString(argumentsValue.summary, 1200),
       completed_at: new Date().toISOString(),
     }).eq('id', completionAction.data.id)
+    // A previously rejected completion is evidence that the model tried to
+    // finish early; it must never be replayed as a terminal completion during
+    // approval/resume recovery. Continue the same AgentRun toward unresolved
+    // required effects instead.
+    if (!accepted) return advanceRun(admin, run, openaiKey)
     return completeRun(admin, run, argumentsValue)
   }
 
