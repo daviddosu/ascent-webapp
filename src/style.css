@@ -1532,6 +1532,18 @@ body[data-theme='dark'] .task-agent-email-field textarea {
   .shotcount-agent-helper > button:not(.shotcount-agent-helper__dismiss) { display: none; }
 }
 
+.task-attachments { margin: 8px 0 12px; }
+.task-attachment-list { display: grid; gap: 6px; }
+.task-attachment-chip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid #e8e8e8; border-radius: 9px; background: #fff; font-size: 10px; }
+.task-attachment-kind { color: #777; font-size: 8px; font-weight: 700; letter-spacing: .05em; }
+.task-attachment-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-attachment-chip em { color: #777; font-size: 8px; font-style: normal; }
+.task-attachment-chip button { border: 0; background: transparent; color: #777; cursor: pointer; font-size: 16px; }
+.task-attachment-reuse { grid-column: 2 / -1; color: #777; font-size: 8px; }
+.task-attachment-add { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; cursor: pointer; font-size: 9px; font-weight: 600; }
+.task-attachment-add input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.task-attachments > small { display: block; margin-top: 4px; color: #888; font-size: 8px; }
+
 .upcoming-screen { padding: 37px 24px 48px; }
 .upcoming-screen .screen-title { height: 82px; border: 0; align-items: flex-start; }
 .upcoming-screen h2 { margin: 0; height: 63px; padding-top: 18px; border-bottom: 1px solid #ededed; font-size: 20px; }

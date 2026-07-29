@@ -4216,6 +4216,25 @@ app.addEventListener('focusout', event => {
 })
 
 app.addEventListener('change', event => {
+  const taskFileInput = (event.target as HTMLElement).closest<HTMLInputElement>('[data-task-file-input]')
+  if (taskFileInput) {
+    const taskId = taskFileInput.dataset.taskFileInput
+    const file = taskFileInput.files?.[0]
+    if (!taskId || !file || taskFileAssetBusy.has(taskId)) return
+    taskFileAssetBusy.add(taskId)
+    render()
+    void uploadTaskFileAsset(taskId, file).then(asset => {
+      const assets = taskFileAssets.get(taskId) ?? []
+      if (!assets.some(item => item.id === asset.id)) taskFileAssets.set(taskId, [...assets, asset])
+      toast = `${asset.originalFilename} attached`
+    }).catch(error => {
+      toast = error instanceof Error ? error.message : 'The file could not be attached.'
+    }).finally(() => {
+      taskFileAssetBusy.delete(taskId)
+      render()
+    })
+    return
+  }
   const profilePhoto = (event.target as HTMLElement).closest<HTMLInputElement>('[data-profile-photo]')
   if (profilePhoto) {
     captureProfileDraft()
