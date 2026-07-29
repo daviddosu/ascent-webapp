@@ -354,6 +354,8 @@ async function gmailCreateDraft(
   idempotencyKey: string,
 ) {
   const to = (argumentsValue.to as string[]).map(safeHeader)
+  const cc = (Array.isArray(argumentsValue.cc) ? argumentsValue.cc : []).map(safeHeader)
+  const bcc = (Array.isArray(argumentsValue.bcc) ? argumentsValue.bcc : []).map(safeHeader)
   const subject = safeHeader(argumentsValue.subject)
   const bodyText = String(argumentsValue.body_text ?? '').replace(/\r?\n/g, '\r\n')
   const threadId = argumentsValue.thread_id as string | null
@@ -368,6 +370,8 @@ async function gmailCreateDraft(
       thread_id: existingDraft.message.threadId ?? threadId ?? '',
       message_id_header: messageIdHeader,
       to: normalizedEmails(existingMessage.to),
+      cc,
+      bcc,
       subject: existingMessage.subject,
       body_text: existingMessage.body_text,
       already_created: true,
@@ -381,6 +385,8 @@ async function gmailCreateDraft(
   const boundary = `shotcount-${idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
     `To: ${to.join(', ')}`,
+    ...(cc.length ? [`Cc: ${cc.join(', ')}`] : []),
+    ...(bcc.length ? [`Bcc: ${bcc.join(', ')}`] : []),
     `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
     hasBenchmarkAttachment
@@ -429,6 +435,8 @@ async function gmailCreateDraft(
     thread_id: draft.message?.threadId ?? threadId ?? '',
     message_id_header: messageIdHeader,
     to,
+    cc,
+    bcc,
     subject,
     body_text: bodyText,
     already_created: false,
@@ -441,13 +449,11 @@ export async function updatePreparedGmailDraft(
   draftId: string,
   subjectValue: string,
   bodyValue: string,
+  attachment: { name: string; base64: string; mimeType: string } = { name: '', base64: '', mimeType: '' },
 ) {
   const draftRecord = await preparedDraftRecord(admin, userId, draftId)
   if (!draftRecord?.arguments || !draftRecord.output) {
     throw new GoogleIntegrationError('gmail_draft_record_missing', 'The prepared Gmail draft is no longer available.', false)
-  }
-  if (draftRecord.arguments.benchmark_attachment_name || draftRecord.arguments.benchmark_attachment_base64) {
-    throw new GoogleIntegrationError('gmail_draft_attachment_edit_unsupported', 'Drafts with attachments cannot be edited here yet.', false)
   }
   const to = (draftRecord.arguments.to as string[]).map(safeHeader)
   const subject = safeHeader(subjectValue).trim()
@@ -457,17 +463,28 @@ export async function updatePreparedGmailDraft(
   const threadId = draftRecord.arguments.thread_id as string | null
   const reply = await replyHeaders(admin, userId, draftRecord.arguments.in_reply_to_message_id as string | null)
   const messageIdHeader = safeHeader(draftRecord.output.message_id_header)
+  const attachmentName = safeHeader(attachment.name).replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 160)
+  const attachmentBase64 = attachment.base64.replace(/\s+/g, '')
+  const hasAttachment = Boolean(attachmentName && attachmentBase64 && attachmentBase64.length <= 1_400_000)
+  if (attachment.name && !hasAttachment) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The attachment is too large or invalid.', false)
+  const boundary = `shotcount-${draftId.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
     `To: ${to.join(', ')}`,
     `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: 8bit',
+    hasAttachment ? `Content-Type: multipart/mixed; boundary="${boundary}"` : 'Content-Type: text/plain; charset=UTF-8',
+    ...(hasAttachment ? [] : ['Content-Transfer-Encoding: 8bit']),
     ...(messageIdHeader ? [`Message-ID: ${messageIdHeader}`] : []),
     ...(reply.inReplyTo ? [`In-Reply-To: ${reply.inReplyTo}`] : []),
     ...(reply.references ? [`References: ${reply.references}`] : []),
   ]
-  const raw = base64UrlEncode(`${headers.join('\r\n')}\r\n\r\n${bodyText}`)
+  const mimeBody = hasAttachment ? [
+    `--${boundary}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', bodyText,
+    `--${boundary}`, `Content-Type: ${safeHeader(attachment.mimeType) || 'application/octet-stream'}`,
+    'Content-Transfer-Encoding: base64', `Content-Disposition: attachment; filename="${attachmentName}"`, '', attachmentBase64,
+    `--${boundary}--`,
+  ].join('\r\n') : bodyText
+  const raw = base64UrlEncode(`${headers.join('\r\n')}\r\n\r\n${mimeBody}`)
   const updated = await googleRequest<GmailDraft>(
     admin,
     userId,
@@ -494,6 +511,7 @@ export async function updatePreparedGmailDraft(
     to,
     subject,
     body_text: bodyText,
+    attachment_name: attachmentName || null,
     already_created: true,
   }
 }
@@ -588,13 +606,19 @@ async function gmailSendDraft(
   )
   if (!draft.message) throw new GoogleIntegrationError('gmail_draft_missing', 'The approved Gmail draft no longer exists.', false)
   const actualTo = normalizedEmails(headerValue(draft.message, 'To'))
+  const actualCc = normalizedEmails(headerValue(draft.message, 'Cc'))
+  const actualBcc = normalizedEmails(headerValue(draft.message, 'Bcc'))
   const expectedTo = (argumentsValue.expected_to as string[]).map(value => value.toLocaleLowerCase()).sort()
+  const expectedCc = (argumentsValue.expected_cc as string[] ?? []).map(value => value.toLocaleLowerCase()).sort()
+  const expectedBcc = (argumentsValue.expected_bcc as string[] ?? []).map(value => value.toLocaleLowerCase()).sort()
   const actualSubject = headerValue(draft.message, 'Subject')
   const expectedSubject = String(argumentsValue.expected_subject)
   const preparedBody = canonicalEmailBody(draftRecord.arguments.body_text)
   const actualBody = canonicalEmailBody(plainTextFromPart(draft.message.payload))
   if (
     JSON.stringify(actualTo) !== JSON.stringify(expectedTo) ||
+    JSON.stringify(actualCc) !== JSON.stringify(expectedCc) ||
+    JSON.stringify(actualBcc) !== JSON.stringify(expectedBcc) ||
     actualSubject !== expectedSubject ||
     actualBody !== preparedBody
   ) {

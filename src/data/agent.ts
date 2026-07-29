@@ -60,6 +60,7 @@ export type AgentRun = {
     recipient?: string
     candidates?: Array<{ name?: string; email?: string; evidence?: string }>
   } | null
+  schedulingOptions?: Array<{ label: string; value: string }>
   capability: AgentCapability
   intent: AgentIntent
   currentStep: number
@@ -102,7 +103,12 @@ type AgentRunRow = {
   task_id: string
   status: AgentRunStatus
   objective: string
-  context: { description?: string; user_context?: string; recipient_resolution_pending?: AgentRun['recipientResolution'] } | null
+  context: {
+    description?: string
+    user_context?: string
+    recipient_resolution_pending?: AgentRun['recipientResolution']
+    scheduling_options?: AgentRun['schedulingOptions']
+  } | null
   recipientResolution?: AgentRun['recipientResolution']
   capability: AgentCapability
   intent: AgentIntent | null
@@ -144,6 +150,7 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     objective: row.objective,
     context: row.context?.user_context || row.context?.description || '',
     recipientResolution: row.recipientResolution ?? row.context?.recipient_resolution_pending ?? null,
+    schedulingOptions: Array.isArray(row.context?.scheduling_options) ? row.context.scheduling_options : [],
     capability: row.capability,
     intent,
     currentStep: row.current_step,
@@ -375,13 +382,16 @@ export function decideAgentApproval(approval: AgentApproval, decision: 'approve'
   }, 'Roon could not apply this approval decision.')
 }
 
-export function editAgentEmailApproval(approval: AgentApproval, subject: string, emailBody: string) {
+export function editAgentEmailApproval(approval: AgentApproval, subject: string, emailBody: string, attachment?: { name: string; base64: string; mimeType: string }) {
   return invokeRunAction({
     action: 'edit_email_approval',
     approvalId: approval.id,
     approvalVersion: approval.version,
     emailSubject: subject,
     emailBody,
+    attachmentName: attachment?.name,
+    attachmentBase64: attachment?.base64,
+    attachmentMimeType: attachment?.mimeType,
   }, 'Roon could not save the edited email.')
 }
 

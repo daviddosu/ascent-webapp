@@ -6,8 +6,17 @@ export type SharedAgentIntent = {
 
 export function classifySharedAgentIntent(title: string, description = ''): SharedAgentIntent {
   const value = `${title} ${description}`.toLocaleLowerCase()
+  const applicationIntent = /\bapply\b[\s\S]{0,80}\b(programme|program|phd|scholarship|fellowship|accelerator|job|role|position|opportunity)\b/.test(value)
   const hasEmail = /\b(email|mail|gmail|reply|follow[\s-]?up|message|outreach)\b/.test(value)
   const hasCalendar = /\b(meeting|meet|calendar|schedule|reschedule|availability|appointment|invite|cancel.+(?:call|meeting))\b/.test(value)
+  // People commonly describe the outcome in the wrong surface: “put the
+  // meeting in her inbox”, “sync the call to his email”, or “add the event to
+  // their Gmail”. Those are calendar-invite outcomes, not email-only asks.
+  // Keep this deliberately narrow: merely *telling* someone about an event is
+  // still an email; placing a scheduled item into their email/calendar is not.
+  const eventDeliveryToRecipient =
+    /\b(?:sync|add|put|place)\b[\s\S]{0,100}\b(?:pitch|meeting|event|appointment|call|session|interview)\b[\s\S]{0,100}\b(?:to|with|in|into|on)\b[\s\S]{0,64}\b(?:email|gmail|inbox|calendar|schedule)\b/.test(value) ||
+    /\b(?:invite|calendar\s+invite)\b[\s\S]{0,80}\b(?:pitch|meeting|event|appointment|call|session|interview)\b/.test(value)
   const coordinatesWithSomeone =
     /\b(?:set\s*up|arrange|coordinate|organize|schedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(value) ||
     /\b(?:meet|meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/.test(value)
@@ -34,6 +43,9 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
   const research = /\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b/.test(value)
   const draft = /\b(draft|write|outline|proposal|application|polish|document)\b/.test(value)
 
+  if (applicationIntent) {
+    return { capability: 'browser', strategy: 'hybrid', outcomeType: 'prepared_result' }
+  }
   if (hasFlight) {
     return {
       capability: 'flight_search',
@@ -41,7 +53,7 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
       outcomeType: wantsBooking ? 'payment_handoff' : 'prepared_result',
     }
   }
-  if (hasCalendar && (coordinatesWithSomeone || (hasEmail && (wantsEmailWrite || wantsCalendarWrite)))) {
+  if (eventDeliveryToRecipient || (hasCalendar && (coordinatesWithSomeone || (hasEmail && (wantsEmailWrite || wantsCalendarWrite))))) {
     return { capability: 'scheduling', strategy: 'hybrid', outcomeType: 'external_change' }
   }
   if (hasCalendar) {

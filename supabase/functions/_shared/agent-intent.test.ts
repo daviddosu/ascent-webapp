@@ -37,4 +37,38 @@ describe('shared agent intent', () => {
       "Reply to Sarah's most recent email and tell her Tuesday works.",
     ).outcomeType).toBe('external_change')
   })
+
+  it('treats syncing a dated pitch to a recipient email as a calendar invite workflow', () => {
+    expect(classifySharedAgentIntent(
+      'Email David',
+      "Tell David to prepare for Antler's speech; the pitch is Friday. Sync the pitch to his email for Friday at 11 a.m. Nigeria time.",
+    )).toEqual({
+      capability: 'scheduling',
+      strategy: 'hybrid',
+      outcomeType: 'external_change',
+    })
+  })
+
+  it.each([
+    'Put the call in her inbox for Thursday at 2 p.m.',
+    'Add the interview to his Gmail for next Monday.',
+    'Place the session on their calendar and invite them.',
+  ])('infers a calendar invite when an event is described through the wrong surface: %s', description => {
+    expect(classifySharedAgentIntent('Let the recipient know', description)).toEqual({
+      capability: 'scheduling',
+      strategy: 'hybrid',
+      outcomeType: 'external_change',
+    })
+  })
+
+  it('does not turn a normal event-notification email into a calendar change', () => {
+    expect(classifySharedAgentIntent(
+      'Email Ada',
+      'Tell Ada that the pitch is on Friday at 11 a.m. Nigeria time.',
+    )).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'external_change',
+    })
+  })
 })

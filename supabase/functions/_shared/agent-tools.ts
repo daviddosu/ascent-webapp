@@ -206,7 +206,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'agent.request_context',
-    description: 'Pause and ask the user one concise question for genuinely missing information.',
+    description: 'Pause and ask the user one concise question for genuinely missing information. For a calendar conflict, include up to three verified suggested_options the user can select.',
     parameters: objectSchema({
       question: stringValue('The single concise question shown to the user.', 400),
       missing_fields: {
@@ -214,7 +214,15 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         items: stringValue('A stable missing field name.', 80),
         maxItems: 6,
       },
-    }, ['question', 'missing_fields']),
+      suggested_options: {
+        type: 'array',
+        items: objectSchema({
+          label: stringValue('Human-readable option, including date, time, and timezone.', 240),
+          value: stringValue('Exact instruction to continue with this option.', 400),
+        }, ['label', 'value']),
+        maxItems: 3,
+      },
+    }, ['question', 'missing_fields', 'suggested_options']),
     strict: true,
   },
   {
@@ -308,11 +316,13 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         minItems: 1,
         maxItems: 20,
       },
+      cc: { type: 'array', items: stringValue('CC recipient email address.', 320), maxItems: 20 },
+      bcc: { type: 'array', items: stringValue('BCC recipient email address.', 320), maxItems: 20 },
       subject: stringValue('Email subject.', 998),
       body_text: stringValue('Plain-text email body.', 30000),
       thread_id: nullableString('Existing Gmail thread ID when replying.', 256),
       in_reply_to_message_id: nullableString('Existing Gmail message ID when replying.', 256),
-    }, ['to', 'subject', 'body_text', 'thread_id', 'in_reply_to_message_id']),
+    }, ['to', 'cc', 'bcc', 'subject', 'body_text', 'thread_id', 'in_reply_to_message_id']),
     strict: true,
   },
   {
@@ -327,14 +337,16 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         minItems: 1,
         maxItems: 20,
       },
+      expected_cc: { type: 'array', items: stringValue('Approved CC recipient email address.', 320), maxItems: 20 },
+      expected_bcc: { type: 'array', items: stringValue('Approved BCC recipient email address.', 320), maxItems: 20 },
       expected_subject: stringValue('Approved email subject.', 998),
-    }, ['draft_id', 'expected_to', 'expected_subject']),
+    }, ['draft_id', 'expected_to', 'expected_cc', 'expected_bcc', 'expected_subject']),
     strict: true,
   },
   {
     type: 'function',
     name: 'gmail.wait_for_reply',
-    description: 'Pause this same AgentRun until a new reply arrives in a Gmail thread.',
+    description: 'Pause this same AgentRun until a new reply arrives after the specified sent message in a Gmail thread. Use a contact email only when one specific respondent is awaited; otherwise use null for a multi-attendee negotiation.',
     parameters: objectSchema({
       thread_id: stringValue('Gmail thread ID returned after sending.', 256),
       sent_message_id: stringValue('Gmail message ID of the message ShotCount sent.', 256),
@@ -651,7 +663,11 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
   if (!isRecord(value)) return false
   switch (toolName) {
     case 'agent.request_context':
-      return validateString(value.question, 400) && validateStringArray(value.missing_fields, 6, 80)
+      return validateString(value.question, 400) &&
+        validateStringArray(value.missing_fields, 6, 80) &&
+        Array.isArray(value.suggested_options) &&
+        value.suggested_options.length <= 3 &&
+        value.suggested_options.every(option => isRecord(option) && validateString(option.label, 240) && validateString(option.value, 400))
     case 'agent.complete':
       return validateString(value.summary, 1200) &&
         Array.isArray(value.sections) &&
@@ -695,6 +711,8 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         value.to.length >= 1 &&
         value.to.length <= 20 &&
         value.to.every(validateEmail) &&
+        Array.isArray(value.cc) && value.cc.length <= 20 && value.cc.every(validateEmail) &&
+        Array.isArray(value.bcc) && value.bcc.length <= 20 && value.bcc.every(validateEmail) &&
         validateString(value.subject, 998, true) &&
         validateString(value.body_text, 30000) &&
         (value.thread_id === null || validateString(value.thread_id, 256)) &&
@@ -705,6 +723,8 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         value.expected_to.length >= 1 &&
         value.expected_to.length <= 20 &&
         value.expected_to.every(validateEmail) &&
+        Array.isArray(value.expected_cc) && value.expected_cc.length <= 20 && value.expected_cc.every(validateEmail) &&
+        Array.isArray(value.expected_bcc) && value.expected_bcc.length <= 20 && value.expected_bcc.every(validateEmail) &&
         validateString(value.expected_subject, 998, true)
     case 'gmail.wait_for_reply':
       return validateString(value.thread_id, 256) &&

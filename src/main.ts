@@ -78,6 +78,14 @@ import {
   type AgentRun,
   type RoonPlanTask,
 } from './data/agent'
+import {
+  acceptedTaskFileTypes,
+  loadTaskFileAssets,
+  removeTaskFileAsset,
+  setFileAssetReusable,
+  uploadTaskFileAsset,
+  type FileAsset,
+} from './data/file-assets'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.png'
 import peopleCollage from './assets/shotcount-people-collage.png'
@@ -406,8 +414,12 @@ let view: View = readStoredView()
 let selectedTaskId = showDemoData && tasks.some(task => task.id === 'license') ? 'license' : tasks[0]?.id ?? ''
 let mobileInspectorOpen = false
 const agentRuns = readAgentRuns()
+const taskFileAssets = new Map<string, FileAsset[]>()
+const loadingTaskFileAssets = new Set<string>()
+const taskFileAssetBusy = new Set<string>()
 const agentApprovals = new Map<string, AgentApproval>()
 const agentDecisionBusy = new Set<string>()
+const pendingEmailSends = new Map<string, (proceed: boolean) => void>()
 let agentPollingTimer = 0
 let agentPollBusy = false
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
@@ -866,7 +878,13 @@ async function refreshAgentRuns() {
 
 async function pollWaitingAgentRuns() {
   if (!activeUser || agentPollBusy || document.visibilityState === 'hidden') return
-  const waitingRuns = [...agentRuns.values()].filter(run => run.status === 'waiting_external')
+  // A provider write normally continues in the same approval response. Poll
+  // active runs as a lightweight recovery path too, so a refresh or a dropped
+  // response never leaves a task visibly working until the background worker
+  // reaches it.
+  const waitingRuns = [...agentRuns.values()].filter(run =>
+    ['waiting_external', 'planning', 'running'].includes(run.status),
+  )
   if (!waitingRuns.length) return
   agentPollBusy = true
   try {
@@ -893,7 +911,7 @@ async function startAgentRunSystem() {
     // A focus refresh can recover if realtime is temporarily unavailable.
   }
   void pollWaitingAgentRuns()
-  agentPollingTimer = window.setInterval(() => void pollWaitingAgentRuns(), 30_000)
+  agentPollingTimer = window.setInterval(() => void pollWaitingAgentRuns(), 5_000)
 }
 
 async function openCreatorToday(profile: CommunityProfile) {
@@ -1110,7 +1128,7 @@ async function syncAgentApproval(run: AgentRun) {
 async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 'reject') {
   const run = agentRuns.get(taskId)
   const approval = run ? agentApprovals.get(run.id) : null
-  if (!run || !approval || agentDecisionBusy.has(approval.id)) return
+  if (!run || !approval || agentDecisionBusy.has(approval.id) || pendingEmailSends.has(approval.id)) return
   const editedSubject = approval.kind === 'send_email'
     ? document.querySelector<HTMLInputElement>(`[data-agent-email-subject="${taskId}"]`)?.value.trim() ?? ''
     : ''
@@ -1125,13 +1143,37 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
       if (!editedSubject || !editedBody) throw new Error('Add both a subject and email body before sending.')
       const currentSubject = String(approvalPreviewValue(approval, 'subject') ?? '').trim()
       const currentBody = String(approvalPreviewValue(approval, 'body_text') ?? '').trim()
-      if (editedSubject !== currentSubject || editedBody !== currentBody) {
-        await editAgentEmailApproval(approval, editedSubject, editedBody)
+      const file = document.querySelector<HTMLInputElement>(`[data-agent-email-attachment="${taskId}"]`)?.files?.[0]
+      const attachment = file ? await new Promise<{ name: string; base64: string; mimeType: string }>((resolve, reject) => {
+        if (file.size > 1_000_000) return reject(new Error('Attachments must be 1 MB or smaller for now.'))
+        const reader = new FileReader()
+        reader.onerror = () => reject(new Error('The attachment could not be read.'))
+        reader.onload = () => resolve({ name: file.name, mimeType: file.type, base64: String(reader.result).split(',').at(-1) ?? '' })
+        reader.readAsDataURL(file)
+      }) : undefined
+      const safety = approvalPreviewValue(approval, 'safety') as { requiresAttachment?: boolean; hasPlaceholder?: boolean } | ''
+      if (safety && safety.requiresAttachment && !attachment) throw new Error('Choose the attachment mentioned in this email before sending.')
+      if (safety && safety.hasPlaceholder) throw new Error('Remove unfinished placeholders before sending.')
+      if (editedSubject !== currentSubject || editedBody !== currentBody || attachment) {
+        await editAgentEmailApproval(approval, editedSubject, editedBody, attachment)
         const refreshed = (await loadAgentApprovals(run.id)).find(item => item.status === 'pending')
         if (!refreshed) throw new Error('The edited email approval could not be reloaded.')
         agentApprovals.set(run.id, refreshed)
         approvalToDecide = refreshed
       }
+      const shouldSend = await new Promise<boolean>(resolve => {
+        pendingEmailSends.set(approvalToDecide.id, resolve)
+        window.setTimeout(() => {
+          const pending = pendingEmailSends.get(approvalToDecide.id)
+          if (pending === resolve) {
+            pendingEmailSends.delete(approvalToDecide.id)
+            resolve(true)
+            render()
+          }
+        }, 3000)
+        render()
+      })
+      if (!shouldSend) return
     }
     const updated = await decideAgentApproval(approvalToDecide, decision)
     agentRuns.set(taskId, updated)
@@ -2520,7 +2562,12 @@ function renderTodayComposer() {
         </label>
         <label class="today-field today-field-description">
           <span>Description</span>
-          <textarea name="description" placeholder="Add a short note or useful context">${escapeHtml(todayComposerDraft.description)}</textarea>
+          <div class="today-description-wrap">
+            <textarea name="description" placeholder="Add a short note or useful context">${escapeHtml(todayComposerDraft.description)}</textarea>
+            <button type="button" class="description-voice-input ${descriptionRecordingTaskId === 'today-composer' ? 'is-recording' : ''}" data-action="toggle-description-voice" data-description-voice-target="today-composer" aria-label="${descriptionRecordingTaskId === 'today-composer' ? 'Stop voice input' : descriptionTranscribingTaskId === 'today-composer' ? 'Transcribing description' : 'Add voice input to description'}" aria-pressed="${descriptionRecordingTaskId === 'today-composer'}" ${descriptionTranscribingTaskId === 'today-composer' ? 'disabled' : ''}>
+              ${descriptionRecordingTaskId === 'today-composer' ? '<span aria-hidden="true">■</span>' : descriptionTranscribingTaskId === 'today-composer' ? '<span aria-hidden="true">…</span>' : icon('mic')}
+            </button>
+          </div>
         </label>
         <label class="today-field today-goal-field">
           <span>Goal</span>
@@ -2745,6 +2792,8 @@ function approvalPreviewValue(approval: AgentApproval, key: string) {
 
 function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
   const recipients = approvalPreviewValue(approval, 'to')
+  const ccRecipients = approvalPreviewValue(approval, 'cc')
+  const bccRecipients = approvalPreviewValue(approval, 'bcc')
   const title = approvalPreviewValue(approval, approval.kind === 'calendar_write' ? 'summary' : 'subject')
   const body = approvalPreviewValue(approval, approval.kind === 'calendar_write' ? 'description' : 'body_text')
   const startsAt = approvalPreviewValue(approval, 'start')
@@ -2753,7 +2802,9 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
   const browserTarget = approvalPreviewValue(approval, 'target')
   const browserEffect = approvalPreviewValue(approval, 'expected_effect')
   const preparedValues = approvalPreviewValue(approval, 'prepared_values')
+  const safety = approvalPreviewValue(approval, 'safety') as { warnings?: unknown } | null
   const busy = agentDecisionBusy.has(approval.id)
+  const undoing = pendingEmailSends.has(approval.id)
   const confirmLabel = approval.kind === 'send_email'
     ? 'Send'
     : approval.kind === 'calendar_write'
@@ -2764,8 +2815,10 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
     <p>${escapeHtml(approval.title)}</p>
     <div class="task-agent-approval-detail">
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
+      ${Array.isArray(ccRecipients) && ccRecipients.length ? `<dl><dt>CC</dt><dd>${escapeHtml(ccRecipients.join(', '))}</dd></dl>` : ''}
+      ${Array.isArray(bccRecipients) && bccRecipients.length ? `<dl><dt>BCC</dt><dd>${escapeHtml(bccRecipients.join(', '))}</dd></dl>` : ''}
       ${title ? approval.kind === 'send_email'
-        ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${task.id}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject"></label>`
+        ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${task.id}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject" ${busy || undoing ? 'disabled' : ''}></label>`
         : `<dl><dt>Event</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
       ${startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
       ${destination ? `<dl><dt>Page</dt><dd>${escapeHtml(String(destination))}</dd></dl>` : ''}
@@ -2775,14 +2828,15 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
         const value = item as Record<string, unknown>
         return `<dl><dt>${escapeHtml(String(value.field ?? 'Field'))}</dt><dd>${escapeHtml(String(value.value ?? ''))}</dd></dl>`
       }).join('') : ''}
+      ${Array.isArray(safety?.warnings) && safety.warnings.length ? `<div class="task-agent-waiting-detail"><span>${escapeHtml(safety.warnings.join(' '))}</span></div>` : ''}
       ${body ? approval.kind === 'send_email'
-        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${task.id}" rows="9" maxlength="20000" aria-label="Email body">${escapeHtml(String(body))}</textarea></label>`
+        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${task.id}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label><label class="task-agent-email-field"><span>Attachment <small>Optional · from your computer</small></span><input type="file" data-agent-email-attachment="${task.id}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`
         : `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
     </div>
     <small>Only this exact action is approved. Any change requires a new review.</small>
     <footer>
-      <button type="button" data-action="reject-agent-approval" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>Not now</button>
-      <button class="agent-primary" type="button" data-action="approve-agent-approval" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>${busy ? 'Working…' : confirmLabel}</button>
+      <button type="button" data-action="reject-agent-approval" data-task-id="${task.id}" ${(busy || undoing) ? 'disabled' : ''}>Not now</button>
+      <button class="agent-primary" type="button" data-action="${undoing ? 'undo-email-send' : 'approve-agent-approval'}" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>${undoing ? 'Undo send' : busy ? 'Working…' : confirmLabel}</button>
     </footer>
   </section>`
 }
@@ -2847,10 +2901,11 @@ function renderAgentPanel(task: Task) {
     const candidates = run.recipientResolution?.state === 'ambiguous'
       ? (run.recipientResolution.candidates ?? []).filter(candidate => candidate.email)
       : []
+    const schedulingOptions = run.schedulingOptions ?? []
     return `<section class="task-agent-card task-agent-card--context">
       <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>Needs context</em></header>
       <p>${escapeHtml(contextPrompt)}</p>
-      ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${task.id}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. Roon will continue this same task.</small>` : `<small>Add the answer in Description, then save. Roon will continue this same task.</small>`}
+      ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${task.id}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. Roon will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${task.id}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label)}</strong><span>Use this time</span></button>`).join('')}</div><small>Choose a time, or edit Description to give Roon another instruction.</small>` : `<small>Add the answer in Description, then save. Roon will continue this same task.</small>`}
       <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>${candidates.length ? '' : '<button class="agent-primary" type="button" data-action="focus-task-description" data-task-id="' + task.id + '">Add details</button>'}</footer>
     </section>`
   }
@@ -2889,6 +2944,15 @@ function renderAgentPanel(task: Task) {
 }
 
 function renderInspector(task: Task) {
+  if (cloudEnabled && !taskFileAssets.has(task.id) && !loadingTaskFileAssets.has(task.id)) {
+    loadingTaskFileAssets.add(task.id)
+    void loadTaskFileAssets(task.id).then(assets => {
+      taskFileAssets.set(task.id, assets)
+      if (selectedTaskId === task.id) render()
+    }).catch(() => {
+      taskFileAssets.set(task.id, [])
+    }).finally(() => loadingTaskFileAssets.delete(task.id))
+  }
   const subtasks = task.subtaskItems ?? Array.from({ length: task.subtasks ?? 0 }, (_, index) => ({
     id: `${task.id}-subtask-${index}`,
     title: index === 0 ? 'Subtask' : `Subtask ${index + 1}`,
@@ -2910,6 +2974,7 @@ function renderInspector(task: Task) {
             ${recording ? '<span aria-hidden="true">■</span>' : transcribing ? '<span aria-hidden="true">…</span>' : icon('mic')}
           </button>
         </div>
+        ${renderTaskAttachments(task)}
         ${renderInspectorRoonAction(task)}
 
         <div class="inspector-fields">
@@ -2937,6 +3002,33 @@ function renderInspector(task: Task) {
       </div>
     </aside>
   `
+}
+
+function fileKind(asset: FileAsset) {
+  if (asset.mimeType.startsWith('image/')) return 'Image'
+  if (asset.mimeType === 'application/pdf') return 'PDF'
+  if (asset.mimeType.includes('wordprocessingml')) return 'DOCX'
+  return 'TXT'
+}
+
+function renderTaskAttachments(task: Task) {
+  const assets = taskFileAssets.get(task.id) ?? []
+  const busy = taskFileAssetBusy.has(task.id)
+  return `<section class="task-attachments" aria-label="Task attachments">
+    <div class="task-attachment-list">
+      ${assets.map(asset => `<article class="task-attachment-chip">
+        <span class="task-attachment-kind">${fileKind(asset)}</span>
+        <span class="task-attachment-name" title="${escapeHtml(asset.originalFilename)}">${escapeHtml(asset.originalFilename)}</span>
+        ${asset.source === 'roon_generated' ? '<em>Prepared by Roon</em>' : `<label class="task-attachment-reuse"><input type="checkbox" data-action="toggle-file-reusable" data-task-id="${task.id}" data-file-asset-id="${asset.id}" ${asset.reusable ? 'checked' : ''} ${busy ? 'disabled' : ''}> Use for future tasks</label>
+        <button type="button" data-action="remove-task-attachment" data-task-id="${task.id}" data-file-asset-id="${asset.id}" aria-label="Remove ${escapeHtml(asset.originalFilename)}" ${busy ? 'disabled' : ''}>×</button>`}
+      </article>`).join('')}
+    </div>
+    <label class="task-attachment-add ${busy ? 'is-busy' : ''}">
+      <input type="file" data-task-file-input="${task.id}" accept="${acceptedTaskFileTypes.join(',')}" ${busy ? 'disabled' : ''}>
+      ${busy ? 'Uploading…' : `${icon('plus')} Attach file`}
+    </label>
+    <small>PNG, JPEG, PDF, DOCX, or TXT · private to you</small>
+  </section>`
 }
 
 function renderInspectorRoonAction(task: Task) {
@@ -3687,12 +3779,13 @@ function descriptionPcmWav() {
   return new Blob([buffer], { type: 'audio/wav' })
 }
 
-async function toggleDescriptionVoiceInput() {
-  const task = selectedTask()
-  if (!task) return
+async function toggleDescriptionVoiceInput(target = 'task') {
+  const task = target === 'today-composer' ? null : selectedTask()
+  const targetId = target === 'today-composer' ? target : task?.id
+  if (!targetId) return
   if (descriptionRecorder) {
     if (
-      descriptionRecordingTaskId === task.id
+      descriptionRecordingTaskId === targetId
       && descriptionRecorder.state === 'recording'
       && !descriptionRecordingStopPending
     ) {
@@ -3707,7 +3800,8 @@ async function toggleDescriptionVoiceInput() {
     return
   }
   // Keep typed text before a recording-state render replaces the inspector DOM.
-  persistInspectorDraft()
+  if (target === 'today-composer') captureTodayComposerDraft()
+  else persistInspectorDraft()
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
     toast = 'Voice input is not available in this browser.'
     render()
@@ -3729,11 +3823,11 @@ async function toggleDescriptionVoiceInput() {
     const chunks: Blob[] = []
     await startDescriptionPcmCapture(stream)
     descriptionRecorder = recorder
-    descriptionRecordingTaskId = task.id
+    descriptionRecordingTaskId = targetId
     descriptionRecordingStartedAt = Date.now()
     descriptionRecordingStopPending = false
     recorder.addEventListener('dataavailable', event => { if (event.data.size) chunks.push(event.data) })
-    recorder.addEventListener('stop', () => void finishDescriptionVoiceInput(task.id, stream, chunks, recorder.mimeType))
+    recorder.addEventListener('stop', () => void finishDescriptionVoiceInput(targetId, stream, chunks, recorder.mimeType))
     // Periodic chunks make short dictation reliable across Chromium and WebKit.
     recorder.start(250)
     void prepareDescriptionTranscription()
@@ -3794,11 +3888,14 @@ async function finishDescriptionVoiceInput(taskId: string, stream: MediaStream, 
     if (task) {
       task.description = appendTranscript(task.description ?? '', transcript)
       persistPlanner()
+    } else if (taskId === 'today-composer') {
+      captureTodayComposerDraft()
+      todayComposerDraft.description = appendTranscript(todayComposerDraft.description, transcript)
     }
     descriptionTranscribingTaskId = null
     render()
     queueMicrotask(() => {
-      const field = document.querySelector<HTMLTextAreaElement>('.inspector-description')
+      const field = document.querySelector<HTMLTextAreaElement>(taskId === 'today-composer' ? '[data-today-form] textarea[name="description"]' : '.inspector-description')
       field?.focus()
       field?.setSelectionRange(field.value.length, field.value.length)
     })
@@ -4393,6 +4490,45 @@ app.addEventListener('click', async event => {
     return
   }
 
+  if (action === 'remove-task-attachment') {
+    const control = target.closest<HTMLElement>('[data-file-asset-id]')
+    const taskId = control?.dataset.taskId
+    const assetId = control?.dataset.fileAssetId
+    if (!taskId || !assetId || taskFileAssetBusy.has(taskId)) return
+    taskFileAssetBusy.add(taskId)
+    render()
+    void removeTaskFileAsset(assetId).then(() => {
+      taskFileAssets.set(taskId, (taskFileAssets.get(taskId) ?? []).filter(asset => asset.id !== assetId))
+      toast = 'Attachment removed'
+    }).catch(error => {
+      toast = error instanceof Error ? error.message : 'The attachment could not be removed.'
+    }).finally(() => {
+      taskFileAssetBusy.delete(taskId)
+      render()
+    })
+    return
+  }
+
+  if (action === 'toggle-file-reusable') {
+    const input = target.closest<HTMLInputElement>('[data-file-asset-id]')
+    const taskId = input?.dataset.taskId
+    const assetId = input?.dataset.fileAssetId
+    if (!taskId || !assetId || taskFileAssetBusy.has(taskId)) return
+    taskFileAssetBusy.add(taskId)
+    void setFileAssetReusable(assetId, input.checked).then(() => {
+      const asset = (taskFileAssets.get(taskId) ?? []).find(item => item.id === assetId)
+      if (asset) asset.reusable = input.checked
+      toast = input.checked ? 'Available to Roon for future tasks' : 'File limited to this task'
+    }).catch(error => {
+      input.checked = !input.checked
+      toast = error instanceof Error ? error.message : 'The file setting could not be changed.'
+    }).finally(() => {
+      taskFileAssetBusy.delete(taskId)
+      render()
+    })
+    return
+  }
+
   if (action === 'submit-agent-context') {
     const task = tasks.find(item => item.id === target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId)
     const context = document.querySelector<HTMLTextAreaElement>('.task-agent-context')?.value.trim() ?? ''
@@ -4409,7 +4545,7 @@ app.addEventListener('click', async event => {
   }
 
   if (action === 'toggle-description-voice') {
-    void toggleDescriptionVoiceInput()
+    void toggleDescriptionVoiceInput(target.closest<HTMLElement>('[data-description-voice-target]')?.dataset.descriptionVoiceTarget)
     return
   }
 
@@ -4417,6 +4553,21 @@ app.addEventListener('click', async event => {
     const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
     if (taskId) {
       void decidePendingAgentApproval(taskId, action === 'approve-agent-approval' ? 'approve' : 'reject')
+    }
+    return
+  }
+
+  if (action === 'undo-email-send') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const run = taskId ? agentRuns.get(taskId) : null
+    const approval = run ? agentApprovals.get(run.id) : null
+    const pending = approval ? pendingEmailSends.get(approval.id) : null
+    if (pending && approval) {
+      pendingEmailSends.delete(approval.id)
+      pending(false)
+      toast = 'Send cancelled'
+      render()
+      clearAgentToast(toast)
     }
     return
   }
@@ -4434,6 +4585,15 @@ app.addEventListener('click', async event => {
     const taskId = control?.dataset.taskId
     const recipientEmail = control?.dataset.recipientEmail
     if (taskId && recipientEmail) void chooseAgentRecipient(taskId, recipientEmail)
+    return
+  }
+
+  if (action === 'select-agent-schedule-option') {
+    const control = target.closest<HTMLElement>('[data-schedule-option]')
+    const taskId = control?.dataset.taskId
+    const option = control?.dataset.scheduleOption
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
+    if (task && option) void startAgentRun(task, option)
     return
   }
 

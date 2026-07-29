@@ -442,6 +442,9 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
 }
 .today-field-title,
 .today-field-description { grid-column: span 2; }
+.today-description-wrap { position: relative; }
+.today-description-wrap textarea { padding-right: 44px; }
+.today-description-wrap .description-voice-input { right: 7px; bottom: 7px; }
 .today-composer-fields .today-field:last-child { grid-column: span 2; }
 .inline-goal-trigger {
   width: max-content;
