@@ -476,7 +476,7 @@ describe('reference screens', () => {
     liveSearch.dispatchEvent(new Event('input', { bubbles: true }))
     document.querySelector<HTMLButtonElement>('[data-calendar-mode="day"]')!.click()
     expect(document.querySelector('[data-calendar-mode="day"]')?.classList.contains('active')).toBe(true)
-    expect(document.querySelectorAll('.calendar-event')).toHaveLength(2)
+    expect(document.querySelectorAll('.calendar-event')).toHaveLength(3)
     document.querySelector<HTMLButtonElement>('[data-calendar-mode="month"]')!.click()
     expect(document.querySelector('[data-calendar-mode="month"]')?.classList.contains('active')).toBe(true)
     expect(document.querySelector('.calendar-header h1')?.textContent).toBe(new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))

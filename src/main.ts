@@ -386,7 +386,7 @@ const seedTasks: Task[] = [
     visibility: 'private',
   },
   { id: 'accountant', title: 'Consult accountant', goalId: 'paper', due: todayKey, subtasks: 3 },
-  { id: 'business-card', title: 'Print business card', due: todayKey },
+  { id: 'business-card', title: 'Print business card', due: todayKey, time: '09:00' },
   { id: 'job-posting', title: 'Create job posting for SEO specialist', due: tomorrowKey, goalId: 'job-search' },
   { id: 'assets', title: 'Request design assets for landing page', due: tomorrowKey, goalId: 'job-search' },
   { id: 'outline', title: 'Outline the next newsletter', due: dateKey(addDays(now, 2)), goalId: 'personal' },
