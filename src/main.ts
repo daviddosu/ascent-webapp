@@ -1,5 +1,5 @@
 import { nextRecurringDate, type Recurrence as SharedRecurrence } from './domain'
-import { cloudEnabled, connectGoogleCalendar, currentUser, getCloudClient, hasGoogleIdentity, signOut as signOutCloud } from './data/cloud'
+import { beginGoogleSignIn, cloudEnabled, connectGoogleCalendar, currentUser, getCloudClient, hasGoogleIdentity, signOut as signOutCloud } from './data/cloud'
 import { appendTranscript, prepareDescriptionTranscription, transcribeDescriptionAudio } from './data/transcription'
 import {
   loadGoogleCalendarEvents,
@@ -63,6 +63,7 @@ import {
   cancelAgentRunRemote,
   createAgentRun,
   decideAgentApproval,
+  editAgentCalendarApproval,
   editAgentEmailApproval,
   executeAgentRun,
   generateRoonPlan,
@@ -79,13 +80,23 @@ import {
   type RoonPlanTask,
 } from './data/agent'
 import {
+  REASONING_MODEL_ID,
+  getSpecialist,
+  legacySpecialistRoute,
+  routeTask,
+  specialistRequiredEffects,
+  type SpecialistRoute,
+} from './data/specialists'
+import {
   acceptedTaskFileTypes,
+  downloadTaskFileAsset,
   loadTaskFileAssets,
   removeTaskFileAsset,
   setFileAssetReusable,
   uploadTaskFileAsset,
   type FileAsset,
 } from './data/file-assets'
+import { isApplicationIntent } from './data/application'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.png'
 import peopleCollage from './assets/shotcount-people-collage.png'
@@ -417,16 +428,21 @@ const agentRuns = readAgentRuns()
 const taskFileAssets = new Map<string, FileAsset[]>()
 const loadingTaskFileAssets = new Set<string>()
 const taskFileAssetBusy = new Set<string>()
+let filePreview: { asset: FileAsset; url: string | null; message?: string } | null = null
 const agentApprovals = new Map<string, AgentApproval>()
 const agentDecisionBusy = new Set<string>()
+const roonContextDrafts = new Map<string, string>()
 const pendingEmailSends = new Map<string, (proceed: boolean) => void>()
 let agentPollingTimer = 0
 let agentPollBusy = false
+let agentRunsRefreshing = false
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
 let plannerDraftGroup: UpcomingGroup | null = previewParams.get('plan') === 'tomorrow' ? 'tomorrow' : null
 let todayComposerOpen = previewParams.get('plan') === 'today'
+let todayComposerAttachment: File | null = null
+let skipTodayComposerCapture = false
 let dailyPlanningPrompt: 'today' | 'tomorrow' | null = null
 let subtaskComposerTaskId: string | null = null
 let editingSubtaskId: string | null = null
@@ -648,6 +664,7 @@ const icons: Record<string, string> = {
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
   mic: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M8.5 21h7"/>',
+  paperclip: '<path d="m20.5 11.5-8.9 8.9a5 5 0 0 1-7.1-7.1l9.6-9.6a3.5 3.5 0 1 1 5 5l-9.7 9.6a2 2 0 0 1-2.8-2.8l8.9-8.8"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
 }
 
@@ -845,6 +862,7 @@ function applyCompletedAgentTasks(runs: AgentRun[]) {
   for (const run of runs) {
     if (run.status !== 'completed') continue
     const task = tasks.find(item => item.id === run.taskId)
+    if (task && isApplicationIntent(task.title, task.description)) continue
     if (!task || task.completedAt) continue
     task.completedAt = run.updatedAt || new Date().toISOString()
     completedTaskIds.add(task.id)
@@ -856,7 +874,8 @@ function applyCompletedAgentTasks(runs: AgentRun[]) {
 }
 
 async function refreshAgentRuns() {
-  if (!activeUser) return
+  if (!activeUser || agentRunsRefreshing) return
+  agentRunsRefreshing = true
   try {
     const durableRuns = await loadAgentRuns()
     const pendingApprovals = (await Promise.all(
@@ -870,26 +889,50 @@ async function refreshAgentRuns() {
     agentApprovals.clear()
     pendingApprovals.forEach(approval => agentApprovals.set(approval.runId, approval))
     persistAgentRuns()
+    // Task state is ready before attachment metadata. Keep the workspace
+    // responsive while that secondary read finishes in the background.
     render()
+    if (selectedTaskId) {
+      const taskId = selectedTaskId
+      void loadTaskFileAssets(taskId).then(selectedAssets => {
+        if (selectedTaskId !== taskId) return
+        taskFileAssets.set(taskId, selectedAssets)
+        const selectedTask = tasks.find(task => task.id === taskId)
+        if (selectedTask) resumeApplicationRunForNewAttachment(selectedTask, selectedAssets)
+        render()
+      }).catch(() => undefined)
+    }
   } catch {
     // The task workspace remains usable while durable runs reconnect.
+  } finally {
+    agentRunsRefreshing = false
   }
 }
 
 async function pollWaitingAgentRuns() {
-  if (!activeUser || agentPollBusy || document.visibilityState === 'hidden') return
+  if ((!activeUser && !isPreviewMode) || agentPollBusy || document.visibilityState === 'hidden') return
   // A provider write normally continues in the same approval response. Poll
-  // active runs as a lightweight recovery path too, so a refresh or a dropped
-  // response never leaves a task visibly working until the background worker
-  // reaches it.
-  const waitingRuns = [...agentRuns.values()].filter(run =>
-    ['waiting_external', 'planning', 'running'].includes(run.status),
+  // active application runs as a recovery path too. An application turn can
+  // take longer than the browser request that started it; without this nudge a
+  // dropped response leaves the panel saying “In progress” until the periodic
+  // server sweep catches it. The server-side lease makes this safe: while the
+  // original turn still owns the run, a poll only reads its durable state and
+  // cannot replay the model turn.
+  const staleApplicationRuns = [...agentRuns.values()].filter(run =>
+    isApplicationIntent(run.objective, run.context) &&
+    ['planning', 'running'].includes(run.status) &&
+    Date.now() - Date.parse(run.updatedAt) >= 20_000,
   )
-  if (!waitingRuns.length) return
+  const waitingRuns = [...agentRuns.values()].filter(run => run.status === 'waiting_external')
+  const recoverableRuns = [...waitingRuns, ...staleApplicationRuns]
+  if (!recoverableRuns.length) return
   agentPollBusy = true
   try {
-    const updatedRuns = await Promise.all(waitingRuns.map(run => pollAgentRun(run.id)))
-    for (const run of updatedRuns) agentRuns.set(run.taskId, run)
+    const updatedRuns = await Promise.all(recoverableRuns.map(run => pollAgentRun(run.id)))
+    for (const run of updatedRuns) {
+      agentRuns.set(run.taskId, run)
+      await syncAgentApproval(run)
+    }
     persistAgentRuns()
     render()
   } catch {
@@ -952,11 +995,38 @@ function readAgentRuns() {
     const stored = window.localStorage.getItem(agentRunsStorageKey)
     if (!stored) return new Map<string, AgentRun>()
     const parsed = JSON.parse(stored) as AgentRun[]
-    return new Map(parsed.map(run => [run.taskId, {
-      ...run,
-      progress: Array.isArray(run.progress) ? run.progress : [],
-      durable: Boolean(run.durable),
-    }]))
+    return new Map(parsed.map(run => {
+      const task = { title: run.objective, description: run.context }
+      const migrated = !run.specialistId && !run.activeSpecialistId
+        ? legacySpecialistRoute(task.title, task.description, run.capability)
+        : null
+      const route = migrated ?? taskSpecialistRoute(task)
+      const specialistId = run.specialistId ?? route?.primarySpecialistId ?? null
+      const specialist = getSpecialist(specialistId)
+      const taskContract = run.taskContract ?? route?.taskContract ?? null
+      const unsatisfiedEffects = Array.isArray(run.unsatisfiedEffects)
+        ? run.unsatisfiedEffects
+        : specialistId && taskContract
+          ? specialistRequiredEffects(specialistId, `${run.objective} ${run.context ?? ''}`, taskContract)
+          : []
+      return [run.taskId, {
+        ...run,
+        specialistId,
+        specialistVersion: run.specialistVersion ?? specialist?.version ?? null,
+        activeSpecialistId: run.activeSpecialistId ?? specialistId,
+        activeSpecialistVersion: run.activeSpecialistVersion ?? run.specialistVersion ?? specialist?.version ?? null,
+        reasoningModel: REASONING_MODEL_ID,
+        taskContract,
+        routingSource: run.routingSource ?? (migrated ? 'legacy_migration' : route?.classification === 'deterministic' ? 'deterministic' : 'semantic'),
+        specialistStageIndex: run.specialistStageIndex ?? 0,
+        specialistStages: Array.isArray(run.specialistStages) && run.specialistStages.length ? run.specialistStages : route?.stages ?? [],
+        completedEffects: Array.isArray(run.completedEffects) ? run.completedEffects : [],
+        unsatisfiedEffects,
+        progressIndex: run.progressIndex ?? run.currentStep ?? -1,
+        progress: Array.isArray(run.progress) ? run.progress : [],
+        durable: Boolean(run.durable),
+      } as AgentRun]
+    }))
   } catch {
     return new Map<string, AgentRun>()
   }
@@ -982,15 +1052,48 @@ const agentPreviewProgressLabels = [
   'Summarizing main points',
   'Identifying key takeaways',
 ]
+const applicationProgressLabels = [
+  'Reading the attached opportunity',
+  'Verifying the official programme page',
+  'Checking requirements and eligibility',
+  'Preparing a safe review handoff',
+]
+
+function taskSpecialistRoute(task: Pick<Task, 'title' | 'description'>): SpecialistRoute {
+  return routeTask(task.title, task.description)
+}
+
+function specialistForTask(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
+  const route = taskSpecialistRoute(task)
+  const assigned = run?.activeSpecialistId ?? run?.specialistId ?? route.primarySpecialistId
+  if (assigned) return getSpecialist(assigned)
+  // Legacy tasks that were previously delegated to Roon retain a subtle
+  // identity treatment in the existing inspector while the server performs
+  // the new domain classification. This is presentation compatibility, not
+  // a routing fallback: unsupported work still stops for context.
+  return roonCapabilityForTask(task) ? getSpecialist('roon') : null
+}
+
+function specialistName(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
+  return specialistForTask(task, run)?.displayName ?? 'ShotCount'
+}
+
+function specialistHeader(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
+  const specialist = specialistForTask(task, run)
+  if (!specialist) return '<strong>ShotCount</strong>'
+  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentSparkleIcon()}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialist.roleDescription)}</small></span></strong>`
+}
 
 function agentUpdateToast(run: AgentRun) {
-  if (run.status === 'completed') return 'Roon finished your task'
+  const specialist = getSpecialist(run.activeSpecialistId ?? run.specialistId)
+  const name = specialist?.displayName ?? 'ShotCount'
+  if (run.status === 'completed') return `${name} finished your task`
   if (run.status === 'needs_approval') return 'Ready for your approval'
   if (run.status === 'needs_context') return 'Add the requested details to continue'
-  if (run.status === 'waiting_external') return 'Roon will continue when the expected update arrives'
-  if (run.status === 'waiting_for_user') return 'Roon needs your next step'
-  if (run.status === 'failed') return run.error ?? 'Roon needs attention'
-  return 'Roon is working through this task'
+  if (run.status === 'waiting_external') return `${name} will continue when the expected update arrives`
+  if (run.status === 'waiting_for_user') return `${name} needs your next step`
+  if (run.status === 'failed') return run.error ?? `${name} needs attention`
+  return `${name} is working through this task`
 }
 
 function clearAgentToast(expected: string) {
@@ -1032,8 +1135,9 @@ function showTransientToast(message: string, duration = 1200) {
 }
 
 async function startAgentRun(task: Task, context = '') {
-  if (!roonCapabilityForTask(task)) {
-    toast = 'Roon cannot delegate this type of task yet.'
+  const route = taskSpecialistRoute(task)
+  if (!route.supported && !route.needsSemanticClassification) {
+    toast = 'ShotCount cannot assign this task to a supported specialist yet.'
     render()
     clearAgentToast(toast)
     return
@@ -1053,7 +1157,7 @@ async function startAgentRun(task: Task, context = '') {
       toast = agentUpdateToast(resumed)
     } catch (error) {
       existing.status = 'failed'
-      existing.error = error instanceof Error ? error.message : 'Roon could not resume this task.'
+      existing.error = error instanceof Error ? error.message : `${specialistName(task, existing)} could not resume this task.`
       toast = existing.error
     } finally {
       agentDecisionBusy.delete(existing.id)
@@ -1094,13 +1198,41 @@ async function startAgentRun(task: Task, context = '') {
   } catch (error) {
     if (agentRuns.get(task.id)?.status === 'cancelled') return
     run.status = 'failed'
-    run.error = error instanceof Error ? error.message : 'Roon could not complete this task.'
+    run.error = error instanceof Error ? error.message : `${specialistName(task, run)} could not complete this task.`
     run.updatedAt = new Date().toISOString()
     toast = run.error
   } finally {
     persistAgentRuns()
     render()
     if (toast) clearAgentToast(toast)
+  }
+}
+
+function roonContinuationContext(task: Task, note: string) {
+  const latestDescription = task.description?.trim()
+  return latestDescription
+    ? `Latest task Description from the user:\n${latestDescription}\n\n${note}`
+    : note
+}
+
+function resumeApplicationRunForNewAttachment(task: Task, assets: FileAsset[]) {
+  const run = agentRuns.get(task.id)
+  if (
+    !isApplicationIntent(task.title, task.description) ||
+    run?.status !== 'needs_context' ||
+    agentDecisionBusy.has(run.id)
+  ) return
+  const runUpdatedAt = Date.parse(run.updatedAt)
+  const hasNewUpload = assets.some(asset =>
+    asset.source === 'task_upload' && Date.parse(asset.createdAt) > runUpdatedAt,
+  )
+  const replacementPdfConfirmed =
+    /NOT A REAL APPLICANT|authoritative CV/i.test(run.waitingReason) &&
+    assets.some(asset => asset.source === 'task_upload' && asset.mimeType === 'application/pdf')
+  if (hasNewUpload || replacementPdfConfirmed) {
+    void startAgentRun(task, replacementPdfConfirmed
+      ? roonContinuationContext(task, 'The user confirms that the attached PDF is their real CV. Use it as authorised applicant context and continue the application workflow.')
+      : roonContinuationContext(task, 'A new attachment was added. Use it as the requested context and continue the application workflow.'))
   }
 }
 
@@ -1111,7 +1243,7 @@ async function syncAgentApproval(run: AgentRun) {
   }
   // The run can reach needs_approval just before its approval row is committed.
   // Retry briefly so the panel does not get stuck on the generic waiting state.
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const pending = (await loadAgentApprovals(run.id)).find(approval => approval.status === 'pending')
       if (pending) {
@@ -1121,12 +1253,13 @@ async function syncAgentApproval(run: AgentRun) {
     } catch {
       // A later attempt, realtime update, or refresh can recover the details.
     }
-    await new Promise(resolve => window.setTimeout(resolve, 250 * (attempt + 1)))
+    await new Promise(resolve => window.setTimeout(resolve, 150 * (attempt + 1)))
   }
 }
 
 async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 'reject') {
   const run = agentRuns.get(taskId)
+  const task = tasks.find(item => item.id === taskId)
   const approval = run ? agentApprovals.get(run.id) : null
   if (!run || !approval || agentDecisionBusy.has(approval.id) || pendingEmailSends.has(approval.id)) return
   const editedSubject = approval.kind === 'send_email'
@@ -1134,6 +1267,18 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
     : ''
   const editedBody = approval.kind === 'send_email'
     ? document.querySelector<HTMLTextAreaElement>(`[data-agent-email-body="${taskId}"]`)?.value.trim() ?? ''
+    : ''
+  const editedCalendarSummary = approval.kind === 'calendar_write'
+    ? document.querySelector<HTMLInputElement>(`[data-agent-calendar-summary="${taskId}"]`)?.value.trim() ?? ''
+    : ''
+  const editedCalendarDescription = approval.kind === 'calendar_write'
+    ? document.querySelector<HTMLTextAreaElement>(`[data-agent-calendar-description="${taskId}"]`)?.value.trim() ?? ''
+    : ''
+  const editedCalendarStart = approval.kind === 'calendar_write'
+    ? document.querySelector<HTMLInputElement>(`[data-agent-calendar-start="${taskId}"]`)?.value.trim() ?? ''
+    : ''
+  const editedCalendarEnd = approval.kind === 'calendar_write'
+    ? document.querySelector<HTMLInputElement>(`[data-agent-calendar-end="${taskId}"]`)?.value.trim() ?? ''
     : ''
   agentDecisionBusy.add(approval.id)
   render()
@@ -1175,16 +1320,35 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
       })
       if (!shouldSend) return
     }
+    if (decision === 'approve' && approval.kind === 'calendar_write') {
+      const currentSummary = String(approvalPreviewValue(approval, 'summary') ?? '').trim()
+      const currentDescription = String(approvalPreviewValue(approval, 'description') ?? '').trim()
+      const currentStart = String(approvalPreviewValue(approval, 'start') ?? '').trim()
+      const currentEnd = String(approvalPreviewValue(approval, 'end') ?? '').trim()
+      if (approval.payload.toolName === 'calendar.create_event' && (!editedCalendarSummary || !editedCalendarStart || !editedCalendarEnd)) {
+        throw new Error('Add an event title and valid start and end times before confirming.')
+      }
+      if (editedCalendarSummary !== currentSummary || editedCalendarDescription !== currentDescription || editedCalendarStart !== currentStart || editedCalendarEnd !== currentEnd) {
+        await editAgentCalendarApproval(approval, editedCalendarSummary, editedCalendarDescription, editedCalendarStart, editedCalendarEnd)
+        const refreshed = (await loadAgentApprovals(run.id)).find(item => item.status === 'pending')
+        if (!refreshed) throw new Error('The edited calendar approval could not be reloaded.')
+        agentApprovals.set(run.id, refreshed)
+        approvalToDecide = refreshed
+      }
+    }
     const updated = await decideAgentApproval(approvalToDecide, decision)
     agentRuns.set(taskId, updated)
     applyCompletedAgentTasks([updated])
     agentApprovals.delete(run.id)
     await syncAgentApproval(updated)
+    if (isPreviewMode && updated.status === 'waiting_external') {
+      window.setTimeout(() => void pollWaitingAgentRuns(), 750)
+    }
     toast = decision === 'approve'
-      ? 'Approved — Roon is continuing'
+      ? `Approved — ${task ? specialistName(task, updated) : 'ShotCount'} is continuing`
       : 'Action declined'
   } catch (error) {
-    toast = error instanceof Error ? error.message : 'Roon could not apply that decision.'
+    toast = error instanceof Error ? error.message : `${task ? specialistName(task, run) : 'ShotCount'} could not apply that decision.`
   } finally {
     agentDecisionBusy.delete(approval.id)
     persistAgentRuns()
@@ -1195,9 +1359,9 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
 
 async function retryAgentRun(taskId: string) {
   const run = agentRuns.get(taskId)
+  const task = tasks.find(item => item.id === taskId)
   if (!run || agentDecisionBusy.has(run.id)) return
   if (!run.durable) {
-    const task = tasks.find(item => item.id === taskId)
     if (task) await startAgentRun(task, run.context)
     return
   }
@@ -1209,7 +1373,7 @@ async function retryAgentRun(taskId: string) {
     await syncAgentApproval(updated)
     toast = agentUpdateToast(updated)
   } catch (error) {
-    toast = error instanceof Error ? error.message : 'Roon could not resume this task.'
+    toast = error instanceof Error ? error.message : `${task ? specialistName(task, run) : 'ShotCount'} could not resume this task.`
   } finally {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
@@ -1220,6 +1384,7 @@ async function retryAgentRun(taskId: string) {
 
 async function chooseAgentFlight(taskId: string, optionId: string) {
   const run = agentRuns.get(taskId)
+  const task = tasks.find(item => item.id === taskId)
   if (!run || agentDecisionBusy.has(run.id)) return
   agentDecisionBusy.add(run.id)
   render()
@@ -1227,9 +1392,10 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
     const updated = await selectAgentFlight(run.id, optionId)
     agentRuns.set(taskId, updated)
     await syncAgentApproval(updated)
+    if (updated.status === 'waiting_external') void monitorDemoFlightHandoff(taskId, updated.id)
     toast = updated.result?.paymentHandoffUrl ? 'Flight ready for you' : agentUpdateToast(updated)
   } catch (error) {
-    toast = error instanceof Error ? error.message : 'Roon could not continue with this flight.'
+    toast = error instanceof Error ? error.message : `${task ? specialistName(task, run) : 'Caspian'} could not continue with this flight.`
   } finally {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
@@ -1238,8 +1404,33 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
   }
 }
 
+// The flight handoff has a deliberately short demo ceiling.  This narrow
+// monitor only polls the run that has just been selected; it never starts a
+// second model turn, so it cannot replay Roon's progress feed.
+function monitorDemoFlightHandoff(taskId: string, runId: string) {
+  let attempts = 0
+  const check = async () => {
+    if (attempts >= 12) return
+    attempts += 1
+    await new Promise(resolve => window.setTimeout(resolve, 1_000))
+    const current = agentRuns.get(taskId)
+    if (!current || current.id !== runId || current.status !== 'waiting_external') return
+    try {
+      const updated = await pollAgentRun(runId)
+      agentRuns.set(taskId, updated)
+      persistAgentRuns()
+      render()
+      if (updated.status === 'waiting_external') void check()
+    } catch {
+      // The regular provider polling remains a recovery path if this one call fails.
+    }
+  }
+  void check()
+}
+
 async function chooseAgentRecipient(taskId: string, recipientEmail: string) {
   const run = agentRuns.get(taskId)
+  const task = tasks.find(item => item.id === taskId)
   if (!run || agentDecisionBusy.has(run.id)) return
   agentDecisionBusy.add(run.id)
   render()
@@ -1249,7 +1440,7 @@ async function chooseAgentRecipient(taskId: string, recipientEmail: string) {
     await syncAgentApproval(updated)
     toast = agentUpdateToast(updated)
   } catch (error) {
-    toast = error instanceof Error ? error.message : 'Roon could not select that recipient.'
+    toast = error instanceof Error ? error.message : `${task ? specialistName(task, run) : 'Roon'} could not select that recipient.`
   } finally {
     agentDecisionBusy.delete(run.id)
     persistAgentRuns()
@@ -1285,7 +1476,7 @@ function addAgentFollowUps(task: Task) {
     .map(title => normalizeTask({
       id: crypto.randomUUID(),
       title,
-      description: `Suggested by Roon from “${task.title}”.`,
+      description: `Suggested by ${specialistName(task, run)} from “${task.title}”.`,
       due: todayKey,
       goalId: task.goalId,
       visibility: 'private',
@@ -1452,6 +1643,13 @@ function renderLanding() {
 }
 
 function render() {
+  // Any render can be triggered by cloud sync or a control change. Snapshot
+  // the visible composer before replacing the DOM so an in-progress task is
+  // never cleared mid-entry.
+  if (todayComposerOpen && !skipTodayComposerCapture && document.querySelector('[data-today-form]')) captureTodayComposerDraft()
+  skipTodayComposerCapture = false
+  const pageScroll = { x: window.scrollX, y: window.scrollY }
+  const inspectorScroll = app.querySelector<HTMLElement>('.inspector-content')?.scrollTop
   if (authState !== 'authenticated') {
     app.innerHTML = renderAuthGate()
     return
@@ -1502,7 +1700,11 @@ function render() {
     ${renderDailyPlanningPrompt()}
     ${renderProfileModal()}
     ${renderRoonPlanner()}
+    ${renderFilePreview()}
   `
+  const nextInspectorContent = app.querySelector<HTMLElement>('.inspector-content')
+  if (nextInspectorContent && inspectorScroll !== undefined) nextInspectorContent.scrollTop = inspectorScroll
+  if (pageScroll.x || pageScroll.y) window.scrollTo(pageScroll.x, pageScroll.y)
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
 }
 
@@ -1714,39 +1916,42 @@ function renderAgentIsland() {
   if (!candidate) return ''
   const task = tasks.find(item => item.id === candidate.taskId)
   if (!task) return ''
+  const owner = specialistForTask(task, candidate)
+  const ownerName = owner?.displayName ?? 'ShotCount'
+  const ownerUpper = ownerName.toLocaleUpperCase()
   const labels: Partial<Record<AgentRun['status'], { eyebrow: string; title: string; message: string; mark: string }>> = {
     needs_approval: {
       eyebrow: 'APPROVAL NEEDED',
-      title: 'Roon needs you',
+      title: `${ownerName} needs you`,
       message: candidate.waitingReason || 'Review the prepared action.',
       mark: '!',
     },
     waiting_for_user: {
       eyebrow: 'ACTION NEEDED',
-      title: 'Roon needs you',
+      title: `${ownerName} needs you`,
       message: candidate.waitingReason || 'Open the task to continue.',
       mark: '!',
     },
     waiting_external: {
-      eyebrow: 'ROON IS WAITING',
+      eyebrow: `${ownerUpper} IS WAITING`,
       title: 'Waiting for a reply',
       message: candidate.waitingReason || 'I’ll continue automatically.',
       mark: '…',
     },
     planning: {
-      eyebrow: 'ROON IS WORKING',
+      eyebrow: `${ownerUpper} IS WORKING`,
       title: 'Planning the task',
       message: candidate.progress.at(-1) || 'Preparing the next safe step.',
       mark: '◔',
     },
     running: {
-      eyebrow: 'ROON IS WORKING',
+      eyebrow: `${ownerUpper} IS WORKING`,
       title: 'Moving your task forward',
       message: candidate.progress.at(-1) || 'Working through the task.',
       mark: '◔',
     },
     completed: {
-      eyebrow: 'ROON FINISHED',
+      eyebrow: `${ownerUpper} FINISHED`,
       title: 'Done',
       message: candidate.result?.summary || 'The task reached its intended outcome.',
       mark: '✓',
@@ -1756,11 +1961,11 @@ function renderAgentIsland() {
   if (!state) return ''
   return `<button type="button" class="shotcount-island shotcount-agent-island" data-agent-island-task="${task.id}" aria-label="${escapeHtml(state.title)}. Open ${escapeHtml(task.title)}">
     <span class="island-head">
-      <span class="island-portrait agent-island-mark"><span class="agent-icon-wrap">${agentSparkleIcon()}</span></span>
+      <span class="island-portrait agent-island-mark specialist-icon specialist-icon--${owner?.id ?? 'roon'}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span></span>
       <span class="island-identity">
         <small>${state.eyebrow}</small>
         <strong>${escapeHtml(state.title)}</strong>
-        <span>${escapeHtml(task.title)}</span>
+        <span>${escapeHtml(owner?.roleDescription ?? '')} · ${escapeHtml(task.title)}</span>
       </span>
       <span class="island-result"><strong>${state.mark}</strong><small>AGENT</small></span>
     </span>
@@ -1926,7 +2131,7 @@ async function connectGoogleAgent() {
     await beginGoogleAgentConnection()
   } catch (error) {
     googleAgentConnectionBusy = false
-    toast = error instanceof Error ? error.message : 'Roon could not start the Google connection.'
+    toast = error instanceof Error ? error.message : 'ShotCount could not start the Google connection.'
     render()
   }
 }
@@ -2055,6 +2260,12 @@ async function verifyAuthSession() {
   render()
   try {
     if (!cloudEnabled) throw new Error('Cloud accounts are not configured')
+    const authIntent = new URLSearchParams(window.location.search).get('auth')
+    if (authIntent === 'google') {
+      const { error } = await beginGoogleSignIn()
+      if (error) throw error
+      return
+    }
     const [user, client] = await Promise.all([currentUser(), getCloudClient()])
     if (!user) {
       const signInUrl = new URL('https://shotcount.app/')
@@ -2062,6 +2273,15 @@ async function verifyAuthSession() {
       if (pendingCreatorSlug) signInUrl.searchParams.set(creatorQueryKey, pendingCreatorSlug)
       window.location.replace(signInUrl.toString())
       return
+    }
+    // The PKCE callback uses a short-lived query code. Supabase has consumed
+    // it by this point, so leave the signed-in workspace at its canonical URL.
+    const authQuery = new URLSearchParams(window.location.search)
+    if (authQuery.has('code') || authQuery.has('auth')) {
+      const cleanUrl = new URL(window.location.href)
+      cleanUrl.searchParams.delete('code')
+      cleanUrl.searchParams.delete('auth')
+      window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}`)
     }
     if (!client) throw new Error('Cloud accounts are not configured')
     plannerRepository?.destroy()
@@ -2079,6 +2299,10 @@ async function verifyAuthSession() {
       },
     })
     activeUser = user
+    // Authentication is done. Let the cached workspace render while the
+    // independent profile, calendar, and task reads reconcile in parallel.
+    authState = 'authenticated'
+    render()
     const [workspace, profileResult, communityResult, googleEventsResult, googleStateResult, agentRunsResult] = await Promise.all([
       plannerRepository.initialize({ tasks: [...tasks], goals: [...goals] }),
       loadCreatorProfile(user)
@@ -2114,7 +2338,6 @@ async function verifyAuthSession() {
       agentRunsResult.value.forEach(run => agentRuns.set(run.taskId, run))
       persistAgentRuns()
     }
-    authState = 'authenticated'
     void startNotificationSystem()
     void startAgentRunSystem()
     void refreshGoogleCalendar(true)
@@ -2564,10 +2787,17 @@ function renderTodayComposer() {
           <span>Description</span>
           <div class="today-description-wrap">
             <textarea name="description" placeholder="Add a short note or useful context">${escapeHtml(todayComposerDraft.description)}</textarea>
-            <button type="button" class="description-voice-input ${descriptionRecordingTaskId === 'today-composer' ? 'is-recording' : ''}" data-action="toggle-description-voice" data-description-voice-target="today-composer" aria-label="${descriptionRecordingTaskId === 'today-composer' ? 'Stop voice input' : descriptionTranscribingTaskId === 'today-composer' ? 'Transcribing description' : 'Add voice input to description'}" aria-pressed="${descriptionRecordingTaskId === 'today-composer'}" ${descriptionTranscribingTaskId === 'today-composer' ? 'disabled' : ''}>
-              ${descriptionRecordingTaskId === 'today-composer' ? '<span aria-hidden="true">■</span>' : descriptionTranscribingTaskId === 'today-composer' ? '<span aria-hidden="true">…</span>' : icon('mic')}
-            </button>
+            <div class="description-tools">
+              <label class="description-attachment-input" aria-label="Add attachment">
+                <input type="file" data-today-task-file accept="${acceptedTaskFileTypes.join(',')}">
+                ${icon('paperclip')}
+              </label>
+              <button type="button" class="description-voice-input ${descriptionRecordingTaskId === 'today-composer' ? 'is-recording' : ''}" data-action="toggle-today-description-voice" aria-label="${descriptionRecordingTaskId === 'today-composer' ? 'Stop voice input' : descriptionTranscribingTaskId === 'today-composer' ? 'Transcribing description' : 'Add voice input to description'}" aria-pressed="${descriptionRecordingTaskId === 'today-composer'}" ${descriptionTranscribingTaskId === 'today-composer' ? 'disabled' : ''}>
+                ${descriptionRecordingTaskId === 'today-composer' ? '<span aria-hidden="true">■</span>' : descriptionTranscribingTaskId === 'today-composer' ? '<span aria-hidden="true">…</span>' : icon('mic')}
+              </button>
+            </div>
           </div>
+          ${todayComposerAttachment ? `<small class="today-composer-attachment">${icon('paperclip')}${escapeHtml(todayComposerAttachment.name)}</small>` : ''}
         </label>
         <label class="today-field today-goal-field">
           <span>Goal</span>
@@ -2607,6 +2837,7 @@ function renderTodayComposer() {
 }
 
 function resetTodayComposerDraft() {
+  todayComposerAttachment = null
   todayComposerDraft = {
     title: '',
     description: '',
@@ -2697,7 +2928,10 @@ function taskIsExecutableToday(task: Task) {
 function renderAgentPill(task: Task) {
   const run = agentRuns.get(task.id)
   if (!taskIsExecutableToday(task)) return ''
-  if (!run && !roonCapabilityForTask(task)) return ''
+  const route = taskSpecialistRoute(task)
+  if (!run && !route.supported && !roonCapabilityForTask(task)) return ''
+  const owner = specialistForTask(task, run)
+  const ownerName = owner?.displayName ?? 'ShotCount'
   const displayStatus = isPreviewMode && previewAgentState !== 'error' && run?.status === 'failed' ? 'running' : run?.status
   // Task completion is already shown by the normal checkbox. Do not add a
   // second Roon-specific completion control to the same row.
@@ -2713,7 +2947,7 @@ function renderAgentPill(task: Task) {
   const mark = displayStatus === 'planning' || displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
       ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '') ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
       `<span class="agent-icon-wrap">${agentSparkleIcon()}</span>`
-  return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'}" data-agent-task="${task.id}" aria-label="${label}: ${escapeHtml(task.title)}" title="${label}">${mark}</button>`
+  return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'} specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}" data-agent-task="${task.id}" aria-label="${escapeHtml(ownerName)} — ${label}: ${escapeHtml(task.title)}" title="${escapeHtml(ownerName)} — ${label}">${mark}</button>`
 }
 
 function safeAgentUrl(value: string) {
@@ -2742,13 +2976,29 @@ function safeAgentHandoffUrl(value: string) {
 }
 
 function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder = false, run?: AgentRun) {
-  const completedProgress = run?.progress.filter(Boolean) ?? []
-  const fallbackLabels = placeholder ? agentPreviewProgressLabels : agentProgressLabels
-  const currentLabel = run?.status === 'planning' ? 'Planning the next safe step' : 'Continuing the task'
+  // Provider/realtime retries can report the same checkpoint more than once.
+  // Keep the feed stable rather than visually replaying an already shown step.
+  const completedProgress = (run?.progress.filter(Boolean) ?? []).filter((label, index, steps) =>
+    index === 0 || label !== steps[index - 1],
+  )
+  const fallbackLabels = isApplicationIntent(task.title, task.description)
+    ? applicationProgressLabels
+    : placeholder ? agentPreviewProgressLabels : agentProgressLabels
+  const currentLabel = run?.status === 'planning'
+    ? 'Planning the next safe step'
+    : run?.status === 'waiting_external'
+      ? 'Monitoring for the next update'
+      : 'Continuing the task'
   const progressLabels = completedProgress.length
     ? [...completedProgress.slice(-3), currentLabel]
     : fallbackLabels
   const activeIndex = completedProgress.length ? progressLabels.length - 1 : progressIndex
+  const owner = specialistForTask(task, run)
+  const ownerMessage = owner?.id === 'caspian'
+    ? 'I’m preserving your flight constraints and validating the strongest itinerary.'
+    : owner?.id === 'david'
+      ? 'I’m organizing the application requirements, deadlines, and missing documents.'
+      : ''
   const capabilityMessage: Record<string, string> = {
     gmail: 'I’m reviewing the relevant Gmail threads and preparing the next safe step.',
     calendar: 'I’m checking your calendar and looking for a conflict-free next step.',
@@ -2760,11 +3010,12 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
     research: 'I’m reading and summarizing the relevant material for you.',
   }
   return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em><i aria-hidden="true">◔</i> In progress</em></header>
-    <p>${placeholder ? 'I’m reading and summarizing the report for you.' : escapeHtml(capabilityMessage[run?.capability ?? 'research'] ?? capabilityMessage.research)}</p>
+    <header>${specialistHeader(task, run)}<em><i aria-hidden="true">◔</i> In progress</em></header>
+    <p>${placeholder ? 'I’m reading and summarizing the report for you.' : escapeHtml(ownerMessage || (capabilityMessage[run?.capability ?? 'research'] ?? capabilityMessage.research))}</p>
     <div class="task-agent-progress">
       ${progressLabels.map((label, index) => `<div class="${index < activeIndex ? 'done' : index === activeIndex ? 'active' : ''}"><i>${index < activeIndex ? '✓' : index === activeIndex ? '◔' : ''}</i><span>${escapeHtml(label)}</span></div>`).join('')}
     </div>
+    ${renderRoonGeneratedFiles(task)}
     <footer><button type="button" data-action="view-agent-progress" data-task-id="${task.id}">View progress</button><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
   </section>
   <aside class="task-agent-notification">${icon('bell')}<span>You’ll be notified when this is ready.</span></aside>`
@@ -2773,12 +3024,13 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
 function renderAgentErrorPanel(task: Task, error: string) {
   const needsSignIn = error.toLowerCase().includes('sign in')
   return `<section class="task-agent-card task-agent-card--error" role="alert">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em><i aria-hidden="true">!</i> Needs attention</em></header>
+    <header>${specialistHeader(task, agentRuns.get(task.id))}<em><i aria-hidden="true">!</i> Needs attention</em></header>
     <p>I couldn’t start this task.</p>
     <div class="task-agent-error-detail">
       <span aria-hidden="true">!</span>
       <div><strong>${needsSignIn ? 'Sign in required' : 'Something interrupted the task'}</strong><p>${escapeHtml(error)}</p></div>
     </div>
+    ${renderRoonGeneratedFiles(task)}
     <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Dismiss</button><button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${task.id}">Try again</button></footer>
   </section>
   <aside class="task-agent-notification task-agent-notification--error">${icon('bell')}<span>No task changes were made. You can safely try again.</span></aside>`
@@ -2811,16 +3063,18 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ? 'Confirm'
       : 'Submit'
   return `<section class="task-agent-card task-agent-card--approval">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em><i aria-hidden="true">!</i> Approval needed</em></header>
+    <header>${specialistHeader(task, agentRuns.get(task.id))}<em><i aria-hidden="true">!</i> Approval needed</em></header>
     <p>${escapeHtml(approval.title)}</p>
     <div class="task-agent-approval-detail">
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
       ${Array.isArray(ccRecipients) && ccRecipients.length ? `<dl><dt>CC</dt><dd>${escapeHtml(ccRecipients.join(', '))}</dd></dl>` : ''}
       ${Array.isArray(bccRecipients) && bccRecipients.length ? `<dl><dt>BCC</dt><dd>${escapeHtml(bccRecipients.join(', '))}</dd></dl>` : ''}
-      ${title ? approval.kind === 'send_email'
+      ${title || approval.kind === 'calendar_write' ? approval.kind === 'send_email'
         ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${task.id}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject" ${busy || undoing ? 'disabled' : ''}></label>`
-        : `<dl><dt>Event</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
-      ${startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
+        : approval.kind === 'calendar_write'
+          ? `<label class="task-agent-email-field"><span>Event <strong class="task-agent-review-value">${escapeHtml(String(title))}</strong></span><input type="text" data-agent-calendar-summary="${task.id}" value="${escapeHtml(String(title))}" maxlength="1000" aria-label="Calendar event title" ${busy ? 'disabled' : ''}></label>`
+          : `<dl><dt>Event</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
+      ${approval.kind === 'calendar_write' ? `<div class="task-agent-calendar-times"><label class="task-agent-email-field"><span>Starts <small>ISO 8601</small></span><input type="text" data-agent-calendar-start="${task.id}" value="${escapeHtml(String(startsAt ?? ''))}" maxlength="64" aria-label="Calendar event start" ${busy ? 'disabled' : ''}><output class="task-agent-review-value">${escapeHtml(String(startsAt ?? ''))}</output></label><label class="task-agent-email-field"><span>Ends <small>ISO 8601</small></span><input type="text" data-agent-calendar-end="${task.id}" value="${escapeHtml(String(endsAt ?? ''))}" maxlength="64" aria-label="Calendar event end" ${busy ? 'disabled' : ''}><output class="task-agent-review-value">${escapeHtml(String(endsAt ?? ''))}</output></label></div>` : startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
       ${destination ? `<dl><dt>Page</dt><dd>${escapeHtml(String(destination))}</dd></dl>` : ''}
       ${browserTarget ? `<dl><dt>Submit</dt><dd>${escapeHtml(String(browserTarget))}</dd></dl>` : ''}
       ${Array.isArray(preparedValues) ? preparedValues.map(item => {
@@ -2829,7 +3083,9 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
         return `<dl><dt>${escapeHtml(String(value.field ?? 'Field'))}</dt><dd>${escapeHtml(String(value.value ?? ''))}</dd></dl>`
       }).join('') : ''}
       ${Array.isArray(safety?.warnings) && safety.warnings.length ? `<div class="task-agent-waiting-detail"><span>${escapeHtml(safety.warnings.join(' '))}</span></div>` : ''}
-      ${body ? approval.kind === 'send_email'
+      ${approval.kind === 'calendar_write'
+        ? `<label class="task-agent-email-field"><span>Description</span><textarea data-agent-calendar-description="${task.id}" rows="5" maxlength="12000" aria-label="Calendar event description" ${busy ? 'disabled' : ''}>${escapeHtml(String(body ?? ''))}</textarea></label>`
+        : body ? approval.kind === 'send_email'
         ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${task.id}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label><label class="task-agent-email-field"><span>Attachment <small>Optional · from your computer</small></span><input type="file" data-agent-email-attachment="${task.id}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`
         : `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
     </div>
@@ -2849,10 +3105,15 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ? safeAgentHandoffUrl(run.result.paymentHandoffUrl)
     : ''
   const flightTask = run.capability === 'flight_search'
+  const flightHandoffLabel = 'Continue to payment'
   const awaitingFlightSelection = run.status === 'waiting_for_user' && flightOptions.length > 0 && !paymentHandoffUrl
+  const staleFlightSelection = awaitingFlightSelection &&
+    ['flight_option_invalid', 'flight_search_checkpoint_missing'].includes(run.errorCode ?? '')
   const needsGoogle = run.errorCode?.startsWith('google_') ||
     /connect google|reconnect google/i.test(run.waitingReason)
-  const title = external ? 'Waiting' : 'Roon needs you'
+  const owner = specialistForTask(task, run)
+  const ownerName = owner?.displayName ?? 'ShotCount'
+  const title = external ? 'Waiting' : `${ownerName} needs you`
   const detail = external
     ? flightTask
       ? 'The isolated browser worker is continuing this same task. You can leave this screen.'
@@ -2866,7 +3127,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
       </div>`
     : ''
   return `<section class="task-agent-card task-agent-card--waiting">
-    <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>${external ? 'Waiting' : 'Needs you'}</em></header>
+    <header>${specialistHeader(task, run)}<em>${external ? 'Waiting' : 'Needs you'}</em></header>
     <p>${escapeHtml(run.waitingReason || title)}</p>
     ${awaitingFlightSelection ? `
       <div class="task-agent-flight-options">
@@ -2876,20 +3137,33 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
           <small>${escapeHtml(option.route)} · ${escapeHtml(option.stops)} · ${escapeHtml(option.duration)}</small>
         </button>`).join('')}
       </div>
-      <small>Live prices can change. Roon rechecks the selected option before handing it back.</small>
+      <small>Live prices can change. ${escapeHtml(ownerName)} rechecks the selected option before handing it back.</small>
     ` : paymentHandoffUrl ? `
       <div class="task-agent-payment-handoff">
         <strong>Ready for you</strong>
         <span>Your itinerary is selected. Payment and the final purchase remain under your control.</span>
-        <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Continue to payment</a>
+        <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">${flightHandoffLabel}</a>
       </div>
     ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(external && flightTask && flightOptions.length ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>`}
     ${replySimulation}
+    ${renderRoonGeneratedFiles(task)}
     <footer>
       <button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>
-      ${awaitingFlightSelection || paymentHandoffUrl ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Checking…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : 'Try again'}</button>`}
+      ${paymentHandoffUrl ? '' : awaitingFlightSelection && !staleFlightSelection ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Refreshing…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : staleFlightSelection ? 'Refresh options' : 'Try again'}</button>`}
     </footer>
   </section>`
+}
+
+function formatAgentContextPrompt(prompt: string) {
+  const numbered = [...prompt.matchAll(/(?:^|\s)\(\d+\)\s*([\s\S]*?)(?=\s*\(\d+\)|$)/g)]
+    .map(match => match[1].trim().replace(/[;.]$/, ''))
+    .filter(Boolean)
+  const dashed = prompt.split(/\n\s*[-•]\s+/).map(value => value.trim()).filter(Boolean)
+  const items = numbered.length > 1 ? numbered : dashed.length > 1 ? dashed.slice(1) : []
+  if (!items.length) return `<p>${escapeHtml(prompt)}</p>`
+  const introEnd = prompt.search(/(?:^|\s)\(1\)\s*/)
+  const intro = introEnd > 0 ? prompt.slice(0, introEnd).replace(/[:\s]+$/, '') : 'Here’s what I need next'
+  return `<div class="task-agent-context-message"><p>${escapeHtml(intro)}</p><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`
 }
 
 function renderAgentPanel(task: Task) {
@@ -2897,16 +3171,41 @@ function renderAgentPanel(task: Task) {
   if (!run || run.status === 'cancelled') return ''
 
   if (run.status === 'needs_context') {
-    const contextPrompt = run.waitingReason.trim() || 'Add the missing details to the task Description.'
+    const contextPrompt = (run.waitingReason.trim() || 'Share the missing details so I can continue.')
+      .replace(/\bRoon\b/gi, specialistName(task, run))
+    const owner = specialistForTask(task, run)
+    const ownerName = owner?.displayName ?? 'ShotCount'
+    const canUseAttachedCv = isApplicationIntent(task.title, task.description) &&
+      /NOT A REAL APPLICANT|authoritative CV/i.test(contextPrompt) &&
+      (taskFileAssets.get(task.id) ?? []).some(asset => asset.source === 'task_upload' && asset.mimeType === 'application/pdf')
     const candidates = run.recipientResolution?.state === 'ambiguous'
       ? (run.recipientResolution.candidates ?? []).filter(candidate => candidate.email)
       : []
     const schedulingOptions = run.schedulingOptions ?? []
+    const tripTypeOptions = run.capability === 'flight_search' && schedulingOptions.some(option =>
+      /\b(?:one-way|round trip)\b/i.test(option.label),
+    )
+    const sopAuthoringOptions = isApplicationIntent(task.title, task.description) && schedulingOptions.length === 2 &&
+      schedulingOptions.some(option => /human expert/i.test(option.label)) &&
+      schedulingOptions.some(option => /(?:roon|david) draft/i.test(option.label))
+    const sopAuthoringPrompt = `Your CV is my home turf: facts in, unfairly sharp tailoring out. An SOP deserves human editorial firepower for the final narrative. Want me to bring in a human application expert, or should ${ownerName} draft it? If we bring one in, I’ll quarterback the whole thing—brief them, handle the messages, drive the revisions, and get the final application pack submission-ready for your approval.`
+    const formattedPrompt = formatAgentContextPrompt(sopAuthoringOptions ? sopAuthoringPrompt : contextPrompt)
+    const asksForConfirmation = /\b(?:please\s+)?confirm\b/i.test(contextPrompt)
+    const requestsAttachment = !sopAuthoringOptions && /\b(?:attach(?:ment)?|upload|file|document|CV|résumé|resume|passport|certificate|transcript)\b/i.test(contextPrompt)
+    const hasDirectChoice = candidates.length > 0
+    const needsFlightDescription = run.capability === 'flight_search' && !hasDirectChoice && !schedulingOptions.length
+    const canReplyInPanel = !hasDirectChoice && !canUseAttachedCv
+    const draft = roonContextDrafts.get(run.id) ?? ''
+    const replyLabel = asksForConfirmation ? 'Your confirmation' : requestsAttachment ? 'Add a note (optional)' : 'Your reply'
+    const replyPlaceholder = asksForConfirmation ? 'Confirm or correct these details' : requestsAttachment ? `Anything ${ownerName} should know about this file` : sopAuthoringOptions ? `Anything ${ownerName} should share with the expert` : tripTypeOptions ? 'Add a return date if needed' : schedulingOptions.length ? 'Enter another airport or city' : `Write the details ${ownerName} needs`
+    const attachmentHint = 'Roon checks it automatically once it is attached.'.replace('Roon', ownerName)
     return `<section class="task-agent-card task-agent-card--context">
-      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>Needs context</em></header>
-      <p>${escapeHtml(contextPrompt)}</p>
-      ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${task.id}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. Roon will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${task.id}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label)}</strong><span>Use this time</span></button>`).join('')}</div><small>Choose a time, or edit Description to give Roon another instruction.</small>` : `<small>Add the answer in Description, then save. Roon will continue this same task.</small>`}
-      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>${candidates.length ? '' : '<button class="agent-primary" type="button" data-action="focus-task-description" data-task-id="' + task.id + '">Add details</button>'}</footer>
+      <header>${specialistHeader(task, run)}<em>Needs context</em></header>
+      ${formattedPrompt}
+      ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${task.id}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. ${escapeHtml(ownerName)} will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${task.id}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label.replace(/Roon/gi, ownerName))}</strong><span>${sopAuthoringOptions ? 'Choose this path' : 'Use this option'}</span></button>`).join('')}</div><small>${sopAuthoringOptions ? `${escapeHtml(ownerName)} stays in the driver’s seat—from expert brief to final submission-ready pack.` : tripTypeOptions ? 'Choose your trip type, or add the return date below.' : `Choose an option, or give ${escapeHtml(ownerName)} a different airport or city below.`}</small>` : ''}
+      ${canReplyInPanel ? `<label class="task-agent-context-input"><span>${replyLabel}</span><textarea class="task-agent-context" data-agent-context-input data-run-id="${run.id}" placeholder="${replyPlaceholder}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${escapeHtml(draft)}</textarea></label>` : ''}
+      ${requestsAttachment ? `<small class="task-agent-attachment-hint">Use the attachment control in Description to add the file. ${escapeHtml(attachmentHint)}</small>` : ''}
+      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>${candidates.length ? '' : canUseAttachedCv ? '<button class="agent-primary" type="button" data-action="use-attached-cv" data-task-id="' + task.id + '">Use attached CV</button>' : requestsAttachment ? '<button type="button" data-action="focus-task-description" data-task-id="' + task.id + '">Attach file</button><button class="agent-primary" type="button" data-action="check-attached-context" data-task-id="' + task.id + '">Check attachment</button>' : needsFlightDescription ? '<button type="button" data-action="focus-task-description" data-task-id="' + task.id + '">Add details</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + task.id + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>Continue</button>' : '<button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + task.id + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>' + (asksForConfirmation ? 'Confirm' : 'Continue') + '</button>'}</footer>
     </section>`
   }
 
@@ -2916,28 +3215,52 @@ function renderAgentPanel(task: Task) {
     return renderAgentWaitingPanel(task, { ...run, status: 'waiting_for_user', waitingReason: 'Preparing the approval details…' })
   }
 
-  if (run.status === 'waiting_external' || run.status === 'waiting_for_user') {
+  if (run.status === 'waiting_external') {
+    return renderAgentProgressPanel(task, run.progressIndex, false, run)
+  }
+
+  if (run.status === 'waiting_for_user') {
     return renderAgentWaitingPanel(task, run)
   }
 
   if (run.status === 'completed' && run.result) {
-    const resultLabel = run.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review'
+    const flightHandoffUrl = run.capability === 'flight_search' && run.result.paymentHandoffUrl
+      ? safeAgentHandoffUrl(run.result.paymentHandoffUrl)
+      : ''
+    const resultLabel = run.intent.outcomeType === 'external_change' || flightHandoffUrl ? 'Done' : 'Ready to review'
+    const flightHandoffLabel = 'Continue to payment'
+    const selectedFlight = run.result.selectedFlight && typeof run.result.selectedFlight === 'object'
+      ? run.result.selectedFlight as Record<string, unknown>
+      : null
+    const selectedFlightDetail = selectedFlight
+      ? [
+          String(selectedFlight.airline ?? '').trim(),
+          String(selectedFlight.route ?? '').trim(),
+          String(selectedFlight.stops ?? '').trim(),
+          String(selectedFlight.duration ?? '').trim(),
+          String(selectedFlight.price ?? '').trim(),
+        ].filter(Boolean).join(' · ')
+      : ''
     return `<section class="task-agent-card task-agent-card--result">
-      <header><strong><span class="agent-icon-wrap">${agentSparkleIcon()}</span> Roon</strong><em>${resultLabel}</em></header>
+      <header>${specialistHeader(task, run)}<em>${resultLabel}</em></header>
       <p>${escapeHtml(run.result.summary)}</p>
       <div class="task-agent-result">
+        ${flightHandoffUrl && selectedFlight ? `<article class="agent-selected-flight"><span>Selected flight</span><strong>${escapeHtml(String(selectedFlight.label ?? 'Your selected option'))}</strong><p>${escapeHtml(selectedFlightDetail || 'Ready to continue to payment.')}</p></article>` : ''}
         ${run.result.sections.map(section => `<article><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.body)}</p></article>`).join('')}
         ${run.result.drafts.map(draft => `<article class="agent-draft"><strong>${escapeHtml(draft.title)}</strong><p>${escapeHtml(draft.body).replaceAll('\n', '<br>')}</p></article>`).join('')}
       </div>
+      ${renderRoonGeneratedFiles(task)}
       ${run.result.sources.length ? `<div class="agent-sources"><strong>Sources</strong>${run.result.sources.map(source => `<a href="${safeAgentUrl(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)} ↗</a>`).join('')}</div>` : ''}
       ${run.result.followUps.length ? `<div class="agent-followups"><strong>Suggested next actions</strong>${run.result.followUps.map(title => `<span>＋ ${escapeHtml(title)}</span>`).join('')}</div><button class="agent-add-followups" type="button" data-action="add-agent-followups" data-task-id="${task.id}">Add follow-up tasks</button>` : ''}
+      ${run.result.applicationReviewUrl ? `<a class="agent-primary agent-review-application" href="${safeAgentUrl(run.result.applicationReviewUrl)}" target="_blank" rel="noreferrer">Review application</a>` : ''}
+      ${flightHandoffUrl ? `<a class="agent-primary agent-review-application" href="${flightHandoffUrl}" target="_blank" rel="noreferrer">${flightHandoffLabel}</a><small>Task complete — payment and any purchase remain entirely yours.</small>` : ''}
       <small>Private to you · Agent context and output never appear in the community feed.</small>
     </section>`
   }
 
   if (run.status === 'failed') {
     if (isPreviewMode && previewAgentState !== 'error') return renderAgentProgressPanel(task, 2, true)
-    return renderAgentErrorPanel(task, run.error ?? 'Roon could not complete this task.')
+    return renderAgentErrorPanel(task, run.error ?? `${specialistName(task, run)} could not complete this task.`)
   }
 
   return renderAgentProgressPanel(task, run.progressIndex, false, run)
@@ -2948,6 +3271,7 @@ function renderInspector(task: Task) {
     loadingTaskFileAssets.add(task.id)
     void loadTaskFileAssets(task.id).then(assets => {
       taskFileAssets.set(task.id, assets)
+      resumeApplicationRunForNewAttachment(task, assets)
       if (selectedTaskId === task.id) render()
     }).catch(() => {
       taskFileAssets.set(task.id, [])
@@ -2970,9 +3294,15 @@ function renderInspector(task: Task) {
         <input class="inspector-title" value="${escapeHtml(task.title)}" aria-label="Task title" />
         <div class="inspector-description-wrap">
           <textarea class="inspector-description" aria-label="Description" placeholder="Description" rows="3">${escapeHtml(task.description ?? '')}</textarea>
-          <button type="button" class="description-voice-input ${recording ? 'is-recording' : ''}" data-action="toggle-description-voice" aria-label="${recording ? 'Stop voice input' : transcribing ? 'Transcribing description' : 'Add voice input to description'}" aria-pressed="${recording}" ${transcribing ? 'disabled' : ''}>
-            ${recording ? '<span aria-hidden="true">■</span>' : transcribing ? '<span aria-hidden="true">…</span>' : icon('mic')}
-          </button>
+          <div class="description-tools">
+            <label class="description-attachment-input ${taskFileAssetBusy.has(task.id) ? 'is-busy' : ''}" aria-label="${taskFileAssetBusy.has(task.id) ? 'Uploading attachment' : 'Add attachment'}">
+              <input type="file" data-task-file-input="${task.id}" accept="${acceptedTaskFileTypes.join(',')}" ${taskFileAssetBusy.has(task.id) ? 'disabled' : ''}>
+              ${taskFileAssetBusy.has(task.id) ? '<span aria-hidden="true">…</span>' : icon('paperclip')}
+            </label>
+            <button type="button" class="description-voice-input ${recording ? 'is-recording' : ''}" data-action="toggle-description-voice" aria-label="${recording ? 'Stop voice input' : transcribing ? 'Transcribing description' : 'Add voice input to description'}" aria-pressed="${recording}" ${transcribing ? 'disabled' : ''}>
+              ${recording ? '<span aria-hidden="true">■</span>' : transcribing ? '<span aria-hidden="true">…</span>' : icon('mic')}
+            </button>
+          </div>
         </div>
         ${renderTaskAttachments(task)}
         ${renderInspectorRoonAction(task)}
@@ -3012,30 +3342,66 @@ function fileKind(asset: FileAsset) {
 }
 
 function renderTaskAttachments(task: Task) {
-  const assets = taskFileAssets.get(task.id) ?? []
+  const assets = (taskFileAssets.get(task.id) ?? []).filter(asset => asset.source !== 'roon_generated')
   const busy = taskFileAssetBusy.has(task.id)
+  if (!assets.length) return ''
   return `<section class="task-attachments" aria-label="Task attachments">
     <div class="task-attachment-list">
       ${assets.map(asset => `<article class="task-attachment-chip">
-        <span class="task-attachment-kind">${fileKind(asset)}</span>
-        <span class="task-attachment-name" title="${escapeHtml(asset.originalFilename)}">${escapeHtml(asset.originalFilename)}</span>
-        ${asset.source === 'roon_generated' ? '<em>Prepared by Roon</em>' : `<label class="task-attachment-reuse"><input type="checkbox" data-action="toggle-file-reusable" data-task-id="${task.id}" data-file-asset-id="${asset.id}" ${asset.reusable ? 'checked' : ''} ${busy ? 'disabled' : ''}> Use for future tasks</label>
-        <button type="button" data-action="remove-task-attachment" data-task-id="${task.id}" data-file-asset-id="${asset.id}" aria-label="Remove ${escapeHtml(asset.originalFilename)}" ${busy ? 'disabled' : ''}>×</button>`}
+        <span class="task-attachment-kind">${icon('paperclip')}</span>
+        <button class="task-attachment-preview" type="button" data-action="preview-task-file" data-task-id="${task.id}" data-file-asset-id="${asset.id}" title="Open ${escapeHtml(asset.originalFilename)}" aria-label="Open ${escapeHtml(asset.originalFilename)}">${escapeHtml(asset.originalFilename)}</button>
+        <label class="task-attachment-reuse" title="Make available to ${escapeHtml(specialistName(task, agentRuns.get(task.id)))} in future tasks"><input type="checkbox" data-action="toggle-file-reusable" data-task-id="${task.id}" data-file-asset-id="${asset.id}" ${asset.reusable ? 'checked' : ''} ${busy ? 'disabled' : ''}><span>Reuse</span></label>
+        <button class="task-attachment-remove" type="button" data-action="remove-task-attachment" data-task-id="${task.id}" data-file-asset-id="${asset.id}" aria-label="Remove ${escapeHtml(asset.originalFilename)}" ${busy ? 'disabled' : ''}>×</button>
       </article>`).join('')}
     </div>
-    <label class="task-attachment-add ${busy ? 'is-busy' : ''}">
-      <input type="file" data-task-file-input="${task.id}" accept="${acceptedTaskFileTypes.join(',')}" ${busy ? 'disabled' : ''}>
-      ${busy ? 'Uploading…' : `${icon('plus')} Attach file`}
-    </label>
-    <small>PNG, JPEG, PDF, DOCX, or TXT · private to you</small>
   </section>`
+}
+
+function renderRoonGeneratedFiles(task: Task) {
+  const assets = (taskFileAssets.get(task.id) ?? []).filter(asset => asset.source === 'roon_generated')
+  if (!assets.length) return ''
+  const ownerName = specialistName(task, agentRuns.get(task.id))
+  return `<section class="task-agent-files" aria-label="Files prepared by ${escapeHtml(ownerName)}">
+    <header><strong>Prepared files</strong><span>${assets.length} ready</span></header>
+    ${assets.map(asset => `<button type="button" data-action="preview-task-file" data-task-id="${task.id}" data-file-asset-id="${asset.id}" aria-label="Preview ${escapeHtml(asset.originalFilename)}">
+      <span class="task-agent-file-icon">${icon('sticky')}</span>
+      <span><b title="${escapeHtml(asset.originalFilename)}">${escapeHtml(asset.originalFilename)}</b><small>${fileKind(asset)}</small></span>
+      <em>Ready</em>
+    </button>`).join('')}
+  </section>`
+}
+
+function renderFilePreview() {
+  if (!filePreview) return ''
+  const isPdf = filePreview.asset.mimeType === 'application/pdf'
+  const isImage = filePreview.asset.mimeType.startsWith('image/')
+  const isText = filePreview.asset.mimeType === 'text/plain'
+  const canPreviewInline = isPdf || isImage || isText
+  const previewTask = tasks.find(task => task.id === filePreview?.asset.taskId)
+  const sourceLabel = filePreview.asset.source === 'roon_generated'
+    ? `Prepared by ${specialistName(previewTask ?? { title: '', description: '' }, previewTask ? agentRuns.get(previewTask.id) : null)}`
+    : 'Attachment'
+  return `<div class="file-preview-backdrop" data-action="close-file-preview">
+    <section class="file-preview-card" role="dialog" aria-modal="true" aria-labelledby="file-preview-title" data-action-stop>
+      <header><div><small>${sourceLabel}</small><strong id="file-preview-title">${escapeHtml(filePreview.asset.originalFilename)}</strong></div><button type="button" data-action="close-file-preview" aria-label="Close preview">×</button></header>
+      ${filePreview.url && canPreviewInline
+        ? isImage
+          ? `<div class="file-preview-image"><img alt="Preview of ${escapeHtml(filePreview.asset.originalFilename)}" src="${escapeHtml(filePreview.url)}"></div>`
+          : `<iframe title="Preview of ${escapeHtml(filePreview.asset.originalFilename)}" src="${escapeHtml(filePreview.url)}"></iframe>`
+        : `<div class="file-preview-notice"><strong>${filePreview.asset.mimeType.includes('wordprocessingml') ? 'DOCX preview' : 'Preview unavailable'}</strong><p>${escapeHtml(filePreview.message ?? 'Download this file to open it in its native app.')}</p></div>`}
+      <footer><span>Private to you</span>${filePreview.url ? `<a href="${escapeHtml(filePreview.url)}" download="${escapeHtml(filePreview.asset.originalFilename)}">Download ${fileKind(filePreview.asset)}</a>` : ''}</footer>
+    </section>
+  </div>`
 }
 
 function renderInspectorRoonAction(task: Task) {
   const run = agentRuns.get(task.id)
   if (run && run.status !== 'failed' && run.status !== 'cancelled') return ''
-  if (!roonCapabilityForTask(task)) return ''
-  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${task.id}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Delegate to Roon</button>`
+  const route = taskSpecialistRoute(task)
+  if (!route.supported && !roonCapabilityForTask(task)) return ''
+  const owner = specialistForTask(task, run)
+  const ownerName = owner?.displayName ?? 'ShotCount'
+  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${task.id}"><span class="agent-icon-wrap specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}">${agentSparkleIcon()}</span>Delegate to ${escapeHtml(ownerName)}</button>`
 }
 
 function renderSubtask(task: Task, subtask: NonNullable<Task['subtaskItems']>[number]) {
@@ -3744,10 +4110,7 @@ function descriptionPcmWav() {
   const sourceLength = descriptionPcmChunks.reduce((total, chunk) => total + chunk.length, 0)
   const source = new Float32Array(sourceLength)
   let sourceOffset = 0
-  for (const chunk of descriptionPcmChunks) {
-    source.set(chunk, sourceOffset)
-    sourceOffset += chunk.length
-  }
+  for (const chunk of descriptionPcmChunks) { source.set(chunk, sourceOffset); sourceOffset += chunk.length }
   const ratio = sourceRate / targetRate
   const sampleCount = Math.floor(source.length / ratio)
   const buffer = new ArrayBuffer(44 + sampleCount * 2)
@@ -3755,19 +4118,10 @@ function descriptionPcmWav() {
   const writeText = (offset: number, value: string) => {
     for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index))
   }
-  writeText(0, 'RIFF')
-  view.setUint32(4, 36 + sampleCount * 2, true)
-  writeText(8, 'WAVE')
-  writeText(12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, 1, true)
-  view.setUint32(24, targetRate, true)
-  view.setUint32(28, targetRate * 2, true)
-  view.setUint16(32, 2, true)
-  view.setUint16(34, 16, true)
-  writeText(36, 'data')
-  view.setUint32(40, sampleCount * 2, true)
+  writeText(0, 'RIFF'); view.setUint32(4, 36 + sampleCount * 2, true); writeText(8, 'WAVE'); writeText(12, 'fmt ')
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true)
+  view.setUint32(24, targetRate, true); view.setUint32(28, targetRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true)
+  writeText(36, 'data'); view.setUint32(40, sampleCount * 2, true)
   for (let index = 0; index < sampleCount; index += 1) {
     const start = Math.floor(index * ratio)
     const end = Math.max(start + 1, Math.floor((index + 1) * ratio))
@@ -3821,7 +4175,15 @@ async function toggleDescriptionVoiceInput(target = 'task') {
       ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128_000 })
       : new MediaRecorder(stream, { audioBitsPerSecond: 128_000 })
     const chunks: Blob[] = []
-    await startDescriptionPcmCapture(stream)
+    // The task-inspector mic can use the PCM path, but the Today composer is
+    // sometimes rendered inside a focus-trapping sheet where a second audio
+    // context is rejected. Recording itself remains valid, so fall back to
+    // the native stream instead of abandoning the mic button.
+    await startDescriptionPcmCapture(stream).catch(() => {
+      descriptionPcmChunks = []
+      descriptionPcmSampleRate = 0
+      descriptionPcmPeak = 0
+    })
     descriptionRecorder = recorder
     descriptionRecordingTaskId = targetId
     descriptionRecordingStartedAt = Date.now()
@@ -3859,21 +4221,20 @@ async function finishDescriptionVoiceInput(taskId: string, stream: MediaStream, 
     render()
     return
   }
-  const pcmAudio = descriptionPcmChunks.length ? descriptionPcmWav() : null
-  const capturedPeak = descriptionPcmPeak
+  const pcmAudio = descriptionPcmChunks.length && descriptionPcmPeak >= 0.0005
+    ? descriptionPcmWav()
+    : null
   descriptionPcmChunks = []
   descriptionPcmSampleRate = 0
   descriptionPcmPeak = 0
-  if (capturedPeak < 0.0005) {
-    toast = 'The selected microphone is sending silence. Check your browser microphone input and try again.'
-    render()
-    return
-  }
   if (!pcmAudio && !chunks.length) {
     toast = 'No audio was captured. Please try again.'
     render()
     return
   }
+  // Preserve the afternoon PCM path when it contains speech, but use the
+  // browser's recorded stream if embedded WebKit/Chromium reports a false
+  // silent PCM signal. This keeps voice input working in the live app.
   const audio = pcmAudio ?? new Blob(chunks, { type: mimeType || chunks[0]?.type || 'audio/webm' })
   if (!audio.size) {
     toast = 'No audio was captured. Please try again.'
@@ -3889,7 +4250,8 @@ async function finishDescriptionVoiceInput(taskId: string, stream: MediaStream, 
       task.description = appendTranscript(task.description ?? '', transcript)
       persistPlanner()
     } else if (taskId === 'today-composer') {
-      captureTodayComposerDraft()
+      // The Today draft is snapshotted on every keystroke. Do not re-read a
+      // potentially replaced composer DOM node after async transcription.
       todayComposerDraft.description = appendTranscript(todayComposerDraft.description, transcript)
     }
     descriptionTranscribingTaskId = null
@@ -4066,6 +4428,7 @@ app.addEventListener('submit', async event => {
     const due = String(data.get('due') ?? todayKey)
     const goalId = String(data.get('goalId') ?? activeGoalId ?? goals[0]?.id ?? '').trim()
     if (!title || !due) return
+    const attachment = todayComposerAttachment
     const time = String(data.get('time') ?? '').trim()
     const newTask: Task = normalizeTask({
       id: crypto.randomUUID(),
@@ -4075,7 +4438,7 @@ app.addEventListener('submit', async event => {
       due,
       time: time || undefined,
       reminder: time ? DEFAULT_TASK_REMINDER_MINUTES : undefined,
-      visibility: normalizeTaskVisibility(data.get('visibility')),
+      visibility: attachment && isApplicationIntent(title) ? 'private' : normalizeTaskVisibility(data.get('visibility')),
       subtaskItems: [],
     })
     tasks.unshift(newTask)
@@ -4092,6 +4455,20 @@ app.addEventListener('submit', async event => {
         ? 'Task scheduled for tomorrow'
         : `Task scheduled for ${formatTaskDate(due)}`
     render()
+    if (attachment) {
+      taskFileAssetBusy.add(newTask.id)
+      render()
+      void uploadTaskFileAsset(newTask.id, attachment).then(asset => {
+        taskFileAssets.set(newTask.id, [asset])
+        toast = `${asset.originalFilename} attached`
+        if (isApplicationIntent(newTask.title, newTask.description)) void startAgentRun(newTask)
+      }).catch(error => {
+        toast = error instanceof Error ? error.message : 'The attachment could not be uploaded.'
+      }).finally(() => {
+        taskFileAssetBusy.delete(newTask.id)
+        render()
+      })
+    }
     window.setTimeout(() => {
       toast = ''
       render()
@@ -4185,6 +4562,19 @@ app.addEventListener('submit', async event => {
 
 app.addEventListener('input', event => {
   const target = event.target as HTMLElement
+  if (target.closest('[data-today-form]')) {
+    // Cloud/realtime renders can arrive while someone is composing. Keep this
+    // small local draft current on every keystroke so those renders never
+    // erase title or description text.
+    captureTodayComposerDraft()
+    return
+  }
+  const agentContextInput = target.closest<HTMLTextAreaElement>('[data-agent-context-input]')
+  if (agentContextInput) {
+    const runId = agentContextInput.dataset.runId
+    if (runId) roonContextDrafts.set(runId, agentContextInput.value)
+    return
+  }
   const usernameInput = target.closest<HTMLInputElement>('[data-profile-form] input[name="username"]')
   if (usernameInput) {
     usernameInput.value = normalizeUsername(usernameInput.value)
@@ -4216,8 +4606,29 @@ app.addEventListener('focusout', event => {
 })
 
 app.addEventListener('change', event => {
+  if ((event.target as HTMLElement).closest('[data-today-form]')) captureTodayComposerDraft()
+  const todayTaskFileInput = (event.target as HTMLElement).closest<HTMLInputElement>('[data-today-task-file]')
+  if (todayTaskFileInput) {
+    const file = todayTaskFileInput.files?.[0]
+    if (!file) return
+    captureTodayComposerDraft()
+    if (!acceptedTaskFileTypes.includes(file.type as typeof acceptedTaskFileTypes[number])) {
+      toast = 'Choose a PNG, JPEG, PDF, DOCX, or TXT file.'
+      render()
+      return
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast = 'Attachments must be 20 MB or smaller.'
+      render()
+      return
+    }
+    todayComposerAttachment = file
+    render()
+    return
+  }
   const taskFileInput = (event.target as HTMLElement).closest<HTMLInputElement>('[data-task-file-input]')
   if (taskFileInput) {
+    persistInspectorDraft()
     const taskId = taskFileInput.dataset.taskFileInput
     const file = taskFileInput.files?.[0]
     if (!taskId || !file || taskFileAssetBusy.has(taskId)) return
@@ -4227,6 +4638,17 @@ app.addEventListener('change', event => {
       const assets = taskFileAssets.get(taskId) ?? []
       if (!assets.some(item => item.id === asset.id)) taskFileAssets.set(taskId, [...assets, asset])
       toast = `${asset.originalFilename} attached`
+      const task = tasks.find(item => item.id === taskId)
+      if (task && isApplicationIntent(task.title, task.description)) {
+        const existingRun = agentRuns.get(task.id)
+        if (!existingRun) {
+          void startAgentRun(task)
+        } else if (existingRun.status === 'needs_context') {
+          void startAgentRun(task, roonContinuationContext(task, 'A new attachment was added. Use it as the requested context and continue the application workflow.'))
+        }
+      } else if (task && agentRuns.get(task.id)?.status === 'needs_context') {
+        void startAgentRun(task, roonContinuationContext(task, 'A new attachment was added. Inspect it as the requested context and continue only if it resolves the missing information.'))
+      }
     }).catch(error => {
       toast = error instanceof Error ? error.message : 'The file could not be attached.'
     }).finally(() => {
@@ -4450,7 +4872,8 @@ app.addEventListener('click', async event => {
     selectedTaskId = task.id
     mobileInspectorOpen = true
     const run = agentRuns.get(task.id)
-    if ((!run || run.status === 'failed' || run.status === 'cancelled') && roonCapabilityForTask(task)) void startAgentRun(task)
+    const route = taskSpecialistRoute(task)
+    if ((!run || run.status === 'failed' || run.status === 'cancelled') && (route.supported || route.needsSemanticClassification)) void startAgentRun(task)
     else render()
     return
   }
@@ -4528,6 +4951,35 @@ app.addEventListener('click', async event => {
     return
   }
 
+  if (action === 'preview-task-file') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const assetId = target.closest<HTMLElement>('[data-file-asset-id]')?.dataset.fileAssetId
+    const asset = taskId && assetId ? (taskFileAssets.get(taskId) ?? []).find(item => item.id === assetId) : undefined
+    if (!asset) return
+    void downloadTaskFileAsset(asset).then(blob => {
+      if (filePreview?.url) URL.revokeObjectURL(filePreview.url)
+      filePreview = {
+        asset,
+        url: URL.createObjectURL(blob),
+        ...(asset.mimeType.includes('wordprocessingml')
+          ? { message: 'This Word document is ready to download and open in Word or Pages.' }
+          : {}),
+      }
+      render()
+    }).catch(error => {
+      toast = error instanceof Error ? error.message : 'The file could not be previewed.'
+      render()
+    })
+    return
+  }
+
+  if (action === 'close-file-preview') {
+    if (filePreview?.url) URL.revokeObjectURL(filePreview.url)
+    filePreview = null
+    render()
+    return
+  }
+
   if (action === 'toggle-file-reusable') {
     const input = target.closest<HTMLInputElement>('[data-file-asset-id]')
     const taskId = input?.dataset.taskId
@@ -4537,7 +4989,8 @@ app.addEventListener('click', async event => {
     void setFileAssetReusable(assetId, input.checked).then(() => {
       const asset = (taskFileAssets.get(taskId) ?? []).find(item => item.id === assetId)
       if (asset) asset.reusable = input.checked
-      toast = input.checked ? 'Available to Roon for future tasks' : 'File limited to this task'
+      const task = tasks.find(item => item.id === taskId)
+      toast = input.checked ? `Available to ${task ? specialistName(task, agentRuns.get(task.id)) : 'ShotCount'} for future tasks` : 'File limited to this task'
     }).catch(error => {
       input.checked = !input.checked
       toast = error instanceof Error ? error.message : 'The file setting could not be changed.'
@@ -4550,8 +5003,15 @@ app.addEventListener('click', async event => {
 
   if (action === 'submit-agent-context') {
     const task = tasks.find(item => item.id === target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId)
-    const context = document.querySelector<HTMLTextAreaElement>('.task-agent-context')?.value.trim() ?? ''
-    if (!task || !context) return
+    const panel = target.closest<HTMLElement>('.task-agent-card')
+    const input = panel?.querySelector<HTMLTextAreaElement>('[data-agent-context-input]')
+    const context = input?.value.trim() ?? ''
+    if (!task || !context) {
+      input?.focus()
+      return
+    }
+    const run = agentRuns.get(task.id)
+    if (run) roonContextDrafts.delete(run.id)
     void startAgentRun(task, context)
     return
   }
@@ -4563,8 +5023,39 @@ app.addEventListener('click', async event => {
     return
   }
 
+  if (action === 'use-attached-cv') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
+    if (task) void startAgentRun(task, roonContinuationContext(task, 'The user confirms that the attached PDF is their real CV. Use it as authorised applicant context and continue the application workflow.'))
+    return
+  }
+
+  if (action === 'check-attached-context') {
+    persistInspectorDraft()
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
+    const panel = target.closest<HTMLElement>('.task-agent-card')
+    const note = panel?.querySelector<HTMLTextAreaElement>('[data-agent-context-input]')?.value.trim()
+    if (task) {
+      const run = agentRuns.get(task.id)
+      if (run) roonContextDrafts.delete(run.id)
+      const attachmentContext = note
+        ? `The user added this note about the requested attachment: ${note}\n\nInspect the task attachments, use any relevant evidence, and continue only if it resolves the missing context.`
+        : 'The user has added the requested attachment. Inspect the task attachments, use any relevant evidence, and continue only if it resolves the missing context.'
+      void startAgentRun(task, roonContinuationContext(task, attachmentContext))
+    }
+    return
+  }
+
   if (action === 'toggle-description-voice') {
-    void toggleDescriptionVoiceInput(target.closest<HTMLElement>('[data-description-voice-target]')?.dataset.descriptionVoiceTarget)
+    void toggleDescriptionVoiceInput()
+    return
+  }
+
+  if (action === 'toggle-today-description-voice') {
+    // Today deliberately calls the same recorder/transcriber pipeline as the
+    // task inspector; only its destination draft is different.
+    void toggleDescriptionVoiceInput('today-composer')
     return
   }
 
@@ -4625,6 +5116,7 @@ app.addEventListener('click', async event => {
   if (action === 'poll-agent') {
     const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
     const run = taskId ? agentRuns.get(taskId) : null
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
     if (!taskId || !run || agentDecisionBusy.has(run.id)) return
     agentDecisionBusy.add(run.id)
     render()
@@ -4632,10 +5124,10 @@ app.addEventListener('click', async event => {
       agentRuns.set(taskId, updated)
       void syncAgentApproval(updated).then(() => render())
       toast = updated.status === 'waiting_external'
-        ? 'Still waiting — Roon will keep checking'
-        : 'Roon continued the task'
+        ? `Still waiting — ${task ? specialistName(task, updated) : 'ShotCount'} will keep checking`
+        : `${task ? specialistName(task, updated) : 'ShotCount'} continued the task`
     }).catch(error => {
-      toast = error instanceof Error ? error.message : 'Roon could not check the external work.'
+      toast = error instanceof Error ? error.message : `${task ? specialistName(task, run) : 'ShotCount'} could not check the external work.`
     }).finally(() => {
       agentDecisionBusy.delete(run.id)
       persistAgentRuns()
@@ -4647,6 +5139,7 @@ app.addEventListener('click', async event => {
   if (action === 'simulate-agent-reply') {
     const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
     const run = taskId ? agentRuns.get(taskId) : null
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
     const reply = target
       .closest<HTMLElement>('.task-agent-reply-simulation')
       ?.querySelector<HTMLTextAreaElement>('.task-agent-simulated-reply')
@@ -4657,9 +5150,9 @@ app.addEventListener('click', async event => {
     void simulateAgentReply(run.id, reply).then(updated => {
       agentRuns.set(taskId, updated)
       void syncAgentApproval(updated).then(() => render())
-      toast = 'Development reply received — Roon resumed the same task'
+      toast = `Development reply received — ${task ? specialistName(task, updated) : 'ShotCount'} resumed the same task`
     }).catch(error => {
-      toast = error instanceof Error ? error.message : 'Roon could not simulate this development reply.'
+      toast = error instanceof Error ? error.message : `${task ? specialistName(task, run) : 'ShotCount'} could not simulate this development reply.`
     }).finally(() => {
       agentDecisionBusy.delete(run.id)
       persistAgentRuns()
@@ -4675,7 +5168,9 @@ app.addEventListener('click', async event => {
   }
 
   if (action === 'view-agent-progress') {
-    toast = 'Roon is working through this task'
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
+    toast = `${task ? specialistName(task, taskId ? agentRuns.get(taskId) : null) : 'ShotCount'} is working through this task`
     render()
     window.setTimeout(() => {
       toast = ''
@@ -4909,6 +5404,7 @@ app.addEventListener('click', async event => {
     goals.push(newGoal)
     todayComposerDraft.goalId = newGoal.id
     todayGoalCreatorOpen = false
+    skipTodayComposerCapture = true
     persistGoals()
     triggerHaptic([35, 30, 60])
     toast = 'Goal added'
@@ -4921,13 +5417,6 @@ app.addEventListener('click', async event => {
   }
   if (action === 'save-task') {
     persistInspectorDraft()
-    const task = selectedTask()
-    const run = task ? agentRuns.get(task.id) : undefined
-    if (task && run?.status === 'needs_context' && task.description?.trim()) {
-      toast = 'Details saved'
-      void startAgentRun(task, task.description)
-      return
-    }
     toast = 'Changes saved'
     mobileInspectorOpen = false
   } else if (action === 'delete-task') {

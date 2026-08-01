@@ -125,11 +125,13 @@ try {
     ],
   })
 
-  await page.goto(`${baseUrl}/?previewView=today&previewAgentIsland=1`, {
+  await page.goto(`${baseUrl}/?previewView=today`, {
     waitUntil: 'networkidle',
   })
   await assertVisible(page, '.task-agent-card--progress', 'Today did not show inline agent progress.')
-  await assertVisible(page, '.shotcount-agent-island', 'The Dynamic Island did not show agent state.')
+  if (await page.locator('.shotcount-agent-island').count()) {
+    throw new Error('The retired Dynamic Island returned instead of using inline agent progress.')
+  }
   if (await page.locator('.shotcount-agent-helper').count()) {
     throw new Error('The persistent Roon banner still appears on Today.')
   }
@@ -233,12 +235,7 @@ try {
   await delegateSelectedTask(page)
   await assertVisible(page, '.task-agent-card--approval', 'Scheduling outreach did not request approval.')
   await page.locator('[data-action="approve-agent-approval"]').click()
-  await assertVisible(page, '.task-agent-card--waiting', 'Scheduling did not enter waiting_external.')
-  const waitingText = await page.locator('.task-agent-card--waiting').innerText()
-  if (!waitingText.includes('Waiting for Blessing')) {
-    throw new Error('The external-reply waiting state is missing.')
-  }
-  await page.locator('[data-action="poll-agent"]').click()
+  await assertVisible(page, '.task-agent-card--progress', 'Scheduling did not show its durable waiting progress.')
   await assertVisible(page, '.task-agent-card--approval', 'Reply resume did not prepare Calendar approval.')
   const calendarApproval = await page.locator('.task-agent-card--approval').innerText()
   if (!calendarApproval.includes('ShotCount launch meeting with Blessing') || !calendarApproval.includes('2026-07-30')) {

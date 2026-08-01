@@ -1,5 +1,6 @@
 import type { AgentCapability } from './agent-runtime'
 import type { Task } from './planner-model'
+import { routeTask } from '../../supabase/functions/_shared/specialists'
 
 export type RoonCapability = AgentCapability
 
@@ -9,20 +10,31 @@ type CapabilityDefinition = {
   matches: RegExp
 }
 
-// This is intentionally a small allow-list. A task gets a Delegate control only
-// when it clearly names work Roon is equipped to carry through safely.
-export const roonCapabilityIndex: readonly CapabilityDefinition[] = [
-  { capability: 'flight_search', label: 'Find flights', matches: /\b(flight|fly|airfare|airline|airport|return trip|round trip|one-way)\b/i },
-  { capability: 'scheduling', label: 'Schedule', matches: /\b(schedule|reschedule|availability|appointment|arrange|coordinate|organize)\b[\s\S]{0,80}\b(meeting|call|appointment)\b|\b(meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/i },
-  { capability: 'calendar', label: 'Check calendar', matches: /\b(calendar|meeting|appointment|remind(?:er)?|due time)\b/i },
-  { capability: 'gmail', label: 'Email', matches: /\b(email|mail|gmail|reply|follow[\s-]?up|message|outreach)\b/i },
-  { capability: 'research_draft', label: 'Research and draft', matches: /\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b[\s\S]*\b(draft|write|outline|proposal|application|polish|document)\b|\b(draft|write|outline|proposal|application|polish|document)\b[\s\S]*\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b/i },
-  { capability: 'research', label: 'Research', matches: /\b(research|find|compare|identify|market|program|professor|supervisor|grant|customer|competitor|event|resource)\b/i },
-  { capability: 'draft', label: 'Draft', matches: /\b(draft|write|outline|proposal|application|polish|document)\b/i },
-  { capability: 'browser', label: 'Complete online task', matches: /\b(apply|application|renew|license|register|sign[\s-]?up|submit|upload|fill|complete)\b/i },
-]
+// Kept as a compatibility boundary for older UI/tests. New routing lives in
+// the shared specialist registry; this helper never selects a model or starts
+// a run. It only tells the legacy inspector whether it should keep showing its
+// existing delegate affordance while an old run is migrated.
+export const roonCapabilityIndex: readonly CapabilityDefinition[] = []
 
 export function roonCapabilityForTask(task: Pick<Task, 'title' | 'description'>): CapabilityDefinition | null {
   const text = `${task.title} ${task.description ?? ''}`
-  return roonCapabilityIndex.find(entry => entry.matches.test(text)) ?? null
+  const route = routeTask(task.title, task.description)
+  if (route.primarySpecialistId === 'caspian') return { capability: 'flight_search', label: 'Find flights', matches: /flight/i }
+  if (route.primarySpecialistId === 'david') return { capability: 'browser', label: 'Complete online task', matches: /application/i }
+  if (route.primarySpecialistId === 'roon') {
+    const capability: AgentCapability = route.taskContract === 'communication.calendar'
+      ? 'calendar'
+      : route.taskContract === 'communication.scheduling'
+        ? 'scheduling'
+        : 'gmail'
+    return { capability, label: capability === 'calendar' ? 'Check calendar' : capability === 'scheduling' ? 'Schedule' : 'Email', matches: /communication/i }
+  }
+  if (/\b(?:research|compare|identify|program|professor|supervisor|grant|customer|competitor|event|resource)\b/i.test(text)) {
+    const combined = /\b(?:draft|write|outline|proposal|polish|document)\b/i.test(text)
+    return { capability: combined ? 'research_draft' : 'research', label: combined ? 'Research and draft' : 'Research', matches: /research/i }
+  }
+  if (/\b(?:renew|license|register|sign[\s-]?up|submit|upload|fill|complete)\b/i.test(text)) {
+    return { capability: 'browser', label: 'Complete online task', matches: /online/i }
+  }
+  return null
 }

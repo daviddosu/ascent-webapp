@@ -50,6 +50,10 @@ Deno.serve(async request => {
     .from('agent_runs')
     .select('id')
     .in('status', ['planning', 'running'])
+    // Flights are driven by their isolated browser session. Restarting a
+    // stalled model turn from the cron sweep can replay the visible progress
+    // instead of waiting for that session's authoritative update.
+    .neq('capability', 'flight_search')
     .lt('updated_at', staleCutoff)
     .order('updated_at', { ascending: true })
     .limit(8)

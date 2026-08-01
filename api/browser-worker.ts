@@ -327,8 +327,18 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
         target: String(operation.arguments.target ?? ''),
         value: operation.arguments.value === null ? null : String(operation.arguments.value ?? ''),
       }
-      const state = await actOnPublicPage(checkpoint.publicBrowser, action, session.allowed_domains)
-      output = { observation: state.observation, resumable: true }
+      const state = await actOnPublicPage(checkpoint.publicBrowser, action, session.allowed_domains, async assetId => {
+        const run = await admin.from('agent_runs').select('task_id').eq('id', session.run_id).eq('user_id', session.user_id).single()
+        if (!run.data) throw new BrowserExecutionError('browser_asset_inaccessible', 'The private file is not available to this task.', false)
+        const asset = await admin.from('file_assets').select('original_filename,mime_type,storage_key,size_bytes')
+          .eq('id', assetId).eq('user_id', session.user_id).eq('task_id', run.data.task_id).maybeSingle()
+        const row = asset.data
+        if (!row || Number(row.size_bytes) > 20 * 1024 * 1024) throw new BrowserExecutionError('browser_asset_inaccessible', 'The private file is not available to this task.', false)
+        const downloaded = await admin.storage.from('private-file-assets').download(row.storage_key)
+        if (downloaded.error || !downloaded.data) throw new BrowserExecutionError('browser_file_materialisation_failed', 'The private file could not be materialised.', true)
+        return { name: row.original_filename, mimeType: row.mime_type, buffer: Buffer.from(await downloaded.data.arrayBuffer()) }
+      })
+      output = { observation: state.observation, upload_evidence: state.lastEvidence ?? null, resumable: true }
       currentUrl = state.currentUrl
       nextCheckpoint = {
         ...claimedCheckpoint,

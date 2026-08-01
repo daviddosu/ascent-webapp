@@ -205,6 +205,20 @@ const nullableString = (description: string, maxLength = 500) => ({
 export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
+    name: 'application.generate_document',
+    description: 'Create a private derived PDF application document from authorised applicant context. Never invent facts.',
+    parameters: objectSchema({
+      title: stringValue('Document title.', 300),
+      filename: stringValue('Safe PDF filename.', 255),
+      body: stringValue('Grounded document text.', 30000),
+      original_asset_id: nullableString('Reusable source FileAsset ID, or null for a new statement.', 64),
+      word_limit: { type: ['integer', 'null'], minimum: 1, maximum: 10000 },
+      character_limit: { type: ['integer', 'null'], minimum: 1, maximum: 50000 },
+    }, ['title', 'filename', 'body', 'original_asset_id', 'word_limit', 'character_limit']),
+    strict: true,
+  },
+  {
+    type: 'function',
     name: 'agent.request_context',
     description: 'Pause and ask the user one concise question for genuinely missing information. For a calendar conflict, include up to three verified suggested_options the user can select.',
     parameters: objectSchema({
@@ -544,7 +558,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       session_id: stringValue('Browser execution session ID.', 64),
       action: {
         type: 'string',
-        enum: ['click', 'type', 'select', 'scroll', 'wait'],
+        enum: ['click', 'type', 'select', 'upload', 'scroll', 'wait'],
       },
       target: stringValue('Stable locator or concise visual target.', 1000),
       value: nullableString('Value for type/select actions.', 5000),
@@ -576,6 +590,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
 const policies: Record<string, ToolPolicy> = {
   'agent.request_context': { risk: 'read', approvalKind: null },
   'agent.complete': { risk: 'read', approvalKind: null },
+  'application.generate_document': { risk: 'prepare', approvalKind: null },
   'gmail.search_messages': { risk: 'read', approvalKind: null },
   'gmail.read_message': { risk: 'read', approvalKind: null },
   'gmail.read_thread': { risk: 'read', approvalKind: null },
@@ -819,13 +834,21 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
       return validateString(value.session_id, 64)
     case 'browser.act':
       return validateString(value.session_id, 64) &&
-        ['click', 'type', 'select', 'scroll', 'wait'].includes(String(value.action)) &&
+        ['click', 'type', 'select', 'upload', 'scroll', 'wait'].includes(String(value.action)) &&
         validateString(value.target, 1000) &&
         (value.value === null || validateString(value.value, 5000, true))
     case 'browser.submit':
       return validateString(value.session_id, 64) &&
         validateString(value.target, 1000) &&
         validateString(value.expected_effect, 1200)
+    case 'application.generate_document':
+      return validateString(value.title, 300) &&
+        validateString(value.filename, 255) &&
+        /\.pdf$/i.test(String(value.filename)) &&
+        validateString(value.body, 30000) &&
+        (value.original_asset_id === null || /^[0-9a-f-]{36}$/i.test(String(value.original_asset_id))) &&
+        (value.word_limit === null || (Number.isInteger(value.word_limit) && Number(value.word_limit) > 0)) &&
+        (value.character_limit === null || (Number.isInteger(value.character_limit) && Number(value.character_limit) > 0))
     default:
       return false
   }

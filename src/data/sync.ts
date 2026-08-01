@@ -358,6 +358,9 @@ export class CloudPlannerRepository implements PlannerRepository {
   async initialize(localFallback: PlannerWorkspace) {
     this.setState('loading', 'Loading your workspace…')
     this.readCache()
+    // Cached records are local and can be drawn immediately; the cloud read
+    // only reconciles them and should not create a blank workspace.
+    if (this.records.length) this.notifyWorkspace()
 
     if (!this.online()) {
       if (!this.records.length) this.queueWorkspace(localFallback)

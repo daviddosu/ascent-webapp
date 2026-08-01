@@ -19,6 +19,7 @@ export type FileAsset = {
   source: 'task_upload' | 'roon_generated'
   reusable: boolean
   originalAssetId: string | null
+  storageKey: string
   createdAt: string
 }
 
@@ -33,6 +34,7 @@ type FileAssetRow = {
   source: FileAsset['source']
   reusable: boolean
   original_asset_id: string | null
+  storage_key: string
   created_at: string
 }
 
@@ -48,6 +50,7 @@ function mapAsset(row: FileAssetRow): FileAsset {
     source: row.source,
     reusable: row.reusable,
     originalAssetId: row.original_asset_id,
+    storageKey: row.storage_key,
     createdAt: row.created_at,
   }
 }
@@ -63,7 +66,7 @@ export async function loadTaskFileAssets(taskId: string) {
   if (!client || !user) return []
   const { data, error } = await client
     .from('file_assets')
-    .select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,original_asset_id,created_at')
+    .select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,original_asset_id,storage_key,created_at')
     .eq('task_id', taskId)
     .order('created_at')
     .returns<FileAssetRow[]>()
@@ -81,7 +84,7 @@ export async function uploadTaskFileAsset(taskId: string, file: File, reusable =
   if (!client || !user) throw new Error('Sign in to attach files.')
   const checksum = await sha256(file)
   const existing = await client.from('file_assets')
-    .select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,original_asset_id,created_at')
+    .select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,original_asset_id,storage_key,created_at')
     .eq('user_id', user.id).eq('task_id', taskId).eq('checksum', checksum).maybeSingle<FileAssetRow>()
   if (existing.data) return mapAsset(existing.data)
   const assetId = crypto.randomUUID()
@@ -103,7 +106,7 @@ export async function uploadTaskFileAsset(taskId: string, file: File, reusable =
     checksum,
     source: 'task_upload',
     reusable,
-  }).select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,original_asset_id,created_at').single<FileAssetRow>()
+  }).select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,original_asset_id,storage_key,created_at').single<FileAssetRow>()
   if (inserted.error) {
     await client.storage.from('private-file-assets').remove([storageKey])
     throw new Error(inserted.error.message)
@@ -128,4 +131,13 @@ export async function removeTaskFileAsset(assetId: string) {
   const removed = await client.from('file_assets').delete().eq('id', assetId).eq('user_id', user.id)
   if (removed.error) throw new Error(removed.error.message)
   await client.storage.from('private-file-assets').remove([found.data.storage_key])
+}
+
+export async function downloadTaskFileAsset(asset: FileAsset) {
+  const client = await getCloudClient()
+  const user = await currentUser()
+  if (!client || !user) throw new Error('Sign in to preview this file.')
+  const { data, error } = await client.storage.from('private-file-assets').download(asset.storageKey)
+  if (error || !data) throw new Error(error?.message ?? 'The file could not be opened.')
+  return data
 }

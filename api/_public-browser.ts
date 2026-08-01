@@ -5,7 +5,7 @@ import { chromium as playwright, type Browser, type Locator, type Page } from 'p
 import { BrowserExecutionError } from './_flight-browser.js'
 
 export type PublicBrowserAction = {
-  action: 'click' | 'type' | 'select' | 'scroll' | 'wait'
+  action: 'click' | 'type' | 'select' | 'upload' | 'scroll' | 'wait'
   target: string
   value: string | null
 }
@@ -15,6 +15,7 @@ export type PublicBrowserState = {
   currentUrl: string
   actions: PublicBrowserAction[]
   observation: PublicBrowserObservation
+  lastEvidence?: Record<string, unknown>
 }
 
 export type PublicBrowserObservation = {
@@ -217,7 +218,9 @@ async function assertNonSensitive(locator: Locator, target: string, value: strin
   }
 }
 
-async function applyAction(page: Page, action: PublicBrowserAction, domains: unknown, replay = false) {
+type FileMaterializer = (assetId: string) => Promise<{ name: string; mimeType: string; buffer: Buffer }>
+
+async function applyAction(page: Page, action: PublicBrowserAction, domains: unknown, replay = false, materialize?: FileMaterializer) {
   if (action.action === 'wait') {
     const requested = Number(action.value ?? 500)
     await page.waitForTimeout(Number.isFinite(requested) ? Math.min(3000, Math.max(100, requested)) : 500)
@@ -229,8 +232,26 @@ async function applyAction(page: Page, action: PublicBrowserAction, domains: unk
     await page.evaluate(value => window.scrollBy({ top: value, behavior: 'auto' }), amount)
     return
   }
-  const locator = await uniqueTarget(page, action.target)
-  if (action.action === 'type') {
+  let locator = await uniqueTarget(page, action.target)
+  if (action.action === 'upload') {
+    if (!materialize || !action.value) throw new BrowserExecutionError('browser_file_materialisation_missing', 'The private file could not be materialised for upload.', false)
+    let metadata = await locator.evaluate(element => ({ tag: element.tagName.toLocaleLowerCase(), type: (element as HTMLInputElement).type }))
+    if (metadata.tag !== 'input' || metadata.type !== 'file') {
+      const nested = locator.locator('input[type="file"]')
+      if (await nested.count() !== 1) throw new BrowserExecutionError('browser_upload_target_invalid', 'The upload target does not contain one file input.', false)
+      locator = nested
+      metadata = { tag: 'input', type: 'file' }
+    }
+    const file = await materialize(action.value)
+    await locator.setInputFiles({ name: file.name, mimeType: file.mimeType, buffer: file.buffer })
+    const evidence = await locator.evaluate(element => {
+      const input = element as HTMLInputElement
+      const uploaded = input.files?.[0]
+      return uploaded ? { filename: uploaded.name, size: uploaded.size, populated: input.files?.length === 1 } : null
+    })
+    if (!evidence?.populated || evidence.filename !== file.name) throw new BrowserExecutionError('browser_upload_unverified', 'The page did not acknowledge the uploaded document.', true)
+    return { kind: 'file_upload', asset_id: action.value, ...evidence }
+  } else if (action.action === 'type') {
     await assertNonSensitive(locator, action.target, action.value)
     await locator.fill(action.value ?? '')
   } else if (action.action === 'select') {
@@ -253,11 +274,11 @@ async function applyAction(page: Page, action: PublicBrowserAction, domains: unk
   if (!replay) await assertPageAllowed(page, domains)
 }
 
-async function restore(page: Page, state: PublicBrowserState, domains: unknown) {
+async function restore(page: Page, state: PublicBrowserState, domains: unknown, materialize?: FileMaterializer) {
   const url = allowedPublicUrl(state.entryUrl || state.currentUrl, domains)
   await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 })
   await assertPageAllowed(page, domains)
-  for (const action of state.actions.slice(0, 30)) await applyAction(page, action, domains, true)
+  for (const action of state.actions.slice(0, 30)) await applyAction(page, action, domains, true, materialize)
 }
 
 export async function navigatePublicPage(rawUrl: string, domains: unknown) {
@@ -275,20 +296,21 @@ export async function navigatePublicPage(rawUrl: string, domains: unknown) {
   }
 }
 
-export async function actOnPublicPage(state: PublicBrowserState, action: PublicBrowserAction, domains: unknown) {
+export async function actOnPublicPage(state: PublicBrowserState, action: PublicBrowserAction, domains: unknown, materialize?: FileMaterializer) {
   if (state.actions.length >= 30) throw new BrowserExecutionError('browser_action_limit', 'This browser session reached its safe action limit.', false)
   const browser: Browser = await launchBrowser()
   try {
     const page = await browser.newPage()
     await installRequestGuard(page, domains)
-    await restore(page, state, domains)
-    await applyAction(page, action, domains)
+    await restore(page, state, domains, materialize)
+    const evidence = await applyAction(page, action, domains, false, materialize)
     const observation = await observe(page)
     return {
       entryUrl: state.entryUrl || state.currentUrl,
       currentUrl: page.url(),
       actions: [...state.actions, action],
       observation,
+      ...(evidence ? { lastEvidence: evidence } : {}),
     } satisfies PublicBrowserState
   } finally {
     await browser.close()

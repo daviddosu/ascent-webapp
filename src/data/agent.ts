@@ -7,6 +7,19 @@ import {
   type DurableAgentRunStatus,
 } from './agent-runtime'
 import { needsSharedAgentContext } from '../../supabase/functions/_shared/agent-intent'
+import {
+  REASONING_MODEL_ID,
+  legacySpecialistRoute,
+  routeTask,
+  specialistIdentity,
+  specialistRequiredEffects,
+  type RequiredEffect,
+  type SpecialistId,
+  type SpecialistRoute,
+  type SpecialistStage,
+  type SpecialistVersion,
+  type TaskContract,
+} from '../../supabase/functions/_shared/specialists'
 import type { Task } from './planner-model'
 
 export type AgentRunStatus = DurableAgentRunStatus
@@ -27,6 +40,7 @@ export type AgentResult = {
   paymentHandoffUrl?: string
   paymentHandoffProvider?: string
   paymentHandoffStage?: 'provider_booking' | 'google_booking_options'
+  applicationReviewUrl?: string
   outcome?: {
     preparedResult: boolean
     externalChangeConfirmed: boolean
@@ -63,6 +77,17 @@ export type AgentRun = {
   schedulingOptions?: Array<{ label: string; value: string }>
   capability: AgentCapability
   intent: AgentIntent
+  specialistId: SpecialistId | null
+  specialistVersion: SpecialistVersion | null
+  activeSpecialistId: SpecialistId | null
+  activeSpecialistVersion: SpecialistVersion | null
+  reasoningModel: typeof REASONING_MODEL_ID
+  taskContract: TaskContract | null
+  routingSource: 'deterministic' | 'semantic' | 'legacy_migration'
+  specialistStageIndex: number
+  specialistStages: SpecialistStage[]
+  completedEffects: RequiredEffect[]
+  unsatisfiedEffects: RequiredEffect[]
   currentStep: number
   waitingReason: string
   progressIndex: number
@@ -112,6 +137,17 @@ type AgentRunRow = {
   recipientResolution?: AgentRun['recipientResolution']
   capability: AgentCapability
   intent: AgentIntent | null
+  specialist_id?: SpecialistId | null
+  specialist_version?: SpecialistVersion | null
+  active_specialist_id?: SpecialistId | null
+  active_specialist_version?: SpecialistVersion | null
+  reasoning_model?: string | null
+  task_contract?: TaskContract | null
+  routing_source?: AgentRun['routingSource'] | null
+  specialist_stage_index?: number | null
+  specialist_stages?: SpecialistStage[] | null
+  completed_effects?: RequiredEffect[] | null
+  unsatisfied_effects?: RequiredEffect[] | null
   current_step: number
   waiting_reason: string
   progress: string[] | null
@@ -143,6 +179,12 @@ async function agentE2EFixture() {
 
 function mapAgentRun(row: AgentRunRow): AgentRun {
   const intent = row.intent ?? classifyAgentIntent(row.objective, row.context?.description)
+  const route = legacySpecialistRoute(row.objective, row.context?.description, row.capability) ?? routeTask(row.objective, row.context?.description)
+  const specialistId = row.specialist_id ?? route.primarySpecialistId
+  const specialist = specialistIdentity(specialistId)
+  const stages = Array.isArray(row.specialist_stages) && row.specialist_stages.length
+    ? row.specialist_stages
+    : route.stages
   return {
     id: row.id,
     taskId: row.task_id,
@@ -153,6 +195,17 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     schedulingOptions: Array.isArray(row.context?.scheduling_options) ? row.context.scheduling_options : [],
     capability: row.capability,
     intent,
+    specialistId,
+    specialistVersion: row.specialist_version ?? specialist?.version ?? null,
+    activeSpecialistId: row.active_specialist_id ?? specialistId,
+    activeSpecialistVersion: row.active_specialist_version ?? row.specialist_version ?? specialist?.version ?? null,
+    reasoningModel: REASONING_MODEL_ID,
+    taskContract: row.task_contract ?? route.taskContract,
+    routingSource: row.routing_source ?? 'legacy_migration',
+    specialistStageIndex: row.specialist_stage_index ?? 0,
+    specialistStages: stages,
+    completedEffects: Array.isArray(row.completed_effects) ? row.completed_effects : [],
+    unsatisfiedEffects: Array.isArray(row.unsatisfied_effects) ? row.unsatisfied_effects : [],
     currentStep: row.current_step,
     waitingReason: row.waiting_reason,
     progressIndex: row.current_step,
@@ -183,6 +236,14 @@ function mapApproval(row: AgentApprovalRow): AgentApproval {
 
 export function agentCapability(task: Task): AgentRun['capability'] {
   return classifyAgentIntent(task.title, task.description).capability
+}
+
+export function specialistRoute(task: Pick<Task, 'title' | 'description'>): SpecialistRoute {
+  return routeTask(task.title, task.description)
+}
+
+export function taskSpecialist(task: Pick<Task, 'title' | 'description'>) {
+  return specialistIdentity(routeTask(task.title, task.description).primarySpecialistId)
 }
 
 export function needsAgentContext(task: Task) {
@@ -221,14 +282,30 @@ export async function generateRoonPlan(goal: string, clarification = ''): Promis
 export function createAgentRun(task: Task, context = ''): AgentRun {
   const timestamp = new Date().toISOString()
   const intent = classifyAgentIntent(task.title, task.description)
+  const route = routeTask(task.title, task.description)
+  const specialist = specialistIdentity(route.primarySpecialistId)
+  const needsContext = needsAgentContext(task)
   return {
     id: crypto.randomUUID(),
     taskId: task.id,
-    status: needsAgentContext(task) && !context ? 'needs_context' : 'planning',
+    status: needsContext && !context ? 'needs_context' : 'planning',
     objective: task.title,
     context: context || task.description || '',
     capability: intent.capability,
     intent,
+    specialistId: route.primarySpecialistId,
+    specialistVersion: specialist?.version ?? null,
+    activeSpecialistId: route.primarySpecialistId,
+    activeSpecialistVersion: specialist?.version ?? null,
+    reasoningModel: REASONING_MODEL_ID,
+    taskContract: route.taskContract,
+    routingSource: route.classification === 'deterministic' ? 'deterministic' : 'semantic',
+    specialistStageIndex: 0,
+    specialistStages: route.stages,
+    completedEffects: [],
+    unsatisfiedEffects: specialist && route.taskContract
+      ? specialistRegistryEffects(route, task.title)
+      : [],
     currentStep: 0,
     waitingReason: '',
     progressIndex: -1,
@@ -238,6 +315,11 @@ export function createAgentRun(task: Task, context = ''): AgentRun {
     createdAt: timestamp,
     updatedAt: timestamp,
   }
+}
+
+function specialistRegistryEffects(route: SpecialistRoute, objective: string): RequiredEffect[] {
+  if (!route.primarySpecialistId || !route.taskContract) return []
+  return specialistRequiredEffects(route.primarySpecialistId, objective, route.taskContract)
 }
 
 export async function resolveAgentFunctionError(
@@ -268,7 +350,7 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
   }
   const client = await getCloudClient()
   const user = await currentUser()
-  if (!client || !user) throw new Error('Sign in to delegate this task to Roon.')
+  if (!client || !user) throw new Error(`Sign in to delegate this task to ${specialistIdentity(run.activeSpecialistId ?? run.specialistId)?.name ?? 'ShotCount'}.`)
 
   const { data, error } = await client.functions.invoke<AgentRun>('task-agent', {
     method: 'POST',
@@ -279,13 +361,17 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
       description: task.description ?? '',
       context: run.context,
       capability: run.capability,
+      specialistId: run.specialistId,
+      specialistVersion: run.specialistVersion,
+      taskContract: run.taskContract,
+      routingSource: run.routingSource,
       goalId: task.goalId ?? null,
       due: task.due ?? null,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     },
   })
   if (error || !data) {
-    throw new Error(await resolveAgentFunctionError(error, 'Roon could not complete this task.'))
+    throw new Error(await resolveAgentFunctionError(error, `${specialistIdentity(run.activeSpecialistId ?? run.specialistId)?.name ?? 'ShotCount'} could not complete this task.`))
   }
   return { ...data, durable: true }
 }
@@ -297,7 +383,7 @@ export async function loadAgentRuns(): Promise<AgentRun[]> {
   if (!client || !user) return []
   const { data, error } = await client
     .from('agent_runs')
-    .select('id,task_id,status,objective,context,capability,intent,current_step,waiting_reason,progress,result,error,error_code,created_at,updated_at')
+      .select('id,task_id,status,objective,context,capability,intent,specialist_id,specialist_version,active_specialist_id,active_specialist_version,reasoning_model,task_contract,routing_source,specialist_stage_index,specialist_stages,completed_effects,unsatisfied_effects,current_step,waiting_reason,progress,result,error,error_code,created_at,updated_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(250)
@@ -345,33 +431,33 @@ async function invokeRunAction(
 }
 
 export function resumeAgentRun(runId: string, context = '') {
-  return invokeRunAction({ action: 'resume', runId, context }, 'Roon could not resume this task.')
+  return invokeRunAction({ action: 'resume', runId, context }, 'ShotCount could not resume this task.')
 }
 
 export function selectAgentRecipient(runId: string, recipientEmail: string) {
-  return invokeRunAction({ action: 'select_recipient', runId, recipientEmail }, 'Roon could not select that recipient.')
+  return invokeRunAction({ action: 'select_recipient', runId, recipientEmail }, 'ShotCount could not select that recipient.')
 }
 
 export function pollAgentRun(runId: string) {
-  return invokeRunAction({ action: 'poll', runId }, 'Roon could not check the external work.')
+  return invokeRunAction({ action: 'poll', runId }, 'ShotCount could not check the external work.')
 }
 
 export function simulateAgentReply(runId: string, simulationReply: string) {
   return invokeRunAction(
     { action: 'simulate_reply', runId, simulationReply },
-    'Roon could not simulate this development reply.',
+    'ShotCount could not simulate this development reply.',
   )
 }
 
 export function selectAgentFlight(runId: string, optionId: string) {
   return invokeRunAction(
     { action: 'select_flight', runId, optionId },
-    'Roon could not continue with this flight.',
+    'Caspian could not continue with this flight.',
   )
 }
 
 export function cancelAgentRunRemote(runId: string) {
-  return invokeRunAction({ action: 'cancel', runId }, 'Roon could not cancel this task.')
+  return invokeRunAction({ action: 'cancel', runId }, 'ShotCount could not cancel this task.')
 }
 
 export function decideAgentApproval(approval: AgentApproval, decision: 'approve' | 'reject') {
@@ -379,7 +465,7 @@ export function decideAgentApproval(approval: AgentApproval, decision: 'approve'
     action: decision,
     approvalId: approval.id,
     approvalVersion: approval.version,
-  }, 'Roon could not apply this approval decision.')
+  }, 'ShotCount could not apply this approval decision.')
 }
 
 export function editAgentEmailApproval(approval: AgentApproval, subject: string, emailBody: string, attachment?: { name: string; base64: string; mimeType: string }) {
@@ -392,7 +478,19 @@ export function editAgentEmailApproval(approval: AgentApproval, subject: string,
     attachmentName: attachment?.name,
     attachmentBase64: attachment?.base64,
     attachmentMimeType: attachment?.mimeType,
-  }, 'Roon could not save the edited email.')
+  }, 'ShotCount could not save the edited email.')
+}
+
+export function editAgentCalendarApproval(approval: AgentApproval, summary: string, description: string, start: string, end: string) {
+  return invokeRunAction({
+    action: 'edit_calendar_approval',
+    approvalId: approval.id,
+    approvalVersion: approval.version,
+    calendarSummary: summary,
+    calendarDescription: description,
+    calendarStart: start,
+    calendarEnd: end,
+  }, 'ShotCount could not save the edited calendar event.')
 }
 
 export async function subscribeToAgentRuns(onChange: () => void) {

@@ -54,6 +54,6 @@ export function verifiedCrossToolStage(actions: ProviderActionEvidence[]) {
   return { stage: 'complete' as const, complete: true }
 }
 
-export function reasoningFallbackAllowed(failureClass: string, deterministicMismatch: boolean) {
+export function lunaContinuationAllowed(failureClass: string, deterministicMismatch: boolean) {
   return failureClass === 'MODEL_REASONING' && deterministicMismatch
 }

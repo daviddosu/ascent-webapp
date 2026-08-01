@@ -38,6 +38,16 @@ export default function handler(request: FixtureRequest, response: FixtureRespon
       <form method="post" action="/api/browser-fixture">
         <label>Customer name<input name="customer_name" autocomplete="off" required></label>
         <label>Comments<textarea name="comments" required></textarea></label>
+        <label>CV document<input type="file" name="cv_document" accept=".docx,.pdf" required></label>
+        <label>Motivation statement<input type="file" name="motivation_document" accept=".docx,.pdf" required></label>
+        <label><input type="checkbox" name="review_confirmed"> I will review all information before submitting</label>
+        <p id="upload-status" aria-live="polite"></p>
+        <script>
+          document.querySelectorAll('input[type=file]').forEach(input => input.addEventListener('change', () => {
+            document.querySelector('#upload-status').textContent = [...document.querySelectorAll('input[type=file]')]
+              .map(item => item.files[0]?.name).filter(Boolean).join(', ') + ' ready'
+          }))
+        </script>
         <button type="submit">Submit form</button>
       </form>
     `))

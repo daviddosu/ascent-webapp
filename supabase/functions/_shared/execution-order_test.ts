@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { reasoningFallbackAllowed, requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from './execution-order.ts'
+import { lunaContinuationAllowed, requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from './execution-order.ts'
 
 Deno.test('blocks out-of-order and premature cross-tool completion', () => {
   assertEquals(verifiedCrossToolStage([]).stage, 'calendar_required')
@@ -18,12 +18,12 @@ Deno.test('blocks out-of-order and premature cross-tool completion', () => {
   ]).complete, true)
 })
 
-Deno.test('Sol is allowed only for deterministic reasoning mismatches', () => {
-  assertEquals(reasoningFallbackAllowed('MODEL_REASONING', true), true)
+Deno.test('Luna continuation is allowed only for deterministic reasoning mismatches', () => {
+  assertEquals(lunaContinuationAllowed('MODEL_REASONING', true), true)
   for (const failure of ['PROVIDER_OR_BROWSER_INFRA', 'STALE_PROVIDER_STATE', 'STATE_ORDERING']) {
-    assertEquals(reasoningFallbackAllowed(failure, true), false)
+    assertEquals(lunaContinuationAllowed(failure, true), false)
   }
-  assertEquals(reasoningFallbackAllowed('MODEL_REASONING', false), false)
+  assertEquals(lunaContinuationAllowed('MODEL_REASONING', false), false)
 })
 
 Deno.test('required-effect ledger ignores model claims and drafts', () => {

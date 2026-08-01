@@ -6,7 +6,8 @@ export type SharedAgentIntent = {
 
 export function classifySharedAgentIntent(title: string, description = ''): SharedAgentIntent {
   const value = `${title} ${description}`.toLocaleLowerCase()
-  const applicationIntent = /\bapply\b[\s\S]{0,80}\b(programme|program|phd|scholarship|fellowship|accelerator|job|role|position|opportunity)\b/.test(value)
+  const applicationIntent = /^apply\s+to\s+(?:this|it|that)$/i.test(value.trim()) ||
+    /\bapply\b[\s\S]{0,80}\b(programme|program|phd|scholarship|fellowship|accelerator|job|role|position|opportunity)\b/.test(value)
   const hasEmail = /\b(email|mail|gmail|reply|follow[\s-]?up|message|outreach)\b/.test(value)
   const hasCalendar = /\b(meeting|meet|calendar|schedule|reschedule|availability|appointment|invite|cancel.+(?:call|meeting))\b/.test(value)
   // People commonly describe the outcome in the wrong surface: “put the

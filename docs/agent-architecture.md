@@ -1,112 +1,140 @@
-# Roon agent architecture
+# ShotCount domain-specialist agent architecture
 
-Roon treats an ordinary ShotCount task as the command. Agent work stays inside the existing Today, Upcoming, task inspector, notification bell, and Dynamic Island surfaces.
+ShotCount keeps one canonical AgentRun for every delegated task. Domain
+specialists are versioned execution contracts around the single reasoning
+model, gpt-5.6-luna; they are not separate chats, agents, screens, or user
+selectable marketplace entries.
 
-## Runtime path
+## Specialist registry
 
-1. The user delegates an existing task.
-2. `task-agent` creates a private `agent_runs` row linked to that task.
-3. The Responses API receives only the task objective, private task context, completion policy, and the typed ShotCount tools.
-4. Every tool call is validated and recorded in `agent_actions`.
-5. The deterministic policy layer allows reads and preparation, pauses external writes for approval, and denies financial actions.
-6. Provider IDs and stable idempotency keys are recorded before a consequential action can be retried.
-7. Realtime updates and bounded polling refresh the existing task UI.
-8. `complete_agent_run` atomically completes the run and, only when its completion policy is satisfied, the underlying task.
+The shared, data-only registry is
+supabase/functions/_shared/specialists.ts. The browser re-exports it from
+src/data/specialists.ts, so routing, the Edge Function, and tests use the same
+definitions.
 
-The OpenAI key, Google tokens, Supabase service key, and browser worker token exist only in server environments.
+| Specialist | Contract | Tools and boundary |
+| --- | --- | --- |
+| Roon roon@1 | Communication, Gmail, Calendar, and scheduling | Gmail/contacts/Calendar tools; send and Calendar writes remain approval-gated |
+| Caspian caspian@1 | Flight search and itinerary validation | Task-owned browser search/selection only; no Gmail, Calendar, purchase, payment entry, or purchase claim |
+| David david@1 | Application planning, checklists, deadlines, missing documents, and document preparation | Grounded application/document tools and safe browser preparation; no Gmail, Calendar, or browser.submit in v1 |
 
-## Durable state
+Each registry entry owns its supported task contracts, tool allow-list,
+approval rules, required-effect derivation, verifier, retry/recovery policy,
+handoff rules, observability tags, and fixtures. Adding a specialist means
+adding a versioned registry entry and contract tests; it does not add a new
+model or runtime.
 
-`agent_runs` uses these user-visible states:
+## Routing
 
-- `planning`
-- `needs_context`
-- `running`
-- `needs_approval`
-- `waiting_external`
-- `waiting_for_user`
-- `completed`
-- `failed`
-- `cancelled`
+routeTask(title, description) performs deterministic semantic routing first.
+It recognizes domain intent rather than relying on product-copy examples:
 
-Related private tables:
+1. Communication and scheduling go to Roon.
+2. Flight and itinerary work goes to Caspian.
+3. Application, admission, programme, document, and deadline work goes to
+   David.
+4. Mixed travel plus communication is represented as typed stages on one run:
+   Roon → Caspian → Roon.
+5. An ambiguous non-empty task receives one bounded Luna classification. An
+   unsupported or empty task stops for context.
 
-- `agent_actions`: exact typed tool calls, risk class, idempotency key, provider ID, and public summary.
-- `agent_approvals`: immutable approval payload, hash, version, expiry, and decision.
-- `agent_run_events`: analytics and user-visible execution history.
-- `agent_model_state`: service-role-only Responses continuation items; never hidden reasoning.
-- `agent_integrations`: encrypted Google tokens and scopes.
-- `agent_email_watches`: durable Gmail reply correlations and polling schedule.
-- `browser_execution_sessions`: allowlist, objective, checkpoint, worker operation, result, and payment-boundary state.
+There is no selector in the UI. The task pill and task inspector show the
+assigned specialist only as a small identity treatment. The existing Today,
+Upcoming, inspector, notification, progress, approval, waiting, and Dynamic
+Island surfaces remain the product surface.
 
-Each new run also receives the owner’s reusable execution context from `agent_user_preferences`: timezone, home airport when known, normal meeting length, working hours, cabin, and currency. Roon falls back to the existing private creator-profile timezone and safe defaults, so users do not have to restate routine constraints in every task.
+Legacy runs are migrated additively by
+202608010001_specialist_agent_architecture.sql. Explicit flight work becomes
+Caspian, application work becomes David, and only historically Roon-owned
+legacy work remains Roon. Provider IDs, actions, approvals, model state,
+leases, and recovery state are not rewritten.
 
-All user-readable tables use row-level security. Model continuation state and OAuth state are service-role only. Private agent output is separate from task visibility and never enters Community payloads.
-AgentRuns, actions, approvals, events, and browser sessions are read-only to
-the owning client. All execution mutations and approval decisions go through
-the server harness; there is no client-callable approval RPC.
+## Durable execution
 
-## Completion policy
+The existing lifecycle remains authoritative:
 
-The initial intent classifier assigns one outcome:
+planning → running → needs_context / needs_approval / waiting_external /
+waiting_for_user → completed / failed / cancelled
 
-- `prepared_result`: complete when a verified research, draft, or live-search result exists.
-- `external_change`: complete only after a provider confirms the email/calendar change.
-- `payment_handoff`: remain `waiting_for_user` at checkout; never infer a purchase from preparation.
+agent_runs now persists:
 
-The model cannot override this policy. The database completion function also emits `task_completed_by_agent`.
+- primary and active specialist ID/version;
+- the active task contract and routing source;
+- stage index and typed specialist stages;
+- the fixed reasoning model ID;
+- completed and unsatisfied required effects.
 
-Completion is evidence-gated twice. The Edge Function checks persisted,
-provider-confirmed tool actions before accepting a model completion request,
-and the database function repeats that check while holding the AgentRun row
-lock. Gmail work requires a confirmed `gmail.send_message`; Calendar and
-scheduling work require a confirmed Calendar create/update/delete; generic
-public-web changes require a confirmed `browser.submit`. Navigation and page
-preparation never count as an external change. A payment handoff never counts
-as a confirmed purchase.
+agent_actions and agent_run_events record specialist ID/version, task
+contract, failure taxonomy, and recovery attempt. agent_run_handoffs stores
+the typed handoff on the same run: objective, constraints, completed and
+unsatisfied effects, provider evidence, approval state, and next stage.
 
-## Approval and idempotency
+Only the orchestrator can complete the overall run. A specialist may complete
+its stage; the orchestrator persists the handoff, advances the stage on the
+same AgentRun, clears only the model continuation state for the new contract,
+and resumes with the next specialist. Handoffs are idempotent per run and
+stage.
 
-Read and preparation tools run automatically after the relevant integration is connected. Gmail send, Calendar create/update/delete, and externally visible browser submissions require an exact approval. A changed recipient, body, event, or target produces a different hash and requires a new approval. The approval row is claimed with its pending status and version in one database update, so concurrent clicks cannot execute the same decision twice.
+## Tools, approvals, and evidence
 
-Consequential actions use:
+The Edge Function filters the existing agentToolDefinitions through the active
+registry contract before each Luna call and checks the same boundary again when
+handling a function call. A specialist cannot silently call another domain’s
+tool or create a second run.
 
-`agent:{run id}:{step}:{tool}:{argument hash}`
+Approvals remain authoritative. Gmail send, Calendar writes, and externally
+visible browser submissions require the existing exact approval flow. Financial
+tools remain denied; flight work stops at a validated itinerary or safe booking
+handoff. David can prepare an application review pack but cannot claim final
+submission without provider-confirmed evidence, and its v1 contract does not
+expose browser.submit.
 
-Duplicate model calls, callbacks, page refreshes, retries, and worker restarts resolve to the same recorded action instead of repeating it.
+Required effects are derived from the typed contract and task objective, then
+reconciled from succeeded actions with provider IDs. A model statement, draft,
+navigation, screenshot, or prepared browser state is not external evidence.
+Completion is accepted only when the persisted effect ledger and the database
+completion RPC agree.
 
-## Waiting and resume
+Existing idempotency keys, provider correlation IDs, approval versions, leases,
+browser checkpoints, Gmail watches, and recovery workers remain in the path.
+The specialist metadata is additive, so refreshes, retries, worker restarts,
+and provider-response races continue through the same durable harness.
 
-Gmail reply watches correlate the sent Gmail message and thread. A poll reads that exact thread, treats message content as untrusted data, appends the reply to the original tool call, and continues the same AgentRun.
+## Failure attribution and recovery
 
-Browser operations persist their pending and completed operation in `browser_execution_sessions.checkpoint`. The worker can restart without losing ownership, selected option, or payment boundary. The app polls only while visible; the durable rows remain resumable after navigation or refresh.
+Failures are attributed to the active specialist and contract, with a stable
+taxonomy such as SPECIALIST_TOOL_NOT_ALLOWED, MODEL_REASONING_LUNA,
+PROVIDER_OR_BROWSER_INFRA, STATE_ORDERING, or BROWSER_SUBMISSION_UNVERIFIED.
+Events and actions carry the recovery attempt. Transient model, provider, and
+browser failures retain the run, release its lease safely, and use the
+existing bounded continuation or watch sweep.
 
-Supabase Cron invokes the protected `agent-watch-sweep` Edge Function every five minutes. The cron credential lives in Supabase Vault and is checked again against the Edge Function secret. The sweep can only call the internal `poll` action with a separate worker token, while the Supabase gateway still receives the server key. This lets Gmail replies and completed browser jobs resume while the app is closed. It cannot start tasks, approve writes, or make user-facing decisions.
+The application boundary is explicit:
 
-The same sweep also reclaims `planning` or `running` work that has not updated for
-three minutes. It resumes the saved model call and action, reusing the exact
-approval and idempotency key. This covers an Edge Function or worker restart
-between a provider accepting an action and ShotCount recording its response.
+- Caspian validates constraints and hands the user to payment; it never
+  enters payment or claims purchase.
+- David asks for missing applicant evidence, grounds documents and deadlines,
+  and stops at a truthful review handoff.
+- Roon keeps the existing approval, reply-watch, Calendar conflict, and
+  provider-confirmed Gmail behavior.
 
 ## Verification
 
-```bash
-pnpm test
-pnpm build
-npx --yes deno test supabase/functions/_shared/*_test.ts
-npx --yes deno check \
-  supabase/functions/task-agent/index.ts \
-  supabase/functions/google-oauth-start/index.ts \
-  supabase/functions/google-oauth-callback/index.ts \
-  supabase/functions/agent-watch-sweep/index.ts
-```
+Run the focused contract tests while changing specialist behavior:
 
-`src/data/agent-flow.integration.test.ts` exercises the complete mocked Gmail,
-Calendar, reply-resume, and flight-payment-boundary journeys through the same
-deterministic policy, state transition, idempotency, and completion helpers used
-by the app.
+    pnpm exec vitest run src/data/specialists.test.ts src/data/agent.test.ts
 
-Before Calendar create or reschedule, the Google tool rechecks the exact approved
-time window and pauses on a newly introduced conflict. Gmail drafts, Gmail sends,
-Calendar creates, Calendar updates, and Calendar deletes each recover safely if
-the worker loses its response after the provider already applied the action.
+Run the complete local checks before deployment:
+
+    pnpm test
+    pnpm build
+    npx --yes deno test supabase/functions/_shared/*_test.ts
+    npx --yes deno check \
+      supabase/functions/task-agent/index.ts \
+      supabase/functions/agent-watch-sweep/index.ts
+
+The specialist fixtures cover deterministic routing, ambiguous Luna routing,
+tool isolation, cross-domain stage sequencing, typed handoff effects, legacy
+migration, Gmail/Calendar approval, flight payment boundaries, and grounded
+application evidence. Frozen benchmark artifacts under benchmarks/ are not
+edited or rerun as part of this architecture change.

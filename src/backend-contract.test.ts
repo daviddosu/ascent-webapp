@@ -18,6 +18,8 @@ const agentGoogleMigration = readFileSync(resolve(root, 'supabase/migrations/202
 const agentCompletionMigration = readFileSync(resolve(root, 'supabase/migrations/202607240003_agent_completion_analytics.sql'), 'utf8')
 const agentCompletionEvidenceMigration = readFileSync(resolve(root, 'supabase/migrations/202607250001_agent_completion_evidence.sql'), 'utf8')
 const agentMutationLockMigration = readFileSync(resolve(root, 'supabase/migrations/202607250002_lock_agent_run_mutations.sql'), 'utf8')
+const demoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migrations/202607310001_demo_flight_handoff.sql'), 'utf8')
+const activeDemoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migrations/202607310002_complete_active_demo_flight_handoffs.sql'), 'utf8')
 const taskDescriptionPrivacyMigration = readFileSync(resolve(root, 'supabase/migrations/202607250003_keep_task_descriptions_private.sql'), 'utf8')
 const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
 const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
@@ -100,6 +102,16 @@ describe('description transcription contract', () => {
 
   it('does not expose the transcription secret in browser code', () => {
     expect(mainUi).not.toContain('OPENAI_API_KEY')
+  })
+})
+
+describe('Roon airport-choice contract', () => {
+  it('recognises departure questions in either word order and keeps them as selectable options', () => {
+    expect(taskAgentFunction).toContain('function airportContextOptions')
+    expect(taskAgentFunction).toContain('(?:airport|city)')
+    expect(taskAgentFunction).toContain('Lagos — Murtala Muhammed International (LOS)')
+    expect(mainUi).toContain('data-action="select-agent-schedule-option"')
+    expect(mainUi).toContain('Use this option')
   })
 })
 
@@ -443,10 +455,61 @@ describe('agent execution security contract', () => {
     expect(publicBrowser).toContain('isIP(hostname) !== 0')
     expect(publicBrowser).toContain("request.resourceType() === 'document'")
     expect(flightBrowser).toContain("paymentBoundaryReached: true")
-    expect(flightBrowser).toContain('continueToProviderBooking')
+    expect(flightBrowser).toContain("stage: 'google_booking_options'")
     expect(flightBrowser).not.toMatch(/card(?:Number|_number)|cvv|securityCode/i)
     expect(taskAgentFunction).toContain("policy.risk === 'financial'")
     expect(taskAgentFunction).toContain('Payment must be completed by you.')
+    expect(taskAgentFunction).toContain('A verified handoff is the defined flight-search outcome.')
+    expect(taskAgentFunction).toContain('purchaseConfirmed: false')
+  })
+
+  it('treats the verified Google Flights booking page as the terminal demo handoff', () => {
+    expect(flightBrowser).toContain("stage: 'google_booking_options'")
+    expect(flightBrowser).toContain("handoffProvider: 'Google Flights'")
+    expect(taskAgentFunction).toContain('p_mark_task_complete: true')
+    expect(taskAgentFunction).toContain('Your flight handoff is ready. Payment remains under your control.')
+    expect(taskAgentFunction).toContain("checkpoint.pendingOperation?.type === 'select_flight'")
+    expect(taskAgentFunction).toContain('75_000')
+  })
+
+  it('recovers a missing Gmail draft within the same run instead of failing the task', () => {
+    expect(taskAgentFunction).toContain("error_code: 'gmail_draft_required'")
+    expect(taskAgentFunction).toContain('Prepare the Gmail draft with gmail.create_draft before requesting send approval.')
+    expect(taskAgentFunction).toContain("'agent_email_draft_required'")
+    expect(taskAgentFunction).toContain("'agent_email_draft_sequence_recovered'")
+    expect(taskAgentFunction).toContain(".eq('tool_name', 'gmail.send_message')")
+  })
+
+  it('lets people revise a pending calendar event before approving that exact revision', () => {
+    expect(taskAgentFunction).toContain("action === 'edit_calendar_approval'")
+    expect(taskAgentFunction).toContain('async function editCalendarApproval')
+    expect(taskAgentFunction).toContain('Add an event title and valid ISO start and end times')
+    expect(mainUi).toContain('data-agent-calendar-summary')
+    expect(mainUi).toContain('data-agent-calendar-description')
+    expect(mainUi).toContain('editAgentCalendarApproval')
+  })
+
+  it('resumes an ambiguous-recipient choice from durable context, not stale model history', () => {
+    expect(taskAgentFunction).toContain("'recipient_selected'")
+    expect(taskAgentFunction).toContain('Recipient resolution happens before the model can safely continue.')
+    expect(taskAgentFunction).toContain(".eq('run_id', run.id)")
+  })
+
+  it('serializes active-run recovery so reply polling cannot replay a model turn', () => {
+    expect(taskAgentFunction).toContain('async function claimRunForContinuation')
+    expect(taskAgentFunction).toContain("p_lease_seconds: 45")
+    expect(taskAgentFunction).toContain('Another request already owns this same continuation.')
+  })
+
+  it('preserves the original Gmail thread for scheduling replies', () => {
+    expect(taskAgentFunction).toContain('const schedulingReply = Boolean(')
+    expect(taskAgentFunction).toContain('!replyRequested && !schedulingReply && hasThread')
+  })
+
+  it('preserves an in-progress task composer through unrelated realtime renders', () => {
+    expect(mainUi).toContain("target.closest('[data-today-form]')")
+    expect(mainUi).toContain('captureTodayComposerDraft()')
+    expect(mainUi).toContain("if (todayComposerOpen && !skipTodayComposerCapture && document.querySelector('[data-today-form]')) captureTodayComposerDraft()")
   })
 
   it('waits for scheduling replies only when a remaining action depends on them', () => {
@@ -454,10 +517,66 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('notification-only email after a completed Calendar change does not require a reply watch')
   })
 
+  it('uses the established background polling cadence for scheduling runs', () => {
+    expect(taskAgentFunction).toContain('auto_started_after_send: true')
+    expect(taskAgentFunction).toContain("tool_name: 'gmail.wait_for_reply'")
+    expect(taskAgentFunction).toContain('event: \'gmail_reply_received\'')
+    expect(taskAgentFunction).toContain('Date.now() + 1_500')
+    expect(mainUi).toContain("run.status === 'waiting_external'")
+    expect(mainUi).toContain('setInterval(() => void pollWaitingAgentRuns(), 5_000)')
+  })
+
+  it('ends a stalled selected-flight demo at a safe booking handoff', () => {
+    expect(taskAgentFunction).toContain("checkpoint.pendingOperation?.type === 'select_flight' && selectionElapsedMs >= 9_000")
+    expect(taskAgentFunction).toContain("p_run_id: run.id")
+    expect(demoFlightHandoffMigration).toContain('create or replace function public.complete_demo_flight_handoff')
+    expect(activeDemoFlightHandoffMigration).toContain("status in ('planning', 'running', 'waiting_external', 'waiting_for_user')")
+    expect(demoFlightHandoffMigration).toContain("task_completion_policy = 'payment_handoff'")
+    expect(mainUi).toContain('monitorDemoFlightHandoff(taskId, updated.id)')
+    expect(mainUi).toContain("const flightHandoffLabel = 'Continue to payment'")
+    expect(activeDemoFlightHandoffMigration).toContain("status in ('planning', 'running', 'waiting_external', 'waiting_for_user')")
+  })
+
+  it('completes a selected demo flight directly instead of queuing another browser step', () => {
+    const selection = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('async function selectFlightOption'),
+      taskAgentFunction.indexOf('async function advanceRun'),
+    )
+    expect(selection).toContain("const completed = await admin.rpc('complete_demo_flight_handoff'")
+    expect(selection.indexOf("complete_demo_flight_handoff")).toBeLessThan(selection.indexOf('const operation: BrowserOperation'))
+  })
+
+  it('keeps the selected flight visible in the completed payment handoff', () => {
+    expect(mainUi).toContain('class="agent-selected-flight"')
+    expect(mainUi).toContain('Selected flight')
+  })
+
+  it('routes both visible microphone buttons through one capture pipeline', () => {
+    expect(mainUi).toContain('data-action="toggle-description-voice"')
+    expect(mainUi).toContain('data-action="toggle-today-description-voice"')
+    expect(mainUi).toContain("toggleDescriptionVoiceInput('today-composer')")
+  })
+
+  it('does not let the background sweep replay isolated flight progress', () => {
+    expect(agentWatchSweepFunction).toContain(".neq('capability', 'flight_search')")
+    expect(mainUi).toContain('label !== steps[index - 1]')
+  })
+
+  it('replaces stale airport choices with trip-type choices', () => {
+    expect(taskAgentFunction).toContain('function flightTripTypeContextOptions')
+    expect(taskAgentFunction).toContain('const flightAirportOptions = run.capability === \'flight_search\'')
+    expect(taskAgentFunction).toContain('run.capability === \'flight_search\' && !flightAirportOptions.length')
+    expect(taskAgentFunction).toContain('suggestedOptions = flightTripOptions')
+    expect(taskAgentFunction).toContain('scheduling_options: suggestedOptions')
+    expect(mainUi).toContain("tripTypeOptions ? 'Choose your trip type, or add the return date below.'")
+    expect(mainUi).toContain('todayComposerDraft.description = appendTranscript(todayComposerDraft.description, transcript)')
+  })
+
   it('reclaims stalled safe browser work without retrying submissions', () => {
     expect(taskAgentFunction).toContain("code: 'browser_worker_timeout'")
     expect(taskAgentFunction).toContain("retryable: checkpoint.pendingOperation!.type !== 'submit'")
-    expect(taskAgentFunction).toContain("Date.now() - updatedAt > 120_000")
+    expect(taskAgentFunction).toContain('workerTimeoutMs')
+    expect(taskAgentFunction).toContain('Date.now() - updatedAt > workerTimeoutMs')
     expect(taskAgentFunction).toContain('safeBrowserRetryDelayMs')
     expect(flightBrowser).toContain('const browser = await launchBrowser()')
     expect(flightBrowser).not.toContain('sharedBrowserPromise')
@@ -467,6 +586,15 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('SHOTCOUNT_BROWSER_SELECTION_WORKER_URL')
     expect(taskAgentFunction).toContain("operation.type === 'select_flight' ? config.selectionUrl : config.url")
     expect(browserSelectWorker).toContain("from './browser-worker.js'")
+  })
+
+  it('refreshes a stale flight selection instead of stranding the user on an invalid option', () => {
+    expect(taskAgentFunction).toContain('function flightSearchArgumentsFromCheckpoint')
+    expect(taskAgentFunction).toContain('async function refreshFlightOptions')
+    expect(taskAgentFunction).toContain("'selection_checkpoint_mismatch'")
+    expect(taskAgentFunction).toContain("['flight_option_invalid', 'flight_search_checkpoint_missing']")
+    expect(taskAgentFunction).toContain("waiting_reason: 'Refreshing live flight options.'")
+    expect(taskAgentFunction).toContain("'user_requested_refresh'")
   })
 
   it('keeps delayed-reply simulation behind explicit development gates', () => {

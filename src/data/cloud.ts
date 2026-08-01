@@ -8,6 +8,11 @@ export let cloud: SupabaseClient | null = null
 let cloudPromise: Promise<SupabaseClient | null> | null = null
 let googleProviderToken: string | null = null
 
+function authFlowType() {
+  const query = new URLSearchParams(window.location.search)
+  return query.get('auth') === 'google' || query.has('code') ? 'pkce' : 'implicit'
+}
+
 function captureGoogleProviderToken(session: Session | null) {
   if (session?.provider_token) googleProviderToken = session.provider_token
 }
@@ -22,6 +27,7 @@ async function ensureCloud() {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        flowType: authFlowType(),
       },
     })
     client.auth.onAuthStateChange((_event, session) => captureGoogleProviderToken(session))
@@ -72,6 +78,19 @@ export async function signOut() {
   const client = await ensureCloud()
   if (!client) return
   await client.auth.signOut()
+}
+
+export async function beginGoogleSignIn() {
+  const client = await ensureCloud()
+  if (!client) return { error: new Error('Cloud accounts are not configured.') }
+  const { error } = await client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/`,
+      scopes: 'openid email profile',
+    },
+  })
+  return { error }
 }
 
 export async function connectGoogleCalendar() {

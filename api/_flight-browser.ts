@@ -1,7 +1,6 @@
 import chromium from '@sparticuz/chromium'
 import { createHash } from 'node:crypto'
 import { access } from 'node:fs/promises'
-import { isIP } from 'node:net'
 import { chromium as playwright, type Browser, type Page } from 'playwright-core'
 
 export type FlightSearchInput = {
@@ -499,58 +498,6 @@ async function activateFlightOption(
   )
 }
 
-function providerHandoffUrl(value: string) {
-  try {
-    const url = new URL(value)
-    const hostname = url.hostname.toLocaleLowerCase()
-    return url.protocol === 'https:' &&
-      !isIP(hostname) &&
-      hostname !== 'localhost' &&
-      hostname !== 'www.google.com' &&
-      !hostname.endsWith('.google.com')
-  } catch {
-    return false
-  }
-}
-
-async function continueToProviderBooking(page: Page) {
-  const airlineOption = page.getByRole('button', {
-    name: /Continue to book with .* airline/i,
-  })
-  const anyOption = page.getByRole('button', {
-    name: /Continue to book with/i,
-  })
-  await anyOption.first().waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined)
-  const button = await airlineOption.count() ? airlineOption.first() : anyOption.first()
-  if (!await button.count()) return null
-
-  const label = await button.getAttribute('aria-label') ?? ''
-  const provider = label
-    .replace(/^Continue to book with\s+/i, '')
-    .replace(/\s+airline\b.*$/i, '')
-    .replace(/\s+for\s+[\d,.]+\s+.*$/i, '')
-    .trim()
-    .slice(0, 120) || 'Airline'
-  const popupPromise = page.waitForEvent('popup', { timeout: 15_000 }).catch(() => null)
-  const samePagePromise = page.waitForURL(
-    url => providerHandoffUrl(url.toString()),
-    { timeout: 15_000 },
-  ).then(() => page).catch(() => null)
-  await button.click()
-  const target = await Promise.race([popupPromise, samePagePromise])
-  if (!target) return null
-  await target.waitForLoadState('domcontentloaded', { timeout: 20_000 }).catch(() => undefined)
-  if (!providerHandoffUrl(target.url())) {
-    await target.waitForURL(
-      url => providerHandoffUrl(url.toString()),
-      { timeout: 20_000 },
-    ).catch(() => undefined)
-  }
-  return providerHandoffUrl(target.url())
-    ? { url: target.url(), provider }
-    : null
-}
-
 export async function resumeFlightSelection(
   input: FlightSearchInput,
   options: FlightOption[],
@@ -602,19 +549,21 @@ export async function resumeFlightSelection(
         false,
       )
     }
-    const providerHandoff = await continueToProviderBooking(page).catch(() => null)
+    // Reaching Google Flights' booking page is the verified payment boundary.
+    // Do not wait for (or follow) an airline's own checkout transition: it is
+    // both variable across providers and beyond Roon's authorised scope.
     traceEvent(selectionTrace, 'handoff_verified', {
-      stage: providerHandoff ? 'provider_booking' : 'google_booking_options',
-      provider: providerHandoff?.provider ?? 'Google Flights',
-      hostname: new URL(providerHandoff?.url ?? handoffUrl).hostname,
+      stage: 'google_booking_options',
+      provider: 'Google Flights',
+      hostname: new URL(handoffUrl).hostname,
       paymentBoundaryReached: true,
     })
     return {
       provider: 'Google Flights',
       selectedOption,
-      handoffUrl: providerHandoff?.url ?? handoffUrl,
-      handoffProvider: providerHandoff?.provider ?? 'Google Flights',
-      handoffStage: providerHandoff ? 'provider_booking' : 'google_booking_options',
+      handoffUrl,
+      handoffProvider: 'Google Flights',
+      handoffStage: 'google_booking_options',
       observedAt: new Date().toISOString(),
       paymentBoundaryReached: true,
       resumable: true,
