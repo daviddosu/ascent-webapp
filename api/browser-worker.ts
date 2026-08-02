@@ -459,6 +459,11 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     response.status(200).json({ ok: true })
   } catch (error) {
     const safeError = publicError(error, operation.type)
+    console.error('[browser-worker] operation failed', {
+      operationType: operation.type,
+      errorCode: safeError.code,
+      retryable: safeError.retryable,
+    })
     await admin
       .from('browser_execution_sessions')
       .update({
