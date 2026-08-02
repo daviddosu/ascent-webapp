@@ -24,6 +24,109 @@ export type CanonicalFlightSearch = {
   stage: 'searching' | 'results_ready' | 'selecting' | 'handoff'
 }
 
+export const googleFlightsBrowserDomains = ['google.com', 'www.google.com'] as const
+
+/**
+ * Browser domains come from model arguments or a comma-separated server
+ * secret. Normalize both forms to hostnames before comparing them. A domain
+ * is not allowed to carry a path, credentials, or a non-HTTPS scheme.
+ */
+export function normalizeBrowserDomain(value: unknown) {
+  if (typeof value !== 'string') return null
+  const raw = value.trim().toLocaleLowerCase()
+  if (!raw) return null
+  const candidate = raw.includes('://') ? raw : `https://${raw}`
+  try {
+    const url = new URL(candidate)
+    if (
+      url.protocol !== 'https:' ||
+      url.username ||
+      url.password ||
+      (url.port && url.port !== '443') ||
+      (url.pathname && url.pathname !== '/') ||
+      url.search ||
+      url.hash
+    ) return null
+    const hostname = url.hostname.replace(/\.$/, '')
+    if (
+      !hostname ||
+      hostname.length > 253 ||
+      !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(hostname)
+    ) return null
+    return hostname
+  } catch {
+    return null
+  }
+}
+
+export function normalizeBrowserDomains(value: unknown) {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : []
+  return [...new Set(values.map(normalizeBrowserDomain).filter((domain): domain is string => Boolean(domain)))]
+}
+
+export function validatedFlightEvidence(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const record = value as Record<string, unknown>
+  const rawOptions = Array.isArray(record.options)
+    ? record.options
+    : Array.isArray(record.flightOptions)
+      ? record.flightOptions
+      : []
+  const searchUrl = typeof record.searchUrl === 'string' ? record.searchUrl : ''
+  let parsedUrl: URL
+  try {
+    parsedUrl = new URL(searchUrl)
+  } catch {
+    return null
+  }
+  if (
+    parsedUrl.protocol !== 'https:' ||
+    parsedUrl.hostname !== 'www.google.com' ||
+    !parsedUrl.pathname.startsWith('/travel/flights') ||
+    !rawOptions.length
+  ) return null
+  const options = rawOptions.filter((option): option is Record<string, unknown> => {
+    if (!option || typeof option !== 'object' || Array.isArray(option)) return false
+    const candidate = option as Record<string, unknown>
+    return Boolean(
+      typeof candidate.id === 'string' && candidate.id.trim() &&
+      candidate.provider === 'Google Flights' &&
+      typeof candidate.searchUrl === 'string' && candidate.searchUrl === searchUrl &&
+      typeof candidate.airline === 'string' && candidate.airline.trim() &&
+      typeof candidate.route === 'string' && candidate.route.trim() &&
+      typeof candidate.departureTime === 'string' && candidate.departureTime.trim() &&
+      typeof candidate.arrivalTime === 'string' && candidate.arrivalTime.trim() &&
+      typeof candidate.duration === 'string' && candidate.duration.trim() &&
+      Number.isFinite(Number(candidate.durationMinutes)) &&
+      Number.isFinite(Number(candidate.stopCount)) &&
+      Number.isFinite(Number(candidate.amount)) &&
+      typeof candidate.price === 'string' && candidate.price.trim()
+    )
+  })
+  return options.length === rawOptions.length
+    ? { searchUrl, options }
+    : null
+}
+
+/** Keep an already validated result when a later retry is incomplete. */
+export function preferValidatedFlightEvidence(current: unknown, candidate: unknown) {
+  return validatedFlightEvidence(candidate) ?? validatedFlightEvidence(current)
+}
+
+export function caspianFlightHandoffAllowed(result: unknown) {
+  return Boolean(validatedFlightEvidence(result))
+}
+
+export function isCompletedBrowserOperation(lastOperation: unknown, operationId: string) {
+  if (!lastOperation || typeof lastOperation !== 'object' || Array.isArray(lastOperation)) return false
+  const operation = lastOperation as Record<string, unknown>
+  return operation.id === operationId && operation.status === 'succeeded'
+}
+
 export function canonicalFlightSearch(argumentsValue: Record<string, unknown>, stage: CanonicalFlightSearch['stage'] = 'searching'): CanonicalFlightSearch {
   return {
     origin: String(argumentsValue.origin_code ?? argumentsValue.origin ?? '').trim().toUpperCase(),

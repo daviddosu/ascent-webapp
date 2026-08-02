@@ -345,8 +345,9 @@ describe('agent execution security contract', () => {
   })
 
   it('keeps Caspian flight sessions on the registered Google destination', () => {
-    expect(taskAgentFunction).toContain("Caspian must use the registered Google Flights destination")
-    expect(taskAgentFunction).toContain("requested = ['google.com', 'www.google.com']")
+    expect(taskAgentFunction).toContain('googleFlightsBrowserDomains')
+    expect(taskAgentFunction).toContain('normalizeBrowserDomains')
+    expect(taskAgentFunction).toContain('Reused the task-owned browser session.')
     expect(taskAgentFunction).toContain('upsertHistoryToolOutput')
   })
 

@@ -34,7 +34,7 @@ import {
   type SpecialistVersion,
   type TaskContract,
 } from '../_shared/specialists.ts'
-import { browserFailureClass, canonicalFlightSearch, isTransientSingleObjectCoercionError, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
+import { browserFailureClass, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isCompletedBrowserOperation, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
 import { requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
 import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
@@ -1254,12 +1254,7 @@ async function reopenRejectedApproval(admin: AdminClient, run: AgentRunRow) {
 }
 
 function configuredBrowserDomains() {
-  return new Set(
-    (Deno.env.get('SHOTCOUNT_BROWSER_ALLOWED_DOMAINS') ?? '')
-      .split(',')
-      .map(value => value.trim().toLocaleLowerCase())
-      .filter(Boolean),
-  )
+  return new Set(normalizeBrowserDomains(Deno.env.get('SHOTCOUNT_BROWSER_ALLOWED_DOMAINS') ?? ''))
 }
 
 function upsertHistoryToolOutput(
@@ -1418,14 +1413,11 @@ async function queueBrowserOperation(
   ) {
     return { kind: 'unavailable' as const, message: 'Navigate this browser session before acting on the page.' }
   }
-  if (
-    checkpoint.lastOperation?.id === operation.id &&
-    checkpoint.lastOperation.status === 'succeeded' &&
-    checkpoint.lastOperation.output
-  ) {
+  const completedOperation = checkpoint.lastOperation
+  if (isCompletedBrowserOperation(completedOperation, operation.id) && completedOperation?.output) {
     return {
       kind: 'complete' as const,
-      output: checkpoint.lastOperation.output,
+      output: completedOperation.output,
       sessionId,
     }
   }
@@ -1500,7 +1492,10 @@ async function refreshFlightOptions(
   const waiting = await updateRun(admin, run, {
     status: 'waiting_external',
     waiting_reason: 'Refreshing live flight options.',
-    result: { ...(run.result ?? {}), flightOptions: [] },
+    // Keep the last validated itinerary visible while the provider refresh is
+    // pending. A transient retry must not erase good evidence or make a later
+    // failed retry look like a successful empty search.
+    result: run.result ?? null,
     error: null,
     error_code: null,
     retryable: true,
@@ -1718,25 +1713,16 @@ async function executeProviderTool(
 
   if (toolName === 'browser.start_session') {
     const configured = configuredBrowserDomains()
-    let requested = (argumentsValue.allowed_domains as string[]).map(domain => domain.toLocaleLowerCase())
+    const requestedDomains = normalizeBrowserDomains(argumentsValue.allowed_domains)
     const caspianFlightSession = run.active_specialist_id === 'caspian' && run.task_contract === 'travel.flight_search'
-    if (caspianFlightSession && (!requested.includes('google.com') || !requested.includes('www.google.com'))) {
-      if (requested.some(domain => domain === 'google.com' || domain === 'www.google.com')) {
-        requested = ['google.com', 'www.google.com']
-      } else {
-        return {
-          kind: 'output',
-          value: {
-            ok: false,
-            error_code: 'browser_domain_not_allowed',
-            error_message: 'Caspian must use the registered Google Flights destination for live flight search.',
-            allowed_domains: ['google.com', 'www.google.com'],
-          },
-          publicSummary: 'Rejected an unregistered flight-search destination.',
-        }
-      }
-    }
-    if (!configured.size || requested.some(domain => !configured.has(domain))) {
+    // Caspian owns one provider-specific browser contract. Normalize any
+    // model-suggested provider/domain to the registered Google Flights pair;
+    // a malformed provider suggestion must not prevent the specialist from
+    // reaching its structured search tool.
+    const requested = caspianFlightSession
+      ? [...googleFlightsBrowserDomains]
+      : requestedDomains
+    if (!requested.length || !configured.size || requested.some(domain => !configured.has(domain))) {
       return {
         kind: 'pause',
         status: 'waiting_for_user',
@@ -1745,7 +1731,34 @@ async function executeProviderTool(
         value: { allowed: false },
       }
     }
-    const { data, error } = await admin.from('browser_execution_sessions').upsert({
+
+    // Starting a session is idempotent for one AgentRun. In particular, a
+    // model retry must never replace a completed checkpoint or a validated
+    // flight result with `{}` while it is trying to recover the provider.
+    const existing = await admin.from('browser_execution_sessions')
+      .select('id,status,resumable,allowed_domains')
+      .eq('run_id', run.id)
+      .eq('user_id', run.user_id)
+      .maybeSingle()
+    if (existing.error) throw new Error(existing.error.message)
+    if (existing.data) {
+      const existingDomains = normalizeBrowserDomains(existing.data.allowed_domains)
+      if (caspianFlightSession && !existingDomains.includes('www.google.com')) {
+        const repaired = await admin.from('browser_execution_sessions').update({
+          allowed_domains: requested,
+        }).eq('id', existing.data.id).eq('run_id', run.id).eq('user_id', run.user_id)
+        if (repaired.error) throw new Error(repaired.error.message)
+      }
+      await admin.from('agent_runs').update({ browser_session_id: existing.data.id }).eq('id', run.id).eq('user_id', run.user_id)
+      return {
+        kind: 'output',
+        value: { session_id: existing.data.id, status: existing.data.status, resumable: existing.data.resumable !== false },
+        providerActionId: existing.data.id,
+        publicSummary: 'Reused the task-owned browser session.',
+      }
+    }
+
+    const { data, error } = await admin.from('browser_execution_sessions').insert({
       run_id: run.id,
       user_id: run.user_id,
       status: 'planning',
@@ -1753,7 +1766,7 @@ async function executeProviderTool(
       objective: safeString(argumentsValue.objective, 1200),
       checkpoint: {},
       resumable: true,
-    }, { onConflict: 'run_id' }).select('id,status').single()
+    }).select('id,status').single()
     if (error || !data) throw new Error(error?.message ?? 'Could not start the browser session.')
     await admin.from('agent_runs').update({ browser_session_id: data.id }).eq('id', run.id)
     return {
@@ -2108,6 +2121,22 @@ async function completionSatisfied(
   run: AgentRunRow,
   argumentsValue: Record<string, unknown>,
 ) {
+  if (run.active_specialist_id === 'caspian' && run.task_contract === 'travel.flight_search') {
+    const result = run.result ?? {}
+    const sources = Array.isArray(result.sources) ? result.sources : []
+    const firstSource = sources.find(source => source && typeof source === 'object' && !Array.isArray(source))
+    const searchUrl = firstSource && typeof firstSource === 'object'
+      ? safeString((firstSource as Record<string, unknown>).url, 2000)
+      : ''
+    // Caspian may complete its stage only after the live browser result has
+    // been validated and stored on this same AgentRun. This prevents a model
+    // completion claim or a capability request from handing an empty travel
+    // stage to Roon.
+    if (!caspianFlightHandoffAllowed({
+      searchUrl,
+      flightOptions: result.flightOptions,
+    })) return false
+  }
   if (run.active_specialist_id === 'david' &&
       /\b(?:submit|send in|final submission|application fee|pay)\b/i.test(`${run.objective} ${safeString(run.context?.description, 4000)}`)) {
     const submissionEvidence = await admin.from('agent_actions')
@@ -2913,7 +2942,7 @@ async function pollBrowserExecutionRun(
   }
 
   if (session.status !== 'completed' || operation.status !== 'succeeded') return run
-  const output = operation.output ?? {}
+  let output = operation.output ?? {}
   const operationSummary = operation.type === 'search_flights'
     ? 'Compared live flight options.'
     : operation.type === 'select_flight'
@@ -2923,6 +2952,65 @@ async function pollBrowserExecutionRun(
         : operation.type === 'submit'
           ? 'Submitted the exact approved public form.'
           : 'Prepared the public webpage.'
+
+  if (operation.type === 'search_flights') {
+    // Prefer the worker's returned payload, then its durable checkpoint. A
+    // transient response-body race may lose the HTTP payload after Chromium
+    // has already persisted the result; the checkpoint is the canonical
+    // recovery source. Neither may be replaced by an invalid retry payload.
+    const checkpointEvidence = checkpoint.flightSearch
+      ? { searchUrl: checkpoint.flightSearch.searchUrl, options: checkpoint.flightSearch.options }
+      : null
+    const evidence = preferValidatedFlightEvidence(checkpointEvidence, {
+      searchUrl: output.searchUrl,
+      options: output.options,
+    })
+    if (!evidence) {
+      const invalidCheckpoint = {
+        ...checkpoint,
+        pendingOperation: null,
+        lastOperation: {
+          id: operation.id,
+          type: operation.type,
+          status: 'failed' as const,
+          error: {
+            code: 'browser_result_invalid',
+            message: 'The browser worker finished without a validated itinerary result.',
+            retryable: true,
+          },
+          completedAt: new Date().toISOString(),
+        },
+      }
+      await admin.from('browser_execution_sessions').update({
+        status: 'failed',
+        checkpoint: invalidCheckpoint,
+        worker_session_id: null,
+        resumable: true,
+        last_observed_at: new Date().toISOString(),
+      }).eq('id', session.id)
+      return pollBrowserExecutionRun(admin, run, openaiKey)
+    }
+    output = { ...output, options: evidence.options, searchUrl: evidence.searchUrl }
+    checkpoint = {
+      ...checkpoint,
+      canonicalFlightSearch: checkpoint.canonicalFlightSearch
+        ? { ...checkpoint.canonicalFlightSearch, stage: 'results_ready' }
+        : checkpoint.canonicalFlightSearch,
+      flightSearch: checkpoint.flightSearch
+        ? { ...checkpoint.flightSearch, searchUrl: evidence.searchUrl, options: evidence.options }
+        : checkpoint.flightSearch,
+    }
+    const persistedCheckpoint = await admin.from('browser_execution_sessions').update({
+      checkpoint,
+      current_domain: 'www.google.com',
+      current_url: evidence.searchUrl,
+      last_observed_at: new Date().toISOString(),
+    }).eq('id', session.id).select('id').maybeSingle()
+    if (persistedCheckpoint.error || !persistedCheckpoint.data) {
+      throw new Error(persistedCheckpoint.error?.message ?? 'Could not persist the validated flight result.')
+    }
+  }
+
   if (
     operation.type === 'submit' &&
     (output.submitted !== true || output.confirmation_observed !== true)
@@ -3026,6 +3114,65 @@ async function pollBrowserExecutionRun(
       return invalid
     }
     const result = browserFlightResult(options.slice(0, 3), searchUrl)
+    const hasNextSpecialistStage = (run.specialist_stage_index ?? 0) <
+      (Array.isArray(run.specialist_stages) ? run.specialist_stages.length : 0) - 1
+    if (run.task_completion_policy === 'prepared_result' && hasNextSpecialistStage) {
+      if (!openaiKey) {
+        const waiting = await updateRun(admin, run, {
+          status: 'waiting_external',
+          result,
+          waiting_reason: 'The live itinerary is validated, but the next specialist continuation is not available yet.',
+          error_code: 'browser_resume_context_missing',
+          error: 'The validated flight result is saved; Roon will resume when the continuation is available.',
+          retryable: true,
+          lease_owner: null,
+          lease_expires_at: null,
+        })
+        await addEvent(admin, waiting, 'agent_waiting_external', waiting.status, waiting.waiting_reason, {
+          browser_session_id: session.id,
+          operation_type: operation.type,
+          validated_itinerary: true,
+        })
+        return waiting
+      }
+      // The search result is a prepared specialist effect, not the end of a
+      // multi-stage task. Persist it before invoking the existing typed
+      // handoff so Roon receives the same canonical itinerary evidence.
+      const staged = await updateRun(admin, run, {
+        status: 'running',
+        result,
+        context: {
+          ...(run.context ?? {}),
+          flight_search_evidence: {
+            provider: 'Google Flights',
+            searchUrl,
+            options: result.flightOptions,
+            observedAt: new Date().toISOString(),
+          },
+        },
+        waiting_reason: '',
+        error: null,
+        error_code: null,
+        retryable: true,
+        current_step: run.current_step + 1,
+        progress: [...(Array.isArray(run.progress) ? run.progress : []), 'Compared live flight options.'],
+        external_correlation_id: null,
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      const ledgerRun = await refreshSpecialistEffectLedger(admin, staged)
+      return completeRun(admin, ledgerRun, {
+        summary: result.summary,
+        sections: result.sections,
+        drafts: result.drafts,
+        follow_ups: result.followUps,
+        sources: result.sources,
+        prepared_result: true,
+        external_change_confirmed: false,
+        payment_boundary_reached: false,
+        purchase_confirmed: false,
+      }, openaiKey)
+    }
     if (run.task_completion_policy === 'prepared_result') {
       const completed = await admin.rpc('complete_agent_run', {
         p_run_id: run.id,
