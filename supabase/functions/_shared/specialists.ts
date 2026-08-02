@@ -228,6 +228,22 @@ export function specialistCanUseTool(id: SpecialistId | string | null | undefine
   return Boolean(id && getSpecialist(id)?.availableTools.includes(toolName))
 }
 
+/**
+ * Find the immediate next stage that owns a tool the current specialist tried
+ * to use. The orchestrator uses this only to trigger a typed handoff; it never
+ * expands the active specialist's tool contract or skips an intermediate stage.
+ */
+export function nextSpecialistForTool(
+  stages: readonly SpecialistStage[],
+  currentStageIndex: number,
+  toolName: string,
+) {
+  const nextStage = stages[currentStageIndex + 1]
+  return nextStage && specialistCanUseTool(nextStage.specialistId, toolName)
+    ? nextStage
+    : null
+}
+
 export function specialistRequiredEffects(
   id: SpecialistId,
   objective: string,

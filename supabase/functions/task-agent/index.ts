@@ -19,6 +19,7 @@ import {
   REASONING_MODEL_ID,
   createSpecialistHandoff,
   getSpecialist,
+  nextSpecialistForTool,
   routeTask,
   routeTaskWithSemanticSpecialist,
   safeSemanticSpecialist,
@@ -3839,6 +3840,25 @@ async function advanceRun(
     }
 
     if (!specialistCanUseTool(current.active_specialist_id, toolName)) {
+      const nextStage = nextSpecialistForTool(
+        current.specialist_stages,
+        current.specialist_stage_index,
+        toolName,
+      )
+      if (nextStage) {
+        const nextSpecialist = getSpecialist(nextStage.specialistId)
+        const handoffMessage = `${activeSpecialistDisplayName(current)} is handing ${toolName} to ${nextSpecialist?.displayName ?? nextStage.specialistId} for the next typed stage.`
+        await addEvent(admin, current, 'specialist_handoff_triggered', current.status, handoffMessage, {
+          tool_name: toolName,
+          from_specialist_id: current.active_specialist_id,
+          from_specialist_version: current.active_specialist_version,
+          to_specialist_id: nextStage.specialistId,
+          to_specialist_version: nextStage.specialistVersion,
+          next_stage_id: nextStage.stageId,
+          failure_taxonomy: 'HANDOFF_TRIGGER_FAILURE',
+        })
+        return handoffToNextSpecialist(admin, current, openaiKey)
+      }
       const specialist = getSpecialist(current.active_specialist_id)
       const message = `${specialist?.displayName ?? 'This specialist'} cannot use ${toolName} in the current domain contract.`
       history.push({

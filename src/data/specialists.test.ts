@@ -3,6 +3,7 @@ import {
   REASONING_MODEL_ID,
   createSpecialistHandoff,
   legacySpecialistRoute,
+  nextSpecialistForTool,
   routeTask,
   routeTaskWithSemanticSpecialist,
   specialistCanUseTool,
@@ -62,6 +63,13 @@ describe('ShotCount specialist contracts', () => {
     expect(specialistCanUseTool('david', 'application.generate_document')).toBe(true)
     expect(specialistCanUseTool('david', 'browser.submit')).toBe(false)
     expect(specialistCanUseTool('david', 'calendar.create_event')).toBe(false)
+  })
+
+  it('forwards a next-stage tool only to the registered immediate specialist', () => {
+    const route = routeTask('Arrange my Antler trip to London', 'Email me the strongest itinerary and put the dates on my calendar.')
+    expect(nextSpecialistForTool(route.stages, 0, 'browser.search_flights')?.specialistId).toBe('caspian')
+    expect(nextSpecialistForTool(route.stages, 0, 'calendar.create_event')).toBeNull()
+    expect(nextSpecialistForTool(route.stages, 1, 'browser.search_flights')).toBeNull()
   })
 
   it('derives provider-confirmed effects and preserves them across typed handoff', () => {

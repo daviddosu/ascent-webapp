@@ -325,6 +325,17 @@ describe('agent execution security contract', () => {
     )
   })
 
+  it('hands a next-stage tool to its registered specialist before denying it locally', () => {
+    const toolGuard = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('if (!specialistCanUseTool(current.active_specialist_id, toolName))'),
+      taskAgentFunction.indexOf("if (toolName === 'gmail.create_draft')"),
+    )
+    expect(toolGuard).toContain('nextSpecialistForTool')
+    expect(toolGuard).toContain("'specialist_handoff_triggered'")
+    expect(toolGuard).toContain('handoffToNextSpecialist(admin, current, openaiKey)')
+    expect(toolGuard).toContain("'HANDOFF_TRIGGER_FAILURE'")
+  })
+
   it('keeps Ask Roon limited to concise title-and-description task planning', () => {
     expect(taskAgentFunction).toContain("action === 'plan_tasks'")
     expect(taskAgentFunction).toContain("name: 'shotcount_task_plan'")
