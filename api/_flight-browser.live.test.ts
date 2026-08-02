@@ -18,8 +18,10 @@ it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
     const input: FlightSearchInput = {
       originCode: 'LOS',
       destinationCode: 'LON',
-      departureDate: futureDate(14),
-      returnDate: futureDate(18),
+      // Keep the live smoke far enough ahead for Google Flights to expose a
+      // stable round-trip result window; dates remain generated at runtime.
+      departureDate: futureDate(49),
+      returnDate: futureDate(56),
       cabin: 'economy',
       maxStops: 2,
       budgetAmount: null,
