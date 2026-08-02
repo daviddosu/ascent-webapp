@@ -344,6 +344,11 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('return handoffToNextSpecialist(admin, current, openaiKey)')
   })
 
+  it('keeps Caspian flight sessions on the registered Google destination', () => {
+    expect(taskAgentFunction).toContain("Caspian must use the registered Google Flights destination")
+    expect(taskAgentFunction).toContain('upsertHistoryToolOutput')
+  })
+
   it('keeps Ask Roon limited to concise title-and-description task planning', () => {
     expect(taskAgentFunction).toContain("action === 'plan_tasks'")
     expect(taskAgentFunction).toContain("name: 'shotcount_task_plan'")

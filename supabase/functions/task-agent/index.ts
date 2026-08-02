@@ -1262,6 +1262,25 @@ function configuredBrowserDomains() {
   )
 }
 
+function upsertHistoryToolOutput(
+  history: OpenAIOutputItem[],
+  callId: string,
+  value: unknown,
+) {
+  const output = JSON.stringify(value)
+  let replaced = false
+  const next = history.map(item => {
+    if (item.type === 'function_call_output' && item.call_id === callId) {
+      replaced = true
+      return { ...item, output }
+    }
+    return item
+  })
+  return replaced
+    ? next
+    : [...next, { type: 'function_call_output' as const, call_id: callId, output }]
+}
+
 function browserWorkerConfig() {
   const rawUrl = Deno.env.get('SHOTCOUNT_BROWSER_WORKER_URL') ?? ''
   const rawSelectionUrl = Deno.env.get('SHOTCOUNT_BROWSER_SELECTION_WORKER_URL') ?? ''
@@ -1700,6 +1719,19 @@ async function executeProviderTool(
   if (toolName === 'browser.start_session') {
     const configured = configuredBrowserDomains()
     const requested = (argumentsValue.allowed_domains as string[]).map(domain => domain.toLocaleLowerCase())
+    const caspianFlightSession = run.active_specialist_id === 'caspian' && run.task_contract === 'travel.flight_search'
+    if (caspianFlightSession && (!requested.includes('google.com') || !requested.includes('www.google.com'))) {
+      return {
+        kind: 'output',
+        value: {
+          ok: false,
+          error_code: 'browser_domain_not_allowed',
+          error_message: 'Caspian must use the registered Google Flights destination for live flight search.',
+          allowed_domains: ['google.com', 'www.google.com'],
+        },
+        publicSummary: 'Rejected an unregistered flight-search destination.',
+      }
+    }
     if (!configured.size || requested.some(domain => !configured.has(domain))) {
       return {
         kind: 'pause',
@@ -3205,13 +3237,7 @@ async function retryWaitingProviderAction(
   }).eq('id', action.id)
   let history = await loadModelHistory(admin, run)
   const callId = safeString(action.model_call_id, 256)
-  if (callId && !historyHasToolOutput(history, callId)) {
-    history = [...history, {
-      type: 'function_call_output',
-      call_id: callId,
-      output: JSON.stringify(execution.value),
-    }]
-  }
+  if (callId) history = upsertHistoryToolOutput(history, callId, execution.value)
   const resumed = await updateRun(admin, run, {
     status: 'running',
     waiting_reason: '',
