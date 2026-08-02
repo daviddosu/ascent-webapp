@@ -3301,6 +3301,41 @@ async function recoverStalledRun(
     return completeRun(admin, run, argumentsValue, openaiKey)
   }
 
+  const capabilityContextAction = await admin
+    .from('agent_actions')
+    .select('id,arguments')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('tool_name', 'agent.request_context')
+    .eq('status', 'succeeded')
+    .order('step_index', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (capabilityContextAction.error) throw new Error(capabilityContextAction.error.message)
+  const savedContextArguments = capabilityContextAction.data?.arguments as Record<string, unknown> | null
+  const savedCapabilityQuestion = safeString(savedContextArguments?.question, 400)
+  const nextStage = nextSpecialistForCapabilityRequest(
+    run.specialist_stages,
+    run.specialist_stage_index,
+    `${run.objective} ${safeString(run.context?.description, 4000)}`,
+    savedCapabilityQuestion,
+  )
+  if (capabilityContextAction.data && nextStage) {
+    const nextSpecialist = getSpecialist(nextStage.specialistId)
+    const handoffMessage = `${activeSpecialistDisplayName(run)} is resuming through ${nextSpecialist?.displayName ?? nextStage.specialistId} for the unavailable capability.`
+    await addEvent(admin, run, 'specialist_handoff_triggered', run.status, handoffMessage, {
+      trigger_tool: 'agent.request_context',
+      trigger_source: 'saved_context_request_recovery',
+      from_specialist_id: run.active_specialist_id,
+      from_specialist_version: run.active_specialist_version,
+      to_specialist_id: nextStage.specialistId,
+      to_specialist_version: nextStage.specialistVersion,
+      next_stage_id: nextStage.stageId,
+      failure_taxonomy: 'HANDOFF_TRIGGER_FAILURE',
+    })
+    return handoffToNextSpecialist(admin, run, openaiKey)
+  }
+
   const retried = await retryWaitingProviderAction(admin, run, openaiKey)
   if (retried) return retried
   return advanceRun(admin, run, openaiKey)

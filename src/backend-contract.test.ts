@@ -340,6 +340,7 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('nextSpecialistForCapabilityRequest')
     expect(taskAgentFunction).toContain("toolName === 'agent.request_context'")
     expect(taskAgentFunction).toContain("error_code: 'specialist_capability_handoff'")
+    expect(taskAgentFunction).toContain("trigger_source: 'saved_context_request_recovery'")
     expect(taskAgentFunction).toContain('return handoffToNextSpecialist(admin, current, openaiKey)')
   })
 
