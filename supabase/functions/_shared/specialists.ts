@@ -1,3 +1,6 @@
+import { hasCalendarIntent, hasEmailIntent, requestsPaymentHandoff } from './agent-intent.ts'
+import { actionIsAffirmed } from './communication-safety.ts'
+
 /**
  * ShotCount's specialist contract registry.
  *
@@ -122,18 +125,14 @@ const davidTools = [
 function requiredEffectsForRoon(objective: string, taskContract: TaskContract): RequiredEffect[] {
   const text = objective.toLocaleLowerCase()
   const effects: RequiredEffect[] = []
-  if (taskContract === 'communication.email' &&
-      !/\b(?:do not|don't|without|never)\s+(?:send|reply|respond|notify|email|message)\b/.test(text) &&
-      /\b(?:send|reply|respond|notify|outreach|follow[\s-]?up)\b/.test(text)) {
+  if (taskContract === 'communication.email' && actionIsAffirmed(text, 'gmail_send')) {
     effects.push('gmail_send')
   }
   if (taskContract === 'communication.calendar' || taskContract === 'communication.scheduling') {
-    if (/\b(?:create|add|schedule|book|move|reschedule|update|change|cancel|delete|invite)\b/.test(text) &&
-        !/\b(?:do not|don't|without|never)\s+(?:create|add|schedule|book|move|reschedule|update|change|cancel|delete|invite)\b/.test(text)) {
+    if (actionIsAffirmed(text, 'calendar_write')) {
       effects.push('calendar_write')
     }
-    if (/\b(?:send|reply|respond|notify|email|message|outreach|follow[\s-]?up)\b/.test(text) &&
-        !/\b(?:do not|don't|without|never)\s+(?:send|reply|respond|notify|email|message)\b/.test(text)) {
+    if (actionIsAffirmed(text, 'gmail_send')) {
       effects.push('gmail_send')
     }
   }
@@ -143,7 +142,10 @@ function requiredEffectsForRoon(objective: string, taskContract: TaskContract): 
 function requiredEffectsForCaspian(objective: string, taskContract: TaskContract): RequiredEffect[] {
   const text = objective.toLocaleLowerCase()
   if (taskContract !== 'travel.flight_search') return []
-  return /\b(?:book|booking|buy|purchase|reserve|payment|handoff)\b/.test(text)
+  const asksForBooking = /\b(?:book|booking|buy|purchase|reserve|payment|handoff)\b/.test(text)
+  const disallowsBooking = /\b(?:do\s+not|don't|never|without)\b[\s\S]{0,60}\b(?:book|booking|buy|purchase|reserve|payment)\b/.test(text) ||
+    /\bstop\s+before\s+(?:any\s+)?booking\s+or\s+payment\b/.test(text)
+  return (asksForBooking && !disallowsBooking) || requestsPaymentHandoff(text)
     ? ['booking_handoff']
     : ['validated_itinerary']
 }
@@ -372,8 +374,8 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
     arrangedTrip
   const hasApplication = /\b(?:apply|application|grad(?:uate)? school|admission|transcript|personal statement|statement of purpose|recommendation letter|application deadline|application documents?)\b/.test(text) ||
     /\b(?:what documents|missing documents)\b[\s\S]{0,80}\b(?:application|programme|program|school|university)\b/.test(text)
-  const hasEmail = /\b(?:email|mail|gmail|reply|respond|follow[\s-]?up|message|outreach|recipient|inbox)\b/.test(text)
-  const hasCalendar = /\b(?:calendar|meeting|meet|schedule|scheduled|scheduling|availability|appointment|invite|event|reschedule|slot|free)\b/.test(text)
+  const hasEmail = hasEmailIntent(text)
+  const hasCalendar = hasCalendarIntent(text)
   const hasScheduling = /\b(?:schedule|scheduled|scheduling|availability|reschedule|arrange|coordinate|organize|slot|free)\b/.test(text)
 
   if (hasFlight && (hasEmail || hasCalendar || /\b(?:arrange|coordinate|organize)\b/.test(text))) {
@@ -415,12 +417,22 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
     )
   }
 
-  if (hasEmail && hasCalendar) {
+  const calendarCoordination = hasScheduling ||
+    /\b(?:invite|add|put|place|sync|coordinate|organize|find\s+(?:a\s+)?(?:free|available)\s+(?:slot|time))\b/.test(text)
+  if (hasEmail && hasCalendar && calendarCoordination) {
     return routeTo(
       'roon',
       'communication.scheduling',
       [stage('communication-scheduling', 'roon', 'communication.scheduling', 'Emailing and scheduling')],
       'The task combines email communication with a Calendar or meeting outcome.',
+    )
+  }
+  if (hasEmail && hasCalendar && !calendarCoordination && !actionIsAffirmed(text, 'calendar_write')) {
+    return routeTo(
+      'roon',
+      'communication.email',
+      [stage('email', 'roon', 'communication.email', 'Emailing')],
+      'The Calendar wording describes the message topic rather than a requested Calendar change.',
     )
   }
   if (hasCalendar && hasScheduling && /\b(?:meeting|meet|appointment|call|event|calendar)\b/.test(text)) {

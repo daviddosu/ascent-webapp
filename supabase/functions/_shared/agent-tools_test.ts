@@ -134,6 +134,7 @@ Deno.test('calendar writes reject invalid time windows', () => {
     timezone: 'Africa/Lagos',
     attendee_emails: ['blessing@example.com'],
     add_google_meet: true,
+    notify_attendees: true,
   }), false)
   assertEquals(validateAgentToolArguments('calendar.update_event', {
     calendar_id: 'primary',
@@ -143,6 +144,7 @@ Deno.test('calendar writes reject invalid time windows', () => {
     start: 'not-a-date',
     end: null,
     timezone: 'Africa/Lagos',
+    notify_attendees: false,
   }), false)
 })
 

@@ -31,10 +31,31 @@ export class GoogleIntegrationError extends Error {
   }
 }
 
+export function isValidIanaTimezone(value: unknown): value is string {
+  if (typeof value !== 'string' || !value.trim()) return false
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value }).format()
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function calendarQueryTimestamp(value: string, timeZone: string) {
-  if (/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return new Date(value).toISOString()
+  if (!isValidIanaTimezone(timeZone)) {
+    throw new GoogleIntegrationError('calendar_timezone_invalid', 'The Calendar timezone is invalid. Review the timezone before continuing.', false)
+  }
+  if (/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) {
+    const instant = new Date(value)
+    if (Number.isNaN(instant.getTime())) {
+      throw new GoogleIntegrationError('calendar_timestamp_invalid', 'The Calendar timestamp is invalid.', false)
+    }
+    return instant.toISOString()
+  }
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/)
-  if (!match) return value
+  if (!match) {
+    throw new GoogleIntegrationError('calendar_timestamp_invalid', 'The Calendar timestamp must be an ISO 8601 date-time.', false)
+  }
   const target = Date.UTC(
     Number(match[1]), Number(match[2]) - 1, Number(match[3]),
     Number(match[4]), Number(match[5]), Number(match[6] ?? 0),
@@ -61,6 +82,10 @@ function safeHeader(value: unknown) {
   return String(value ?? '').replace(/[\r\n]+/g, ' ').trim()
 }
 
+function safeString(value: unknown, maximum = 10_000) {
+  return typeof value === 'string' ? value.slice(0, maximum) : ''
+}
+
 function base64UrlEncode(value: string) {
   const bytes = new TextEncoder().encode(value)
   let binary = ''
@@ -81,6 +106,18 @@ function encodeHeader(value: string) {
   let binary = ''
   for (const byte of bytes) binary += String.fromCharCode(byte)
   return `=?UTF-8?B?${btoa(binary)}?=`
+}
+
+export function gmailRecipientHeaderLines(to: unknown, cc: unknown = [], bcc: unknown = []) {
+  const recipients = (value: unknown) => Array.isArray(value) ? value.map(safeHeader).filter(Boolean) : []
+  const toValues = recipients(to)
+  const ccValues = recipients(cc)
+  const bccValues = recipients(bcc)
+  return [
+    `To: ${toValues.join(', ')}`,
+    ...(ccValues.length ? [`Cc: ${ccValues.join(', ')}`] : []),
+    ...(bccValues.length ? [`Bcc: ${bccValues.join(', ')}`] : []),
+  ]
 }
 
 async function integrationForUser(admin: AdminClient, userId: string) {
@@ -258,8 +295,12 @@ function compactMessage(message: GmailMessage) {
     from: headerValue(message, 'From'),
     to: headerValue(message, 'To'),
     cc: headerValue(message, 'Cc'),
+    bcc: headerValue(message, 'Bcc'),
     subject: headerValue(message, 'Subject'),
     date: headerValue(message, 'Date'),
+    auto_submitted: headerValue(message, 'Auto-Submitted'),
+    precedence: headerValue(message, 'Precedence'),
+    x_auto_response_suppress: headerValue(message, 'X-Auto-Response-Suppress'),
     message_id_header: headerValue(message, 'Message-ID'),
     in_reply_to: headerValue(message, 'In-Reply-To'),
     body_text: plainTextFromPart(message.payload).slice(0, 40_000),
@@ -293,16 +334,32 @@ async function gmailReadMessage(admin: AdminClient, userId: string, messageId: s
   return compactMessage(message)
 }
 
-async function gmailReadThread(admin: AdminClient, userId: string, threadId: string) {
+async function gmailReadThread(
+  admin: AdminClient,
+  userId: string,
+  threadId: string,
+  sentMessageId = '',
+) {
   const thread = await googleRequest<{ id?: string; historyId?: string; messages?: GmailMessage[] }>(
     admin,
     userId,
     `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`,
   )
+  const messages = thread.messages ?? []
+  const tailStart = Math.max(0, messages.length - 30)
+  const selectedIndexes = new Set<number>()
+  for (let index = tailStart; index < messages.length; index += 1) selectedIndexes.add(index)
+  const sentIndex = sentMessageId
+    ? messages.findIndex(message => message.id === sentMessageId)
+    : -1
+  if (sentIndex >= 0) selectedIndexes.add(sentIndex)
   return {
     id: thread.id ?? threadId,
     history_id: thread.historyId ?? '',
-    messages: (thread.messages ?? []).slice(-30).map(compactMessage),
+    // Keep the response bounded, but always retain the exact sent checkpoint
+    // so a long Gmail thread cannot make Roon wait forever for a message that
+    // fell out of the last-page window.
+    messages: messages.filter((_, index) => selectedIndexes.has(index)).map(compactMessage),
   }
 }
 
@@ -370,8 +427,8 @@ async function gmailCreateDraft(
       thread_id: existingDraft.message.threadId ?? threadId ?? '',
       message_id_header: messageIdHeader,
       to: normalizedEmails(existingMessage.to),
-      cc,
-      bcc,
+      cc: normalizedEmails(existingMessage.cc),
+      bcc: normalizedEmails(existingMessage.bcc),
       subject: existingMessage.subject,
       body_text: existingMessage.body_text,
       already_created: true,
@@ -384,9 +441,7 @@ async function gmailCreateDraft(
   const hasBenchmarkAttachment = Boolean(attachmentName && attachmentBase64 && attachmentBase64.length <= 1_400_000)
   const boundary = `shotcount-${idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
-    `To: ${to.join(', ')}`,
-    ...(cc.length ? [`Cc: ${cc.join(', ')}`] : []),
-    ...(bcc.length ? [`Bcc: ${bcc.join(', ')}`] : []),
+    ...gmailRecipientHeaderLines(to, cc, bcc),
     `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
     hasBenchmarkAttachment
@@ -456,6 +511,8 @@ export async function updatePreparedGmailDraft(
     throw new GoogleIntegrationError('gmail_draft_record_missing', 'The prepared Gmail draft is no longer available.', false)
   }
   const to = (draftRecord.arguments.to as string[]).map(safeHeader)
+  const cc = (Array.isArray(draftRecord.arguments.cc) ? draftRecord.arguments.cc : []).map(safeHeader)
+  const bcc = (Array.isArray(draftRecord.arguments.bcc) ? draftRecord.arguments.bcc : []).map(safeHeader)
   const subject = safeHeader(subjectValue).trim()
   const bodyText = String(bodyValue ?? '').trim().replace(/\r?\n/g, '\r\n')
   if (!subject) throw new GoogleIntegrationError('gmail_subject_required', 'Add an email subject before sending.', false)
@@ -469,7 +526,7 @@ export async function updatePreparedGmailDraft(
   if (attachment.name && !hasAttachment) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The attachment is too large or invalid.', false)
   const boundary = `shotcount-${draftId.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
-    `To: ${to.join(', ')}`,
+    ...gmailRecipientHeaderLines(to, cc, bcc),
     `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
     hasAttachment ? `Content-Type: multipart/mixed; boundary="${boundary}"` : 'Content-Type: text/plain; charset=UTF-8',
@@ -509,6 +566,8 @@ export async function updatePreparedGmailDraft(
     thread_id: updated.message.threadId ?? threadId ?? '',
     message_id_header: messageIdHeader,
     to,
+    cc,
+    bcc,
     subject,
     body_text: bodyText,
     attachment_name: attachmentName || null,
@@ -688,6 +747,7 @@ async function calendarListEvents(admin: AdminClient, userId: string, argumentsV
 }
 
 async function calendarAvailability(admin: AdminClient, userId: string, argumentsValue: Record<string, unknown>) {
+  const timezone = String(argumentsValue.timezone)
   return googleRequest<Record<string, unknown>>(
     admin,
     userId,
@@ -695,9 +755,9 @@ async function calendarAvailability(admin: AdminClient, userId: string, argument
     {
       method: 'POST',
       body: JSON.stringify({
-        timeMin: argumentsValue.time_min,
-        timeMax: argumentsValue.time_max,
-        timeZone: argumentsValue.timezone,
+        timeMin: calendarQueryTimestamp(String(argumentsValue.time_min), timezone),
+        timeMax: calendarQueryTimestamp(String(argumentsValue.time_max), timezone),
+        timeZone: timezone,
         items: (argumentsValue.calendar_ids as string[]).map(id => ({ id })),
       }),
     },
@@ -762,17 +822,28 @@ async function blockingCalendarEvents(
   )
   url.searchParams.set('timeMin', start)
   url.searchParams.set('timeMax', end)
-  url.searchParams.set('maxResults', '20')
+  url.searchParams.set('maxResults', '250')
   url.searchParams.set('singleEvents', 'true')
   url.searchParams.set('showDeleted', 'false')
-  const result = await googleRequest<{ items?: GoogleCalendarEvent[] }>(
-    admin,
-    userId,
-    url.toString(),
-  )
-  return (result.items ?? []).filter(event =>
-    calendarEventBlocksTime(event, excludedEventId)
-  )
+  const events: GoogleCalendarEvent[] = []
+  for (let page = 0; page < 5; page += 1) {
+    const result = await googleRequest<{ items?: GoogleCalendarEvent[]; nextPageToken?: string }>(
+      admin,
+      userId,
+      url.toString(),
+    )
+    events.push(...(result.items ?? []))
+    if (!result.nextPageToken) break
+    if (page === 4) {
+      throw new GoogleIntegrationError(
+        'calendar_conflict_check_incomplete',
+        'Calendar returned too many events to verify this time safely. Review the window before continuing.',
+        false,
+      )
+    }
+    url.searchParams.set('pageToken', result.nextPageToken)
+  }
+  return events.filter(event => calendarEventBlocksTime(event, excludedEventId))
 }
 
 async function assertCalendarWindowAvailable(
@@ -847,15 +918,15 @@ async function calendarCreateEvent(
   )
 
   const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`)
-  url.searchParams.set('sendUpdates', 'all')
+  url.searchParams.set('sendUpdates', argumentsValue.notify_attendees === false ? 'none' : 'all')
   if (argumentsValue.add_google_meet) url.searchParams.set('conferenceDataVersion', '1')
   const event = await googleRequest<Record<string, unknown>>(admin, userId, url.toString(), {
     method: 'POST',
     body: JSON.stringify({
       summary: argumentsValue.summary,
       description: argumentsValue.description,
-      start: { dateTime: argumentsValue.start, timeZone: argumentsValue.timezone },
-      end: { dateTime: argumentsValue.end, timeZone: argumentsValue.timezone },
+      start: { dateTime: queryStart, timeZone: timezone },
+      end: { dateTime: queryEnd, timeZone: timezone },
       attendees: (argumentsValue.attendee_emails as string[]).map(email => ({ email })),
       extendedProperties: { private: { shotcount_idempotency_key: idempotencyKey } },
       ...(argumentsValue.add_google_meet
@@ -894,6 +965,9 @@ async function calendarUpdateEvent(
   const effectiveEnd = argumentsValue.end === null
     ? current.end?.dateTime ?? ''
     : String(argumentsValue.end)
+  const effectiveTimezone = String(
+    argumentsValue.timezone ?? current.start?.timeZone ?? current.end?.timeZone ?? 'UTC',
+  )
   if ((argumentsValue.start !== null || argumentsValue.end !== null) && (!effectiveStart || !effectiveEnd)) {
     throw new GoogleIntegrationError(
       'calendar_event_time_missing',
@@ -906,8 +980,8 @@ async function calendarUpdateEvent(
       admin,
       userId,
       calendarId,
-      effectiveStart,
-      effectiveEnd,
+      calendarQueryTimestamp(effectiveStart, effectiveTimezone),
+      calendarQueryTimestamp(effectiveEnd, effectiveTimezone),
       eventId,
     )
   }
@@ -915,7 +989,7 @@ async function calendarUpdateEvent(
   const url = new URL(
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
   )
-  url.searchParams.set('sendUpdates', 'all')
+  url.searchParams.set('sendUpdates', argumentsValue.notify_attendees === false ? 'none' : 'all')
   const patch: Record<string, unknown> = {
     extendedProperties: {
       private: {
@@ -927,10 +1001,10 @@ async function calendarUpdateEvent(
   if (argumentsValue.summary !== null) patch.summary = argumentsValue.summary
   if (argumentsValue.description !== null) patch.description = argumentsValue.description
   if (argumentsValue.start !== null) {
-    patch.start = { dateTime: argumentsValue.start, timeZone: argumentsValue.timezone ?? undefined }
+    patch.start = { dateTime: calendarQueryTimestamp(String(argumentsValue.start), effectiveTimezone), timeZone: effectiveTimezone }
   }
   if (argumentsValue.end !== null) {
-    patch.end = { dateTime: argumentsValue.end, timeZone: argumentsValue.timezone ?? undefined }
+    patch.end = { dateTime: calendarQueryTimestamp(String(argumentsValue.end), effectiveTimezone), timeZone: effectiveTimezone }
   }
   const updated = await googleRequest<Record<string, unknown>>(admin, userId, url.toString(), {
     method: 'PATCH',
@@ -1093,7 +1167,12 @@ export async function executeGoogleTool(
       return { value, providerActionId: value.id, publicSummary: 'Read the relevant Gmail message.' }
     }
     case 'gmail.read_thread': {
-      const value = await gmailReadThread(admin, userId, String(argumentsValue.thread_id))
+      const value = await gmailReadThread(
+        admin,
+        userId,
+        String(argumentsValue.thread_id),
+        safeString(argumentsValue.sent_message_id, 256),
+      )
       return { value, providerActionId: value.id, publicSummary: 'Read the relevant Gmail thread.' }
     }
     case 'gmail.create_draft': {

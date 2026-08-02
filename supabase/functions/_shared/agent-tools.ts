@@ -420,7 +420,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'calendar.create_event',
-    description: 'Create one exact approved calendar event and optional attendee invitations.',
+    description: 'Create one exact approved calendar event. Set notify_attendees true only when the user explicitly wants attendee invitations or notifications.',
     parameters: objectSchema({
       calendar_id: stringValue('Calendar ID, usually primary.', 320),
       summary: stringValue('Event title.', 1000),
@@ -434,13 +434,14 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         maxItems: 50,
       },
       add_google_meet: { type: 'boolean' },
-    }, ['calendar_id', 'summary', 'description', 'start', 'end', 'timezone', 'attendee_emails', 'add_google_meet']),
+      notify_attendees: { type: 'boolean' },
+    }, ['calendar_id', 'summary', 'description', 'start', 'end', 'timezone', 'attendee_emails', 'add_google_meet', 'notify_attendees']),
     strict: true,
   },
   {
     type: 'function',
     name: 'calendar.update_event',
-    description: 'Apply an exact approved patch to an existing calendar event.',
+    description: 'Apply an exact approved patch to an existing calendar event. Set notify_attendees true only when the user explicitly wants attendees notified.',
     parameters: objectSchema({
       calendar_id: stringValue('Calendar ID.', 320),
       event_id: stringValue('Google Calendar event ID.', 256),
@@ -449,7 +450,8 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       start: nullableString('Replacement ISO 8601 start timestamp.', 64),
       end: nullableString('Replacement ISO 8601 end timestamp.', 64),
       timezone: nullableString('IANA timezone.', 120),
-    }, ['calendar_id', 'event_id', 'summary', 'description', 'start', 'end', 'timezone']),
+      notify_attendees: { type: 'boolean' },
+    }, ['calendar_id', 'event_id', 'summary', 'description', 'start', 'end', 'timezone', 'notify_attendees']),
     strict: true,
   },
   {
@@ -649,7 +651,30 @@ function validateEmail(value: unknown) {
 }
 
 function validateIso(value: unknown) {
-  return typeof value === 'string' && value.length <= 64 && !Number.isNaN(Date.parse(value))
+  return typeof value === 'string' &&
+    value.length <= 64 &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(value) &&
+    !Number.isNaN(Date.parse(value))
+}
+
+function validateAbsoluteIso(value: unknown) {
+  return validateIso(value) && /(?:Z|[+-]\d{2}:?\d{2})$/.test(String(value))
+}
+
+function validateIanaTimezone(value: unknown) {
+  if (!validateString(value, 120)) return false
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: String(value) }).format()
+    return true
+  } catch {
+    return false
+  }
+}
+
+function validateRecipientBuckets(to: unknown, cc: unknown, bcc: unknown) {
+  const values = [to, cc, bcc].flatMap(value => Array.isArray(value) ? value : [])
+    .map(value => typeof value === 'string' ? value.toLocaleLowerCase() : '')
+  return new Set(values).size === values.length
 }
 
 function validateDateOnly(value: unknown) {
@@ -728,10 +753,12 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         value.to.every(validateEmail) &&
         Array.isArray(value.cc) && value.cc.length <= 20 && value.cc.every(validateEmail) &&
         Array.isArray(value.bcc) && value.bcc.length <= 20 && value.bcc.every(validateEmail) &&
+        validateRecipientBuckets(value.to, value.cc, value.bcc) &&
         validateString(value.subject, 998, true) &&
         validateString(value.body_text, 30000) &&
         (value.thread_id === null || validateString(value.thread_id, 256)) &&
-        (value.in_reply_to_message_id === null || validateString(value.in_reply_to_message_id, 256))
+        (value.in_reply_to_message_id === null || validateString(value.in_reply_to_message_id, 256)) &&
+        ((value.thread_id === null) === (value.in_reply_to_message_id === null))
     case 'gmail.send_message':
       return validateString(value.draft_id, 256) &&
         Array.isArray(value.expected_to) &&
@@ -740,6 +767,7 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         value.expected_to.every(validateEmail) &&
         Array.isArray(value.expected_cc) && value.expected_cc.length <= 20 && value.expected_cc.every(validateEmail) &&
         Array.isArray(value.expected_bcc) && value.expected_bcc.length <= 20 && value.expected_bcc.every(validateEmail) &&
+        validateRecipientBuckets(value.expected_to, value.expected_cc, value.expected_bcc) &&
         validateString(value.expected_subject, 998, true)
     case 'gmail.wait_for_reply':
       return validateString(value.thread_id, 256) &&
@@ -756,8 +784,8 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
     case 'contacts.resolve_recipient':
       return validateString(value.recipient, 300)
     case 'calendar.list_events':
-      return validateIso(value.time_min) &&
-        validateIso(value.time_max) &&
+      return validateAbsoluteIso(value.time_min) &&
+        validateAbsoluteIso(value.time_max) &&
         Date.parse(String(value.time_max)) > Date.parse(String(value.time_min)) &&
         validateString(value.calendar_id, 320) &&
         Number.isInteger(value.max_results) &&
@@ -768,7 +796,7 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateIso(value.time_max) &&
         Date.parse(String(value.time_max)) > Date.parse(String(value.time_min)) &&
         validateStringArray(value.calendar_ids, 20, 320, 1) &&
-        validateString(value.timezone, 120)
+        validateIanaTimezone(value.timezone)
     case 'calendar.create_event':
       return validateString(value.calendar_id, 320) &&
         validateString(value.summary, 1000) &&
@@ -776,11 +804,12 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateIso(value.start) &&
         validateIso(value.end) &&
         Date.parse(String(value.end)) > Date.parse(String(value.start)) &&
-        validateString(value.timezone, 120) &&
+        validateIanaTimezone(value.timezone) &&
         Array.isArray(value.attendee_emails) &&
         value.attendee_emails.length <= 50 &&
         value.attendee_emails.every(validateEmail) &&
-        typeof value.add_google_meet === 'boolean'
+        typeof value.add_google_meet === 'boolean' &&
+        typeof value.notify_attendees === 'boolean'
     case 'calendar.update_event':
       if (!(validateString(value.calendar_id, 320) &&
         validateString(value.event_id, 256) &&
@@ -788,7 +817,8 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         (value.description === null || validateString(value.description, 12000, true)) &&
         (value.start === null || validateIso(value.start)) &&
         (value.end === null || validateIso(value.end)) &&
-        (value.timezone === null || validateString(value.timezone, 120)))) return false
+        (value.timezone === null || validateIanaTimezone(value.timezone)) &&
+        typeof value.notify_attendees === 'boolean')) return false
       return value.start === null ||
         value.end === null ||
         Date.parse(String(value.end)) > Date.parse(String(value.start))

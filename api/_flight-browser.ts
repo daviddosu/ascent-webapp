@@ -197,7 +197,11 @@ export function rankFlightOptions(
   const withinBudget = input.budgetAmount === null
     ? unique
     : unique.filter(option => option.amount <= input.budgetAmount!)
-  const eligible = withinBudget.length ? withinBudget : unique
+  // Never present an over-budget itinerary as if it satisfied the request.
+  // An empty result is an honest, recoverable outcome that lets the caller
+  // ask for a revised budget or constraints.
+  if (input.budgetAmount !== null && !withinBudget.length) return []
+  const eligible = withinBudget
   const best = eligible.find(option =>
     preferred.some(airline => option.airline.toLocaleLowerCase().includes(airline))
   ) ?? eligible[0]!

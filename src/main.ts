@@ -1404,13 +1404,13 @@ async function chooseAgentFlight(taskId: string, optionId: string) {
   }
 }
 
-// The flight handoff has a deliberately short demo ceiling.  This narrow
-// monitor only polls the run that has just been selected; it never starts a
-// second model turn, so it cannot replay Roon's progress feed.
+// Poll the task-owned browser selection until the bounded worker path reaches
+// the provider booking/payment boundary. This monitor never starts a second
+// model turn, so it cannot replay Roon's progress feed.
 function monitorDemoFlightHandoff(taskId: string, runId: string) {
   let attempts = 0
   const check = async () => {
-    if (attempts >= 12) return
+    if (attempts >= 90) return
     attempts += 1
     await new Promise(resolve => window.setTimeout(resolve, 1_000))
     const current = agentRuns.get(taskId)

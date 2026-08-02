@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { classifySharedAgentIntent, needsSharedAgentContext } from './agent-intent.ts'
+import { classifySharedAgentIntent, flightContextField, needsSharedAgentContext, requestsPaymentHandoff } from './agent-intent.ts'
 
 Deno.test('read-only Gmail and Calendar tasks use prepared-result completion', () => {
   assertEquals(
@@ -42,6 +42,14 @@ Deno.test('flight search that explicitly stops before booking is a prepared resu
     ),
     { capability: 'flight_search', strategy: 'browser', outcomeType: 'payment_handoff' },
   )
+})
+
+Deno.test('flight context answers have stable fields and stop-before-payment means handoff', () => {
+  assertEquals(requestsPaymentHandoff('Continue to the payment boundary and stop before payment.'), true)
+  assertEquals(requestsPaymentHandoff('Stop before any booking or payment step.'), false)
+  assertEquals(flightContextField('Which airport are you departing from?', []), 'origin')
+  assertEquals(flightContextField('What date will you return?', []), 'return_date')
+  assertEquals(flightContextField('What is the maximum number of stops?', []), 'max_stops')
 })
 
 Deno.test('provider writes and meeting coordination keep external-change completion', () => {

@@ -287,7 +287,10 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
         flightSearch.options,
         optionId,
       )
-      output = result as unknown as Record<string, unknown>
+      output = {
+        ...(result as unknown as Record<string, unknown>),
+        payment_boundary_reached: true,
+      }
       currentUrl = result.handoffUrl
       paymentBoundaryReached = true
       nextCheckpoint = {

@@ -14,15 +14,12 @@ export type RequiredEffect = 'gmail_send' | 'calendar_write'
 export function requiredEffectsForObjective(objective: string) {
   const text = objective.toLocaleLowerCase()
   const required: RequiredEffect[] = []
-  const calendarMutation = !/\b(?:do not|don't|without|never)\s+(?:create|add|schedule|book|move|reschedule|update|change|cancel|delete|remove)\b/.test(text) &&
-    /\b(?:create|created|add|added|schedule|scheduled|book|booked|move|moved|reschedule|rescheduled|update|updated|change|changed|cancel|cancelled|delete|deleted|remove|removed)\b/.test(text)
-  if (calendarMutation && /\b(?:calendar|event|meeting|appointment|call|schedule|reschedule|move|update|cancel|delete)\b/.test(text)) {
+  if (actionIsAffirmed(text, 'calendar_write') && /\b(?:calendar|event|meeting|appointment|call|schedule|reschedule|move|update|cancel|delete)\b/.test(text)) {
     required.push('calendar_write')
   }
-  const gmailSend = !/\b(?:do not|don't|without|never)\s+(?:send|reply|respond|notify|email|message)\b/.test(text) &&
-    /\b(?:send|sent|reply|respond|notify|notification|outreach|follow[\s-]?up)\b/.test(text) ||
-    /\bemail\s+(?:the\s+)?(?:options|attendee|participant)\b/.test(text)
-  if (gmailSend) required.push('gmail_send')
+  if (actionIsAffirmed(text, 'gmail_send') || /\bemail\s+(?:the\s+)?(?:options|attendee|participant)\b/i.test(text)) {
+    required.push('gmail_send')
+  }
   return required
 }
 
@@ -42,7 +39,9 @@ export function unresolvedRequiredEffects(required: RequiredEffect[], confirmedT
 
 export function verifiedCrossToolStage(actions: ProviderActionEvidence[]) {
   const succeeded = actions.filter(action => action.status === 'succeeded' && action.provider_action_id)
-  const calendar = succeeded.filter(action => action.tool_name === 'calendar.update_event').at(-1)
+  const calendar = succeeded.filter(action =>
+    ['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].includes(action.tool_name),
+  ).at(-1)
   const gmail = succeeded.filter(action => action.tool_name === 'gmail.send_message').at(-1)
   if (!calendar) return { stage: 'calendar_required' as const, complete: false }
   if (!gmail) return { stage: 'notification_required' as const, complete: false }
@@ -57,3 +56,4 @@ export function verifiedCrossToolStage(actions: ProviderActionEvidence[]) {
 export function lunaContinuationAllowed(failureClass: string, deterministicMismatch: boolean) {
   return failureClass === 'MODEL_REASONING' && deterministicMismatch
 }
+import { actionIsAffirmed } from './communication-safety.ts'

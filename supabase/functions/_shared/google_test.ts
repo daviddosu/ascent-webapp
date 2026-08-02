@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { calendarEventBlocksTime, calendarQueryTimestamp, hasConfirmedSentMessage } from './google.ts'
+import { calendarEventBlocksTime, calendarQueryTimestamp, gmailRecipientHeaderLines, hasConfirmedSentMessage, isValidIanaTimezone } from './google.ts'
 
 Deno.test('calendar conflict checks ignore only transparent, cancelled, or edited events', () => {
   assertEquals(calendarEventBlocksTime({
@@ -37,4 +37,21 @@ Deno.test('confirmed Gmail provider evidence prevents duplicate draft sends', ()
   assertEquals(hasConfirmedSentMessage({ id: 'provider-message-id' }), true)
   assertEquals(hasConfirmedSentMessage({}), false)
   assertEquals(hasConfirmedSentMessage(null), false)
+})
+
+Deno.test('Gmail draft updates preserve To, CC, and BCC header intent', () => {
+  assertEquals(gmailRecipientHeaderLines(
+    ['to@example.com'],
+    ['copy@example.com'],
+    ['hidden@example.com'],
+  ), [
+    'To: to@example.com',
+    'Cc: copy@example.com',
+    'Bcc: hidden@example.com',
+  ])
+})
+
+Deno.test('Calendar timezone validation accepts IANA zones and rejects arbitrary strings', () => {
+  assertEquals(isValidIanaTimezone('Africa/Lagos'), true)
+  assertEquals(isValidIanaTimezone('not/a-timezone'), false)
 })

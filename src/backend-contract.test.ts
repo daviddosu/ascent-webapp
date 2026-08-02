@@ -552,8 +552,10 @@ describe('agent execution security contract', () => {
     expect(mainUi).toContain('setInterval(() => void pollWaitingAgentRuns(), 5_000)')
   })
 
-  it('ends a stalled selected-flight demo at a safe booking handoff', () => {
-    expect(taskAgentFunction).toContain("checkpoint.pendingOperation?.type === 'select_flight' && selectionElapsedMs >= 9_000")
+  it('keeps selected-flight recovery bounded until the browser proves the handoff', () => {
+    expect(taskAgentFunction).not.toContain('selectionElapsedMs')
+    expect(taskAgentFunction).toContain('flightSelectionRecoveryCount')
+    expect(taskAgentFunction).toContain("'flight_selection_failed'")
     expect(taskAgentFunction).toContain("p_run_id: run.id")
     expect(demoFlightHandoffMigration).toContain('create or replace function public.complete_demo_flight_handoff')
     expect(activeDemoFlightHandoffMigration).toContain("status in ('planning', 'running', 'waiting_external', 'waiting_for_user')")
@@ -563,13 +565,15 @@ describe('agent execution security contract', () => {
     expect(activeDemoFlightHandoffMigration).toContain("status in ('planning', 'running', 'waiting_external', 'waiting_for_user')")
   })
 
-  it('completes a selected demo flight directly instead of queuing another browser step', () => {
+  it('routes every selected flight through the task-owned browser worker', () => {
     const selection = taskAgentFunction.slice(
       taskAgentFunction.indexOf('async function selectFlightOption'),
       taskAgentFunction.indexOf('async function advanceRun'),
     )
-    expect(selection).toContain("const completed = await admin.rpc('complete_demo_flight_handoff'")
-    expect(selection.indexOf("complete_demo_flight_handoff")).toBeLessThan(selection.indexOf('const operation: BrowserOperation'))
+    expect(selection).toContain('return queueFlightSelectionOperation')
+    expect(selection).not.toContain("complete_demo_flight_handoff")
+    expect(taskAgentFunction).toContain("type: 'select_flight'")
+    expect(taskAgentFunction).toContain('SHOTCOUNT_BROWSER_SELECTION_WORKER_URL')
   })
 
   it('keeps the selected flight visible in the completed payment handoff', () => {
@@ -586,6 +590,31 @@ describe('agent execution security contract', () => {
   it('does not let the background sweep replay isolated flight progress', () => {
     expect(agentWatchSweepFunction).toContain(".neq('capability', 'flight_search')")
     expect(mainUi).toContain('label !== steps[index - 1]')
+  })
+
+  it('persists browser search and selection evidence on the same run', () => {
+    expect(taskAgentFunction).toContain('preferValidatedFlightEvidence')
+    expect(taskAgentFunction).toContain('Could not persist the validated flight result.')
+    expect(taskAgentFunction).toContain('Could not persist the verified flight handoff.')
+    expect(taskAgentFunction).toContain("context: { ...(run.context ?? {}),")
+    expect(taskAgentFunction).toContain('flight_search_evidence')
+    expect(taskAgentFunction).toContain('flight_handoff_evidence')
+    expect(browserWorker).toContain('payment_boundary_reached: paymentBoundaryReached')
+  })
+
+  it('does not overwrite a verified flight handoff with a retry payload', () => {
+    expect(taskAgentFunction).toContain('A later search response is never allowed to replace a verified payment')
+    expect(taskAgentFunction).toContain('if (run.result?.selectedFlight && existingHandoff) return run')
+    expect(taskAgentFunction).toContain('payment_boundary_reached: output.paymentBoundaryReached === true')
+    expect(taskAgentFunction).toContain('workerSelectedId !== safeString(expectedOption.id, 128)')
+  })
+
+  it('keeps flight selection idempotent and never follows a payment action', () => {
+    expect(taskAgentFunction).toContain("'browser.select_flight', 'browser.submit'")
+    expect(taskAgentFunction).toContain('operation again')
+    expect(taskAgentFunction).toContain("complete_demo_flight_handoff")
+    expect(taskAgentFunction).toContain("policy.risk === 'financial'")
+    expect(agentTools).toContain("'browser.purchase'")
   })
 
   it('replaces stale airport choices with trip-type choices', () => {
@@ -618,9 +647,22 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('function flightSearchArgumentsFromCheckpoint')
     expect(taskAgentFunction).toContain('async function refreshFlightOptions')
     expect(taskAgentFunction).toContain("'selection_checkpoint_mismatch'")
-    expect(taskAgentFunction).toContain("['flight_option_invalid', 'flight_search_checkpoint_missing']")
+    expect(taskAgentFunction).toContain("'flight_option_invalid'")
+    expect(taskAgentFunction).toContain("'flight_search_checkpoint_missing'")
     expect(taskAgentFunction).toContain("waiting_reason: 'Refreshing live flight options.'")
     expect(taskAgentFunction).toContain("'user_requested_refresh'")
+  })
+
+  it('does not repeat answered pre-search flight context or hand back before selection', () => {
+    expect(taskAgentFunction).toContain('flight_context_answers')
+    expect(taskAgentFunction).toContain('flight_context_pending')
+    expect(taskAgentFunction).toContain('context_already_provided')
+    expect(taskAgentFunction).toContain('Used the flight detail already provided.')
+    expect(taskAgentFunction).toContain('flightPaymentHandoffRequested')
+    expect(taskAgentFunction).toContain('best_matching_live_option')
+    expect(taskAgentFunction).toContain('flight_handoff_evidence')
+    expect(taskAgentFunction).toContain('payment_boundary_reached: true')
+    expect(taskAgentFunction).toContain('preserveFlightResult')
   })
 
   it('keeps delayed-reply simulation behind explicit development gates', () => {

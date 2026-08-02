@@ -98,6 +98,7 @@ describe('ShotCount specialist contracts', () => {
   it('derives provider-confirmed effects and preserves them across typed handoff', () => {
     expect(specialistRequiredEffects('roon', 'Send the itinerary by email.', 'communication.email')).toEqual(['gmail_send'])
     expect(specialistRequiredEffects('caspian', 'Book the selected flight.', 'travel.flight_search')).toEqual(['booking_handoff'])
+    expect(specialistRequiredEffects('caspian', 'Find a flight and stop before payment.', 'travel.flight_search')).toEqual(['booking_handoff'])
     expect(specialistRequiredEffects('david', 'Prepare the application documents.', 'applications.planning')).toEqual(['application_plan'])
 
     const handoff = createSpecialistHandoff({

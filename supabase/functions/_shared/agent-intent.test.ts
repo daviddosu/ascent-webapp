@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifySharedAgentIntent } from './agent-intent'
+import { classifySharedAgentIntent, flightContextField, requestsPaymentHandoff } from './agent-intent.ts'
 
 describe('shared agent intent', () => {
   it('does not treat a negated calendar write as the requested outcome', () => {
@@ -70,5 +70,23 @@ describe('shared agent intent', () => {
       strategy: 'structured',
       outcomeType: 'external_change',
     })
+  })
+
+  it('treats stopping before payment as a prepared booking handoff', () => {
+    expect(classifySharedAgentIntent(
+      'Find me a flight',
+      'Find the best live option and stop before payment.',
+    ).outcomeType).toBe('payment_handoff')
+    expect(requestsPaymentHandoff('stop before any booking or payment step')).toBe(false)
+  })
+
+  it.each([
+    ['Which airport are you departing from?', 'origin'],
+    ['What date do you want to fly?', 'departure_date'],
+    ['Is this one-way or round-trip?', 'trip_type'],
+    ['What date will you return?', 'return_date'],
+    ['What is the maximum number of stops?', 'max_stops'],
+  ] as const)('identifies the durable field for a flight context question: %s', (question, field) => {
+    expect(flightContextField(question, [])).toBe(field)
   })
 })

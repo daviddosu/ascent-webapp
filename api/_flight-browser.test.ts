@@ -148,4 +148,9 @@ describe('flight browser worker', () => {
     expect(ranked.every(option => option.stopCount <= 1)).toBe(true)
     expect(ranked.every(option => option.amount <= 1_600)).toBe(true)
   })
+
+  it('returns no options rather than silently violating a hard budget', () => {
+    const ranked = rankFlightOptions(results, { ...input, budgetAmount: 500 })
+    expect(ranked).toEqual([])
+  })
 })

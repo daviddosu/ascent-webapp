@@ -93,6 +93,10 @@ describe('agent intent and completion semantics', () => {
       strategy: 'browser',
       outcomeType: 'payment_handoff',
     })
+    expect(classifyAgentIntent(
+      'Find a return flight from Lagos to London',
+      'Continue to the payment boundary, then stop before payment.',
+    ).outcomeType).toBe('payment_handoff')
   })
 
   it('does not confuse preparation or payment handoff with the real outcome', () => {
