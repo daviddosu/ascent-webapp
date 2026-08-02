@@ -923,8 +923,14 @@ async function pollWaitingAgentRuns() {
     ['planning', 'running'].includes(run.status) &&
     Date.now() - Date.parse(run.updatedAt) >= 20_000,
   )
+  const stalePaymentHandoffRuns = [...agentRuns.values()].filter(run =>
+    run.capability === 'flight_search' &&
+    ['planning', 'running'].includes(run.status) &&
+    Boolean(run.result?.paymentHandoffUrl) &&
+    Date.now() - Date.parse(run.updatedAt) >= 20_000,
+  )
   const waitingRuns = [...agentRuns.values()].filter(run => run.status === 'waiting_external')
-  const recoverableRuns = [...waitingRuns, ...staleApplicationRuns]
+  const recoverableRuns = [...waitingRuns, ...staleApplicationRuns, ...stalePaymentHandoffRuns]
   if (!recoverableRuns.length) return
   agentPollBusy = true
   try {
