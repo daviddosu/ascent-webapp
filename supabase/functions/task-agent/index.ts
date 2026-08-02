@@ -201,8 +201,12 @@ type BrowserCheckpoint = {
       excludedAirlines?: string[]
       adultCount?: number
       childCount?: number
+      childAges?: number[]
       infantCount?: number
+      infantSeatCount?: number
       allowNearbyAirports?: boolean
+      departureTimeWindow?: string | null
+      arrivalTimeWindow?: string | null
     }
     provider?: string
     searchUrl?: string
@@ -1487,8 +1491,12 @@ function flightSearchArgumentsFromCheckpoint(sessionId: string, checkpoint: Brow
     excluded_airlines: Array.isArray(input.excludedAirlines) ? input.excludedAirlines : [],
     adults: input.adultCount ?? 1,
     children: input.childCount ?? 0,
+    children_ages: Array.isArray(input.childAges) ? input.childAges : [],
     infants: input.infantCount ?? 0,
+    infant_seats: input.infantSeatCount ?? 0,
     allow_nearby_airports: input.allowNearbyAirports === true,
+    departure_time_window: input.departureTimeWindow ?? null,
+    arrival_time_window: input.arrivalTimeWindow ?? null,
   }
 }
 
@@ -1550,6 +1558,31 @@ function flightTripShapeNeedsUserDecision(run: AgentRunRow) {
     : ''
   const text = `${run.objective} ${safeString(run.context?.description, 4_000)} ${answers}`
   return /\b(?:multi[ -]?city|open[ -]?jaw|multiple\s+(?:independent\s+)?(?:flight\s+)?legs?)\b/i.test(text)
+}
+
+function unsupportedFlightConstraint(run: AgentRunRow, argumentsValue: Record<string, unknown>) {
+  const answers = run.context?.flight_context_answers &&
+    typeof run.context.flight_context_answers === 'object' &&
+    !Array.isArray(run.context.flight_context_answers)
+    ? JSON.stringify(run.context.flight_context_answers)
+    : ''
+  const text = `${run.objective} ${safeString(run.context?.description, 4_000)} ${answers} ${JSON.stringify(argumentsValue)}`
+  if (/(?:\bflexible\s+dates?|\bany\s+dates?|\bcheapest\s+dates?|\bdate\s+range|(?:\+\/-?|±)\s*\d+\s*days?|\baround\s+the\s+dates?)/i.test(text)) {
+    return {
+      code: 'flight_flexible_dates_unsupported',
+      message: 'I need one exact departure date and, for a return trip, one exact return date before I can safely continue. Flexible date ranges require a separate comparison flow.',
+      value: { recoverable: true, required: ['exact_departure_date'], supported: false },
+    }
+  }
+  const unsupported = text.match(/\b(?:checked\s+bags?|carry[- ]?on|cabin\s+baggage|baggage|luggage|refundable|non[- ]?refundable|fare\s+(?:brand|family|class)|basic\s+economy|seat\s+selection|choose\s+(?:a\s+)?seat|wheelchair|mobility\s+assistance|special\s+assistance|service\s+animal|\bpet\b|unaccompanied\s+minor|mixed\s+cabin|stopover)\b/i)?.[0]
+  if (unsupported) {
+    return {
+      code: 'flight_constraint_unsupported',
+      message: `I cannot verify the requested ${unsupported} rule reliably on the live provider page. Remove or relax that constraint, or handle it manually after the safe payment handoff, before I continue.`,
+      value: { recoverable: true, unsupported_constraint: unsupported, supported: false },
+    }
+  }
+  return null
 }
 
 function meaningfulFlightContextAnswer(value: unknown) {
@@ -2029,6 +2062,10 @@ async function executeProviderTool(
         message: 'This flow safely searches one-way or round-trip travel only. Multi-city and open-jaw trips need separate leg searches; choose how you want to split the itinerary before I continue.',
         value: { recoverable: true, supported_trip_types: ['one_way', 'round_trip'] },
       }
+    }
+    if (toolName === 'browser.search_flights' && run.capability === 'flight_search') {
+      const unsupported = unsupportedFlightConstraint(run, argumentsValue)
+      if (unsupported) return { kind: 'pause', status: 'waiting_for_user', ...unsupported }
     }
     const operationTypes: Record<string, BrowserOperation['type']> = {
       'browser.navigate': 'navigate',
@@ -2763,11 +2800,12 @@ function agentInstructions(run?: AgentRunRow) {
   ]
   if (specialist.id === 'caspian') {
     shared.push(
-      'Extract origin, destination, dates, trip type, cabin, stop limit, budget, currency, passenger counts, nearby-airport preference, and airline constraints before searching. Use one adult, no children, no infants, no nearby airports, and no preferred or excluded airline only when the user has not supplied another value; do not interrupt for those safe defaults.',
+      'Extract origin, destination, dates, trip type, cabin, stop limit, budget, currency, passenger counts, child ages, infant lap-versus-seat choice, nearby-airport preference, airline constraints, and any departure or arrival time windows before searching. Use one adult, no children, no infants, no nearby airports, and no preferred or excluded airline only when the user has not supplied another value; ask for child ages or infant seat choice when those passengers are present.',
       'The structured flight worker supports one-way and round-trip itineraries. If the user asks for multi-city, open-jaw, or more than one independently dated leg, do not collapse it into a return trip; explain that this flow needs separate leg searches and leave a recoverable user decision.',
       'Use only the task-owned flight browser tools for flight work. Preserve the exact constraints through search, validation, ranking, selection, and recovery.',
       'Treat task_context.flight_context_answers as authoritative. Never repeat a pre-search question whose field is already answered; ask only for genuinely missing facts and group independent missing facts into one concise numbered question when possible. For a payment-handoff task, continue automatically from validated search results with browser__select_flight using the best matching live option; do not return control to Roon or the user at the result-card selection step.',
-      'Validate returned itinerary evidence against the original constraints and stop at the safe booking/payment handoff. Never purchase, enter payment data, or claim a purchase.',
+      'Validate returned itinerary evidence against the original constraints and stop at the safe booking/payment handoff. The worker may follow one labelled Google-to-airline booking handoff and leave the provider page ready for the user; never click payment or purchase, enter payment data, or claim a purchase.',
+      'If the user requests flexible dates, baggage or fare-brand guarantees, seat selection, accessibility or pet handling, mixed cabins, stopovers, or another constraint the structured worker cannot verify, stop with an explicit recoverable explanation instead of silently ignoring it.',
       'You do not have Gmail or Calendar access. If the canonical task needs communication or scheduling, return the typed handoff to the orchestrator; do not improvise those tools.',
     )
   } else {
@@ -3769,9 +3807,12 @@ async function pollBrowserExecutionRun(
           ? { ...checkpoint.flightSearch, searchUrl: evidence.searchUrl, options: evidence.options }
           : checkpoint.flightSearch,
     }
+    const searchDomain = existingHandoff
+      ? new URL(existingHandoff).hostname
+      : new URL(evidence.searchUrl).hostname
     const persistedCheckpoint = await admin.from('browser_execution_sessions').update({
       checkpoint,
-      current_domain: 'www.google.com',
+      current_domain: searchDomain,
       current_url: existingHandoff ? session.current_url : evidence.searchUrl,
       last_observed_at: new Date().toISOString(),
     }).eq('id', session.id).select('id').maybeSingle()
@@ -4100,7 +4141,7 @@ async function pollBrowserExecutionRun(
   }
   const persistedHandoff = await admin.from('browser_execution_sessions').update({
     checkpoint: handoffCheckpoint,
-    current_domain: 'www.google.com',
+    current_domain: new URL(handoffUrl).hostname,
     current_url: handoffUrl,
     payment_boundary_reached: true,
     resumable: true,

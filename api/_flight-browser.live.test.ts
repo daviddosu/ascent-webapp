@@ -32,6 +32,7 @@ it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
     expect(search.options.length).toBeGreaterThan(0)
     expect(search.options.length).toBeLessThanOrEqual(3)
     expect(search.options.every(option => option.searchUrl.startsWith('https://www.google.com/'))).toBe(true)
+    expect(search.options.every(option => option.departureDate === input.departureDate)).toBe(true)
 
     const selection = await resumeFlightSelection(input, search.options, search.options[0]!.id)
     const handoff = new URL(selection.handoffUrl)
@@ -46,5 +47,32 @@ it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
     }
     expect(selection.paymentBoundaryReached).toBe(true)
     expect(selection.resumable).toBe(true)
+  },
+)
+
+it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
+  'searches and selects a live one-way itinerary without a return leg',
+  { timeout: 150_000 },
+  async () => {
+    const input: FlightSearchInput = {
+      originCode: 'LOS',
+      destinationCode: 'LON',
+      departureDate: futureDate(21),
+      returnDate: null,
+      cabin: 'economy',
+      maxStops: 2,
+      budgetAmount: null,
+      currency: 'USD',
+      preferredAirlines: [],
+    }
+    const search = await runLiveFlightSearch(input)
+    expect(search.options.length).toBeGreaterThan(0)
+    expect(search.options.every(option => option.departureDate === input.departureDate)).toBe(true)
+
+    const selection = await resumeFlightSelection(input, search.options, search.options[0]!.id)
+    expect(selection.selectedReturnOption).toBeUndefined()
+    expect(selection.paymentBoundaryReached).toBe(true)
+    expect(selection.resumable).toBe(true)
+    expect(selection.handoffUrl.startsWith('https://')).toBe(true)
   },
 )

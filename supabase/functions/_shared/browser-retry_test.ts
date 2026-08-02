@@ -60,11 +60,14 @@ Deno.test('canonical search preserves passenger and airport constraints for reco
   assertEquals(canonicalFlightSearch({
     origin_code: 'LOS', destination_code: 'LON', departure_date: '2026-09-17',
     cabin: 'economy', adults: 2, children: 1, infants: 1,
+    children_ages: [7], infant_seats: 0,
     allow_nearby_airports: true, excluded_airlines: ['Example Air'],
+    departure_time_window: '06:00-12:00', arrival_time_window: null,
   }), {
     origin: 'LOS', destination: 'LON', departDate: '2026-09-17', cabin: 'economy',
-    adults: 2, children: 1, infants: 1, allowNearbyAirports: true,
-    excludedAirlines: ['Example Air'], stage: 'searching',
+    adults: 2, children: 1, childrenAges: [7], infants: 1, infantSeatCount: 0,
+    allowNearbyAirports: true, excludedAirlines: ['Example Air'],
+    departureTimeWindow: '06:00-12:00', arrivalTimeWindow: null, stage: 'searching',
   })
 })
 
@@ -73,6 +76,9 @@ const canonicalOption = {
   airline: 'Example Air',
   departureTime: '08:00 AM',
   arrivalTime: '03:00 PM',
+  departureDate: '2026-09-17',
+  arrivalDate: '2026-09-17',
+  arrivalDayOffset: 0,
   duration: '7 hr',
   durationMinutes: 420,
   route: 'AAA–BBB',
@@ -102,6 +108,14 @@ Deno.test('a retry payload cannot overwrite an already validated flight result',
   assertEquals(validatedFlightEvidence({
     searchUrl: canonicalOption.searchUrl,
     options: [canonicalOption, canonicalOption],
+  }), null)
+  assertEquals(validatedFlightEvidence({
+    searchUrl: canonicalOption.searchUrl,
+    options: [{ ...canonicalOption, arrivalDate: '2026-09-16' }],
+  }), null)
+  assertEquals(validatedFlightEvidence({
+    searchUrl: canonicalOption.searchUrl,
+    options: [{ ...canonicalOption, arrivalDate: '2026-09-18', arrivalDayOffset: 0 }],
   }), null)
 })
 

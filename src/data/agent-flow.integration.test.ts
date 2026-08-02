@@ -285,7 +285,9 @@ describe('mocked AgentRun integration journeys', () => {
       excluded_airlines: [],
       adults: 1,
       children: 0,
+      children_ages: [],
       infants: 0,
+      infant_seats: 0,
       allow_nearby_airports: false,
     })
     flow.handoff('Choose a flight option to continue.')

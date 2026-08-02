@@ -15,7 +15,7 @@ ShotCount uses a signed Vercel Node worker for tasks without a first-party API. 
 - Generic clicks can only follow safe links. Form submission is a separate typed tool that always requires exact approval.
 - Public cookie consent is rejected rather than accepted.
 - No card data is entered or stored.
-- No provider Continue/payment button is clicked.
+- No provider payment or purchase button is clicked. A single labelled Google-to-airline booking handoff may be opened so the user is left at the provider's payment-ready page.
 
 ## Public-web tasks
 
@@ -36,10 +36,16 @@ State is replayable rather than tied to a long-lived Chromium process: the initi
 - optional budget;
 - currency;
 - optional preferred airlines.
+- optional excluded airlines;
+- passenger counts, child ages, and infant lap-versus-seat choice;
+- optional local departure and arrival time windows;
+- optional nearby-airport preference.
 
 The worker opens a real Google Flights result page, parses structured visible itineraries, enforces the stops and budget constraints, and returns at most three distinct choices labelled Best overall, Cheapest, and Fastest where possible.
 
-The saved option contains only the observed airline, times, route, stops, duration, price, currency, provider, stable option ID, and search URL. The normal ShotCount task inspector renders these options.
+The saved option contains only the observed airline, times, route, stops, duration, price, currency, provider, stable option ID, search URL, and verified date/overnight metadata. Hard constraints are applied again during selection, so an over-budget, excluded-airline, out-of-window, or over-stop card cannot be selected.
+
+Flexible date ranges, baggage or fare-brand guarantees, seat selection, accessibility or pet handling, mixed cabins, stopovers, and multi-city/open-jaw itineraries are explicit recoverable stops. The worker does not silently claim those constraints were enforced.
 
 ## Resume and handoff
 
@@ -51,7 +57,7 @@ When the user chooses an option:
 4. If price or availability changed, it stops and returns a recoverable state.
 5. It selects the outbound and return legs.
 6. It verifies the `https://www.google.com/travel/flights/booking` itinerary.
-7. Where Google exposes a direct airline booking option, it opens that fixed “Continue to book with … airline” control and verifies the resulting HTTPS provider handoff. If the provider handoff does not load safely, it falls back to the verified Google booking-options URL.
+7. Where Google exposes a labelled direct airline booking option, it opens that one navigation-only control and verifies the resulting public HTTPS provider handoff. If the provider handoff does not load safely, it falls back to the verified Google booking-options URL.
 8. It sets `payment_boundary_reached = true`.
 9. ShotCount shows Continue to payment and leaves the task `waiting_for_user`.
 

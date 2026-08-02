@@ -68,6 +68,8 @@ export type AgentFlightOption = {
   searchUrl?: string
   departureDate?: string
   returnDate?: string | null
+  arrivalDate?: string
+  arrivalDayOffset?: number
 }
 
 export type AgentRun = {

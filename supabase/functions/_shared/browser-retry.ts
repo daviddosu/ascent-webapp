@@ -23,9 +23,13 @@ export type CanonicalFlightSearch = {
   currency?: string
   adults?: number
   children?: number
+  childrenAges?: number[]
   infants?: number
+  infantSeatCount?: number
   allowNearbyAirports?: boolean
   excludedAirlines?: string[]
+  departureTimeWindow?: string | null
+  arrivalTimeWindow?: string | null
   stage: 'searching' | 'results_ready' | 'selecting' | 'handoff'
 }
 
@@ -111,8 +115,18 @@ export function validatedFlightEvidence(value: unknown) {
     const id = typeof candidate.id === 'string' ? candidate.id.trim() : ''
     const departureDateValid = candidate.departureDate === undefined || validDate(candidate.departureDate)
     const returnDateValid = candidate.returnDate === undefined || candidate.returnDate === null || validDate(candidate.returnDate)
+    const arrivalDateValid = candidate.arrivalDate === undefined || validDate(candidate.arrivalDate)
+    const arrivalOffsetValid = candidate.arrivalDayOffset === undefined ||
+      (Number.isInteger(Number(candidate.arrivalDayOffset)) && Number(candidate.arrivalDayOffset) >= 0)
     const datesOrdered = typeof candidate.departureDate !== 'string' || candidate.returnDate === undefined || candidate.returnDate === null ||
       Date.parse(`${String(candidate.returnDate)}T00:00:00Z`) > Date.parse(`${candidate.departureDate}T00:00:00Z`)
+    const arrivalDateOrdered = typeof candidate.arrivalDate !== 'string' || typeof candidate.departureDate !== 'string' ||
+      Date.parse(`${candidate.arrivalDate}T00:00:00Z`) >= Date.parse(`${candidate.departureDate}T00:00:00Z`)
+    const arrivalDateMatchesOffset = typeof candidate.arrivalDate !== 'string' ||
+      typeof candidate.departureDate !== 'string' ||
+      candidate.arrivalDayOffset === undefined ||
+      Date.parse(`${candidate.arrivalDate}T00:00:00Z`) - Date.parse(`${candidate.departureDate}T00:00:00Z`) ===
+        Number(candidate.arrivalDayOffset) * 24 * 60 * 60 * 1000
     const valid = Boolean(
       id && !ids.has(id) &&
       candidate.provider === 'Google Flights' &&
@@ -126,7 +140,7 @@ export function validatedFlightEvidence(value: unknown) {
       Number.isInteger(Number(candidate.stopCount)) && Number(candidate.stopCount) >= 0 &&
       Number.isFinite(Number(candidate.amount)) && Number(candidate.amount) >= 0 &&
       typeof candidate.price === 'string' && candidate.price.trim() &&
-      departureDateValid && returnDateValid && datesOrdered
+      departureDateValid && returnDateValid && arrivalDateValid && arrivalOffsetValid && datesOrdered && arrivalDateOrdered && arrivalDateMatchesOffset
     )
     if (valid) ids.add(id)
     return valid
@@ -175,12 +189,24 @@ export function canonicalFlightSearch(argumentsValue: Record<string, unknown>, s
     ...(argumentsValue.currency ? { currency: String(argumentsValue.currency).trim().toUpperCase() } : {}),
     ...(Number.isFinite(Number(argumentsValue.adults)) ? { adults: Number(argumentsValue.adults) } : {}),
     ...(Number.isFinite(Number(argumentsValue.children)) ? { children: Number(argumentsValue.children) } : {}),
+    ...(Array.isArray(argumentsValue.children_ages)
+      ? { childrenAges: argumentsValue.children_ages.map(value => Number(value)) }
+      : {}),
     ...(Number.isFinite(Number(argumentsValue.infants)) ? { infants: Number(argumentsValue.infants) } : {}),
+    ...(Number.isFinite(Number(argumentsValue.infant_seats))
+      ? { infantSeatCount: Number(argumentsValue.infant_seats) }
+      : {}),
     ...(typeof argumentsValue.allow_nearby_airports === 'boolean'
       ? { allowNearbyAirports: argumentsValue.allow_nearby_airports }
       : {}),
     ...(Array.isArray(argumentsValue.excluded_airlines)
       ? { excludedAirlines: argumentsValue.excluded_airlines.map(value => String(value).trim()).filter(Boolean) }
+      : {}),
+    ...(typeof argumentsValue.departure_time_window === 'string' || argumentsValue.departure_time_window === null
+      ? { departureTimeWindow: argumentsValue.departure_time_window as string | null }
+      : {}),
+    ...(typeof argumentsValue.arrival_time_window === 'string' || argumentsValue.arrival_time_window === null
+      ? { arrivalTimeWindow: argumentsValue.arrival_time_window as string | null }
       : {}),
     stage,
   }

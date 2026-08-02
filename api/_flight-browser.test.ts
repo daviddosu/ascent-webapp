@@ -13,6 +13,8 @@ import {
   normalizeFlightSearchInput,
   parseGoogleFlightListItem,
   rankFlightOptions,
+  flightOptionSatisfiesConstraints,
+  safeExternalProviderHandoffUrl,
   shouldReloadFlightResults,
   type FlightSearchInput,
 } from './_flight-browser'
@@ -79,6 +81,24 @@ describe('flight browser worker', () => {
     expect(url.searchParams.get('q')).not.toContain('returning')
   })
 
+  it('carries child ages, infant seat choice, and local time windows into the provider query', () => {
+    const url = new URL(buildGoogleFlightsUrl({
+      ...input,
+      returnDate: null,
+      childCount: 1,
+      childAges: [6],
+      infantCount: 1,
+      infantSeatCount: 1,
+      departureTimeWindow: '06:00-11:30',
+      arrivalTimeWindow: '18:00-23:59',
+    }))
+    const query = url.searchParams.get('q') ?? ''
+    expect(query).toContain('ages 6')
+    expect(query).toContain('1 infant seat')
+    expect(query).toContain('depart 06:00-11:30')
+    expect(query).toContain('arrive 18:00-23:59')
+  })
+
   it('normalizes structured constraints and rejects impossible calendar dates', () => {
     expect(normalizeFlightSearchInput({
       ...input,
@@ -88,6 +108,7 @@ describe('flight browser worker', () => {
       returnDate: null,
       adultCount: 2,
       childCount: 1,
+      childAges: [7],
       infantCount: 1,
       excludedAirlines: [' KLM ', 'KLM'],
       allowNearbyAirports: true,
@@ -97,11 +118,15 @@ describe('flight browser worker', () => {
       adultCount: 2,
       childCount: 1,
       infantCount: 1,
+      infantSeatCount: 0,
       excludedAirlines: ['KLM'],
       allowNearbyAirports: true,
     })
     expect(() => normalizeFlightSearchInput({ ...input, departureDate: '2026-02-30' })).toThrow('valid YYYY-MM-DD')
     expect(() => normalizeFlightSearchInput({ ...input, returnDate: input.departureDate })).toThrow('return date')
+    expect(() => normalizeFlightSearchInput({ ...input, childCount: 1, childAges: [] })).toThrow('Passenger counts')
+    expect(() => normalizeFlightSearchInput({ ...input, infantCount: 1, infantSeatCount: 2 })).toThrow('Passenger counts')
+    expect(() => normalizeFlightSearchInput({ ...input, departureTimeWindow: '25:00-26:00' })).toThrow('Time windows')
   })
 
   it('accepts either normalized Google host alias for the flight worker', () => {
@@ -201,6 +226,8 @@ describe('flight browser worker', () => {
       provider: 'Google Flights',
       departureDate: input.departureDate,
       returnDate: input.returnDate,
+      arrivalDayOffset: 1,
+      arrivalDate: '2026-07-31',
     })
     expect(parsed?.id).toMatch(/^[a-f0-9]{24}$/)
   })
@@ -224,6 +251,15 @@ describe('flight browser worker', () => {
     expect(ranked).toEqual([])
   })
 
+  it('enforces departure and arrival time windows at ranking and selection boundaries', () => {
+    const constrained = { ...input, departureTimeWindow: '22:00-23:59', arrivalTimeWindow: '07:00-08:00' }
+    const ranked = rankFlightOptions(results, constrained)
+    expect(ranked).toHaveLength(1)
+    expect(ranked[0]).toMatchObject({ airline: 'KLM', departureTime: '10:10 PM' })
+    expect(flightOptionSatisfiesConstraints(ranked[0]!, constrained)).toBe(true)
+    expect(flightOptionSatisfiesConstraints({ ...ranked[0]!, departureTime: '08:00 AM' }, constrained)).toBe(false)
+  })
+
   it('parses 24-hour times and localized decimal prices', () => {
     const parsed = parseGoogleFlightListItem(
       `08:05\n–\n16:30+1\nExample Air\n9 hr 25 min\nAAA – BBB\n1 stop\n€1.234,50`,
@@ -237,5 +273,15 @@ describe('flight browser worker', () => {
       durationMinutes: 565,
       route: 'AAA–BBB',
     })
+  })
+
+  it('accepts only safe public HTTPS airline handoffs', () => {
+    expect(safeExternalProviderHandoffUrl('https://www.klm.com/booking?x=1')).toBe('https://www.klm.com/booking?x=1')
+    expect(safeExternalProviderHandoffUrl('http://www.klm.com/booking')).toBe('')
+    expect(safeExternalProviderHandoffUrl('https://127.0.0.1/booking')).toBe('')
+    expect(safeExternalProviderHandoffUrl('https://localhost/booking')).toBe('')
+    expect(safeExternalProviderHandoffUrl('https://www.google.com/travel/flights/booking')).toBe('')
+    expect(safeExternalProviderHandoffUrl('https://user:secret@www.klm.com/booking')).toBe('')
+    expect(safeExternalProviderHandoffUrl('https://www.klm.com:8443/booking')).toBe('')
   })
 })

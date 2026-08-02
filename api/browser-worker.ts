@@ -106,8 +106,18 @@ export function flightSearchInputFromArguments(argumentsValue: Record<string, un
       : [],
     adultCount: Number(argumentsValue.adults ?? 1),
     childCount: Number(argumentsValue.children ?? 0),
+    childAges: Array.isArray(argumentsValue.children_ages)
+      ? argumentsValue.children_ages.map(value => Number(value))
+      : [],
     infantCount: Number(argumentsValue.infants ?? 0),
+    infantSeatCount: Number(argumentsValue.infant_seats ?? 0),
     allowNearbyAirports: argumentsValue.allow_nearby_airports === true,
+    departureTimeWindow: argumentsValue.departure_time_window === null
+      ? null
+      : String(argumentsValue.departure_time_window ?? ''),
+    arrivalTimeWindow: argumentsValue.arrival_time_window === null
+      ? null
+      : String(argumentsValue.arrival_time_window ?? ''),
   })
 }
 

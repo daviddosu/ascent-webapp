@@ -526,8 +526,17 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       },
       adults: { type: 'integer', minimum: 1, maximum: 9 },
       children: { type: 'integer', minimum: 0, maximum: 8 },
+      children_ages: {
+        type: 'array',
+        items: { type: 'integer', minimum: 2, maximum: 11 },
+        minItems: 0,
+        maxItems: 8,
+      },
       infants: { type: 'integer', minimum: 0, maximum: 4 },
+      infant_seats: { type: 'integer', minimum: 0, maximum: 4 },
       allow_nearby_airports: { type: 'boolean' },
+      departure_time_window: nullableString('Optional local departure time window, HH:MM-HH:MM.', 11),
+      arrival_time_window: nullableString('Optional local arrival time window, HH:MM-HH:MM.', 11),
     }, [
       'session_id',
       'origin_code',
@@ -542,8 +551,12 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       'excluded_airlines',
       'adults',
       'children',
+      'children_ages',
       'infants',
+      'infant_seats',
       'allow_nearby_airports',
+      'departure_time_window',
+      'arrival_time_window',
     ]),
     strict: true,
   },
@@ -696,6 +709,15 @@ function validateDateOnly(value: unknown) {
   const parsed = new Date(`${value}T00:00:00Z`)
   return !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === value
+}
+
+function validateTimeWindow(value: unknown) {
+  if (value === null) return true
+  if (typeof value !== 'string') return false
+  const match = value.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/)
+  if (!match) return false
+  return [Number(match[1]), Number(match[3])].every(hour => hour >= 0 && hour <= 23) &&
+    [Number(match[2]), Number(match[4])].every(minute => minute >= 0 && minute <= 59)
 }
 
 function validateString(value: unknown, maximum: number, allowEmpty = false) {
@@ -878,11 +900,19 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         Number.isInteger(value.children) &&
         Number(value.children) >= 0 &&
         Number(value.children) <= 8 &&
+        Array.isArray(value.children_ages) &&
+        value.children_ages.length === Number(value.children) &&
+        value.children_ages.every((age: unknown) => Number.isInteger(age) && Number(age) >= 2 && Number(age) <= 11) &&
         Number.isInteger(value.infants) &&
         Number(value.infants) >= 0 &&
         Number(value.infants) <= 4 &&
         Number(value.infants) <= Number(value.adults) &&
-        typeof value.allow_nearby_airports === 'boolean'
+        Number.isInteger(value.infant_seats) &&
+        Number(value.infant_seats) >= 0 &&
+        Number(value.infant_seats) <= Number(value.infants) &&
+        typeof value.allow_nearby_airports === 'boolean' &&
+        validateTimeWindow(value.departure_time_window) &&
+        validateTimeWindow(value.arrival_time_window)
     case 'browser.select_flight':
       return validateString(value.session_id, 64) &&
         /^[a-f0-9]{16,128}$/i.test(String(value.option_id))
