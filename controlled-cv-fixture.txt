@@ -1,0 +1,17 @@
+CONTROLLED ACCEPTANCE FIXTURE — NOT A REAL APPLICANT
+
+Alex Example
+Lagos, Nigeria
+
+SUMMARY
+Product builder working on tools for small businesses.
+
+EXPERIENCE
+Founder, Example Labs — 2024 to present
+Built and tested a workflow product with five controlled pilot users.
+
+EDUCATION
+BSc Computer Science, Example University — 2023
+
+SKILLS
+Product research, TypeScript, user interviews

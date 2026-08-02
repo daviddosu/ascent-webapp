@@ -44,4 +44,18 @@ Deno.test('conditional ledger does not intercept read-only Calendar availability
   assertEquals(requiredEffectsForObjective('Find a conflict-free one-hour slot on my calendar. Do not create an event.'), [])
   assertEquals(requiredEffectsForObjective('Create a 45-minute meeting on my calendar.'), ['calendar_write'])
   assertEquals(requiredEffectsForObjective('Move the meeting and email the attendee.'), ['calendar_write', 'gmail_send'])
+  assertEquals(requiredEffectsForObjective('Schedule a meeting without sending an email.'), ['calendar_write'])
+  assertEquals(requiredEffectsForObjective('Create a calendar event; no email or invitation.'), ['calendar_write'])
+  assertEquals(requiredEffectsForObjective('Do not reply; summarize the email.'), [])
+})
+
+Deno.test('Calendar create is also ordered before a notification when the task requires both', () => {
+  assertEquals(verifiedCrossToolStage([
+    { tool_name: 'gmail.send_message', status: 'succeeded', provider_action_id: 'mail', completed_at: '2026-09-17T09:59:00Z' },
+    { tool_name: 'calendar.create_event', status: 'succeeded', provider_action_id: 'event', completed_at: '2026-09-17T10:00:00Z' },
+  ]).stage, 'out_of_order')
+  assertEquals(verifiedCrossToolStage([
+    { tool_name: 'calendar.create_event', status: 'succeeded', provider_action_id: 'event', completed_at: '2026-09-17T10:00:00Z' },
+    { tool_name: 'gmail.send_message', status: 'succeeded', provider_action_id: 'mail', completed_at: '2026-09-17T10:01:00Z' },
+  ]).complete, true)
 })

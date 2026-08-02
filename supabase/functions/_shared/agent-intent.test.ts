@@ -38,6 +38,30 @@ describe('shared agent intent', () => {
     ).outcomeType).toBe('external_change')
   })
 
+  it.each(['Tell Ada about the meeting.', 'Ask Ada whether Tuesday works.', 'Remind Ada about the appointment.'])('%s is an affirmative Gmail communication', description => {
+    expect(classifySharedAgentIntent('Roon communication', description)).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'external_change',
+    })
+  })
+
+  it('keeps email nouns in read-only questions from becoming sends', () => {
+    expect(classifySharedAgentIntent('Roon research', 'Tell me about the latest email.')).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'prepared_result',
+    })
+  })
+
+  it('keeps advisory Calendar questions read-only', () => {
+    expect(classifySharedAgentIntent('Roon advice', 'Should I schedule a meeting with Ada?')).toEqual({
+      capability: 'calendar',
+      strategy: 'structured',
+      outcomeType: 'prepared_result',
+    })
+  })
+
   it('treats syncing a dated pitch to a recipient email as a calendar invite workflow', () => {
     expect(classifySharedAgentIntent(
       'Email David',
@@ -69,6 +93,120 @@ describe('shared agent intent', () => {
       capability: 'gmail',
       strategy: 'structured',
       outcomeType: 'external_change',
+    })
+    expect(classifySharedAgentIntent(
+      'Email Ada',
+      'Tell Ada about scheduling the meeting next week.',
+    )).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'external_change',
+    })
+    expect(classifySharedAgentIntent(
+      'Email Ada',
+      'Ask Ada whether scheduling the meeting next week works.',
+    )).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'external_change',
+    })
+    expect(classifySharedAgentIntent(
+      'Email Ada',
+      'Tell Ada about the calendar invite already on the schedule.',
+    )).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'external_change',
+    })
+    expect(classifySharedAgentIntent(
+      'Tell Ada',
+      'Tell Ada about the calendar invite already on the schedule.',
+    ).capability).toBe('gmail')
+    expect(classifySharedAgentIntent(
+      'Ask Ada',
+      'Ask Ada to put the meeting on my calendar.',
+    ).capability).toBe('gmail')
+    expect(classifySharedAgentIntent(
+      'Tell Ada',
+      'Tell Ada about the meeting; do not add it to my calendar.',
+    ).capability).toBe('gmail')
+  })
+
+  it('keeps explicitly negated invites and calendar placement as email-only communication', () => {
+    expect(classifySharedAgentIntent(
+      'Email Ada',
+      'Tell Ada the meeting is tomorrow; do not invite her or put it on her calendar.',
+    )).toEqual({
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: 'external_change',
+    })
+    expect(classifySharedAgentIntent(
+      'Create the event and email Ada',
+      'Create the event, but do not invite anyone. Send Ada a confirmation email.',
+    ).capability).toBe('scheduling')
+  })
+
+  it.each([
+    'Invite Ada to the meeting next week.',
+    'Send Ada a meeting invitation.',
+    'Check Ada\'s availability for next week, then propose a time.',
+    'Check Ada availability for next week, then propose a time.',
+    'Put the meeting in Ada\'s inbox for Thursday at 2 p.m.',
+  ])('recognises person-to-person coordination: %s', description => {
+    expect(classifySharedAgentIntent('Coordinate with Ada', description)).toEqual({
+      capability: 'scheduling',
+      strategy: 'hybrid',
+      outcomeType: 'external_change',
+    })
+  })
+
+  it('keeps a personal calendar placement out of the scheduling negotiation path', () => {
+    expect(classifySharedAgentIntent(
+      'Add event to my calendar',
+      'Add the event to my calendar for Thursday at 2 p.m.',
+    )).toEqual({
+      capability: 'calendar',
+      strategy: 'structured',
+      outcomeType: 'external_change',
+    })
+  })
+
+  it.each([
+    'Arrange time with Ada next week.',
+    'Find a time with Ada next week.',
+    'Coordinate with Ada about a one-hour call.',
+  ])('recognises ordinary-language person-to-person coordination without a Calendar keyword: %s', description => {
+    expect(classifySharedAgentIntent('Coordinate availability', description)).toEqual({
+      capability: 'scheduling',
+      strategy: 'hybrid',
+      outcomeType: 'external_change',
+    })
+  })
+
+  it('keeps personal availability as a personal Calendar request', () => {
+    expect(classifySharedAgentIntent('Find availability', 'Check my availability for next week.')).toEqual({
+      capability: 'calendar',
+      strategy: 'structured',
+      outcomeType: 'prepared_result',
+    })
+  })
+
+  it.each([
+    ['Create event', 'Create an event tomorrow.', 'calendar', 'external_change'],
+    ['Schedule meeting', 'Schedule a meeting tomorrow.', 'scheduling', 'external_change'],
+    ['Set up meeting', 'Set up a meeting tomorrow.', 'scheduling', 'external_change'],
+    ['Reschedule meeting', 'Reschedule the meeting to Friday.', 'scheduling', 'external_change'],
+    ['Find a free slot', 'Find a free time with Ada next week.', 'scheduling', 'external_change'],
+    ['Find availability', 'Find a free slot on my calendar next week.', 'calendar', 'prepared_result'],
+    ['Draft only', 'Draft an email about tomorrow\'s meeting; do not send it.', 'gmail', 'prepared_result'],
+    ['Write and send', 'Write and send the email to Ada.', 'gmail', 'external_change'],
+    ['No reply', 'Do not reply to the email; summarize it.', 'gmail', 'prepared_result'],
+  ] as const)('%s stays in the intended communication capability', (_label, description, capability, outcomeType) => {
+    expect(classifySharedAgentIntent(_label, description)).toEqual({
+      capability,
+      strategy: capability === 'scheduling' ? 'hybrid' : 'structured',
+      outcomeType,
     })
   })
 

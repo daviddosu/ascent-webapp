@@ -146,6 +146,38 @@ Deno.test('calendar writes reject invalid time windows', () => {
     timezone: 'Africa/Lagos',
     notify_attendees: false,
   }), false)
+  assertEquals(validateAgentToolArguments('calendar.create_event', {
+    calendar_id: 'primary',
+    summary: 'ShotCount launch',
+    description: '',
+    start: '2026-07-30T15:00:00',
+    end: '2026-07-30T15:30:00',
+    timezone: 'not/a-timezone',
+    attendee_emails: [],
+    add_google_meet: false,
+    notify_attendees: false,
+  }), false)
+})
+
+Deno.test('Gmail drafts require coherent reply identity and distinct recipients', () => {
+  const base = {
+    to: ['blessing@example.com'],
+    cc: [],
+    bcc: [],
+    subject: 'Hello',
+    body_text: 'Hello there.',
+    thread_id: null,
+    in_reply_to_message_id: null,
+  }
+  assertEquals(validateAgentToolArguments('gmail.create_draft', {
+    ...base,
+    thread_id: 'thread-1',
+    in_reply_to_message_id: null,
+  }), false)
+  assertEquals(validateAgentToolArguments('gmail.create_draft', {
+    ...base,
+    cc: ['blessing@example.com'],
+  }), false)
 })
 
 Deno.test('calendar reads require a bounded forward time window and at least one calendar', () => {

@@ -457,7 +457,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'calendar.delete_event',
-    description: 'Cancel one exact approved calendar event.',
+    description: 'Cancel one exact approved calendar event. Set notify_attendees true only when the user explicitly wants cancellation notices; otherwise set it false.',
     parameters: objectSchema({
       calendar_id: stringValue('Calendar ID.', 320),
       event_id: stringValue('Google Calendar event ID.', 256),

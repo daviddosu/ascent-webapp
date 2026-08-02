@@ -170,9 +170,12 @@ describe('mocked AgentRun integration journeys', () => {
     flow.execute('calendar.create_event', {
       calendar_id: 'primary',
       summary: 'ShotCount launch',
+      description: '',
       start: '2026-07-30T14:00:00+01:00',
       end: '2026-07-30T14:30:00+01:00',
       attendee_emails: ['blessing@example.com'],
+      add_google_meet: false,
+      notify_attendees: true,
     })
     expect(flow.provider.count('calendar.create_event')).toBe(0)
     flow.approve()
@@ -216,9 +219,12 @@ describe('mocked AgentRun integration journeys', () => {
     flow.execute('calendar.create_event', {
       calendar_id: 'primary',
       summary: 'ShotCount launch',
+      description: '',
       start: '2026-07-30T14:00:00+01:00',
       end: '2026-07-30T14:30:00+01:00',
       attendee_emails: ['blessing@example.com'],
+      add_google_meet: false,
+      notify_attendees: true,
     })
     flow.approve()
     expect(flow.complete({ externalChangeConfirmed: true })).toBe(true)

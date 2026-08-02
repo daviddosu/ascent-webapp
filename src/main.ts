@@ -3052,6 +3052,8 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
   const recipients = approvalPreviewValue(approval, 'to')
   const ccRecipients = approvalPreviewValue(approval, 'cc')
   const bccRecipients = approvalPreviewValue(approval, 'bcc')
+  const calendarAttendees = approvalPreviewValue(approval, 'attendee_emails')
+  const notifyAttendees = approvalPreviewValue(approval, 'notify_attendees')
   const title = approvalPreviewValue(approval, approval.kind === 'calendar_write' ? 'summary' : 'subject')
   const body = approvalPreviewValue(approval, approval.kind === 'calendar_write' ? 'description' : 'body_text')
   const startsAt = approvalPreviewValue(approval, 'start')
@@ -3075,6 +3077,8 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
       ${Array.isArray(ccRecipients) && ccRecipients.length ? `<dl><dt>CC</dt><dd>${escapeHtml(ccRecipients.join(', '))}</dd></dl>` : ''}
       ${Array.isArray(bccRecipients) && bccRecipients.length ? `<dl><dt>BCC</dt><dd>${escapeHtml(bccRecipients.join(', '))}</dd></dl>` : ''}
+      ${approval.kind === 'calendar_write' && Array.isArray(calendarAttendees) && calendarAttendees.length ? `<dl><dt>Attendees</dt><dd>${escapeHtml(calendarAttendees.join(', '))}</dd></dl>` : ''}
+      ${approval.kind === 'calendar_write' && typeof notifyAttendees === 'boolean' ? `<dl><dt>Notifications</dt><dd>${notifyAttendees ? 'Attendees will be notified.' : 'No attendee notifications.'}</dd></dl>` : ''}
       ${title || approval.kind === 'calendar_write' ? approval.kind === 'send_email'
         ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${task.id}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject" ${busy || undoing ? 'disabled' : ''}></label>`
         : approval.kind === 'calendar_write'

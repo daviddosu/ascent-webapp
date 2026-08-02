@@ -22,6 +22,7 @@ const demoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migratio
 const activeDemoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migrations/202607310002_complete_active_demo_flight_handoffs.sql'), 'utf8')
 const taskDescriptionPrivacyMigration = readFileSync(resolve(root, 'supabase/migrations/202607250003_keep_task_descriptions_private.sql'), 'utf8')
 const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
+const specialistSource = readFileSync(resolve(root, 'supabase/functions/_shared/specialists.ts'), 'utf8')
 const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
 const googleOAuthCallbackFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-callback/index.ts'), 'utf8')
 const googleScopes = readFileSync(resolve(root, 'supabase/functions/_shared/google-scopes.ts'), 'utf8')
@@ -529,6 +530,8 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('Add an event title and valid ISO start and end times')
     expect(mainUi).toContain('data-agent-calendar-summary')
     expect(mainUi).toContain('data-agent-calendar-description')
+    expect(mainUi).toContain('notify_attendees')
+    expect(mainUi).toContain('Attendees will be notified.')
     expect(mainUi).toContain('editAgentCalendarApproval')
   })
 
@@ -567,6 +570,67 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('Date.now() + 1_500')
     expect(mainUi).toContain("run.status === 'waiting_external'")
     expect(mainUi).toContain('setInterval(() => void pollWaitingAgentRuns(), 5_000)')
+  })
+
+  it('exposes a same-run new-instruction path after a scheduling decline', () => {
+    expect(taskAgentFunction).toContain('restartingDeclinedNegotiation')
+    expect(taskAgentFunction).toContain('New authoritative scheduling instruction: ${value}')
+    expect(taskAgentFunction).toContain('recoverable_with_new_user_instruction: true')
+    const terminalDecline = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('safeString(current.context?.negotiation_status, 40) === \'declined\''),
+      taskAgentFunction.indexOf('let history = await loadModelHistory(admin, current)'),
+    )
+    expect(terminalDecline).toContain("status: 'needs_context'")
+    expect(mainUi).toContain("context && existing?.status === 'needs_context' && existing.durable")
+  })
+
+  it('blocks exact context-question loops after the user has already answered', () => {
+    expect(taskAgentFunction).toContain('answered_context_questions')
+    expect(taskAgentFunction).toContain('answeredQuestions.includes(normalizedQuestion)')
+    expect(taskAgentFunction).toContain("error_code: 'duplicate_context_question'")
+  })
+
+  it('does not allow a scheduling Calendar write before attendee agreement exists', () => {
+    const guard = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('function schedulingToolGuard'),
+      taskAgentFunction.indexOf('function calendarMustPrecedeEmail'),
+    )
+    expect(guard).toContain("if (run.capability !== 'scheduling') return null")
+    expect(guard).toContain("'calendar.create_event', 'calendar.update_event', 'calendar.delete_event'")
+    expect(guard).toContain('!negotiationIsAgreed(run)')
+  })
+
+  it('does not route personal Calendar availability checks through attendee negotiation', () => {
+    expect(specialistSource).toContain('calendarCoordinationIsAffirmed')
+    expect(specialistSource).not.toContain('if (hasCalendar && hasScheduling && (')
+    expect(taskAgentFunction).toContain('calendarAttendeeCoordinationIsAffirmed')
+  })
+
+  it('never starts an unscoped reply watch that could accept an unknown sender', () => {
+    expect(taskAgentFunction).toContain('negotiationWatchAttendees')
+    expect(taskAgentFunction).toContain("error_code: 'negotiation_recipient_required'")
+    expect(taskAgentFunction).toContain("expected_to.map(normalizeEmail)")
+  })
+
+  it('blocks external communication writes that the task explicitly negates', () => {
+    expect(taskAgentFunction).toContain('function requestedCommunicationToolGuard')
+    expect(taskAgentFunction).toContain("error_code: 'gmail_send_not_requested'")
+    expect(taskAgentFunction).toContain("error_code: 'calendar_write_not_requested'")
+    expect(taskAgentFunction).toContain("actionIsNegated(text, 'gmail_send')")
+  })
+
+  it('makes Calendar attendee notification intent explicit on both model and approval paths', () => {
+    expect(taskAgentFunction).toContain('function calendarNotificationGuard')
+    expect(taskAgentFunction).toContain("error_code: 'calendar_notification_required'")
+    expect(taskAgentFunction).toContain("error_code: 'calendar_notification_not_requested'")
+    expect(taskAgentFunction).toContain("requestedCommunicationToolGuard(current, toolName, argumentsValue)")
+    expect(taskAgentFunction).toContain("requestedCommunicationToolGuard(run, action.tool_name, action.arguments as Record<string, unknown>)")
+  })
+
+  it('resolves named Roon recipients from a generic title plus its Description', () => {
+    expect(taskAgentFunction).toContain('function namedRecipientsFromObjective(objective: string, description = \'\')')
+    expect(taskAgentFunction).toContain('safeString(run.context?.description, 4_000)')
+    expect(taskAgentFunction).toContain("evidence: 'user_provided_context'")
   })
 
   it('keeps selected-flight recovery bounded until the browser proves the handoff', () => {

@@ -15,7 +15,7 @@ import {
   updatePreparedGmailDraft,
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, flightContextField, needsSharedAgentContext } from '../_shared/agent-intent.ts'
-import { actionIsAffirmed, classifyNegotiationReply, extractEmailAddresses, normalizeContextQuestion, normalizeEmail } from '../_shared/communication-safety.ts'
+import { actionIsAffirmed, actionIsNegated, calendarAttendeeCoordinationIsAffirmed, calendarInviteIsAffirmed, calendarWriteIsAffirmed, classifyNegotiationReply, extractEmailAddresses, isAutomatedEmailReply, normalizeContextQuestion, normalizeEmail } from '../_shared/communication-safety.ts'
 import {
   REASONING_MODEL_ID,
   createSpecialistHandoff,
@@ -1651,7 +1651,10 @@ async function executeProviderTool(
     const question = safeString(argumentsValue.question, 400)
     const normalizedQuestion = normalizeContextQuestion(question)
     const previousQuestion = normalizeContextQuestion(run.context?.last_context_question)
-    if (normalizedQuestion && normalizedQuestion === previousQuestion) {
+    const answeredQuestions = Array.isArray(run.context?.answered_context_questions)
+      ? run.context.answered_context_questions.map(value => normalizeContextQuestion(value)).filter(Boolean)
+      : []
+    if (normalizedQuestion && (normalizedQuestion === previousQuestion || answeredQuestions.includes(normalizedQuestion))) {
       return {
         kind: 'output',
         value: {
@@ -2050,7 +2053,18 @@ async function executeProviderTool(
   if (toolName === 'gmail.wait_for_reply') {
     const timeoutDays = Math.min(30, Math.max(1, Number(argumentsValue.timeout_days)))
     const requestedContact = normalizeEmail(argumentsValue.contact_email)
-    const requiredAttendees = negotiationRequiredAttendees(run, requestedContact)
+    const requiredAttendees = await negotiationWatchAttendees(admin, run, requestedContact)
+    if (!requiredAttendees.length) {
+      return {
+        kind: 'output',
+        value: {
+          ok: false,
+          error_code: 'negotiation_recipient_required',
+          error_message: 'Resolve the intended respondent or every required scheduling attendee before starting a reply watch. Never accept an unknown sender as agreement.',
+        },
+        publicSummary: 'A canonical scheduling respondent is required before waiting for a reply.',
+      }
+    }
     const contactEmail = requiredAttendees.length === 1 ? requiredAttendees[0] : null
     const { data, error } = await admin.from('agent_email_watches').upsert({
       run_id: run.id,
@@ -2752,29 +2766,40 @@ async function resumeWithContext(
 ) {
   const value = context.trim()
   if (!value) throw new Error('Add the missing context before resuming this task.')
-  const contextAction = await admin
-    .from('agent_actions')
-    .select('model_call_id')
-    .eq('run_id', run.id)
-    .eq('user_id', run.user_id)
-    .eq('tool_name', 'agent.request_context')
-    .eq('status', 'succeeded')
-    .order('step_index', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const restartingDeclinedNegotiation = safeString(run.context?.negotiation_status, 40) === 'declined'
   let history = await loadModelHistory(admin, run)
-  const callId = safeString(contextAction.data?.model_call_id, 256)
-  if (callId && !historyHasToolOutput(history, callId)) {
-    history = [...history, {
-      type: 'function_call_output',
-      call_id: callId,
-      output: JSON.stringify({ provided_context: value }),
+  if (restartingDeclinedNegotiation) {
+    // A new instruction after a participant declines is a fresh scheduling
+    // decision. Discard the stale blocked tool-call turn so it cannot replay
+    // the old negotiation or make the model ask the same question again.
+    history = [{
+      role: 'user',
+      content: [{ type: 'input_text', text: `New authoritative scheduling instruction: ${value}` }],
     }]
   } else {
-    history = [...history, {
-      role: 'user',
-      content: [{ type: 'input_text', text: `Additional task context: ${value}` }],
-    }]
+    const contextAction = await admin
+      .from('agent_actions')
+      .select('model_call_id')
+      .eq('run_id', run.id)
+      .eq('user_id', run.user_id)
+      .eq('tool_name', 'agent.request_context')
+      .eq('status', 'succeeded')
+      .order('step_index', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const callId = safeString(contextAction.data?.model_call_id, 256)
+    if (callId && !historyHasToolOutput(history, callId)) {
+      history = [...history, {
+        type: 'function_call_output',
+        call_id: callId,
+        output: JSON.stringify({ provided_context: value }),
+      }]
+    } else {
+      history = [...history, {
+        role: 'user',
+        content: [{ type: 'input_text', text: `Additional task context: ${value}` }],
+      }]
+    }
   }
   const pendingFlightContext = run.context.flight_context_pending &&
     typeof run.context.flight_context_pending === 'object' &&
@@ -2801,6 +2826,24 @@ async function resumeWithContext(
         flight_context_pending: null,
       }
     : {}
+  const pendingRecipient = run.context?.recipient_resolution_pending &&
+    typeof run.context.recipient_resolution_pending === 'object' &&
+    !Array.isArray(run.context.recipient_resolution_pending)
+    ? run.context.recipient_resolution_pending as Record<string, unknown>
+    : null
+  const contextEmails = extractEmailAddresses(value)
+  const explicitContextEmail = pendingRecipient && contextEmails.length === 1
+    ? contextEmails[0]
+    : ''
+  const explicitRecipientResolution = explicitContextEmail
+    ? {
+        state: 'explicit',
+        recipient: safeString(pendingRecipient?.recipient, 300) || explicitContextEmail,
+        email: explicitContextEmail,
+        evidence: 'user_provided_context',
+        candidates: [],
+      }
+    : null
   const updated = await updateRun(admin, run, {
     status: 'planning',
     context: {
@@ -2815,6 +2858,25 @@ async function resumeWithContext(
       ...nextFlightContext,
       ...(run.context?.sop_authoring_choice === '' && /\b(?:human application expert|draft the statement of purpose yourself)\b/i.test(value)
         ? { sop_authoring_choice: value }
+        : {}),
+      ...(restartingDeclinedNegotiation
+        ? {
+            negotiation_active: false,
+            negotiation_status: null,
+            negotiation_required_attendees: [],
+            negotiation_responses: {},
+            negotiation_processed_reply_ids: [],
+            negotiation_last_reply: null,
+          }
+        : {}),
+      ...(explicitRecipientResolution
+        ? {
+            recipient_resolution_pending: null,
+            recipient_resolutions: [
+              ...((Array.isArray(run.context?.recipient_resolutions) ? run.context.recipient_resolutions : []) as unknown[]),
+              explicitRecipientResolution,
+            ].slice(-20),
+          }
         : {}),
     },
     waiting_reason: '',
@@ -2889,26 +2951,47 @@ async function selectRecipient(
     lease_expires_at: null,
   })
   await addEvent(admin, updated, 'recipient_selected', updated.status, `Recipient selected: ${safeString(candidate.name, 300)}.`, { recipient: selected })
-  return updated
+  return resolveNamedRecipientBeforeModel(admin, updated)
 }
 
-function namedRecipientFromObjective(objective: string) {
-  return namedRecipientsFromObjective(objective)[0] ?? ''
+function namedRecipientFromObjective(objective: string, description = '') {
+  return namedRecipientsFromObjective(objective, description)[0] ?? ''
 }
 
-function namedRecipientsFromObjective(objective: string) {
-  const match = objective.trim().match(/^(?:email|message|reply\s+to|follow[\s-]?up\s+with)\s+(.+?)(?:\s+(?:about|regarding|re:)\b|$)/i)
+function namedRecipientsFromObjective(objective: string, description = '') {
+  const titleValue = objective.trim().replace(/[’‘]/g, "'")
+  const descriptionValue = description.trim().replace(/[’‘]/g, "'")
+  // Prefer the explicit title anchor, then parse the Description on its own
+  // so a generic title such as “Find availability” cannot contaminate the
+  // recipient name captured from “Check Ada's availability”. Only combine
+  // them when the instruction is split across both fields (for example,
+  // “Schedule meeting” + “with Ada next week”).
+  const values = [titleValue, descriptionValue, `${titleValue} ${descriptionValue}`.trim()].filter(Boolean)
+  const patterns = [
+    /^(?:email|message|reply\s+to|follow[\s-]?up\s+with)\s+(.+?)(?:\s+(?:about|regarding|re:)\b|$)/i,
+    /^(?:tell|ask|inform|remind)\s+(.+?)(?:\s+(?:about|regarding|whether|if|to)\b|$)/i,
+    /^(?:invite|notify)\s+(.+?)(?:\s+(?:to|for|about|regarding|on|at)\b|$)/i,
+    /^(?:schedule|arrange|coordinate|organize|set\s*up|book|reschedule)\b[\s\S]*?\bwith\s+(.+?)(?:\s+(?:about|regarding|for|on|at|next|this|today|tomorrow)\b|$)/i,
+    /^(?:find|check|look\s+for)\s+(.+?)\s+(?:availability|free\s+(?:time|slot))\b/i,
+    /^(?:find|check|look\s+for)\s+(?:availability|free\s+(?:time|slot))\s+(?:with|for)\s+(.+?)(?:\s+(?:about|regarding|on|at|next|this|today|tomorrow)\b|$)/i,
+    /^(?:find|check|look\s+for)\b[\s\S]*?\bwith\s+(.+?)(?:\s+(?:about|regarding|for|on|at|next|this|today|tomorrow)\b|$)/i,
+    /^(?:when|what\s+time)\b[\s\S]*?\b(?:is|can|could|would)\s+(.+?)\s+(?:free|available|meet)\b/i,
+    /^(?:what|which)\s+(?:time|day|date)\b[\s\S]*?\bworks?\s+for\s+(.+?)(?:\s+(?:about|regarding|on|at|next|this|today|tomorrow)\b|$)/i,
+    /^(?:put|place|add|sync)\b[\s\S]*?\b(?:to|in|into|on)\s+(.+?)\s+(?:email|gmail|inbox|calendar|schedule)\b/i,
+  ]
+  const match = values.flatMap(value => patterns.map(pattern => value.match(pattern))).find(Boolean)
   const raw = safeString(match?.[1], 600).trim()
   if (!raw) return []
   return raw
     .split(/\s*(?:,|\band\b|&)\s*/i)
-    .map(value => value.replace(/\b(?:please|today|tomorrow|next\s+week)\b/gi, '').trim())
+    .map(value => value.replace(/[’‘]s\b|'s\b/gi, '').replace(/\b(?:please|today|tomorrow|next\s+week)\b/gi, '').trim())
     .filter(value => value && !/^(?:me|myself|us|everyone|them|the\s+team)$/i.test(value))
+    .filter((value, index, values) => values.findIndex(candidate => candidate.toLocaleLowerCase() === value.toLocaleLowerCase()) === index)
     .slice(0, 10)
 }
 
 function canonicalTitleRecipientEmail(run: AgentRunRow) {
-  if (namedRecipientsFromObjective(run.objective).length !== 1) return ''
+  if (namedRecipientsFromObjective(run.objective, safeString(run.context?.description, 4_000)).length !== 1) return ''
   const resolutions = Array.isArray(run.context?.recipient_resolutions) ? run.context.recipient_resolutions : []
   const titleResolution = resolutions[0]
   if (!titleResolution || typeof titleResolution !== 'object') return ''
@@ -2919,11 +3002,24 @@ function canonicalTitleRecipientEmail(run: AgentRunRow) {
 }
 
 async function resolveNamedRecipientBeforeModel(admin: AdminClient, run: AgentRunRow) {
-  if (!['gmail', 'scheduling'].includes(run.capability) || Array.isArray(run.context?.recipient_resolutions) || run.context?.recipient_resolution_pending) return run
-  const recipients = namedRecipientsFromObjective(run.objective)
+  if (!['gmail', 'scheduling'].includes(run.capability) || run.context?.recipient_resolution_pending) return run
+  const recipients = namedRecipientsFromObjective(run.objective, safeString(run.context?.description, 4_000))
   if (!recipients.length) return run
-  const resolutions: unknown[] = []
+  const existingResolutions = Array.isArray(run.context?.recipient_resolutions)
+    ? run.context.recipient_resolutions as unknown[]
+    : []
+  const resolvedKeys = new Set(existingResolutions.flatMap(value => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return []
+    const record = value as Record<string, unknown>
+    const recipient = safeString(record.recipient, 300).toLocaleLowerCase().trim()
+    const email = normalizeEmail(record.email)
+    return [recipient, email].filter(Boolean)
+  }))
+  const resolutions: unknown[] = [...existingResolutions]
   for (const recipient of recipients) {
+    const key = recipient.toLocaleLowerCase().trim()
+    const emailKey = normalizeEmail(recipient)
+    if (resolvedKeys.has(key) || (emailKey && resolvedKeys.has(emailKey))) continue
     const action = await recordAction(admin, run, 'contacts.resolve_recipient', '', { recipient }, 'running')
     const result = await executeGoogleTool(admin, run.user_id, 'contacts.resolve_recipient', { recipient }, String(action.idempotency_key))
     const state = safeString(result.value.state, 80)
@@ -2947,6 +3043,9 @@ async function resolveNamedRecipientBeforeModel(admin: AdminClient, run: AgentRu
       })
     }
     resolutions.push(result.value)
+    resolvedKeys.add(key)
+    const resolvedEmail = normalizeEmail(result.value.email)
+    if (resolvedEmail) resolvedKeys.add(resolvedEmail)
   }
   return await updateRun(admin, run, { context: { ...(run.context ?? {}), recipient_resolutions: resolutions } })
 }
@@ -2954,13 +3053,6 @@ async function resolveNamedRecipientBeforeModel(admin: AdminClient, run: AgentRu
 function normalizedSender(value: unknown) {
   const header = safeString(value, 1000).toLocaleLowerCase()
   return header.match(/<([^>]+)>/)?.[1]?.trim() ?? header.trim()
-}
-
-function isAutomatedEmailReply(message: Record<string, unknown>) {
-  const text = `${safeString(message.subject, 1000)} ${safeString(message.body_text, 8_000)} ${safeString(message.auto_submitted, 120)} ${safeString(message.precedence, 120)}`
-    .toLocaleLowerCase()
-  return /\b(?:automatic reply|auto[ -]?reply|out of (?:the )?office|on (?:annual )?leave|delivery status notification|undeliverable|mail delivery failed|auto-replied|bulk|list)\b/.test(text) ||
-    /\bauto-submitted\s*:\s*(?:auto-replied|auto-generated)\b/i.test(text)
 }
 
 function negotiationRequiredAttendees(run: AgentRunRow, fallbackEmail = '') {
@@ -2973,6 +3065,27 @@ function negotiationRequiredAttendees(run: AgentRunRow, fallbackEmail = '') {
   if (values.length) return [...new Set(values)]
   const fallback = normalizeEmail(fallbackEmail)
   return fallback ? [fallback] : []
+}
+
+async function negotiationWatchAttendees(admin: AdminClient, run: AgentRunRow, fallbackEmail = '') {
+  const direct = negotiationRequiredAttendees(run, fallbackEmail)
+  if (direct.length) return direct
+  const sent = await admin.from('agent_actions')
+    .select('arguments')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('tool_name', 'gmail.send_message')
+    .eq('status', 'succeeded')
+    .not('provider_action_id', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (sent.error) throw new Error(sent.error.message)
+  const argumentsValue = sent.data?.arguments as Record<string, unknown> | undefined
+  const expected = Array.isArray(argumentsValue?.expected_to)
+    ? argumentsValue.expected_to.map(normalizeEmail).filter(Boolean)
+    : []
+  return [...new Set(expected)]
 }
 
 function negotiationResponses(run: AgentRunRow) {
@@ -2988,9 +3101,15 @@ function negotiationIsAgreed(run: AgentRunRow) {
 }
 
 function schedulingToolGuard(run: AgentRunRow, toolName: string) {
-  if (run.capability !== 'scheduling' || !run.context?.negotiation_active) return null
+  // The scheduling contract remains gated before the first reply watch too;
+  // otherwise a model could create the Calendar event before asking attendees.
+  if (run.capability !== 'scheduling') return null
   const status = safeString(run.context?.negotiation_status, 40)
-  if (status === 'declined' && ['gmail.send_message', 'gmail.wait_for_reply'].includes(toolName)) {
+  const taskText = `${run.objective} ${safeString(run.context?.description, 4_000)}`
+  const attendeeAgreementRequired = run.context?.negotiation_active === true ||
+    negotiationRequiredAttendees(run).length > 0 ||
+    calendarAttendeeCoordinationIsAffirmed(taskText)
+  if (status === 'declined' && ['gmail.create_draft', 'gmail.send_message', 'gmail.wait_for_reply'].includes(toolName)) {
     return {
       error_code: 'negotiation_declined',
       error_message: 'A participant declined or cancelled this scheduling negotiation. Do not send another scheduling message until the user gives a new instruction.',
@@ -3002,7 +3121,7 @@ function schedulingToolGuard(run: AgentRunRow, toolName: string) {
       error_message: 'All required attendees have already agreed. Do not start another reply watch; prepare the verified Calendar action.',
     }
   }
-  if (['calendar.create_event', 'calendar.update_event'].includes(toolName) && !negotiationIsAgreed(run)) {
+  if (['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].includes(toolName) && attendeeAgreementRequired && !negotiationIsAgreed(run)) {
     return {
       error_code: status === 'declined' ? 'negotiation_declined' : 'negotiation_agreement_required',
       error_message: status === 'declined'
@@ -3013,10 +3132,78 @@ function schedulingToolGuard(run: AgentRunRow, toolName: string) {
   return null
 }
 
+function calendarNotificationGuard(
+  run: AgentRunRow,
+  toolName: string,
+  argumentsValue: Record<string, unknown>,
+) {
+  if (!['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].includes(toolName)) return null
+  const text = `${run.objective} ${safeString(run.context?.description, 4_000)}`
+  const notificationNegated = /\b(?:do\s+not|don't|never|without|no)\b[\s\S]{0,60}\b(?:invite|invitation|notify|notification|attendee|attendees)\b/i.test(text)
+  const coordinated = calendarAttendeeCoordinationIsAffirmed(text)
+  const calendarInviteRequested = calendarInviteIsAffirmed(text)
+  const explicitAttendeeLanguage = /\b(?:attendee|attendees)\b/i.test(text) && !notificationNegated
+  const attendeeRequested = coordinated || calendarInviteRequested || explicitAttendeeLanguage
+  const notificationRequested = !notificationNegated && (coordinated || calendarInviteRequested || /\b(?:notify|notification)\b/i.test(text))
+  const notifyAttendees = argumentsValue.notify_attendees
+  const attendees = Array.isArray(argumentsValue.attendee_emails)
+    ? argumentsValue.attendee_emails
+    : []
+  if (attendees.length && !attendeeRequested) {
+    return {
+      error_code: 'calendar_attendees_not_requested',
+      error_message: 'The task does not request external Calendar attendees. Do not add recipients to the event.',
+    }
+  }
+  if (notificationRequested && notifyAttendees !== true) {
+    return {
+      error_code: 'calendar_notification_required',
+      error_message: 'The task requests attendee coordination. Set notify_attendees to true so the approved Calendar action matches that request.',
+    }
+  }
+  if (!notificationRequested && notifyAttendees !== false) {
+    return {
+      error_code: 'calendar_notification_not_requested',
+      error_message: 'The task does not request attendee notifications. Set notify_attendees to false before preparing the Calendar action.',
+    }
+  }
+  return null
+}
+
+function requestedCommunicationToolGuard(
+  run: AgentRunRow,
+  toolName: string,
+  argumentsValue: Record<string, unknown> = {},
+) {
+  const text = `${run.objective} ${safeString(run.context?.description, 4_000)}`
+  const schedulingContract = run.capability === 'scheduling' || run.task_contract === 'communication.scheduling'
+  if (toolName === 'gmail.send_message' && (
+    actionIsNegated(text, 'gmail_send') ||
+    (!schedulingContract && !actionIsAffirmed(text, 'gmail_send'))
+  )) {
+    return {
+      error_code: 'gmail_send_not_requested',
+      error_message: 'The task does not request a Gmail send. Keep this task read-only or prepared unless the user explicitly asks to send it.',
+    }
+  }
+  if (['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].includes(toolName) && (
+    actionIsNegated(text, 'calendar_write') ||
+    !calendarWriteIsAffirmed(text)
+  )) {
+    return {
+      error_code: 'calendar_write_not_requested',
+      error_message: 'The task does not request a Calendar change. Do not create, update, or delete an event.',
+    }
+  }
+  const notificationGuard = calendarNotificationGuard(run, toolName, argumentsValue)
+  if (notificationGuard) return notificationGuard
+  return null
+}
+
 function calendarMustPrecedeEmail(run: AgentRunRow) {
   if (run.capability !== 'scheduling') return false
   const text = `${run.objective} ${safeString(run.context?.description, 4000)}`
-  if (!actionIsAffirmed(text, 'calendar_write') || !actionIsAffirmed(text, 'gmail_send')) return false
+  if (!calendarWriteIsAffirmed(text) || !actionIsAffirmed(text, 'gmail_send')) return false
   return !/\b(?:reply|respond|follow[\s-]?up|coordinate|negotiate|counteroffer|wait\s+for|after\s+(?:they|the attendee|everyone)\s+(?:agree|confirm|reply))\b/i.test(text)
 }
 
@@ -4512,6 +4699,25 @@ async function advanceRun(
     return handoffToNextSpecialist(admin, current, openaiKey)
   }
 
+  if (current.capability === 'scheduling' && current.context?.negotiation_active &&
+      safeString(current.context?.negotiation_status, 40) === 'declined') {
+    const message = 'A participant declined or cancelled this scheduling negotiation. Give Roon a new instruction before any further message or Calendar change.'
+    const waiting = await updateRun(admin, current, {
+      status: 'needs_context',
+      waiting_reason: message,
+      error_code: 'negotiation_declined',
+      error: message,
+      retryable: false,
+      lease_owner: null,
+      lease_expires_at: null,
+    })
+    await addEvent(admin, waiting, 'agent_negotiation_terminal', waiting.status, message, {
+      negotiation_status: 'declined',
+      recoverable_with_new_user_instruction: true,
+    })
+    return waiting
+  }
+
   let history = await loadModelHistory(admin, current)
 
   for (let iteration = 0; iteration < maximumModelSteps; iteration += 1) {
@@ -4611,6 +4817,21 @@ async function advanceRun(
       return current
     }
 
+    const communicationGuard = requestedCommunicationToolGuard(current, toolName, argumentsValue)
+    if (communicationGuard) {
+      history.push({
+        type: 'function_call_output',
+        call_id: safeString(call.call_id, 256),
+        output: JSON.stringify({ ok: false, ...communicationGuard }),
+      })
+      await saveModelHistory(admin, current, history, response.id)
+      await addEvent(admin, current, 'agent_communication_guard_blocked', current.status, communicationGuard.error_message, {
+        tool_name: toolName,
+        error_code: communicationGuard.error_code,
+      })
+      continue
+    }
+
     if (toolName === 'gmail.create_draft') {
       const titleRecipient = canonicalTitleRecipientEmail(current)
       const draftRecipients = Array.isArray(argumentsValue.to)
@@ -4688,6 +4909,22 @@ async function advanceRun(
         tool_name: toolName,
         negotiation_status: current.context?.negotiation_status ?? null,
       })
+      if (negotiationGuard.error_code === 'negotiation_declined') {
+        const waiting = await updateRun(admin, current, {
+          status: 'needs_context',
+          waiting_reason: negotiationGuard.error_message,
+          error_code: negotiationGuard.error_code,
+          error: negotiationGuard.error_message,
+          retryable: false,
+          lease_owner: null,
+          lease_expires_at: null,
+        })
+        await addEvent(admin, waiting, 'agent_negotiation_terminal', waiting.status, waiting.waiting_reason, {
+          negotiation_status: 'declined',
+          recoverable_with_new_user_instruction: true,
+        })
+        return waiting
+      }
       continue
     }
 
@@ -5140,12 +5377,14 @@ async function approveOrReject(
   await addEvent(admin, run, 'agent_approval_granted', run.status, approval.summary, { action_id: action.id })
 
   const negotiationGuard = schedulingToolGuard(run, action.tool_name)
+  const communicationGuard = requestedCommunicationToolGuard(run, action.tool_name, action.arguments as Record<string, unknown>)
   const recipientGuard = ['gmail.create_draft', 'gmail.send_message', 'calendar.create_event'].includes(action.tool_name)
     ? untrustedRecipientEmails(run, action.arguments as Record<string, unknown>)
     : []
-  if (negotiationGuard || recipientGuard.length) {
-    const code = negotiationGuard?.error_code ?? 'recipient_resolution_required'
-    const message = negotiationGuard?.error_message ?? `The approved action contains unverified recipient address(es): ${recipientGuard.join(', ')}.`
+  if (negotiationGuard || communicationGuard || recipientGuard.length) {
+    const guard = negotiationGuard ?? communicationGuard
+    const code = guard?.error_code ?? 'recipient_resolution_required'
+    const message = guard?.error_message ?? `The approved action contains unverified recipient address(es): ${recipientGuard.join(', ')}.`
     await admin.from('agent_actions').update({
       status: 'failed',
       error_code: code,
@@ -5154,7 +5393,7 @@ async function approveOrReject(
       completed_at: new Date().toISOString(),
     }).eq('id', action.id)
     run = await updateRun(admin, run, {
-      status: 'waiting_for_user',
+      status: negotiationGuard?.error_code === 'negotiation_declined' ? 'needs_context' : 'waiting_for_user',
       waiting_reason: message,
       error_code: code,
       error: message,

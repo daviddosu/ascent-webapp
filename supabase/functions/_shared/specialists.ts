@@ -1,5 +1,5 @@
 import { hasCalendarIntent, hasEmailIntent, requestsPaymentHandoff } from './agent-intent.ts'
-import { actionIsAffirmed } from './communication-safety.ts'
+import { actionIsAffirmed, calendarCoordinationIsAffirmed, calendarInviteIsAffirmed, calendarWriteIsAffirmed } from './communication-safety.ts'
 
 /**
  * ShotCount's specialist contract registry.
@@ -129,7 +129,7 @@ function requiredEffectsForRoon(objective: string, taskContract: TaskContract): 
     effects.push('gmail_send')
   }
   if (taskContract === 'communication.calendar' || taskContract === 'communication.scheduling') {
-    if (actionIsAffirmed(text, 'calendar_write')) {
+    if (calendarWriteIsAffirmed(text)) {
       effects.push('calendar_write')
     }
     if (actionIsAffirmed(text, 'gmail_send')) {
@@ -391,8 +391,8 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
   const hasApplication = /\b(?:apply|application|grad(?:uate)? school|admission|transcript|personal statement|statement of purpose|recommendation letter|application deadline|application documents?)\b/.test(text) ||
     /\b(?:what documents|missing documents)\b[\s\S]{0,80}\b(?:application|programme|program|school|university)\b/.test(text)
   const hasEmail = hasEmailIntent(text)
-  const hasCalendar = hasCalendarIntent(text)
-  const hasScheduling = /\b(?:set\s*up|schedule|scheduled|scheduling|availability|reschedule|arrange|coordinate|organize|slot|free)\b/.test(text)
+  const calendarCoordination = calendarCoordinationIsAffirmed(text) || calendarInviteIsAffirmed(text)
+  const hasCalendar = hasCalendarIntent(text) || calendarCoordination
 
   if (hasFlight && (hasEmail || hasCalendar || /\b(?:arrange|coordinate|organize)\b/.test(text))) {
     const firstContract: TaskContract = hasCalendar ? 'communication.scheduling' : 'communication.email'
@@ -433,11 +433,7 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
     )
   }
 
-  const calendarCoordination = actionIsAffirmed(text, 'calendar_write') ||
-    /\b(?:invite|add|put|place|sync)\b/.test(text) ||
-    /\b(?:set\s*up|arrange|coordinate|organize|schedule|reschedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(text) ||
-    /\b(?:find|check|look\s+for)\b[\s\S]{0,60}\b(?:free|available)\s+(?:slot|time)\b[\s\S]{0,60}\bwith\b/.test(text)
-  if (hasEmail && hasCalendar && calendarCoordination) {
+  if (hasCalendar && (calendarCoordination || (hasEmail && calendarWriteIsAffirmed(text)))) {
     return routeTo(
       'roon',
       'communication.scheduling',
@@ -445,23 +441,12 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
       'The task combines email communication with a Calendar or meeting outcome.',
     )
   }
-  if (hasEmail && hasCalendar && !calendarCoordination && !actionIsAffirmed(text, 'calendar_write')) {
+  if (hasEmail && hasCalendar && !calendarCoordination && !calendarWriteIsAffirmed(text)) {
     return routeTo(
       'roon',
       'communication.email',
       [stage('email', 'roon', 'communication.email', 'Emailing')],
       'The Calendar wording describes the message topic rather than a requested Calendar change.',
-    )
-  }
-  if (hasCalendar && hasScheduling && (
-    /\b(?:meeting|meet|appointment|call|event|calendar)\b/.test(text) ||
-    /\b(?:find|check|look\s+for)\b[\s\S]{0,60}\b(?:free|available)\s+(?:slot|time)\b[\s\S]{0,60}\bwith\b/.test(text)
-  )) {
-    return routeTo(
-      'roon',
-      'communication.scheduling',
-      [stage('communication-scheduling', 'roon', 'communication.scheduling', 'Finding a time and scheduling it')],
-      'The task asks for coordination, availability, or a scheduled meeting outcome.',
     )
   }
   if (hasCalendar) {

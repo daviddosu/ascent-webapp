@@ -1,4 +1,4 @@
-import { actionIsAffirmed, actionIsNegated } from './communication-safety.ts'
+import { actionIsAffirmed, calendarCoordinationIsAffirmed, calendarInviteIsAffirmed, calendarWriteIsAffirmed } from './communication-safety.ts'
 
 export type SharedAgentIntent = {
   capability: 'research' | 'draft' | 'research_draft' | 'gmail' | 'calendar' | 'scheduling' | 'browser' | 'flight_search'
@@ -27,11 +27,12 @@ export function requestsPaymentHandoff(value: string) {
 }
 
 export function hasEmailIntent(value: string) {
-  return /\b(?:email|mail|gmail|reply|respond|follow[\s-]?up|message|outreach|recipient|inbox)\b/i.test(value)
+  return /\b(?:email|mail|gmail|reply|respond|follow[\s-]?up|message|outreach|recipient|inbox)\b/i.test(value) ||
+    /\b(?:tell|ask|inform|remind|notify)\s+(?!me\b|myself\b|us\b|the\s+user\b)(?:the\s+)?(?:[a-z][a-z'-]*|them|him|her|someone|everyone)\b/i.test(value)
 }
 
 export function hasCalendarIntent(value: string) {
-  return /\b(?:meeting|meet|calendar|schedule|scheduled|scheduling|reschedule|availability|appointment|invite|slot|free)\b/i.test(value) ||
+  return /\b(?:meeting|meet|calendar|schedule|scheduled|scheduling|reschedule|availability|appointment|invite|invitation|slot|free)\b/i.test(value) ||
     /\b(?:create|add|put|place|sync|move|update|change|cancel|delete|remove|book)\b[\s\S]{0,80}\b(?:event|meeting|appointment|call|calendar|slot)\b/i.test(value)
 }
 
@@ -59,27 +60,21 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
   const applicationIntent = /^apply\s+to\s+(?:this|it|that)$/i.test(value.trim()) ||
     /\bapply\b[\s\S]{0,80}\b(programme|program|phd|scholarship|fellowship|accelerator|job|role|position|opportunity)\b/.test(value)
   const hasEmail = hasEmailIntent(value)
-  const hasCalendar = hasCalendarIntent(value)
+  const calendarCoordination = calendarCoordinationIsAffirmed(value) || calendarInviteIsAffirmed(value)
+  const hasCalendar = hasCalendarIntent(value) || calendarCoordination
   // People commonly describe the outcome in the wrong surface: “put the
   // meeting in her inbox”, “sync the call to his email”, or “add the event to
   // their Gmail”. Those are calendar-invite outcomes, not email-only asks.
   // Keep this deliberately narrow: merely *telling* someone about an event is
   // still an email; placing a scheduled item into their email/calendar is not.
-  const eventDeliveryToRecipient =
-    /\b(?:sync|add|put|place)\b[\s\S]{0,100}\b(?:pitch|meeting|event|appointment|call|session|interview)\b[\s\S]{0,100}\b(?:to|with|in|into|on)\b[\s\S]{0,64}\b(?:email|gmail|inbox|calendar|schedule)\b/.test(value) ||
-    /\b(?:invite|calendar\s+invite)\b[\s\S]{0,80}\b(?:pitch|meeting|event|appointment|call|session|interview)\b/.test(value)
-  const coordinatesWithSomeone =
-    /\b(?:set\s*up|arrange|coordinate|organize|schedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(value) ||
-    /\b(?:meet|meeting|call|appointment)\b[\s\S]{0,40}\bwith\b/.test(value) ||
-    /\b(?:find|check|look\s+for)\b[\s\S]{0,60}\b(?:a\s+)?(?:free|available)\s+(?:slot|time)\b[\s\S]{0,60}\bwith\b/.test(value)
-  const calendarCoordination = actionIsAffirmed(value, 'calendar_write') ||
-    /\b(?:availability|free|available)\s+(?:slot|time)|\b(?:invite|add|put|place|sync)\b/.test(value)
-  const explicitEmailWrite = /\b(?:send|sending|respond|notify|reply\s+to|replying\s+to)\b/.test(value) ||
-    /^(?:email|message|reply)\s+\S+/.test(value.trim())
-  const preparesEmailOnly = /\b(?:prepare|draft|write)\b/.test(value) && !explicitEmailWrite ||
-    actionIsNegated(value, 'gmail_send')
-  const wantsEmailWrite = (!preparesEmailOnly && actionIsAffirmed(value, 'gmail_send')) || explicitEmailWrite
-  const wantsCalendarWrite = actionIsAffirmed(value, 'calendar_write')
+  const eventDeliveryToRecipient = calendarInviteIsAffirmed(value)
+  const preparingEmail = /\b(?:prepare|draft|write)\b/.test(value)
+  const explicitSendRequest = actionIsAffirmed(
+    value.replace(/\b(?:email|message|follow[\s-]?up)\b/g, ''),
+    'gmail_send',
+  )
+  const wantsEmailWrite = actionIsAffirmed(value, 'gmail_send') && (!preparingEmail || explicitSendRequest)
+  const wantsCalendarWrite = calendarWriteIsAffirmed(value)
   const hasFlight = /\b(flight|fly|airfare|airline|airport|return trip|round trip|one-way)\b/.test(value)
   const bookingIntent = value.replace(
     /\b(?:do\s+not|don't|never|without|stop\s+before)\b[\s\S]{0,60}\b(?:book|booking|buy|purchase|reserve|payment)\b/g,
@@ -102,8 +97,17 @@ export function classifySharedAgentIntent(title: string, description = ''): Shar
       outcomeType: wantsBooking ? 'payment_handoff' : 'prepared_result',
     }
   }
-  if (eventDeliveryToRecipient || (hasCalendar && (coordinatesWithSomeone || calendarCoordination))) {
+  if (eventDeliveryToRecipient || (hasCalendar && calendarCoordination) || (hasEmail && hasCalendar && wantsCalendarWrite)) {
     return { capability: 'scheduling', strategy: 'hybrid', outcomeType: 'external_change' }
+  }
+  // Meeting/event words often describe the subject of an email. They should
+  // not turn a read, draft, or notification task into a Calendar operation.
+  if (hasEmail && hasCalendar && !wantsCalendarWrite && !calendarCoordination) {
+    return {
+      capability: 'gmail',
+      strategy: 'structured',
+      outcomeType: wantsEmailWrite ? 'external_change' : 'prepared_result',
+    }
   }
   if (hasCalendar) {
     return {

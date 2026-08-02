@@ -1,3 +1,5 @@
+import { actionIsAffirmed, calendarWriteIsAffirmed } from './communication-safety.ts'
+
 export type ProviderActionEvidence = {
   tool_name: string
   status: string
@@ -14,7 +16,7 @@ export type RequiredEffect = 'gmail_send' | 'calendar_write'
 export function requiredEffectsForObjective(objective: string) {
   const text = objective.toLocaleLowerCase()
   const required: RequiredEffect[] = []
-  if (actionIsAffirmed(text, 'calendar_write') && /\b(?:calendar|event|meeting|appointment|call|schedule|reschedule|move|update|cancel|delete)\b/.test(text)) {
+  if (calendarWriteIsAffirmed(text) && /\b(?:calendar|event|meeting|appointment|call|schedule|reschedule|move|update|cancel|delete)\b/.test(text)) {
     required.push('calendar_write')
   }
   if (actionIsAffirmed(text, 'gmail_send') || /\bemail\s+(?:the\s+)?(?:options|attendee|participant)\b/i.test(text)) {
@@ -56,4 +58,3 @@ export function verifiedCrossToolStage(actions: ProviderActionEvidence[]) {
 export function lunaContinuationAllowed(failureClass: string, deterministicMismatch: boolean) {
   return failureClass === 'MODEL_REASONING' && deterministicMismatch
 }
-import { actionIsAffirmed } from './communication-safety.ts'
