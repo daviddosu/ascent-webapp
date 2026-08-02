@@ -19,6 +19,7 @@ import {
   REASONING_MODEL_ID,
   createSpecialistHandoff,
   getSpecialist,
+  nextSpecialistForCapabilityRequest,
   nextSpecialistForTool,
   routeTask,
   routeTaskWithSemanticSpecialist,
@@ -4069,6 +4070,36 @@ async function advanceRun(
       argumentsValue,
       String(action.idempotency_key),
     )
+    if (toolName === 'agent.request_context' && toolOutput.kind === 'pause' && toolOutput.status === 'needs_context') {
+      const nextStage = nextSpecialistForCapabilityRequest(
+        current.specialist_stages,
+        current.specialist_stage_index,
+        `${current.objective} ${safeString(current.context?.description, 4000)}`,
+        toolOutput.message,
+      )
+      if (nextStage) {
+        const nextSpecialist = getSpecialist(nextStage.specialistId)
+        const handoffMessage = `${activeSpecialistDisplayName(current)} is handing the unavailable capability to ${nextSpecialist?.displayName ?? nextStage.specialistId} for the next typed stage.`
+        await admin.from('agent_actions').update({
+          status: 'failed',
+          error_code: 'specialist_capability_handoff',
+          error_message: handoffMessage,
+          failure_taxonomy: 'HANDOFF_TRIGGER_FAILURE',
+          retryable: false,
+          completed_at: new Date().toISOString(),
+        }).eq('id', action.id)
+        await addEvent(admin, current, 'specialist_handoff_triggered', current.status, handoffMessage, {
+          trigger_tool: toolName,
+          from_specialist_id: current.active_specialist_id,
+          from_specialist_version: current.active_specialist_version,
+          to_specialist_id: nextStage.specialistId,
+          to_specialist_version: nextStage.specialistVersion,
+          next_stage_id: nextStage.stageId,
+          failure_taxonomy: 'HANDOFF_TRIGGER_FAILURE',
+        })
+        return handoffToNextSpecialist(admin, current, openaiKey)
+      }
+    }
     if (toolOutput.kind === 'pause') {
       const actionSucceeded = toolOutput.actionSucceeded || toolOutput.status === 'needs_context'
       const actionStatus = toolOutput.actionStatus ??

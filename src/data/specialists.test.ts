@@ -3,6 +3,7 @@ import {
   REASONING_MODEL_ID,
   createSpecialistHandoff,
   legacySpecialistRoute,
+  nextSpecialistForCapabilityRequest,
   nextSpecialistForTool,
   routeTask,
   routeTaskWithSemanticSpecialist,
@@ -70,6 +71,22 @@ describe('ShotCount specialist contracts', () => {
     expect(nextSpecialistForTool(route.stages, 0, 'browser.search_flights')?.specialistId).toBe('caspian')
     expect(nextSpecialistForTool(route.stages, 0, 'calendar.create_event')).toBeNull()
     expect(nextSpecialistForTool(route.stages, 1, 'browser.search_flights')).toBeNull()
+  })
+
+  it('forwards a capability-unavailable context request to the registered next stage', () => {
+    const route = routeTask('Lagos to London', 'Find a live flight and prepare a calendar reference.')
+    expect(nextSpecialistForCapabilityRequest(
+      route.stages,
+      0,
+      'Lagos to London Find a live flight and prepare a calendar reference.',
+      'I cannot access the live flight-search capability in this run.',
+    )?.specialistId).toBe('caspian')
+    expect(nextSpecialistForCapabilityRequest(
+      route.stages,
+      0,
+      'Lagos to London Find a live flight and prepare a calendar reference.',
+      'What return date should I use?',
+    )).toBeNull()
   })
 
   it('derives provider-confirmed effects and preserves them across typed handoff', () => {

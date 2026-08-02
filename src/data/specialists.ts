@@ -14,6 +14,7 @@ export {
   specialistRequiredEffects,
   specialistVersion,
   legacySpecialistRoute,
+  nextSpecialistForCapabilityRequest,
   nextSpecialistForTool,
   taskContracts,
   unsupportedRoute,

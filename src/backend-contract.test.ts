@@ -336,6 +336,13 @@ describe('agent execution security contract', () => {
     expect(toolGuard).toContain("'HANDOFF_TRIGGER_FAILURE'")
   })
 
+  it('hands a capability-unavailable context request to the next typed stage', () => {
+    expect(taskAgentFunction).toContain('nextSpecialistForCapabilityRequest')
+    expect(taskAgentFunction).toContain("toolName === 'agent.request_context'")
+    expect(taskAgentFunction).toContain("error_code: 'specialist_capability_handoff'")
+    expect(taskAgentFunction).toContain('return handoffToNextSpecialist(admin, current, openaiKey)')
+  })
+
   it('keeps Ask Roon limited to concise title-and-description task planning', () => {
     expect(taskAgentFunction).toContain("action === 'plan_tasks'")
     expect(taskAgentFunction).toContain("name: 'shotcount_task_plan'")

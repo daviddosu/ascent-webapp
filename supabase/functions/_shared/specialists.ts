@@ -244,6 +244,47 @@ export function nextSpecialistForTool(
     : null
 }
 
+const capabilityToolsByContract: Readonly<Record<TaskContract, readonly string[]>> = {
+  'communication.email': ['gmail.search_messages', 'gmail.create_draft', 'gmail.send_message'],
+  'communication.scheduling': ['calendar.get_availability', 'calendar.create_event', 'gmail.create_draft'],
+  'communication.calendar': ['calendar.get_availability', 'calendar.create_event'],
+  'travel.flight_search': ['browser.search_flights'],
+  'applications.planning': ['application.generate_document', 'browser.navigate'],
+  'applications.review_handoff': ['application.generate_document', 'browser.navigate'],
+}
+
+const capabilityTermsByContract: Readonly<Record<TaskContract, RegExp>> = {
+  'communication.email': /\b(?:email|gmail|mail|message|recipient)\b/i,
+  'communication.scheduling': /\b(?:calendar|schedule|scheduling|meeting|availability|appointment|event|slot)\b/i,
+  'communication.calendar': /\b(?:calendar|schedule|scheduling|meeting|availability|appointment|event|slot)\b/i,
+  'travel.flight_search': /\b(?:flight|airfare|itinerary|airport|airline|air travel)\b/i,
+  'applications.planning': /\b(?:application|cv|resume|document|admission|programme|program|school)\b/i,
+  'applications.review_handoff': /\b(?:application|cv|resume|document|admission|programme|program|school)\b/i,
+}
+
+/**
+ * Find the immediate next stage when a specialist asks for context because a
+ * capability belongs to that next registered contract. This keeps capability
+ * ownership in the registry instead of making the current specialist guess or
+ * pause until its safe-step budget is exhausted.
+ */
+export function nextSpecialistForCapabilityRequest(
+  stages: readonly SpecialistStage[],
+  currentStageIndex: number,
+  objective: string,
+  question: string,
+) {
+  const nextStage = stages[currentStageIndex + 1]
+  if (!nextStage) return null
+  const registeredTools = capabilityToolsByContract[nextStage.taskContract] ?? []
+  if (!registeredTools.some(toolName => specialistCanUseTool(nextStage.specialistId, toolName))) return null
+  const capabilityText = `${objective} ${question}`
+  const capabilityUnavailable = /\b(?:capability|access|unavailable|not available|reconnect)\b/i.test(question)
+  return capabilityUnavailable && capabilityTermsByContract[nextStage.taskContract].test(capabilityText)
+    ? nextStage
+    : null
+}
+
 export function specialistRequiredEffects(
   id: SpecialistId,
   objective: string,
