@@ -11,8 +11,10 @@ import {
 } from '../_shared/agent-tools.ts'
 import {
   executeGoogleTool,
+  deletePreparedGmailDraft,
   GoogleIntegrationError,
   updatePreparedGmailDraft,
+  validateGmailReplyTarget,
 } from '../_shared/google.ts'
 import { classifySharedAgentIntent, flightContextFields, needsSharedAgentContext, type FlightContextField } from '../_shared/agent-intent.ts'
 import { actionIsAffirmed, actionIsNegated, calendarAttendeeCoordinationIsAffirmed, calendarInviteIsAffirmed, calendarWriteIsAffirmed, classifyNegotiationReply, extractEmailAddresses, isAutomatedEmailReply, normalizeContextQuestion, normalizeEmail } from '../_shared/communication-safety.ts'
@@ -40,9 +42,15 @@ import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttempt
 import { requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
 import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
+  persistedEmailArguments,
+  retryAttemptAllowed,
+  unsentPreparedDraftIds,
+} from '../_shared/email-integrity.ts'
+import {
   verifyScheduleNotificationDraft,
 } from '../_shared/schedule-notification.ts'
 import { assessEmailDraft } from '../_shared/email-safety.ts'
+import { namedRecipientsFromObjective as parseNamedRecipients } from '../_shared/recipient-parsing.ts'
 import { validateDocumentText } from '../_shared/docx.ts'
 import { createPdf } from '../_shared/pdf.ts'
 
@@ -78,6 +86,8 @@ type RequestBody = {
   taskContract?: string | null
   routingSource?: string | null
 }
+
+const maxProviderRecoveryAttempts = 3
 
 type AgentIntent = {
   capability: string
@@ -635,6 +645,19 @@ function stableValue(value: unknown): unknown {
   return value
 }
 
+function emailAttachmentPreview(
+  argumentsValue: Record<string, unknown> | undefined,
+  output: Record<string, unknown> | undefined,
+) {
+  const name = safeString(output?.attachment_name ?? argumentsValue?.attachment_name, 160)
+  const mimeType = safeString(output?.attachment_mime_type ?? argumentsValue?.attachment_mime_type, 160)
+  const size = Number(output?.attachment_size ?? argumentsValue?.attachment_size ?? 0)
+  const sha256 = safeString(output?.attachment_sha256 ?? argumentsValue?.attachment_sha256, 128)
+  return name && size > 0 && sha256
+    ? { name, mime_type: mimeType || 'application/octet-stream', size, sha256 }
+    : null
+}
+
 async function hashValue(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(stableValue(value)))
   const digest = await crypto.subtle.digest('SHA-256', bytes)
@@ -758,12 +781,14 @@ async function approvalPayload(
     if (explicitRecipients.length) {
       safety.warnings.push('Verify the typed recipient address before sending; it was not matched against a contact or prior correspondence.')
     }
+    const attachment = emailAttachmentPreview(draftArguments, draftOutput)
     payload.preview = {
       to: draftArguments.to,
       cc: draftArguments.cc ?? [],
       bcc: draftArguments.bcc ?? [],
       subject: draftArguments.subject,
       body_text: draftArguments.body_text,
+      attachment,
       safety,
     }
   } else if (toolName === 'browser.submit') {
@@ -2184,12 +2209,28 @@ async function executeProviderTool(
       }
     }
     const contactEmail = requiredAttendees.length === 1 ? requiredAttendees[0] : null
+    const threadId = safeString(argumentsValue.thread_id, 256)
+    const sentMessageId = safeString(argumentsValue.sent_message_id, 256)
+    try {
+      await validateGmailReplyTarget(admin, run.user_id, threadId, sentMessageId)
+    } catch (error) {
+      if (error instanceof GoogleIntegrationError) {
+        return {
+          kind: 'pause',
+          status: error.retryable ? 'waiting_external' : 'waiting_for_user',
+          code: error.code,
+          message: error.message,
+          value: { connected: false, retryable: error.retryable },
+        }
+      }
+      throw error
+    }
     const { data, error } = await admin.from('agent_email_watches').upsert({
       run_id: run.id,
       user_id: run.user_id,
-      thread_id: safeString(argumentsValue.thread_id, 256),
+      thread_id: threadId,
       contact_email: contactEmail,
-      sent_message_id: safeString(argumentsValue.sent_message_id, 256),
+      sent_message_id: sentMessageId,
       status: 'active',
       next_poll_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + timeoutDays * 24 * 60 * 60 * 1000).toISOString(),
@@ -2494,6 +2535,14 @@ async function completionSatisfied(
   if (requiredExternalEffects.includes('gmail_send') &&
       confirmedTools.has('gmail.create_draft') &&
       !confirmedTools.has('gmail.send_message')) return false
+  if (requiredExternalEffects.includes('gmail_send')) {
+    const emailActions = await admin.from('agent_actions')
+      .select('tool_name,status,arguments,output')
+      .eq('run_id', run.id)
+      .eq('user_id', run.user_id)
+    if (emailActions.error) throw new Error(emailActions.error.message)
+    if (unsentPreparedDraftIds((emailActions.data ?? []) as Array<Record<string, unknown>>).length) return false
+  }
 
   const requiresOrderedChangeNotification = calendarMustPrecedeEmail(run)
   if (requiresOrderedChangeNotification && !verifiedCrossToolStage(ledger.actions).complete) return false
@@ -3093,35 +3142,7 @@ function namedRecipientFromObjective(objective: string, description = '') {
 }
 
 function namedRecipientsFromObjective(objective: string, description = '') {
-  const titleValue = objective.trim().replace(/[’‘]/g, "'")
-  const descriptionValue = description.trim().replace(/[’‘]/g, "'")
-  // Prefer the explicit title anchor, then parse the Description on its own
-  // so a generic title such as “Find availability” cannot contaminate the
-  // recipient name captured from “Check Ada's availability”. Only combine
-  // them when the instruction is split across both fields (for example,
-  // “Schedule meeting” + “with Ada next week”).
-  const values = [titleValue, descriptionValue, `${titleValue} ${descriptionValue}`.trim()].filter(Boolean)
-  const patterns = [
-    /^(?:email|message|reply\s+to|follow[\s-]?up\s+with)\s+(.+?)(?:\s+(?:about|regarding|re:)\b|$)/i,
-    /^(?:tell|ask|inform|remind)\s+(.+?)(?:\s+(?:about|regarding|whether|if|to)\b|$)/i,
-    /^(?:invite|notify)\s+(.+?)(?:\s+(?:to|for|about|regarding|on|at)\b|$)/i,
-    /^(?:schedule|arrange|coordinate|organize|set\s*up|book|reschedule)\b[\s\S]*?\bwith\s+(.+?)(?:\s+(?:about|regarding|for|on|at|next|this|today|tomorrow)\b|$)/i,
-    /^(?:find|check|look\s+for)\s+(.+?)\s+(?:availability|free\s+(?:time|slot))\b/i,
-    /^(?:find|check|look\s+for)\s+(?:availability|free\s+(?:time|slot))\s+(?:with|for)\s+(.+?)(?:\s+(?:about|regarding|on|at|next|this|today|tomorrow)\b|$)/i,
-    /^(?:find|check|look\s+for)\b[\s\S]*?\bwith\s+(.+?)(?:\s+(?:about|regarding|for|on|at|next|this|today|tomorrow)\b|$)/i,
-    /^(?:when|what\s+time)\b[\s\S]*?\b(?:is|can|could|would)\s+(.+?)\s+(?:free|available|meet)\b/i,
-    /^(?:what|which)\s+(?:time|day|date)\b[\s\S]*?\bworks?\s+for\s+(.+?)(?:\s+(?:about|regarding|on|at|next|this|today|tomorrow)\b|$)/i,
-    /^(?:put|place|add|sync)\b[\s\S]*?\b(?:to|in|into|on)\s+(.+?)\s+(?:email|gmail|inbox|calendar|schedule)\b/i,
-  ]
-  const match = values.flatMap(value => patterns.map(pattern => value.match(pattern))).find(Boolean)
-  const raw = safeString(match?.[1], 600).trim()
-  if (!raw) return []
-  return raw
-    .split(/\s*(?:,|\band\b|&)\s*/i)
-    .map(value => value.replace(/[’‘]s\b|'s\b/gi, '').replace(/\b(?:please|today|tomorrow|next\s+week)\b/gi, '').trim())
-    .filter(value => value && !/^(?:me|myself|us|everyone|them|the\s+team)$/i.test(value))
-    .filter((value, index, values) => values.findIndex(candidate => candidate.toLocaleLowerCase() === value.toLocaleLowerCase()) === index)
-    .slice(0, 10)
+  return parseNamedRecipients(objective, description)
 }
 
 function canonicalTitleRecipientEmail(run: AgentRunRow) {
@@ -3345,7 +3366,14 @@ function taskRecipientEmails(run: AgentRunRow) {
   // A user may supply the explicit address after Contacts returns not_found
   // or provider_unavailable. That answer is authoritative task context and
   // must be accepted without allowing the model to invent a different address.
-  return extractEmailAddresses(`${run.objective} ${safeString(run.context?.description, 4000)} ${safeString(run.context?.user_context, 10000)}`)
+  const objectiveAndDescription = `${run.objective} ${safeString(run.context?.description, 4000)}`
+  const userContext = safeString(run.context?.user_context, 10000)
+  const pending = run.context?.recipient_resolution_pending as Record<string, unknown> | undefined
+  const userContextIsRecipientAnswer = ['not_found', 'provider_unavailable'].includes(safeString(pending?.state, 80)) ||
+    /\b(?:recipient|contact|email)\s+(?:address|is|should|means?)\b/i.test(userContext)
+  return extractEmailAddresses(userContextIsRecipientAnswer
+    ? `${objectiveAndDescription} ${userContext}`
+    : objectiveAndDescription)
 }
 
 function resolvedRecipientEmails(run: AgentRunRow) {
@@ -4279,6 +4307,35 @@ async function retryWaitingProviderAction(
     if (!approval.data) return null
   }
 
+  const recoveryAttempt = Number(action.recovery_attempt ?? 0)
+  if (!retryAttemptAllowed(recoveryAttempt, maxProviderRecoveryAttempts)) {
+    const message = 'Google could not complete this step after the bounded recovery attempts. Reconnect Google or try this email action again.'
+    const exhausted = await admin.from('agent_actions').update({
+      status: 'failed',
+      error_code: 'google_retry_exhausted',
+      error_message: message,
+      retryable: false,
+      completed_at: new Date().toISOString(),
+    }).eq('id', action.id).eq('retryable', true).select('id').maybeSingle()
+    if (exhausted.error) throw new Error(exhausted.error.message)
+    const waiting = await updateRun(admin, run, {
+      status: 'waiting_for_user',
+      waiting_reason: message,
+      error_code: 'google_retry_exhausted',
+      error: message,
+      retryable: false,
+      lease_owner: null,
+      lease_expires_at: null,
+    })
+    await addEvent(admin, waiting, 'agent_provider_retry_exhausted', waiting.status, message, {
+      tool_name: toolName,
+      action_id: action.id,
+      recovery_attempt: recoveryAttempt,
+      max_recovery_attempts: maxProviderRecoveryAttempts,
+    })
+    return waiting
+  }
+
   const lastStartedAt = safeString(action.started_at, 80)
   if (
     action.status === 'running' &&
@@ -4291,6 +4348,7 @@ async function retryWaitingProviderAction(
     started_at: new Date().toISOString(),
     error_code: null,
     error_message: null,
+    recovery_attempt: recoveryAttempt + 1,
   }).eq('id', action.id).eq('status', action.status)
   retryClaimQuery = lastStartedAt
     ? retryClaimQuery.eq('started_at', lastStartedAt)
@@ -4370,8 +4428,10 @@ async function retryWaitingProviderAction(
     return waiting
   }
 
-  await admin.from('agent_actions').update({
+  const persistedArguments = persistedEmailArguments(action.tool_name, action.arguments as Record<string, unknown>, execution.value)
+  const persistedAction = await admin.from('agent_actions').update({
     status: 'succeeded',
+    arguments: persistedArguments,
     output: execution.value,
     public_summary: execution.publicSummary,
     provider_action_id: execution.providerActionId ?? null,
@@ -4379,7 +4439,10 @@ async function retryWaitingProviderAction(
     error_message: null,
     retryable: false,
     completed_at: new Date().toISOString(),
-  }).eq('id', action.id)
+  }).eq('id', action.id).select('id').maybeSingle()
+  if (persistedAction.error || !persistedAction.data) {
+    throw new Error(persistedAction.error?.message ?? 'The provider result could not be persisted safely.')
+  }
   let history = await loadModelHistory(admin, run)
   const callId = safeString(action.model_call_id, 256)
   if (callId) history = upsertHistoryToolOutput(history, callId, execution.value)
@@ -5460,13 +5523,18 @@ async function advanceRun(
     const resolvedRecipient = toolName === 'contacts.resolve_recipient'
       ? toolOutput.value
       : null
-    await admin.from('agent_actions').update({
+    const persistedArguments = persistedEmailArguments(toolName, argumentsValue, toolOutput.value)
+    const persistedAction = await admin.from('agent_actions').update({
       status: 'succeeded',
+      arguments: persistedArguments,
       output: toolOutput.value,
       public_summary: toolOutput.publicSummary,
       provider_action_id: toolOutput.providerActionId ?? null,
       completed_at: new Date().toISOString(),
-    }).eq('id', action.id)
+    }).eq('id', action.id).select('id').maybeSingle()
+    if (persistedAction.error || !persistedAction.data) {
+      throw new Error(persistedAction.error?.message ?? 'The provider result could not be persisted safely.')
+    }
     history.push({
       type: 'function_call_output',
       call_id: safeString(call.call_id, 256),
@@ -5509,6 +5577,31 @@ async function advanceRun(
   return current
 }
 
+async function cleanupPreparedEmailDrafts(
+  admin: AdminClient,
+  run: AgentRunRow,
+) {
+  const result = await admin.from('agent_actions')
+    .select('id,output')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('tool_name', 'gmail.create_draft')
+    .eq('status', 'succeeded')
+  if (result.error) throw new Error(result.error.message)
+  const draftIds = [...new Set((result.data ?? [])
+    .map(action => safeString((action.output as Record<string, unknown> | null)?.draft_id, 256))
+    .filter(Boolean))]
+  const cleanupErrors: string[] = []
+  for (const draftId of draftIds) {
+    try {
+      await deletePreparedGmailDraft(admin, run.user_id, draftId)
+    } catch (error) {
+      cleanupErrors.push(error instanceof Error ? error.message : 'Gmail draft cleanup failed.')
+    }
+  }
+  return cleanupErrors
+}
+
 async function approveOrReject(
   admin: AdminClient,
   userId: string,
@@ -5530,7 +5623,22 @@ async function approveOrReject(
   if (approvalResult.error || !approval) throw new Error('This approval is unavailable or already decided.')
   if (approval.version !== body.approvalVersion) throw new Error('This approval changed. Review it again.')
   if (approval.expires_at && Date.parse(approval.expires_at) <= Date.now()) {
-    await admin.from('agent_approvals').update({ status: 'expired', decided_at: new Date().toISOString() }).eq('id', approval.id)
+    const expiredActionResult = await admin.from('agent_actions').select('id,tool_name').eq('id', approval.action_id).eq('user_id', userId).maybeSingle()
+    if (expiredActionResult.error) throw new Error(expiredActionResult.error.message)
+    const expiredRun = await loadOwnedRun(admin, userId, approval.run_id)
+    if (expiredRun && expiredActionResult.data?.tool_name === 'gmail.send_message') {
+      try {
+        await cleanupPreparedEmailDrafts(admin, expiredRun)
+      } catch {
+        // Expiry is still authoritative. A private draft that could not be
+        // deleted because Google was unavailable cannot be sent by this action,
+        // which is cancelled below; the next recovery can clean it up.
+      }
+    }
+    const expiredApproval = await admin.from('agent_approvals').update({ status: 'expired', decided_at: new Date().toISOString() }).eq('id', approval.id).eq('status', 'pending').select('id').maybeSingle()
+    if (expiredApproval.error) throw new Error(expiredApproval.error.message)
+    const expiredAction = await admin.from('agent_actions').update({ status: 'cancelled', completed_at: new Date().toISOString(), retryable: false }).eq('id', approval.action_id).eq('status', 'awaiting_approval').select('id').maybeSingle()
+    if (expiredAction.error) throw new Error(expiredAction.error.message)
     throw new Error('This approval expired. Ask Roon to prepare it again.')
   }
   const actionResult = await admin.from('agent_actions').select('*').eq('id', approval.action_id).eq('user_id', userId).single()
@@ -5546,6 +5654,18 @@ async function approveOrReject(
   )
   const expectedHash = await hashValue(expectedPayload)
   if (expectedHash !== approval.payload_hash) throw new Error('The action changed after approval was requested.')
+
+  if (decision === 'approved' && action.tool_name === 'gmail.send_message') {
+    const preview = expectedPayload.preview as Record<string, unknown> | undefined
+    const safety = preview?.safety as { requiresAttachment?: boolean; hasPlaceholder?: boolean } | undefined
+    const attachment = preview?.attachment as Record<string, unknown> | null | undefined
+    if (safety?.hasPlaceholder) {
+      throw new Error('Remove unfinished placeholders before sending this email.')
+    }
+    if (safety?.requiresAttachment && (!attachment?.name || !attachment?.sha256 || Number(attachment.size) <= 0)) {
+      throw new Error('Choose the attachment mentioned in this email before sending.')
+    }
+  }
 
   const decisionClaim = await admin.from('agent_approvals').update({
     status: decision,
@@ -5563,7 +5683,8 @@ async function approveOrReject(
   }
 
   if (decision === 'rejected') {
-    await admin.from('agent_actions').update({ status: 'cancelled', completed_at: new Date().toISOString() }).eq('id', action.id)
+    const cancelledAction = await admin.from('agent_actions').update({ status: 'cancelled', completed_at: new Date().toISOString() }).eq('id', action.id).select('id').maybeSingle()
+    if (cancelledAction.error || !cancelledAction.data) throw new Error(cancelledAction.error?.message ?? 'Could not cancel the email action.')
     let history = await loadModelHistory(admin, run)
     const callId = safeString(action.model_call_id, 256)
     if (callId && !historyHasToolOutput(history, callId)) {
@@ -5584,7 +5705,8 @@ async function approveOrReject(
     return run
   }
 
-  await admin.from('agent_actions').update({ status: 'running', started_at: new Date().toISOString() }).eq('id', action.id)
+  const startedAction = await admin.from('agent_actions').update({ status: 'running', started_at: new Date().toISOString() }).eq('id', action.id).eq('status', 'awaiting_approval').select('id').maybeSingle()
+  if (startedAction.error || !startedAction.data) throw new Error(startedAction.error?.message ?? 'The approved email action changed before execution.')
   run = await updateRun(admin, run, { status: 'running', waiting_reason: '', error: null, error_code: null })
   await addEvent(admin, run, 'agent_approval_granted', run.status, approval.summary, { action_id: action.id })
 
@@ -5743,13 +5865,18 @@ async function approveOrReject(
     return run
   }
 
-  await admin.from('agent_actions').update({
+  const persistedArguments = persistedEmailArguments(action.tool_name, action.arguments as Record<string, unknown>, execution.value)
+  const persistedAction = await admin.from('agent_actions').update({
     status: 'succeeded',
+    arguments: persistedArguments,
     output: execution.value,
     public_summary: execution.publicSummary,
     provider_action_id: execution.providerActionId ?? null,
     completed_at: new Date().toISOString(),
-  }).eq('id', action.id)
+  }).eq('id', action.id).select('id').maybeSingle()
+  if (persistedAction.error || !persistedAction.data) {
+    throw new Error(persistedAction.error?.message ?? 'The retried provider result could not be persisted safely.')
+  }
   run = await refreshSpecialistEffectLedger(admin, run)
   const history = await loadModelHistory(admin, run)
   history.push({
@@ -5880,10 +6007,11 @@ async function editEmailApproval(admin: AdminClient, userId: string, body: Reque
   const updatedDraft = await updatePreparedGmailDraft(admin, userId, draftId, subject, emailBody, {
     name: attachmentName, base64: attachmentBase64, mimeType: attachmentMimeType,
   })
-  const updatedDraftArguments = {
-    ...(draftAction.arguments as Record<string, unknown>), subject, body_text: emailBody,
-    ...(attachmentName ? { attachment_name: attachmentName, attachment_base64: attachmentBase64, attachment_mime_type: attachmentMimeType } : {}),
-  }
+    const updatedDraftArguments = persistedEmailArguments(
+    'gmail.create_draft',
+    { ...(draftAction.arguments as Record<string, unknown>), subject, body_text: emailBody },
+    updatedDraft,
+  )
   const updatedSendArguments = { ...sendArguments, expected_subject: subject }
   const draftUpdate = await admin.from('agent_actions').update({
     arguments: updatedDraftArguments,
@@ -6215,6 +6343,12 @@ Deno.serve(async request => {
         run = await advanceRun(admin, run, openaiKey)
       } else if (action === 'cancel') {
         if (!['completed', 'cancelled'].includes(run.status)) {
+          let draftCleanupErrors: string[] = []
+          try {
+            draftCleanupErrors = await cleanupPreparedEmailDrafts(admin, run)
+          } catch (error) {
+            draftCleanupErrors = [error instanceof Error ? error.message : 'Gmail draft cleanup failed.']
+          }
           run = await updateRun(admin, run, {
             status: 'cancelled',
             cancelled_at: new Date().toISOString(),
@@ -6224,7 +6358,9 @@ Deno.serve(async request => {
           })
           await admin.from('agent_actions').update({ status: 'cancelled' }).eq('run_id', run.id).in('status', ['queued', 'running', 'awaiting_approval'])
           await admin.from('agent_approvals').update({ status: 'cancelled' }).eq('run_id', run.id).eq('status', 'pending')
-          await addEvent(admin, run, 'agent_cancelled', run.status, 'Agent run cancelled.')
+          await addEvent(admin, run, 'agent_cancelled', run.status, 'Agent run cancelled.', {
+            gmail_draft_cleanup_errors: draftCleanupErrors,
+          })
         }
       } else if (action === 'resume') {
         if (!run) throw new Error('Agent run not found.')

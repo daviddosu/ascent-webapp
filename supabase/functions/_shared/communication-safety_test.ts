@@ -9,6 +9,8 @@ import {
   classifyNegotiationReply,
   isAutomatedEmailReply,
   latestEmailReplyText,
+  extractEmailAddresses,
+  normalizeEmail,
   normalizeContextQuestion,
 } from './communication-safety.ts'
 
@@ -110,4 +112,9 @@ Deno.test('negotiation reply classification is conservative', () => {
 Deno.test('context questions normalize for duplicate detection', () => {
   assertEquals(normalizeContextQuestion(' What time should we use? '), 'what time should we use')
   assertEquals(normalizeContextQuestion('What time should we use!'), 'what time should we use')
+})
+
+Deno.test('email authorization normalizes addresses without collapsing distinct recipients', () => {
+  assertEquals(normalizeEmail('Alice <ALICE@example.com>'), 'alice@example.com')
+  assertEquals(extractEmailAddresses('To Alice <ALICE@example.com> and Bob <bob@example.com>'), ['alice@example.com', 'bob@example.com'])
 })

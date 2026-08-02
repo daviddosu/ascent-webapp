@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { calendarEventBlocksTime, calendarQueryTimestamp, gmailRecipientHeaderLines, hasConfirmedSentMessage, isValidIanaTimezone } from './google.ts'
+import { calendarEventBlocksTime, calendarQueryTimestamp, classifyGoogleHttpFailure, gmailRecipientHeaderLines, gmailReplyCheckpointMatches, hasConfirmedSentMessage, isValidIanaTimezone } from './google.ts'
 
 Deno.test('calendar conflict checks ignore only transparent, cancelled, or edited events', () => {
   assertEquals(calendarEventBlocksTime({
@@ -49,6 +49,20 @@ Deno.test('Gmail draft updates preserve To, CC, and BCC header intent', () => {
     'Cc: copy@example.com',
     'Bcc: hidden@example.com',
   ])
+})
+
+Deno.test('Google transport classification retries timeouts, quota, and transient HTTP failures', () => {
+  assertEquals(classifyGoogleHttpFailure(408), { code: 'google_408', message: 'Google could not complete this step (408). Roon will retry.', retryable: true })
+  assertEquals(classifyGoogleHttpFailure(403, 'userRateLimitExceeded').code, 'google_rate_limited')
+  assertEquals(classifyGoogleHttpFailure(403, 'userRateLimitExceeded').retryable, true)
+  assertEquals(classifyGoogleHttpFailure(403, 'insufficientPermissions').retryable, false)
+  assertEquals(classifyGoogleHttpFailure(400).retryable, false)
+})
+
+Deno.test('reply checkpoints require the exact sent message and thread', () => {
+  assertEquals(gmailReplyCheckpointMatches({ id: 'sent-1', threadId: 'thread-1', labelIds: ['SENT'] }, 'thread-1', 'sent-1'), true)
+  assertEquals(gmailReplyCheckpointMatches({ id: 'sent-1', threadId: 'thread-2', labelIds: ['SENT'] }, 'thread-1', 'sent-1'), false)
+  assertEquals(gmailReplyCheckpointMatches({ id: 'sent-1', threadId: 'thread-1', labelIds: ['INBOX'] }, 'thread-1', 'sent-1'), false)
 })
 
 Deno.test('Calendar timezone validation accepts IANA zones and rejects arbitrary strings', () => {

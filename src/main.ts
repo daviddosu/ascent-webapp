@@ -1303,7 +1303,8 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
         reader.readAsDataURL(file)
       }) : undefined
       const safety = approvalPreviewValue(approval, 'safety') as { requiresAttachment?: boolean; hasPlaceholder?: boolean } | ''
-      if (safety && safety.requiresAttachment && !attachment) throw new Error('Choose the attachment mentioned in this email before sending.')
+      const persistedAttachment = approvalPreviewValue(approval, 'attachment') as { name?: string; sha256?: string } | null
+      if (safety && safety.requiresAttachment && !attachment && !persistedAttachment?.name && !persistedAttachment?.sha256) throw new Error('Choose the attachment mentioned in this email before sending.')
       if (safety && safety.hasPlaceholder) throw new Error('Remove unfinished placeholders before sending.')
       if (editedSubject !== currentSubject || editedBody !== currentBody || attachment) {
         await editAgentEmailApproval(approval, editedSubject, editedBody, attachment)
@@ -3062,6 +3063,7 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
   const browserTarget = approvalPreviewValue(approval, 'target')
   const browserEffect = approvalPreviewValue(approval, 'expected_effect')
   const preparedValues = approvalPreviewValue(approval, 'prepared_values')
+  const attachment = approvalPreviewValue(approval, 'attachment') as { name?: string; mime_type?: string; size?: number } | null
   const safety = approvalPreviewValue(approval, 'safety') as { warnings?: unknown } | null
   const busy = agentDecisionBusy.has(approval.id)
   const undoing = pendingEmailSends.has(approval.id)
@@ -3077,6 +3079,7 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
       ${Array.isArray(ccRecipients) && ccRecipients.length ? `<dl><dt>CC</dt><dd>${escapeHtml(ccRecipients.join(', '))}</dd></dl>` : ''}
       ${Array.isArray(bccRecipients) && bccRecipients.length ? `<dl><dt>BCC</dt><dd>${escapeHtml(bccRecipients.join(', '))}</dd></dl>` : ''}
+      ${approval.kind === 'send_email' && attachment?.name ? `<dl><dt>Attachment</dt><dd>${escapeHtml(String(attachment.name))}${attachment.size ? ` (${Math.ceil(Number(attachment.size) / 1024)} KB)` : ''}</dd></dl>` : ''}
       ${approval.kind === 'calendar_write' && Array.isArray(calendarAttendees) && calendarAttendees.length ? `<dl><dt>Attendees</dt><dd>${escapeHtml(calendarAttendees.join(', '))}</dd></dl>` : ''}
       ${approval.kind === 'calendar_write' && typeof notifyAttendees === 'boolean' ? `<dl><dt>Notifications</dt><dd>${notifyAttendees ? 'Attendees will be notified.' : 'No attendee notifications.'}</dd></dl>` : ''}
       ${title || approval.kind === 'calendar_write' ? approval.kind === 'send_email'
@@ -3096,7 +3099,7 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ${approval.kind === 'calendar_write'
         ? `<label class="task-agent-email-field"><span>Description</span><textarea data-agent-calendar-description="${task.id}" rows="5" maxlength="12000" aria-label="Calendar event description" ${busy ? 'disabled' : ''}>${escapeHtml(String(body ?? ''))}</textarea></label>`
         : body ? approval.kind === 'send_email'
-        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${task.id}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label><label class="task-agent-email-field"><span>Attachment <small>Optional · from your computer</small></span><input type="file" data-agent-email-attachment="${task.id}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`
+        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${task.id}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label><label class="task-agent-email-field"><span>Attachment <small>${attachment?.name ? 'Choose another to replace it' : 'Optional · from your computer'}</small></span><input type="file" data-agent-email-attachment="${task.id}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`
         : `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
     </div>
     <small>Only this exact action is approved. Any change requires a new review.</small>

@@ -1,5 +1,19 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { decryptSecret, encryptSecret } from './crypto.ts'
+import {
+  attachmentMetadataFromBase64,
+  attachmentParts,
+  attachmentsEqual,
+  canonicalEmailBody,
+  emailPayloadMatches,
+  matchingEmailHeaderEntries,
+  normalizeEmailAddress,
+  normalizedEmailHeader,
+  normalizedPersonName,
+  type EmailAttachmentMetadata,
+  type EmailPayload,
+  type GmailAttachmentPart,
+} from './email-integrity.ts'
 
 type AdminClient = SupabaseClient<any, 'public', 'public', any, any>
 
@@ -28,6 +42,55 @@ export class GoogleIntegrationError extends Error {
     this.name = 'GoogleIntegrationError'
     this.code = code
     this.retryable = retryable
+  }
+}
+
+const googleRequestTimeoutMs = 15_000
+const googleTokenTimeoutMs = 12_000
+
+export type GoogleHttpFailure = {
+  code: string
+  message: string
+  retryable: boolean
+}
+
+/** Keep provider error policy deterministic and testable without a live Google call. */
+export function classifyGoogleHttpFailure(
+  status: number,
+  reason = '',
+): GoogleHttpFailure {
+  const normalizedReason = reason.toLocaleLowerCase()
+  if (status === 401) return { code: 'google_reauth_required', message: 'Reconnect Google to continue.', retryable: false }
+  if (status === 403 && /(?:ratelimit|quota|user.?rate|backenderror|temporar)/i.test(normalizedReason)) {
+    return { code: 'google_rate_limited', message: 'Google is temporarily rate-limiting this task. Roon will retry.', retryable: true }
+  }
+  if (status === 403) return { code: 'google_permission_denied', message: 'Google denied this permission. Reconnect Google or review the requested access.', retryable: false }
+  if ([408, 409, 425, 429].includes(status) || status >= 500) {
+    return { code: status === 429 ? 'google_rate_limited' : `google_${status}`, message: status === 429 ? 'Google is temporarily rate-limiting this task. Roon will retry.' : `Google could not complete this step (${status}). Roon will retry.`, retryable: true }
+  }
+  return { code: `google_${status}`, message: `Google could not complete this step (${status}).`, retryable: false }
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+) {
+  if (init.signal) return fetch(input, init)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new GoogleIntegrationError('google_timeout', 'Google did not respond in time. Roon will retry.')
+    }
+    throw new GoogleIntegrationError(
+      'google_network_error',
+      `Google could not be reached${error instanceof Error && error.message ? `: ${error.message}` : '.'} Roon will retry.`,
+    )
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
@@ -141,7 +204,7 @@ async function refreshAccessToken(admin: AdminClient, integration: GoogleIntegra
     throw new GoogleIntegrationError('google_reauth_required', 'Reconnect Google to continue.', false)
   }
   const refreshToken = await decryptSecret(integration.refresh_token_ciphertext)
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await fetchWithTimeout('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -150,8 +213,8 @@ async function refreshAccessToken(admin: AdminClient, integration: GoogleIntegra
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
-  })
-  const payload = await response.json() as {
+  }, googleTokenTimeoutMs)
+  const payload = await response.json().catch(() => ({})) as {
     access_token?: string
     expires_in?: number
     scope?: string
@@ -200,33 +263,35 @@ async function googleRequest<T>(
   retry = true,
 ): Promise<T> {
   const token = await accessToken(admin, userId, !retry)
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     ...init,
     headers: {
       'Authorization': `Bearer ${token}`,
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),
       ...(init.headers ?? {}),
     },
-  })
+  }, googleRequestTimeoutMs)
   if (response.status === 401 && retry) {
     return googleRequest(admin, userId, url, init, false)
   }
-  if (response.status === 401 || response.status === 403) {
-    throw new GoogleIntegrationError('google_reauth_required', 'Reconnect Google to continue.', false)
-  }
-  if (response.status === 429) {
-    throw new GoogleIntegrationError('google_rate_limited', 'Google is temporarily rate-limiting this task. Roon will retry.')
-  }
   if (!response.ok) {
-    const detail = await response.text()
-    throw new GoogleIntegrationError(
-      `google_${response.status}`,
-      `Google could not complete this step (${response.status}).`,
-      response.status >= 500,
-    )
+    const detail = await response.text().catch(() => '')
+    let reason = ''
+    try {
+      const parsed = JSON.parse(detail) as { error?: { errors?: Array<{ reason?: string }>; status?: string } }
+      reason = parsed.error?.errors?.[0]?.reason ?? parsed.error?.status ?? ''
+    } catch {
+      // The HTTP status is still enough to classify the failure.
+    }
+    const failure = classifyGoogleHttpFailure(response.status, reason)
+    throw new GoogleIntegrationError(failure.code, failure.message, failure.retryable)
   }
   if (response.status === 204) return {} as T
-  return response.json() as Promise<T>
+  try {
+    return await response.json() as T
+  } catch {
+    throw new GoogleIntegrationError('google_invalid_response', 'Google returned an invalid response. Roon will retry.')
+  }
 }
 
 type GmailHeader = { name?: string; value?: string }
@@ -309,6 +374,100 @@ function compactMessage(message: GmailMessage) {
   }
 }
 
+async function attachmentBase64ForPart(
+  admin: AdminClient,
+  userId: string,
+  message: GmailMessage,
+  part: GmailAttachmentPart,
+) {
+  if (part.body?.data) return part.body.data
+  if (!part.body?.attachmentId || !message.id) return ''
+  const attachment = await googleRequest<{ data?: string }>(
+    admin,
+    userId,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(message.id)}/attachments/${encodeURIComponent(part.body.attachmentId)}`,
+  )
+  return attachment.data ?? ''
+}
+
+async function messageAttachmentMetadata(
+  admin: AdminClient,
+  userId: string,
+  message: GmailMessage,
+): Promise<EmailAttachmentMetadata[]> {
+  const parts = attachmentParts(message.payload as GmailAttachmentPart | undefined)
+  const metadata: EmailAttachmentMetadata[] = []
+  for (const part of parts) {
+    const encoded = await attachmentBase64ForPart(admin, userId, message, part)
+    const item = await attachmentMetadataFromBase64(part.filename, part.mimeType, encoded)
+    if (!item) {
+      throw new GoogleIntegrationError(
+        'gmail_attachment_unreadable',
+        'Gmail returned an attachment that could not be verified. Review the email again.',
+        false,
+      )
+    }
+    metadata.push(item)
+  }
+  return metadata
+}
+
+async function emailPayloadFromMessage(
+  admin: AdminClient,
+  userId: string,
+  message: GmailMessage,
+): Promise<EmailPayload> {
+  return {
+    to: normalizedEmails(headerValue(message, 'To')),
+    cc: normalizedEmails(headerValue(message, 'Cc')),
+    bcc: normalizedEmails(headerValue(message, 'Bcc')),
+    subject: headerValue(message, 'Subject'),
+    body_text: canonicalEmailBody(plainTextFromPart(message.payload)),
+    attachments: await messageAttachmentMetadata(admin, userId, message),
+  }
+}
+
+async function attachmentMetadataFromDraftRecord(
+  draftRecord: Awaited<ReturnType<typeof preparedDraftRecord>>,
+): Promise<EmailAttachmentMetadata[]> {
+  const argumentsValue = draftRecord?.arguments ?? {}
+  const output = draftRecord?.output ?? {}
+  const name = argumentsValue.attachment_name ?? output.attachment_name
+  const mimeType = argumentsValue.attachment_mime_type ?? output.attachment_mime_type
+  const base64 = argumentsValue.attachment_base64
+  if (name && base64) {
+    const item = await attachmentMetadataFromBase64(name, mimeType, base64)
+    if (!item) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The saved attachment is invalid. Choose it again.', false)
+    return [item]
+  }
+  const sha256 = String(argumentsValue.attachment_sha256 ?? output.attachment_sha256 ?? '')
+  if (!name && !sha256) return []
+  const size = Number(argumentsValue.attachment_size ?? output.attachment_size ?? 0)
+  if (!name || !sha256 || !Number.isFinite(size) || size <= 0) {
+    throw new GoogleIntegrationError('gmail_attachment_metadata_missing', 'The saved attachment details are incomplete. Choose the attachment again.', false)
+  }
+  return [{
+    name: String(name),
+    mime_type: String(mimeType ?? 'application/octet-stream').toLocaleLowerCase(),
+    size,
+    sha256,
+  }]
+}
+
+async function draftExpectedPayload(
+  draftRecord: Awaited<ReturnType<typeof preparedDraftRecord>>,
+): Promise<EmailPayload> {
+  const argumentsValue = draftRecord?.arguments ?? {}
+  return {
+    to: Array.isArray(argumentsValue.to) ? argumentsValue.to.map(value => String(value)) : [],
+    cc: Array.isArray(argumentsValue.cc) ? argumentsValue.cc.map(value => String(value)) : [],
+    bcc: Array.isArray(argumentsValue.bcc) ? argumentsValue.bcc.map(value => String(value)) : [],
+    subject: String(argumentsValue.subject ?? ''),
+    body_text: canonicalEmailBody(argumentsValue.body_text),
+    attachments: await attachmentMetadataFromDraftRecord(draftRecord),
+  }
+}
+
 async function gmailSearch(admin: AdminClient, userId: string, query: string, maxResults: number) {
   const url = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages')
   url.searchParams.set('q', query)
@@ -352,7 +511,12 @@ async function gmailReadThread(
   const sentIndex = sentMessageId
     ? messages.findIndex(message => message.id === sentMessageId)
     : -1
-  if (sentIndex >= 0) selectedIndexes.add(sentIndex)
+  if (sentIndex >= 0) {
+    // The first human reply can be older than the final 30 messages in a busy
+    // thread. Keep the sent checkpoint plus the bounded window immediately
+    // after it, which is the only portion that can satisfy this watch.
+    for (let index = sentIndex; index < Math.min(messages.length, sentIndex + 31); index += 1) selectedIndexes.add(index)
+  }
   return {
     id: thread.id ?? threadId,
     history_id: thread.historyId ?? '',
@@ -367,6 +531,7 @@ async function replyHeaders(
   admin: AdminClient,
   userId: string,
   gmailMessageId: string | null,
+  expectedThreadId = '',
 ) {
   if (!gmailMessageId) return { inReplyTo: '', references: '' }
   const message = await googleRequest<GmailMessage>(
@@ -374,12 +539,48 @@ async function replyHeaders(
     userId,
     `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(gmailMessageId)}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References`,
   )
+  if (expectedThreadId && message.threadId !== expectedThreadId) {
+    throw new GoogleIntegrationError('gmail_reply_target_invalid', 'The reply message is not part of the requested Gmail thread.', false)
+  }
   const messageId = headerValue(message, 'Message-ID')
+  if (!messageId) throw new GoogleIntegrationError('gmail_reply_target_invalid', 'Gmail did not return a valid reply message identity.', false)
   const references = headerValue(message, 'References')
   return {
     inReplyTo: messageId,
     references: [references, messageId].filter(Boolean).join(' ').trim(),
   }
+}
+
+export async function validateGmailReplyTarget(
+  admin: AdminClient,
+  userId: string,
+  threadId: string,
+  sentMessageId: string,
+) {
+  if (!threadId || !sentMessageId) {
+    throw new GoogleIntegrationError('gmail_reply_target_invalid', 'A reply watch needs the exact Gmail thread and sent message.', false)
+  }
+  const message = await googleRequest<GmailMessage>(
+    admin,
+    userId,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(sentMessageId)}?format=metadata&metadataHeaders=Message-ID`,
+  )
+  if (!gmailReplyCheckpointMatches(message, threadId, sentMessageId)) {
+    throw new GoogleIntegrationError('gmail_reply_target_invalid', 'The reply checkpoint is not a sent message in the requested Gmail thread.', false)
+  }
+  return { thread_id: message.threadId, sent_message_id: message.id }
+}
+
+export function gmailReplyCheckpointMatches(
+  message: { id?: string; threadId?: string; labelIds?: string[] },
+  threadId: string,
+  sentMessageId: string,
+) {
+  return Boolean(
+    message.id === sentMessageId &&
+    message.threadId === threadId &&
+    (message.labelIds ?? []).includes('SENT'),
+  )
 }
 
 async function existingGmailDraft(
@@ -416,11 +617,17 @@ async function gmailCreateDraft(
   const subject = safeHeader(argumentsValue.subject)
   const bodyText = String(argumentsValue.body_text ?? '').replace(/\r?\n/g, '\r\n')
   const threadId = argumentsValue.thread_id as string | null
-  const reply = await replyHeaders(admin, userId, argumentsValue.in_reply_to_message_id as string | null)
+  const inReplyToMessageId = argumentsValue.in_reply_to_message_id as string | null
+  if (Boolean(threadId) !== Boolean(inReplyToMessageId)) {
+    throw new GoogleIntegrationError('gmail_reply_target_invalid', 'A reply must include both its Gmail thread and the message it answers.', false)
+  }
+  const reply = await replyHeaders(admin, userId, inReplyToMessageId, threadId ?? '')
   const messageIdHeader = `<${idempotencyKey.replace(/[^a-zA-Z0-9._-]/g, '.')}@shotcount.app>`
   const existingDraft = await existingGmailDraft(admin, userId, messageIdHeader)
   if (existingDraft?.id && existingDraft.message) {
     const existingMessage = compactMessage(existingDraft.message)
+    const existingAttachments = await messageAttachmentMetadata(admin, userId, existingDraft.message)
+    const firstAttachment = existingAttachments[0]
     return {
       draft_id: existingDraft.id,
       message_id: existingDraft.message.id ?? '',
@@ -431,6 +638,12 @@ async function gmailCreateDraft(
       bcc: normalizedEmails(existingMessage.bcc),
       subject: existingMessage.subject,
       body_text: existingMessage.body_text,
+      ...(firstAttachment ? {
+        attachment_name: firstAttachment.name,
+        attachment_mime_type: firstAttachment.mime_type,
+        attachment_size: firstAttachment.size,
+        attachment_sha256: firstAttachment.sha256,
+      } : {}),
       already_created: true,
     }
   }
@@ -438,7 +651,13 @@ async function gmailCreateDraft(
     .replace(/[^a-zA-Z0-9._ -]/g, '')
     .slice(0, 160)
   const attachmentBase64 = String(argumentsValue.benchmark_attachment_base64 ?? '')
-  const hasBenchmarkAttachment = Boolean(attachmentName && attachmentBase64 && attachmentBase64.length <= 1_400_000)
+  const benchmarkAttachment = attachmentName && attachmentBase64 && attachmentBase64.length <= 1_400_000
+    ? await attachmentMetadataFromBase64(attachmentName, 'application/pdf', attachmentBase64)
+    : null
+  if (attachmentName && !benchmarkAttachment) {
+    throw new GoogleIntegrationError('gmail_attachment_invalid', 'The attachment is too large or invalid.', false)
+  }
+  const hasBenchmarkAttachment = Boolean(benchmarkAttachment)
   const boundary = `shotcount-${idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
     ...gmailRecipientHeaderLines(to, cc, bcc),
@@ -494,6 +713,12 @@ async function gmailCreateDraft(
     bcc,
     subject,
     body_text: bodyText,
+    ...(benchmarkAttachment ? {
+      attachment_name: benchmarkAttachment.name,
+      attachment_mime_type: benchmarkAttachment.mime_type,
+      attachment_size: benchmarkAttachment.size,
+      attachment_sha256: benchmarkAttachment.sha256,
+    } : {}),
     already_created: false,
   }
 }
@@ -518,12 +743,44 @@ export async function updatePreparedGmailDraft(
   if (!subject) throw new GoogleIntegrationError('gmail_subject_required', 'Add an email subject before sending.', false)
   if (!bodyText) throw new GoogleIntegrationError('gmail_body_required', 'Add an email body before sending.', false)
   const threadId = draftRecord.arguments.thread_id as string | null
-  const reply = await replyHeaders(admin, userId, draftRecord.arguments.in_reply_to_message_id as string | null)
+  const currentDraft = await googleRequest<GmailDraft>(
+    admin,
+    userId,
+    `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`,
+  )
+  if (!currentDraft.message) throw new GoogleIntegrationError('gmail_draft_missing', 'The prepared Gmail draft no longer exists.', false)
+  const reply = await replyHeaders(admin, userId, draftRecord.arguments.in_reply_to_message_id as string | null, threadId ?? '')
   const messageIdHeader = safeHeader(draftRecord.output.message_id_header)
-  const attachmentName = safeHeader(attachment.name).replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 160)
-  const attachmentBase64 = attachment.base64.replace(/\s+/g, '')
-  const hasAttachment = Boolean(attachmentName && attachmentBase64 && attachmentBase64.length <= 1_400_000)
-  if (attachment.name && !hasAttachment) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The attachment is too large or invalid.', false)
+  const savedAttachments = await attachmentMetadataFromDraftRecord(draftRecord)
+  let attachmentName = safeHeader(attachment.name).replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 160)
+  let attachmentBase64 = attachment.base64.replace(/\s+/g, '')
+  let attachmentMimeType = safeHeader(attachment.mimeType).toLocaleLowerCase().slice(0, 160)
+  let attachmentMetadata: EmailAttachmentMetadata | null = null
+  if (attachment.name || attachment.base64) {
+    attachmentMetadata = await attachmentMetadataFromBase64(attachmentName, attachmentMimeType, attachmentBase64)
+    if (!attachmentMetadata) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The attachment is too large or invalid.', false)
+    attachmentName = attachmentMetadata.name
+    attachmentMimeType = attachmentMetadata.mime_type
+  } else if (savedAttachments.length) {
+    const currentParts = attachmentParts(currentDraft.message.payload as GmailAttachmentPart | undefined)
+    const currentAttachments = await messageAttachmentMetadata(admin, userId, currentDraft.message)
+    if (!attachmentsEqual(savedAttachments, currentAttachments) || currentParts.length !== savedAttachments.length) {
+      throw new GoogleIntegrationError('gmail_attachment_changed', 'The saved Gmail attachment changed. Choose it again before saving this edit.', false)
+    }
+    if (currentParts.length !== 1) {
+      throw new GoogleIntegrationError('gmail_attachment_unsupported', 'This email has more than one attachment. Review it in Gmail before sending.', false)
+    }
+    attachmentName = safeHeader(currentParts[0].filename).replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 160)
+    attachmentMimeType = safeHeader(currentParts[0].mimeType).toLocaleLowerCase().slice(0, 160) || 'application/octet-stream'
+    attachmentBase64 = await attachmentBase64ForPart(admin, userId, currentDraft.message, currentParts[0])
+    attachmentMetadata = await attachmentMetadataFromBase64(attachmentName, attachmentMimeType, attachmentBase64)
+    if (!attachmentMetadata || !attachmentsEqual(savedAttachments, [attachmentMetadata])) {
+      throw new GoogleIntegrationError('gmail_attachment_changed', 'The saved Gmail attachment could not be verified. Choose it again before saving this edit.', false)
+    }
+  } else if (attachmentParts(currentDraft.message.payload as GmailAttachmentPart | undefined).length) {
+    throw new GoogleIntegrationError('gmail_attachment_changed', 'This Gmail draft has an attachment that was added outside ShotCount. Review the email again before saving this edit.', false)
+  }
+  const hasAttachment = Boolean(attachmentMetadata)
   const boundary = `shotcount-${draftId.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
     ...gmailRecipientHeaderLines(to, cc, bcc),
@@ -537,7 +794,7 @@ export async function updatePreparedGmailDraft(
   ]
   const mimeBody = hasAttachment ? [
     `--${boundary}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', bodyText,
-    `--${boundary}`, `Content-Type: ${safeHeader(attachment.mimeType) || 'application/octet-stream'}`,
+    `--${boundary}`, `Content-Type: ${attachmentMimeType || 'application/octet-stream'}`,
     'Content-Transfer-Encoding: base64', `Content-Disposition: attachment; filename="${attachmentName}"`, '', attachmentBase64,
     `--${boundary}--`,
   ].join('\r\n') : bodyText
@@ -570,22 +827,18 @@ export async function updatePreparedGmailDraft(
     bcc,
     subject,
     body_text: bodyText,
-    attachment_name: attachmentName || null,
+    ...(attachmentMetadata ? {
+      attachment_name: attachmentMetadata.name,
+      attachment_mime_type: attachmentMetadata.mime_type,
+      attachment_size: attachmentMetadata.size,
+      attachment_sha256: attachmentMetadata.sha256,
+    } : {}),
     already_created: true,
   }
 }
 
 function normalizedEmails(value: string) {
-  return value
-    .split(',')
-    .map(item => item.match(/<([^>]+)>/)?.[1] ?? item)
-    .map(item => item.trim().toLocaleLowerCase())
-    .filter(Boolean)
-    .sort()
-}
-
-function canonicalEmailBody(value: unknown) {
-  return String(value ?? '').replace(/\r\n?/g, '\n')
+  return normalizedEmailHeader(value)
 }
 
 async function preparedDraftRecord(
@@ -628,7 +881,13 @@ async function sentMessageForPreparedDraft(
     `in:sent rfc822msgid:${messageIdHeader}`,
     1,
   )
-  return existing.messages[0] ?? null
+  const messageId = existing.messages[0]?.id
+  if (!messageId) return null
+  return googleRequest<GmailMessage>(
+    admin,
+    userId,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?format=full`,
+  )
 }
 
 export function hasConfirmedSentMessage(value: { id?: string } | null | undefined) {
@@ -650,48 +909,61 @@ async function gmailSendDraft(
     )
   }
   const alreadySent = await sentMessageForPreparedDraft(admin, userId, draftRecord)
+  const expectedPayload = await draftExpectedPayload(draftRecord)
   if (alreadySent?.id) {
+    const sentPayload = await emailPayloadFromMessage(admin, userId, alreadySent)
+    if (!emailPayloadMatches(expectedPayload, sentPayload)) {
+      throw new GoogleIntegrationError('gmail_sent_message_mismatch', 'A message with this send identity already exists, but its content does not match the approved email. Review it before continuing.', false)
+    }
     return {
       message_id: alreadySent.id,
-      thread_id: alreadySent.thread_id,
+      thread_id: alreadySent.threadId ?? '',
       already_sent: true,
     }
   }
 
-  const draft = await googleRequest<{ id?: string; message?: GmailMessage }>(
-    admin,
-    userId,
-    `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`,
-  )
+  let draft: GmailDraft
+  try {
+    draft = await googleRequest<GmailDraft>(
+      admin,
+      userId,
+      `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`,
+    )
+  } catch (error) {
+    if (error instanceof GoogleIntegrationError && error.code === 'google_404') {
+      throw new GoogleIntegrationError('gmail_send_verification_pending', 'Gmail may have accepted this email, but its final sent copy is not visible yet. Roon will verify it before retrying.', true)
+    }
+    throw error
+  }
   if (!draft.message) throw new GoogleIntegrationError('gmail_draft_missing', 'The approved Gmail draft no longer exists.', false)
-  const actualTo = normalizedEmails(headerValue(draft.message, 'To'))
-  const actualCc = normalizedEmails(headerValue(draft.message, 'Cc'))
-  const actualBcc = normalizedEmails(headerValue(draft.message, 'Bcc'))
-  const expectedTo = (argumentsValue.expected_to as string[]).map(value => value.toLocaleLowerCase()).sort()
-  const expectedCc = (argumentsValue.expected_cc as string[] ?? []).map(value => value.toLocaleLowerCase()).sort()
-  const expectedBcc = (argumentsValue.expected_bcc as string[] ?? []).map(value => value.toLocaleLowerCase()).sort()
-  const actualSubject = headerValue(draft.message, 'Subject')
-  const expectedSubject = String(argumentsValue.expected_subject)
-  const preparedBody = canonicalEmailBody(draftRecord.arguments.body_text)
-  const actualBody = canonicalEmailBody(plainTextFromPart(draft.message.payload))
+  const draftPayload = await emailPayloadFromMessage(admin, userId, draft.message)
+  const approvedPayload: EmailPayload = {
+    ...expectedPayload,
+    to: Array.isArray(argumentsValue.expected_to) ? argumentsValue.expected_to.map(value => String(value)) : [],
+    cc: Array.isArray(argumentsValue.expected_cc) ? argumentsValue.expected_cc.map(value => String(value)) : [],
+    bcc: Array.isArray(argumentsValue.expected_bcc) ? argumentsValue.expected_bcc.map(value => String(value)) : [],
+    subject: String(argumentsValue.expected_subject ?? ''),
+  }
+  const messageIdHeader = headerValue(draft.message, 'Message-ID')
+  const expectedMessageIdHeader = safeHeader(draftRecord.output.message_id_header)
   if (
-    JSON.stringify(actualTo) !== JSON.stringify(expectedTo) ||
-    JSON.stringify(actualCc) !== JSON.stringify(expectedCc) ||
-    JSON.stringify(actualBcc) !== JSON.stringify(expectedBcc) ||
-    actualSubject !== expectedSubject ||
-    actualBody !== preparedBody
+    (expectedMessageIdHeader && messageIdHeader !== expectedMessageIdHeader) ||
+    !emailPayloadMatches(expectedPayload, draftPayload) ||
+    !emailPayloadMatches(approvedPayload, draftPayload)
   ) {
     throw new GoogleIntegrationError('gmail_draft_changed', 'The Gmail draft changed after approval. Review it again.', false)
   }
 
-  const messageIdHeader = headerValue(draft.message, 'Message-ID')
-  if (messageIdHeader) {
-    const existing = await gmailSearch(admin, userId, `in:sent rfc822msgid:${messageIdHeader}`, 1)
-    const existingMessage = existing.messages[0]
-    if (hasConfirmedSentMessage(existingMessage)) {
+  const existingAfterValidation = await sentMessageForPreparedDraft(admin, userId, draftRecord)
+  if (existingAfterValidation?.id) {
+    const sentPayload = await emailPayloadFromMessage(admin, userId, existingAfterValidation)
+    if (!emailPayloadMatches(expectedPayload, sentPayload)) {
+      throw new GoogleIntegrationError('gmail_sent_message_mismatch', 'A message with this send identity already exists, but its content does not match the approved email. Review it before continuing.', false)
+    }
+    if (hasConfirmedSentMessage(existingAfterValidation)) {
       return {
-        message_id: existingMessage.id,
-        thread_id: existingMessage.thread_id,
+        message_id: existingAfterValidation.id,
+        thread_id: existingAfterValidation.threadId ?? '',
         already_sent: true,
       }
     }
@@ -704,21 +976,47 @@ async function gmailSendDraft(
     { method: 'POST', body: JSON.stringify({ id: draftId }) },
   )
   if (!sent.id) throw new GoogleIntegrationError('gmail_send_unconfirmed', 'Gmail did not confirm that the email was sent.')
+  let confirmedSent: GmailMessage
+  try {
+    confirmedSent = await googleRequest<GmailMessage>(
+      admin,
+      userId,
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(sent.id)}?format=full`,
+    )
+  } catch {
+    throw new GoogleIntegrationError('gmail_send_verification_pending', 'Gmail accepted the email, but its final sent copy is not visible yet. Roon will verify it before retrying.', true)
+  }
+  const confirmedPayload = await emailPayloadFromMessage(admin, userId, confirmedSent)
+  if (!emailPayloadMatches(expectedPayload, confirmedPayload) || !emailPayloadMatches(approvedPayload, confirmedPayload)) {
+    throw new GoogleIntegrationError('gmail_sent_message_mismatch', 'Gmail returned a sent message that does not match the approved email. The message was not marked complete.', false)
+  }
   return {
-    message_id: sent.id,
-    thread_id: sent.threadId ?? '',
-    history_id: sent.historyId ?? '',
+    message_id: confirmedSent.id,
+    thread_id: confirmedSent.threadId ?? '',
+    history_id: confirmedSent.historyId ?? '',
     already_sent: false,
   }
 }
 
-export async function deleteGoogleBenchmarkDraft(
+export async function deletePreparedGmailDraft(
   admin: AdminClient,
   userId: string,
   draftId: string,
 ) {
   if (!draftId) return { deleted: false, already_deleted: true }
   try {
+    const draftRecord = await preparedDraftRecord(admin, userId, draftId)
+    if (!draftRecord?.output) return { deleted: false, already_deleted: true }
+    const draft = await googleRequest<GmailDraft>(
+      admin,
+      userId,
+      `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`,
+    )
+    const expectedMessageId = safeHeader(draftRecord.output.message_id_header)
+    const actualMessageId = draft.message ? headerValue(draft.message, 'Message-ID') : ''
+    if (expectedMessageId && actualMessageId && expectedMessageId !== actualMessageId) {
+      throw new GoogleIntegrationError('gmail_draft_identity_mismatch', 'The Gmail draft identity no longer matches ShotCount. It was left untouched for safety.', false)
+    }
     await googleRequest<Record<string, unknown>>(
       admin,
       userId,
@@ -732,6 +1030,16 @@ export async function deleteGoogleBenchmarkDraft(
     }
     throw error
   }
+}
+
+// Kept as a compatibility export for the benchmark-only caller. The deletion
+// path is identity-checked and is safe for both benchmark and live drafts.
+export async function deleteGoogleBenchmarkDraft(
+  admin: AdminClient,
+  userId: string,
+  draftId: string,
+) {
+  return deletePreparedGmailDraft(admin, userId, draftId)
 }
 
 async function calendarListEvents(admin: AdminClient, userId: string, argumentsValue: Record<string, unknown>) {
@@ -1072,12 +1380,7 @@ async function contactsFind(admin: AdminClient, userId: string, argumentsValue: 
 }
 
 function recipientEmail(value: string) {
-  const match = value.match(/<([^>\s]+@[^>\s]+)>/)?.[1] ?? value.trim()
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(match) ? match.toLocaleLowerCase() : ''
-}
-
-function normalizedPersonName(value: string) {
-  return value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ')
+  return normalizeEmailAddress(value)
 }
 
 async function gmailRecipientHeaderMatches(
@@ -1088,24 +1391,31 @@ async function gmailRecipientHeaderMatches(
   // Gmail's from:/to: operators constrain this lookup to message headers. We
   // deliberately do not use message bodies as recipient identity evidence.
   const searches = await Promise.all([
-    gmailSearch(admin, userId, `from:"${query.replaceAll('"', '')}"`, 10),
-    gmailSearch(admin, userId, `in:sent to:"${query.replaceAll('"', '')}"`, 10),
+    gmailSearch(admin, userId, `from:"${query.replaceAll('"', '')}"`, 50),
+    gmailSearch(admin, userId, `in:sent to:"${query.replaceAll('"', '')}"`, 50),
   ])
   const seen = new Set<string>()
   const matches: Array<{ email: string; name: string; thread_id: string; evidence: string }> = []
-  for (const search of searches) {
-    for (const message of search.messages) {
-      if (!message.id || seen.has(message.id)) continue
-      seen.add(message.id)
-      const gmailMessage = await googleRequest<GmailMessage>(
+  const candidates = searches.flatMap(search => search.messages).filter(message => {
+    if (!message.id || seen.has(message.id)) return false
+    seen.add(message.id)
+    return true
+  })
+  for (let offset = 0; offset < candidates.length; offset += 8) {
+    const batch = candidates.slice(offset, offset + 8)
+    const messages = await Promise.all(batch.map(async message => ({
+      source: message,
+      value: await googleRequest<GmailMessage>(
         admin,
         userId,
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(message.id)}?format=metadata&metadataHeaders=From&metadataHeaders=To`,
-      )
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(String(message.id))}?format=metadata&metadataHeaders=From&metadataHeaders=To`,
+      ),
+    })))
+    for (const { source, value: gmailMessage } of messages) {
       for (const [header, evidence] of [[headerValue(gmailMessage, 'From'), 'gmail_from_header'], [headerValue(gmailMessage, 'To'), 'gmail_sent_to_header']] as const) {
-        const email = recipientEmail(header)
-        if (!email || !normalizedPersonName(header).includes(normalizedPersonName(query))) continue
-        matches.push({ email, name: header.replace(/<[^>]+>/, '').trim() || query, thread_id: message.thread_id, evidence })
+        for (const entry of matchingEmailHeaderEntries(header, query)) {
+          matches.push({ email: entry.email, name: entry.name || query, thread_id: source.thread_id, evidence })
+        }
       }
     }
   }
