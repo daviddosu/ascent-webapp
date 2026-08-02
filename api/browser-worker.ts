@@ -18,7 +18,11 @@ import {
   type PublicBrowserState,
 } from './_public-browser.js'
 
-export const maxDuration = 60
+// Google Flights can spend most of a minute resolving a round-trip result
+// page before the bounded DOM-read timeout starts. Keep one isolated worker
+// invocation alive long enough to finish that safe read; retries still remain
+// bounded at the task-owned session layer.
+export const maxDuration = 120
 
 type WorkerRequest = {
   method?: string
