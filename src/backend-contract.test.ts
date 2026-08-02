@@ -459,6 +459,17 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('purchase_confirmed === true')
   })
 
+  it('uses the payment-handoff completion RPC after the final specialist stage', () => {
+    const completion = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('async function completeRun'),
+      taskAgentFunction.indexOf('function roonAgentInstructions'),
+    )
+    expect(completion).toContain("run.task_completion_policy === 'payment_handoff'")
+    expect(completion).toContain("admin.rpc('complete_demo_flight_handoff'")
+    expect(completion).toContain('p_result: finalResult')
+    expect(completion).toContain("admin.rpc('complete_agent_run'")
+  })
+
   it('requires provider-confirmed evidence before a real-world task becomes done', () => {
     expect(agentCompletionEvidenceMigration).toContain('for update')
     expect(agentCompletionEvidenceMigration).toContain("action.status = 'succeeded'")

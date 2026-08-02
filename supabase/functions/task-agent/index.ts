@@ -2574,9 +2574,20 @@ async function completeRun(
     return handoffToNextSpecialist(admin, run, openaiKey)
   }
 
+  const finalResult = preserveFlightResult(run, completionResult(argumentsValue))
+  if (run.task_completion_policy === 'payment_handoff') {
+    const { data, error } = await admin.rpc('complete_demo_flight_handoff', {
+      p_run_id: run.id,
+      p_result: finalResult,
+      p_expected_version: run.version,
+    })
+    if (error || !data) throw new Error(error?.message ?? 'Could not complete the payment handoff.')
+    return data as AgentRunRow
+  }
+
   const { data, error } = await admin.rpc('complete_agent_run', {
     p_run_id: run.id,
-    p_result: preserveFlightResult(run, completionResult(argumentsValue)),
+    p_result: finalResult,
     p_expected_version: run.version,
     p_mark_task_complete: !(/\bapply\b/i.test(run.objective) &&
       Array.isArray(run.context?.attachments) &&
