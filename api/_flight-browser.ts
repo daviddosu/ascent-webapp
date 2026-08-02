@@ -9,10 +9,15 @@ export type FlightSearchInput = {
   departureDate: string
   returnDate: string | null
   cabin: 'economy' | 'premium_economy' | 'business' | 'first'
-  maxStops: 0 | 1 | 2
+  maxStops: 0 | 1 | 2 | 3
   budgetAmount: number | null
   currency: 'USD' | 'GBP' | 'EUR' | 'NGN'
   preferredAirlines: string[]
+  excludedAirlines?: string[]
+  adultCount?: number
+  childCount?: number
+  infantCount?: number
+  allowNearbyAirports?: boolean
 }
 
 export type FlightOption = {
@@ -31,6 +36,8 @@ export type FlightOption = {
   currency: FlightSearchInput['currency']
   provider: 'Google Flights'
   searchUrl: string
+  departureDate?: string
+  returnDate?: string | null
 }
 
 export type FlightSearchResult = {
@@ -43,6 +50,7 @@ export type FlightSearchResult = {
 export type FlightSelectionResult = {
   provider: 'Google Flights'
   selectedOption: FlightOption
+  selectedReturnOption?: FlightOption
   handoffUrl: string
   handoffProvider: string
   handoffStage: 'provider_booking' | 'google_booking_options'
@@ -73,7 +81,9 @@ export class BrowserExecutionError extends Error {
 }
 
 const currencyPattern = /(?:[$£€]\s?[\d,.]+|(?:USD|GBP|EUR|NGN)\s?[\d,.]+)/i
-const durationPattern = /\b(?:(\d+)\s*hr)?(?:\s*(\d+)\s*min)?\b/i
+
+const flightCabins = new Set<FlightSearchInput['cabin']>(['economy', 'premium_economy', 'business', 'first'])
+const flightCurrencies = new Set<FlightSearchInput['currency']>(['USD', 'GBP', 'EUR', 'NGN'])
 
 function normalizedLines(text: string) {
   return text
@@ -84,18 +94,123 @@ function normalizedLines(text: string) {
 }
 
 function priceAmount(price: string) {
-  const value = price.replace(/[^\d.,]/g, '').replaceAll(',', '')
+  let value = price.replace(/[^\d.,]/g, '')
+  const lastDot = value.lastIndexOf('.')
+  const lastComma = value.lastIndexOf(',')
+  if (lastDot >= 0 && lastComma >= 0) {
+    value = lastComma > lastDot
+      ? value.replaceAll('.', '').replace(',', '.')
+      : value.replaceAll(',', '')
+  } else if (lastComma >= 0) {
+    const fractionalDigits = value.length - lastComma - 1
+    value = fractionalDigits === 3 ? value.replaceAll(',', '') : value.replace(',', '.')
+  }
   const amount = Number(value)
   return Number.isFinite(amount) ? amount : Number.NaN
 }
 
 function durationInMinutes(value: string) {
-  const match = value.match(durationPattern)
-  if (!match) return Number.NaN
-  const hours = Number(match[1] ?? 0)
-  const minutes = Number(match[2] ?? 0)
+  const hours = Number(value.match(/(\d+)\s*(?:hr|hrs|hour|hours|h)\b/i)?.[1] ?? 0)
+  const minutes = Number(value.match(/(\d+)\s*(?:min|mins|minute|minutes|m)\b/i)?.[1] ?? 0)
   const total = hours * 60 + minutes
   return total > 0 ? total : Number.NaN
+}
+
+function validDateOnly(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
+function normalizedAirlines(value: unknown) {
+  return Array.isArray(value)
+    ? [...new Set(value
+      .filter(item => typeof item === 'string')
+      .map(item => item.trim())
+      .filter(Boolean))]
+    : []
+}
+
+export function normalizeFlightSearchInput(input: FlightSearchInput): FlightSearchInput {
+  const originCode = String(input.originCode ?? '').trim().toUpperCase()
+  const destinationCode = String(input.destinationCode ?? '').trim().toUpperCase()
+  const departureDate = String(input.departureDate ?? '').trim()
+  const returnDateValue = input.returnDate === null || input.returnDate === undefined
+    ? null
+    : String(input.returnDate).trim()
+  const returnDate = returnDateValue || null
+  const cabin = String(input.cabin ?? '').trim().toLocaleLowerCase() as FlightSearchInput['cabin']
+  const currency = String(input.currency ?? '').trim().toUpperCase() as FlightSearchInput['currency']
+  const maxStops = Number(input.maxStops)
+  const budgetAmount = input.budgetAmount === null || input.budgetAmount === undefined
+    ? null
+    : Number(input.budgetAmount)
+  const adultCount = input.adultCount === undefined ? 1 : Number(input.adultCount)
+  const childCount = input.childCount === undefined ? 0 : Number(input.childCount)
+  const infantCount = input.infantCount === undefined ? 0 : Number(input.infantCount)
+
+  if (!/^[A-Z]{3}$/.test(originCode) || !/^[A-Z]{3}$/.test(destinationCode) || originCode === destinationCode) {
+    throw new BrowserExecutionError('flight_input_invalid', 'Origin and destination must be different three-letter airport or city codes.', false)
+  }
+  if (!validDateOnly(departureDate) || (returnDate !== null && !validDateOnly(returnDate))) {
+    throw new BrowserExecutionError('flight_input_invalid', 'Flight dates must use valid YYYY-MM-DD calendar dates.', false)
+  }
+  if (returnDate !== null && Date.parse(`${returnDate}T00:00:00Z`) <= Date.parse(`${departureDate}T00:00:00Z`)) {
+    throw new BrowserExecutionError('flight_input_invalid', 'The return date must be after the departure date.', false)
+  }
+  if (!flightCabins.has(cabin) || !flightCurrencies.has(currency)) {
+    throw new BrowserExecutionError('flight_input_invalid', 'The flight cabin or currency is not supported.', false)
+  }
+  if (!Number.isInteger(maxStops) || maxStops < 0 || maxStops > 3) {
+    throw new BrowserExecutionError('flight_input_invalid', 'The maximum stop count must be an integer from zero through three.', false)
+  }
+  if (budgetAmount !== null && (!Number.isFinite(budgetAmount) || budgetAmount < 0 || budgetAmount > 1_000_000)) {
+    throw new BrowserExecutionError('flight_input_invalid', 'The budget must be a finite non-negative amount.', false)
+  }
+  if (!Number.isInteger(adultCount) || adultCount < 1 || adultCount > 9 ||
+    !Number.isInteger(childCount) || childCount < 0 || childCount > 8 ||
+    !Number.isInteger(infantCount) || infantCount < 0 || infantCount > 4 || infantCount > adultCount) {
+    throw new BrowserExecutionError('flight_input_invalid', 'Passenger counts are outside the supported range.', false)
+  }
+
+  return {
+    originCode,
+    destinationCode,
+    departureDate,
+    returnDate,
+    cabin,
+    maxStops: maxStops as FlightSearchInput['maxStops'],
+    budgetAmount,
+    currency,
+    preferredAirlines: normalizedAirlines(input.preferredAirlines),
+    excludedAirlines: normalizedAirlines(input.excludedAirlines),
+    adultCount,
+    childCount,
+    infantCount,
+    allowNearbyAirports: input.allowNearbyAirports === true,
+  }
+}
+
+export function isGoogleFlightsDomainAllowed(value: unknown) {
+  if (!Array.isArray(value)) return false
+  return value.some(item => {
+    if (typeof item !== 'string') return false
+    const raw = item.trim().toLocaleLowerCase()
+    if (!raw) return false
+    try {
+      const url = new URL(raw.includes('://') ? raw : `https://${raw}`)
+      return url.protocol === 'https:' &&
+        (!url.port || url.port === '443') &&
+        !url.username &&
+        !url.password &&
+        (!url.pathname || url.pathname === '/') &&
+        !url.search &&
+        !url.hash &&
+        (url.hostname === 'google.com' || url.hostname === 'www.google.com')
+    } catch {
+      return false
+    }
+  })
 }
 
 function stableOptionId(option: Omit<FlightOption, 'id' | 'label' | 'searchUrl' | 'provider'>) {
@@ -115,33 +230,72 @@ function stableOptionId(option: Omit<FlightOption, 'id' | 'label' | 'searchUrl' 
 }
 
 export function buildGoogleFlightsUrl(input: FlightSearchInput) {
-  const cabin = input.cabin.replaceAll('_', ' ')
+  const normalized = normalizeFlightSearchInput(input)
+  const cabin = normalized.cabin.replaceAll('_', ' ')
+  const passengerSummary = [
+    `${normalized.adultCount} adult${normalized.adultCount === 1 ? '' : 's'}`,
+    ...(normalized.childCount ? [`${normalized.childCount} child${normalized.childCount === 1 ? '' : 'ren'}`] : []),
+    ...(normalized.infantCount ? [`${normalized.infantCount} infant${normalized.infantCount === 1 ? '' : 's'}`] : []),
+  ].join(' ')
   const query = [
-    `Flights from ${input.originCode} to ${input.destinationCode}`,
-    `on ${input.departureDate}`,
-    ...(input.returnDate ? [`returning ${input.returnDate}`] : ['one way']),
+    `Flights from ${normalized.originCode} to ${normalized.destinationCode}`,
+    `on ${normalized.departureDate}`,
+    ...(normalized.returnDate ? [`returning ${normalized.returnDate}`] : ['one way']),
     cabin,
+    passengerSummary,
+    ...(normalized.allowNearbyAirports ? ['nearby airports'] : []),
   ].join(' ')
   const url = new URL('https://www.google.com/travel/flights')
   url.searchParams.set('q', query)
-  url.searchParams.set('curr', input.currency)
+  url.searchParams.set('curr', normalized.currency)
   url.searchParams.set('hl', 'en')
   return url.toString()
+}
+
+function isFlightTimeLine(line: string) {
+  return /^\d{1,2}:\d{2}\s*(?:AM|PM)?(?:\+\d+)?$/i.test(line)
+}
+
+function normalizedRoute(line: string) {
+  const match = line.match(/\b[A-Z]{3}\s*[–-]\s*[A-Z]{3}\b/)
+  return match?.[0].replace(/\s*([–-])\s*/, '$1') ?? ''
+}
+
+export function isFlightResultCardText(text: string) {
+  const lines = normalizedLines(text)
+  return currencyPattern.test(text) &&
+    lines.some(line => Boolean(normalizedRoute(line))) &&
+    lines.some(line => /\b\d+\s*(?:hr|hrs|hour|hours|h|min|mins|minute|minutes|m)\b/i.test(line)) &&
+    lines.filter(isFlightTimeLine).length >= 2 &&
+    lines.some(line => /^(?:Nonstop|\d+\s+stops?)$/i.test(line))
 }
 
 export function parseGoogleFlightListItem(
   text: string,
   currency: FlightSearchInput['currency'],
   searchUrl: string,
+  dates?: Pick<FlightSearchInput, 'departureDate' | 'returnDate'>,
 ): Omit<FlightOption, 'label'> | null {
   const lines = normalizedLines(text)
-  const durationIndex = lines.findIndex(line => /\b\d+\s*hr\b|\b\d+\s*min\b/i.test(line))
-  const routeIndex = lines.findIndex(line => /\b[A-Z]{3}\s*[–-]\s*[A-Z]{3}\b/.test(line))
+  const durationIndex = lines.findIndex(line => /\b\d+\s*(?:hr|hrs|hour|hours|h|min|mins|minute|minutes|m)\b/i.test(line))
+  const routeIndex = lines.findIndex(line => Boolean(normalizedRoute(line)))
   const stopsIndex = lines.findIndex(line => /^(?:Nonstop|\d+\s+stops?)$/i.test(line))
   const priceIndex = lines.findIndex(line => currencyPattern.test(line))
-  const times = lines.filter(line => /^\d{1,2}:\d{2}\s*(?:AM|PM)(?:\+\d+)?$/i.test(line))
+  const times = lines.filter(isFlightTimeLine)
+  const airline = durationIndex > 0
+    ? [...lines.slice(0, durationIndex)].reverse().find(line =>
+      !isFlightTimeLine(line) &&
+      line !== '–' &&
+      line !== '-' &&
+      !normalizedRoute(line) &&
+      !/^(?:Nonstop|\d+\s+stops?)$/i.test(line) &&
+      !currencyPattern.test(line) &&
+      !/\b\d+\s*(?:hr|hrs|hour|hours|h|min|mins|minute|minutes|m)\b/i.test(line),
+    )
+    : null
   if (
     durationIndex < 1 ||
+    !airline ||
     routeIndex < 0 ||
     stopsIndex < 0 ||
     priceIndex < 0 ||
@@ -161,17 +315,18 @@ export function parseGoogleFlightListItem(
   if (!Number.isFinite(stopCount)) return null
 
   const base = {
-    airline: lines[durationIndex - 1]!,
+    airline,
     departureTime: times[0]!,
     arrivalTime: times[1]!,
     duration,
     durationMinutes,
-    route: lines[routeIndex]!.replace(/\s+/g, ''),
+    route: normalizedRoute(lines[routeIndex]!),
     stops,
     stopCount,
     price,
     amount,
     currency,
+    ...(dates ? { departureDate: dates.departureDate, returnDate: dates.returnDate } : {}),
   }
   return {
     id: stableOptionId(base),
@@ -186,21 +341,27 @@ export function rankFlightOptions(
   input: FlightSearchInput,
   searchUrl = buildGoogleFlightsUrl(input),
 ) {
+  const normalized = normalizeFlightSearchInput(input)
   const parsed = listItemTexts
-    .map(text => parseGoogleFlightListItem(text, input.currency, searchUrl))
+    .map(text => parseGoogleFlightListItem(text, normalized.currency, searchUrl, normalized))
     .filter((option): option is Omit<FlightOption, 'label'> => Boolean(option))
-    .filter(option => option.stopCount <= input.maxStops)
+    .filter(option => option.stopCount <= normalized.maxStops)
   const unique = [...new Map(parsed.map(option => [option.id, option])).values()]
   if (!unique.length) return []
 
-  const preferred = input.preferredAirlines.map(airline => airline.toLocaleLowerCase())
-  const withinBudget = input.budgetAmount === null
-    ? unique
-    : unique.filter(option => option.amount <= input.budgetAmount!)
+  const preferred = normalized.preferredAirlines.map(airline => airline.toLocaleLowerCase())
+  const excluded = (normalized.excludedAirlines ?? []).map(airline => airline.toLocaleLowerCase())
+  const withoutExcludedAirlines = unique.filter(option =>
+    !excluded.some(airline => option.airline.toLocaleLowerCase().includes(airline)),
+  )
+  if (!withoutExcludedAirlines.length) return []
+  const withinBudget = normalized.budgetAmount === null
+    ? withoutExcludedAirlines
+    : withoutExcludedAirlines.filter(option => option.amount <= normalized.budgetAmount!)
   // Never present an over-budget itinerary as if it satisfied the request.
   // An empty result is an honest, recoverable outcome that lets the caller
   // ask for a revised budget or constraints.
-  if (input.budgetAmount !== null && !withinBudget.length) return []
+  if (normalized.budgetAmount !== null && !withinBudget.length) return []
   const eligible = withinBudget
   const best = eligible.find(option =>
     preferred.some(airline => option.airline.toLocaleLowerCase().includes(airline))
@@ -261,11 +422,15 @@ export function isRecoverableBrowserRuntimeError(error: unknown) {
 export function isRecoverableFlightReadError(error: unknown) {
   return error instanceof BrowserExecutionError &&
     error.retryable &&
-    ['flight_results_timeout'].includes(error.code)
+    ['flight_results_timeout', 'browser_result_not_ready', 'browser_worker_timeout'].includes(error.code)
 }
 
 export function shouldReloadFlightResults(bodyText: string) {
-  return /Oops, something went wrong\.|No results returned\./i.test(bodyText)
+  return /\b(?:something went wrong|no results?|results? unavailable|could(?:n|'t| not) load|temporarily unavailable|try again|reload results?)\b/i.test(bodyText)
+}
+
+export function flightProviderNeedsUser(bodyText: string) {
+  return /\b(?:captcha|verify\s+(?:that\s+)?you(?:'re| are)\s+human|unusual\s+traffic|robot\s+check|sign\s+in\s+to\s+continue)\b/i.test(bodyText)
 }
 
 async function dismissPublicCookiePrompt(page: Page) {
@@ -286,16 +451,25 @@ async function openFlightSearch(page: Page, searchUrl: string) {
       if (/execution context was destroyed|most likely because of a navigation/i.test(String(error))) return []
       throw error
     })
-    if (listItems.some(text => currencyPattern.test(text))) return
+    if (listItems.some(isFlightResultCardText)) return
     const body = await page.locator('body').innerText().catch(() => '')
+    if (flightProviderNeedsUser(body)) {
+      throw new BrowserExecutionError(
+        'flight_provider_challenge',
+        'The flight provider requires a user verification step before it will show live results.',
+        false,
+      )
+    }
     if (shouldReloadFlightResults(body) && reloads < 2) {
-      const reload = page.getByText('Reload', { exact: true })
+      reloads += 1
+      const reload = page.getByRole('button', { name: /reload|try again|retry/i }).first()
       if (await reload.count()) {
-        reloads += 1
         await reload.click({ noWaitAfter: true, timeout: 5_000 }).catch(() => undefined)
-        await page.waitForTimeout(2_500)
-        continue
+      } else {
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
       }
+      await page.waitForTimeout(2_500)
+      continue
     }
     await page.waitForTimeout(750)
   }
@@ -327,11 +501,12 @@ async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promi
 }
 
 export async function runLiveFlightSearch(input: FlightSearchInput): Promise<FlightSearchResult> {
-  const searchUrl = buildGoogleFlightsUrl(input)
+  const normalized = normalizeFlightSearchInput(input)
+  const searchUrl = buildGoogleFlightsUrl(normalized)
   return withBrowser(async (_browser, page) => {
     await openFlightSearch(page, searchUrl)
     const listItemTexts = await page.locator('li, [role="listitem"]').allInnerTexts()
-    const options = rankFlightOptions(listItemTexts, input, searchUrl)
+    const options = rankFlightOptions(listItemTexts, normalized, searchUrl)
     if (!options.length) {
       throw new BrowserExecutionError(
         'no_flight_results',
@@ -375,6 +550,7 @@ export function chooseFlightCandidate<T extends Pick<FlightOption, 'id' | 'airli
   const ranked = candidates
     .map(candidate => ({ candidate, score: flightOptionMatchScore(candidate, expected) }))
     .sort((left, right) => right.score - left.score)
+  if (ranked[0] && ranked[1] && ranked[0].score === ranked[1].score && ranked[0].score < 100) return null
   return ranked[0]?.score >= 80 ? ranked[0] : null
 }
 
@@ -399,7 +575,7 @@ async function visibleFlightCandidates(
   const candidates: FlightCardCandidate[] = []
   const seen = new Set<string>()
   for (const [index, text] of texts.entries()) {
-    const option = parseGoogleFlightListItem(text, input.currency, searchUrl)
+    const option = parseGoogleFlightListItem(text, input.currency, searchUrl, input)
     if (!option || option.stopCount > input.maxStops || seen.has(option.id)) continue
     seen.add(option.id)
     candidates.push({ index, option, score: flightOptionMatchScore(option, expected) })
@@ -409,16 +585,22 @@ async function visibleFlightCandidates(
 
 async function expectedFlightStageReady(page: Page, expectedStage: 'returning_flights' | 'booking_options') {
   if (expectedStage === 'booking_options') {
-    return new URL(page.url()).pathname.startsWith('/travel/flights/booking')
+    try {
+      return new URL(page.url()).pathname.startsWith('/travel/flights/booking')
+    } catch {
+      return false
+    }
   }
-  return page.getByText(/Returning flights/i).count().then(count => count > 0).catch(() => false)
+  return page.locator('body').innerText()
+    .then(body => /\b(?:returning|return)\s+flights?\b|\b(?:select|choose)\s+(?:your\s+)?(?:a\s+)?return\b/i.test(body))
+    .catch(() => false)
 }
 
 async function waitForFlightStage(page: Page, expectedStage: 'returning_flights' | 'booking_options', timeout: number) {
   await page.waitForFunction(
     stage => stage === 'booking_options'
       ? window.location.pathname.startsWith('/travel/flights/booking')
-      : /Returning flights/i.test(document.body.innerText),
+      : /\b(?:returning|return)\s+flights?\b|\b(?:select|choose)\s+(?:your\s+)?(?:a\s+)?return\b/i.test(document.body.innerText),
     expectedStage,
     { timeout },
   )
@@ -449,6 +631,11 @@ async function activateFlightOption(
     })
     const chosen = chooseFlightCandidate(candidates.map(candidate => candidate.option), expected)
     if (!chosen) {
+      if (attempt < maximumFlightSelectionAttempts) {
+        await openFlightSearch(page, expected.searchUrl)
+        traceEvent(trace, 'recovered_state', { attempt, url: page.url(), source: 'stale_result_cards' })
+        continue
+      }
       throw new BrowserExecutionError(
         'flight_sold_out',
         'This flight is no longer available. Run the search again for current options.',
@@ -479,7 +666,14 @@ async function activateFlightOption(
       for (const candidate of targets) if (await candidate.locator.count()) return candidate
       return null
     })()
-    if (!target) throw new BrowserExecutionError('flight_selection_failed', 'Google Flights did not expose a selectable itinerary.')
+    if (!target) {
+      if (attempt < maximumFlightSelectionAttempts) {
+        await openFlightSearch(page, expected.searchUrl)
+        traceEvent(trace, 'recovered_state', { attempt, url: page.url(), source: 'missing_selection_target' })
+        continue
+      }
+      throw new BrowserExecutionError('flight_selection_failed', 'Google Flights did not expose a selectable itinerary.')
+    }
     traceEvent(trace, 'selection_target', { attempt, target: target.name })
     await target.locator.click({ force: target.name !== 'select_button', noWaitAfter: true }).catch(error => {
       traceEvent(trace, 'stale_or_changed_target', { attempt, target: target.name, message: String(error).slice(0, 240) })
@@ -490,7 +684,7 @@ async function activateFlightOption(
       return
     } catch (error) {
       traceEvent(trace, 'selection_retry', { attempt, reason: String(error).slice(0, 240), url: page.url() })
-      if (attempt < maximumFlightSelectionAttempts && !page.url().startsWith('https://www.google.com/travel/flights')) {
+      if (attempt < maximumFlightSelectionAttempts) {
         await openFlightSearch(page, expected.searchUrl)
         traceEvent(trace, 'recovered_state', { attempt, url: page.url(), source: 'search_checkpoint' })
       }
@@ -507,6 +701,7 @@ export async function resumeFlightSelection(
   options: FlightOption[],
   optionId: string,
 ): Promise<FlightSelectionResult> {
+  const normalized = normalizeFlightSearchInput(input)
   const selectedOption = options.find(option => option.id === optionId)
   if (!selectedOption) {
     throw new BrowserExecutionError(
@@ -517,28 +712,34 @@ export async function resumeFlightSelection(
   }
 
   const selectionTrace: FlightSelectionTraceEvent[] = []
+  let selectedReturnOption: FlightOption | undefined
   try {
     return await withBrowser(async (_browser, page) => {
     await openFlightSearch(page, selectedOption.searchUrl)
     traceEvent(selectionTrace, 'selection_started', {
-      optionId, searchUrl: selectedOption.searchUrl, tripType: input.returnDate ? 'round_trip' : 'one_way',
-      constraints: { maxStops: input.maxStops, cabin: input.cabin, originCode: input.originCode, destinationCode: input.destinationCode },
+      optionId, searchUrl: selectedOption.searchUrl, tripType: normalized.returnDate ? 'round_trip' : 'one_way',
+      constraints: { maxStops: normalized.maxStops, cabin: normalized.cabin, originCode: normalized.originCode, destinationCode: normalized.destinationCode },
     })
     await activateFlightOption(
       page,
-      input,
+      normalized,
       selectedOption,
-      input.returnDate ? 'returning_flights' : 'booking_options',
+      normalized.returnDate ? 'returning_flights' : 'booking_options',
       selectionTrace,
     )
 
-    if (input.returnDate) {
+    if (normalized.returnDate) {
+      const returnDate = normalized.returnDate
       const returnCards = page.locator('li:visible, [role="listitem"]:visible')
       const texts = await returnCards.allInnerTexts()
-      const parsed = texts.map(text => parseGoogleFlightListItem(text, input.currency, selectedOption.searchUrl)).filter((option): option is Omit<FlightOption, 'label'> => Boolean(option))
-      const returnOption = parsed.find(option => option.airline === selectedOption.airline && option.stopCount <= input.maxStops) ?? parsed.find(option => option.stopCount <= input.maxStops)
+      const parsed = texts.map(text => parseGoogleFlightListItem(text, normalized.currency, selectedOption.searchUrl, {
+        departureDate: returnDate,
+        returnDate: null,
+      })).filter((option): option is Omit<FlightOption, 'label'> => Boolean(option))
+      const returnOption = parsed.find(option => option.airline === selectedOption.airline && option.stopCount <= normalized.maxStops) ?? parsed.find(option => option.stopCount <= normalized.maxStops)
       if (!returnOption) throw new BrowserExecutionError('return_flight_unavailable', 'The matching return flight is no longer available.', false)
-      await activateFlightOption(page, input, { ...returnOption, label: 'Also worth considering' }, 'booking_options', selectionTrace)
+      selectedReturnOption = { ...returnOption, label: 'Also worth considering' }
+      await activateFlightOption(page, normalized, selectedReturnOption, 'booking_options', selectionTrace)
     }
     await page.waitForURL(
       url => url.hostname === 'www.google.com' && url.pathname.startsWith('/travel/flights/booking'),
@@ -565,6 +766,7 @@ export async function resumeFlightSelection(
     return {
       provider: 'Google Flights',
       selectedOption,
+      ...(selectedReturnOption ? { selectedReturnOption } : {}),
       handoffUrl,
       handoffProvider: 'Google Flights',
       handoffStage: 'google_booking_options',

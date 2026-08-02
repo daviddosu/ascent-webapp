@@ -50,6 +50,10 @@ Deno.test('flight context answers have stable fields and stop-before-payment mea
   assertEquals(flightContextField('Which airport are you departing from?', []), 'origin')
   assertEquals(flightContextField('What date will you return?', []), 'return_date')
   assertEquals(flightContextField('What is the maximum number of stops?', []), 'max_stops')
+  assertEquals(flightContextField('How many adults and children are travelling?', []), 'passengers')
+  assertEquals(flightContextField('Can I use nearby airports?', []), 'airport_preferences')
+  assertEquals(flightContextField('Which airline should I avoid?', []), 'airline')
+  assertEquals(flightContextField('Is this a multi-city trip?', []), 'trip_type')
 })
 
 Deno.test('provider writes and meeting coordination keep external-change completion', () => {

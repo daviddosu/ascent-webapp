@@ -21,6 +21,11 @@ export type CanonicalFlightSearch = {
   maxStops?: number
   maxPrice?: number
   currency?: string
+  adults?: number
+  children?: number
+  infants?: number
+  allowNearbyAirports?: boolean
+  excludedAirlines?: string[]
   stage: 'searching' | 'results_ready' | 'selecting' | 'handoff'
 }
 
@@ -68,6 +73,11 @@ export function normalizeBrowserDomains(value: unknown) {
   return [...new Set(values.map(normalizeBrowserDomain).filter((domain): domain is string => Boolean(domain)))]
 }
 
+export function allowsGoogleFlightsDomain(value: unknown) {
+  const domains = normalizeBrowserDomains(value)
+  return domains.some(domain => googleFlightsBrowserDomains.includes(domain as typeof googleFlightsBrowserDomains[number]))
+}
+
 export function validatedFlightEvidence(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const record = value as Record<string, unknown>
@@ -89,11 +99,22 @@ export function validatedFlightEvidence(value: unknown) {
     !parsedUrl.pathname.startsWith('/travel/flights') ||
     !rawOptions.length
   ) return null
+  const validDate = (date: unknown) => {
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false
+    const parsed = new Date(`${date}T00:00:00Z`)
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date
+  }
+  const ids = new Set<string>()
   const options = rawOptions.filter((option): option is Record<string, unknown> => {
     if (!option || typeof option !== 'object' || Array.isArray(option)) return false
     const candidate = option as Record<string, unknown>
-    return Boolean(
-      typeof candidate.id === 'string' && candidate.id.trim() &&
+    const id = typeof candidate.id === 'string' ? candidate.id.trim() : ''
+    const departureDateValid = candidate.departureDate === undefined || validDate(candidate.departureDate)
+    const returnDateValid = candidate.returnDate === undefined || candidate.returnDate === null || validDate(candidate.returnDate)
+    const datesOrdered = typeof candidate.departureDate !== 'string' || candidate.returnDate === undefined || candidate.returnDate === null ||
+      Date.parse(`${String(candidate.returnDate)}T00:00:00Z`) > Date.parse(`${candidate.departureDate}T00:00:00Z`)
+    const valid = Boolean(
+      id && !ids.has(id) &&
       candidate.provider === 'Google Flights' &&
       typeof candidate.searchUrl === 'string' && candidate.searchUrl === searchUrl &&
       typeof candidate.airline === 'string' && candidate.airline.trim() &&
@@ -101,11 +122,14 @@ export function validatedFlightEvidence(value: unknown) {
       typeof candidate.departureTime === 'string' && candidate.departureTime.trim() &&
       typeof candidate.arrivalTime === 'string' && candidate.arrivalTime.trim() &&
       typeof candidate.duration === 'string' && candidate.duration.trim() &&
-      Number.isFinite(Number(candidate.durationMinutes)) &&
-      Number.isFinite(Number(candidate.stopCount)) &&
-      Number.isFinite(Number(candidate.amount)) &&
-      typeof candidate.price === 'string' && candidate.price.trim()
+      Number.isInteger(Number(candidate.durationMinutes)) && Number(candidate.durationMinutes) > 0 &&
+      Number.isInteger(Number(candidate.stopCount)) && Number(candidate.stopCount) >= 0 &&
+      Number.isFinite(Number(candidate.amount)) && Number(candidate.amount) >= 0 &&
+      typeof candidate.price === 'string' && candidate.price.trim() &&
+      departureDateValid && returnDateValid && datesOrdered
     )
+    if (valid) ids.add(id)
+    return valid
   })
   return options.length === rawOptions.length
     ? { searchUrl, options }
@@ -127,6 +151,18 @@ export function isCompletedBrowserOperation(lastOperation: unknown, operationId:
   return operation.id === operationId && operation.status === 'succeeded'
 }
 
+export function browserOperationAttemptCount(checkpoint: unknown, operationId: string) {
+  if (!checkpoint || typeof checkpoint !== 'object' || Array.isArray(checkpoint)) return 0
+  const record = checkpoint as Record<string, unknown>
+  const byOperation = record.workerAttemptsByOperation
+  if (byOperation && typeof byOperation === 'object' && !Array.isArray(byOperation)) {
+    const attempt = Number((byOperation as Record<string, unknown>)[operationId])
+    if (Number.isFinite(attempt) && attempt >= 0) return attempt
+  }
+  const legacyAttempt = Number(record.workerAttempts)
+  return Number.isFinite(legacyAttempt) && legacyAttempt >= 0 ? legacyAttempt : 0
+}
+
 export function canonicalFlightSearch(argumentsValue: Record<string, unknown>, stage: CanonicalFlightSearch['stage'] = 'searching'): CanonicalFlightSearch {
   return {
     origin: String(argumentsValue.origin_code ?? argumentsValue.origin ?? '').trim().toUpperCase(),
@@ -137,13 +173,30 @@ export function canonicalFlightSearch(argumentsValue: Record<string, unknown>, s
     ...(Number.isFinite(Number(argumentsValue.max_stops)) ? { maxStops: Number(argumentsValue.max_stops) } : {}),
     ...(Number.isFinite(Number(argumentsValue.budget_amount ?? argumentsValue.max_price)) ? { maxPrice: Number(argumentsValue.budget_amount ?? argumentsValue.max_price) } : {}),
     ...(argumentsValue.currency ? { currency: String(argumentsValue.currency).trim().toUpperCase() } : {}),
+    ...(Number.isFinite(Number(argumentsValue.adults)) ? { adults: Number(argumentsValue.adults) } : {}),
+    ...(Number.isFinite(Number(argumentsValue.children)) ? { children: Number(argumentsValue.children) } : {}),
+    ...(Number.isFinite(Number(argumentsValue.infants)) ? { infants: Number(argumentsValue.infants) } : {}),
+    ...(typeof argumentsValue.allow_nearby_airports === 'boolean'
+      ? { allowNearbyAirports: argumentsValue.allow_nearby_airports }
+      : {}),
+    ...(Array.isArray(argumentsValue.excluded_airlines)
+      ? { excludedAirlines: argumentsValue.excluded_airlines.map(value => String(value).trim()).filter(Boolean) }
+      : {}),
     stage,
   }
 }
 
 export function browserFailureClass(code: string) {
-  if (/timeout|worker|target_closed|network|unreachable|results_not_ready|provider/i.test(code)) return 'PROVIDER_OR_BROWSER_INFRA' as const
+  if (/timeout|worker|target_closed|network|unreachable|results_not_ready|result_invalid|provider|page_state/i.test(code)) return 'PROVIDER_OR_BROWSER_INFRA' as const
   return 'BROWSER_TASK' as const
+}
+
+export function isFlightConstraintFailure(code: string) {
+  return ['flight_input_invalid', 'no_flight_results', 'flight_option_invalid', 'flight_price_changed', 'flight_sold_out', 'return_flight_unavailable'].includes(code)
+}
+
+export function isBrowserUserInterventionFailure(code: string) {
+  return ['flight_provider_challenge', 'browser_sensitive_field_blocked', 'browser_submission_status_unknown'].includes(code)
 }
 
 export function shouldRecycleBrowserSession(operationType: string, code: string, completedAttempts: number) {

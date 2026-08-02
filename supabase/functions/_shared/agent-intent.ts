@@ -15,6 +15,11 @@ export type FlightContextField =
   | 'budget'
   | 'max_stops'
   | 'cabin'
+  | 'passengers'
+  | 'airport_preferences'
+  | 'airline'
+  | 'departure_time'
+  | 'arrival_time'
 
 /**
  * Payment handoff means “prepare the exact provider checkout boundary”; it
@@ -36,23 +41,59 @@ export function hasCalendarIntent(value: string) {
     /\b(?:create|add|put|place|sync|move|update|change|cancel|delete|remove|book)\b[\s\S]{0,80}\b(?:event|meeting|appointment|call|calendar|slot)\b/i.test(value)
 }
 
-/** Identify which flight fact a context question is asking for. */
-export function flightContextField(question: string, missingFields: unknown): FlightContextField | null {
+function contextFieldFromName(value: unknown): FlightContextField | null {
+  const normalized = String(value ?? '').toLocaleLowerCase().replaceAll('-', '_').replaceAll(' ', '_')
+  if (normalized.includes('return')) return 'return_date'
+  if (normalized.includes('trip')) return 'trip_type'
+  if (normalized.includes('origin') || normalized.includes('departing_airport')) return 'origin'
+  if (normalized.includes('destination') || normalized.includes('arrival_airport')) return 'destination'
+  if (normalized.includes('departure_date') || normalized === 'date' || normalized.includes('travel_date')) return 'departure_date'
+  if (normalized.includes('budget') || normalized.includes('price')) return 'budget'
+  if (normalized.includes('stop') || normalized.includes('layover')) return 'max_stops'
+  if (normalized.includes('cabin') || normalized.includes('class')) return 'cabin'
+  if (normalized.includes('passenger') || normalized.includes('adult') || normalized.includes('child') || normalized.includes('infant')) return 'passengers'
+  if (normalized.includes('nearby') || normalized.includes('airport_preference')) return 'airport_preferences'
+  if (normalized.includes('airline') || normalized.includes('carrier')) return 'airline'
+  if (normalized.includes('departure_time')) return 'departure_time'
+  if (normalized.includes('arrival_time')) return 'arrival_time'
+  return null
+}
+
+/** Identify every flight fact a context question is asking for, in stable order. */
+export function flightContextFields(question: string, missingFields: unknown): FlightContextField[] {
   const missing = Array.isArray(missingFields)
     ? missingFields.map(value => String(value)).join(' ')
     : ''
   const text = `${question} ${missing}`.toLocaleLowerCase()
-  if (/\b(?:return[_ ]?date|returning\s+date|(?:when|what\s+date|which\s+date)\s+(?:(?:do|will)\s+)?you\s+return|return\s+on)\b/.test(text)) return 'return_date'
-  if (/\b(?:trip[_ ]?type|one[ -]?way|round[ -]?trip|return\s+flight|journey\s+type)\b/.test(text)) return 'trip_type'
+  const fields: FlightContextField[] = []
+  const add = (field: FlightContextField | null) => {
+    if (field && !fields.includes(field)) fields.push(field)
+  }
+  if (Array.isArray(missingFields)) {
+    for (const field of missingFields) add(contextFieldFromName(field))
+  }
+  if (/\b(?:return[_ ]?date|returning\s+date|(?:when|what\s+date|which\s+date)\s+(?:(?:do|will)\s+)?you\s+return|return\s+on)\b/.test(text)) add('return_date')
+  if (/\b(?:trip[_ ]?type|one[ -]?way|round[ -]?trip|return\s+flight|multi[ -]?city|open[ -]?jaw|journey\s+type)\b/.test(text)) add('trip_type')
   if (/\b(?:origin[_ ]?(?:code)?|from)\b/.test(text) ||
-      /\b(?:origin[_ ]?(?:code)?|from)\b[\s\S]{0,90}\b(?:airport|city|fly|depart|leave)\b|\b(?:airport|city)\b[\s\S]{0,90}\b(?:depart(?:ure|ing)?|leav(?:e|ing)|origin|from)\b/.test(text)) return 'origin'
+      /\b(?:origin[_ ]?(?:code)?|from)\b[\s\S]{0,90}\b(?:airport|city|fly|depart|leave)\b|\b(?:airport|city)\b[\s\S]{0,90}\b(?:depart(?:ure|ing)?|leav(?:e|ing)|origin|from)\b/.test(text)) add('origin')
   if (/\b(?:destination[_ ]?(?:code)?|arriv(?:e|ing)?|flying\s+into|fly\s+to)\b/.test(text) ||
-      /\b(?:destination[_ ]?(?:code)?|arriv(?:e|ing)?|flying\s+into|fly\s+to|where)\b[\s\S]{0,90}\b(?:airport|city|fly|go|travel|destination|to|into)\b/.test(text)) return 'destination'
-  if (/\b(?:departure[_ ]?date|outbound\s+date|travel\s+date|flight\s+date)\b|\b(?:when|what\s+date|which\s+date)\b[\s\S]{0,50}\b(?:fly|depart|leave|travel)\b/.test(text)) return 'departure_date'
-  if (/\b(?:max[_ ]?stops?|stop|stops|connection|layover)\b/.test(text)) return 'max_stops'
-  if (/\b(?:budget|price|cost|spend|under|maximum)\b/.test(text)) return 'budget'
-  if (/\b(?:cabin|class|economy|business|first)\b/.test(text)) return 'cabin'
-  return null
+      /\b(?:destination[_ ]?(?:code)?|arriv(?:e|ing)?|flying\s+into|fly\s+to|where)\b[\s\S]{0,90}\b(?:airport|city|fly|go|travel|destination|to|into)\b/.test(text)) add('destination')
+  if (/\b(?:departure[_ ]?date|outbound\s+date|travel\s+date|flight\s+date|date\s+range|flexible\s+dates?)\b|\b(?:when|what\s+date|which\s+date)\b[\s\S]{0,50}\b(?:fly|depart|leave|travel)\b/.test(text)) add('departure_date')
+  if (/\b(?:max[_ ]?stops?|stop|stops|connection|layover)\b/.test(text)) add('max_stops')
+  if (/\b(?:passenger|travell?er|adult|child(?:ren)?|infant|baby|how many people)\b/.test(text)) add('passengers')
+  if (/\b(?:budget|price|cost|spend|under|maximum)\b/.test(text)) add('budget')
+  if (/\b(?:cabin|class|economy|business|first)\b/.test(text)) add('cabin')
+  if (/\b(?:nearby|neighbouring|neighboring|airport preference|alternate airport|alternative airport)\b/.test(text) ||
+      /\b(?:which|what)\s+airports?\b/.test(text)) add('airport_preferences')
+  if (/\b(?:airline|carrier)\b/.test(text)) add('airline')
+  if (/\b(?:depart(?:ure)?|leave|take off)\b[\s\S]{0,60}\b(?:time|hour|morning|afternoon|evening|night|window)\b/.test(text)) add('departure_time')
+  if (/\b(?:arriv(?:e|al|ing)?|land)\b[\s\S]{0,60}\b(?:time|hour|morning|afternoon|evening|night|window)\b/.test(text)) add('arrival_time')
+  return fields
+}
+
+/** Identify the first flight fact a context question is asking for. */
+export function flightContextField(question: string, missingFields: unknown): FlightContextField | null {
+  return flightContextFields(question, missingFields)[0] ?? null
 }
 
 export function classifySharedAgentIntent(title: string, description = ''): SharedAgentIntent {

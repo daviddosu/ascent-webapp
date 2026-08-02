@@ -282,6 +282,11 @@ describe('mocked AgentRun integration journeys', () => {
       budget_amount: null,
       currency: 'USD',
       preferred_airlines: [],
+      excluded_airlines: [],
+      adults: 1,
+      children: 0,
+      infants: 0,
+      allow_nearby_airports: false,
     })
     flow.handoff('Choose a flight option to continue.')
     expect(flow.state.status).toBe('waiting_for_user')

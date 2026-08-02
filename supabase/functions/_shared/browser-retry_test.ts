@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { browserFailureClass, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isCompletedBrowserOperation, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession, validatedFlightEvidence } from './browser-retry.ts'
+import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttemptCount, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession, validatedFlightEvidence } from './browser-retry.ts'
 
 Deno.test('safe browser reads back off between durable worker attempts', () => {
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'browser_worker_failed', 1), 8_000)
@@ -10,6 +10,11 @@ Deno.test('safe browser reads back off between durable worker attempts', () => {
 
 Deno.test('classifies provider failures, preserves canonical search, and recycles poisoned sessions', () => {
   assertEquals(browserFailureClass('flight_results_timeout'), 'PROVIDER_OR_BROWSER_INFRA')
+  assertEquals(browserFailureClass('browser_result_invalid'), 'PROVIDER_OR_BROWSER_INFRA')
+  assertEquals(isFlightConstraintFailure('no_flight_results'), true)
+  assertEquals(isFlightConstraintFailure('browser_result_invalid'), false)
+  assertEquals(isBrowserUserInterventionFailure('flight_provider_challenge'), true)
+  assertEquals(isBrowserUserInterventionFailure('flight_results_timeout'), false)
   assertEquals(shouldRecycleBrowserSession('search_flights', 'flight_results_timeout', 2), true)
   assertEquals(shouldRecycleBrowserSession('submit', 'network_timeout', 2), false)
   assertEquals(canonicalFlightSearch({
@@ -26,6 +31,16 @@ Deno.test('consequential submissions and exhausted reads never retry automatical
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'browser_worker_failed', 3), null)
 })
 
+Deno.test('browser retry budgets are isolated per operation', () => {
+  const checkpoint = {
+    workerAttempts: 3,
+    workerAttemptsByOperation: { 'search-1': 3, 'select-1': 0 },
+  }
+  assertEquals(browserOperationAttemptCount(checkpoint, 'search-1'), 3)
+  assertEquals(browserOperationAttemptCount(checkpoint, 'select-1'), 0)
+  assertEquals(browserOperationAttemptCount(checkpoint, 'legacy-operation'), 3)
+})
+
 Deno.test('immediate selection retries only the known PostgREST single-object coercion race', () => {
   assertEquals(isTransientSingleObjectCoercionError('JSON object requested, multiple (or no) rows returned: cannot coerce the result to a single JSON object'), true)
   assertEquals(isTransientSingleObjectCoercionError('duplicate key violates unique constraint'), false)
@@ -37,6 +52,20 @@ Deno.test('normalizes the production Google allowlist and any Caspian provider s
     'google.com',
   ])
   assertEquals(googleFlightsBrowserDomains, ['google.com', 'www.google.com'])
+  assertEquals(allowsGoogleFlightsDomain(['https://google.com:443/']), true)
+  assertEquals(allowsGoogleFlightsDomain(['accounts.google.com']), false)
+})
+
+Deno.test('canonical search preserves passenger and airport constraints for recovery', () => {
+  assertEquals(canonicalFlightSearch({
+    origin_code: 'LOS', destination_code: 'LON', departure_date: '2026-09-17',
+    cabin: 'economy', adults: 2, children: 1, infants: 1,
+    allow_nearby_airports: true, excluded_airlines: ['Example Air'],
+  }), {
+    origin: 'LOS', destination: 'LON', departDate: '2026-09-17', cabin: 'economy',
+    adults: 2, children: 1, infants: 1, allowNearbyAirports: true,
+    excludedAirlines: ['Example Air'], stage: 'searching',
+  })
 })
 
 const canonicalOption = {
@@ -66,6 +95,14 @@ Deno.test('a retry payload cannot overwrite an already validated flight result',
   const valid = { searchUrl: canonicalOption.searchUrl, options: [canonicalOption] }
   assertEquals(preferValidatedFlightEvidence(valid, { options: [], searchUrl: '' }), valid)
   assertEquals(caspianFlightHandoffAllowed({ searchUrl: '', flightOptions: [] }), false)
+  assertEquals(validatedFlightEvidence({
+    searchUrl: canonicalOption.searchUrl,
+    options: [{ ...canonicalOption, amount: -1 }],
+  }), null)
+  assertEquals(validatedFlightEvidence({
+    searchUrl: canonicalOption.searchUrl,
+    options: [canonicalOption, canonicalOption],
+  }), null)
 })
 
 Deno.test('reuses a completed browser operation instead of creating a duplicate flight action', () => {

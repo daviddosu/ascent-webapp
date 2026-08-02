@@ -248,6 +248,11 @@ Deno.test('flight search is structured, bounded, and cannot cross payment policy
     budget_amount: 1000,
     currency: 'USD',
     preferred_airlines: [],
+    excluded_airlines: [],
+    adults: 1,
+    children: 0,
+    infants: 0,
+    allow_nearby_airports: false,
   }
   assertEquals(policyForAgentTool('browser.search_flights'), {
     risk: 'read',
@@ -261,6 +266,15 @@ Deno.test('flight search is structured, bounded, and cannot cross payment policy
   assertEquals(validateAgentToolArguments('browser.search_flights', {
     ...search,
     return_date: '2026-07-29',
+  }), false)
+  assertEquals(validateAgentToolArguments('browser.search_flights', {
+    ...search,
+    departure_date: '2026-02-30',
+  }), false)
+  assertEquals(validateAgentToolArguments('browser.search_flights', {
+    ...search,
+    infants: 2,
+    adults: 1,
   }), false)
   assertEquals(validateAgentToolArguments('browser.select_flight', {
     session_id: search.session_id,

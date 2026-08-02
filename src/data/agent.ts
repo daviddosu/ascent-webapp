@@ -37,6 +37,7 @@ export type AgentResult = {
   sources: AgentSource[]
   flightOptions?: AgentFlightOption[]
   selectedFlight?: AgentFlightOption
+  selectedReturnFlight?: AgentFlightOption
   paymentHandoffUrl?: string
   paymentHandoffProvider?: string
   paymentHandoffStage?: 'provider_booking' | 'google_booking_options'
@@ -61,6 +62,12 @@ export type AgentFlightOption = {
   price: string
   currency: string
   provider: string
+  durationMinutes?: number
+  stopCount?: number
+  amount?: number
+  searchUrl?: string
+  departureDate?: string
+  returnDate?: string | null
 }
 
 export type AgentRun = {

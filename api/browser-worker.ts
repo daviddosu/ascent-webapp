@@ -2,6 +2,9 @@ import { createClient } from '@supabase/supabase-js'
 import { timingSafeEqual } from 'node:crypto'
 import {
   BrowserExecutionError,
+  isRecoverableBrowserRuntimeError,
+  isGoogleFlightsDomainAllowed,
+  normalizeFlightSearchInput,
   resumeFlightSelection,
   runLiveFlightSearch,
   type FlightOption,
@@ -59,6 +62,7 @@ type BrowserCheckpoint = {
     attemptedAt: string
   }
   workerAttempts?: number
+  workerAttemptsByOperation?: Record<string, number>
   [key: string]: unknown
 }
 
@@ -82,8 +86,8 @@ function parseBody(request: WorkerRequest) {
   return {}
 }
 
-function searchInput(argumentsValue: Record<string, unknown>): FlightSearchInput {
-  return {
+export function flightSearchInputFromArguments(argumentsValue: Record<string, unknown>): FlightSearchInput {
+  return normalizeFlightSearchInput({
     originCode: String(argumentsValue.origin_code),
     destinationCode: String(argumentsValue.destination_code),
     departureDate: String(argumentsValue.departure_date),
@@ -97,19 +101,45 @@ function searchInput(argumentsValue: Record<string, unknown>): FlightSearchInput
     preferredAirlines: Array.isArray(argumentsValue.preferred_airlines)
       ? argumentsValue.preferred_airlines.map(value => String(value))
       : [],
-  }
+    excludedAirlines: Array.isArray(argumentsValue.excluded_airlines)
+      ? argumentsValue.excluded_airlines.map(value => String(value))
+      : [],
+    adultCount: Number(argumentsValue.adults ?? 1),
+    childCount: Number(argumentsValue.children ?? 0),
+    infantCount: Number(argumentsValue.infants ?? 0),
+    allowNearbyAirports: argumentsValue.allow_nearby_airports === true,
+  })
 }
 
-function publicError(error: unknown) {
+function searchInput(argumentsValue: Record<string, unknown>) {
+  return flightSearchInputFromArguments(argumentsValue)
+}
+
+function publicError(error: unknown, operationType: BrowserOperation['type']) {
   if (error instanceof BrowserExecutionError) {
     return { code: error.code, message: error.message, retryable: error.retryable, details: error.details }
   }
+  const message = error instanceof Error
+    ? error.message.slice(0, 500)
+    : String(error).slice(0, 500)
+  if (/timeout|timed out|exceeded/i.test(message)) {
+    return {
+      code: operationType === 'search_flights' ? 'flight_results_timeout' : 'browser_worker_timeout',
+      message: 'The browser worker timed out before the safe step finished.',
+      retryable: operationType !== 'submit',
+    }
+  }
+  if (isRecoverableBrowserRuntimeError(error)) {
+    return {
+      code: 'browser_target_closed',
+      message: 'The browser runtime closed during this safe step and can be restarted.',
+      retryable: operationType !== 'submit',
+    }
+  }
   return {
     code: 'browser_worker_failed',
-    message: error instanceof Error
-      ? error.message.slice(0, 500)
-      : 'The isolated browser worker could not finish this step.',
-    retryable: true,
+    message: message || 'The isolated browser worker could not finish this step.',
+    retryable: operationType !== 'submit',
   }
 }
 
@@ -178,7 +208,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     !Array.isArray(session.allowed_domains) ||
     !session.allowed_domains.length ||
     ((operation.type === 'search_flights' || operation.type === 'select_flight') &&
-      !session.allowed_domains.includes('www.google.com'))
+      !isGoogleFlightsDomainAllowed(session.allowed_domains))
   ) {
     response.status(403).json({ error: 'The requested domain is not allowed for this browser session' })
     return
@@ -210,9 +240,14 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
   }
 
   const workerSessionId = crypto.randomUUID()
+  const workerAttemptsByOperation = {
+    ...(checkpoint.workerAttemptsByOperation ?? {}),
+    [operation.id]: Number(checkpoint.workerAttemptsByOperation?.[operation.id] ?? 0) + 1,
+  }
   let claimedCheckpoint: BrowserCheckpoint = {
     ...checkpoint,
     workerAttempts: Number(checkpoint.workerAttempts ?? 0) + 1,
+    workerAttemptsByOperation,
   }
   const claim = await admin
     .from('browser_execution_sessions')
@@ -409,7 +444,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     if (finished.error) throw new Error(finished.error.message)
     response.status(200).json({ ok: true })
   } catch (error) {
-    const safeError = publicError(error)
+    const safeError = publicError(error, operation.type)
     await admin
       .from('browser_execution_sessions')
       .update({

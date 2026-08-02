@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifySharedAgentIntent, flightContextField, requestsPaymentHandoff } from './agent-intent.ts'
+import { classifySharedAgentIntent, flightContextField, flightContextFields, requestsPaymentHandoff } from './agent-intent.ts'
 
 describe('shared agent intent', () => {
   it('does not treat a negated calendar write as the requested outcome', () => {
@@ -216,6 +216,13 @@ describe('shared agent intent', () => {
       'Find the best live option and stop before payment.',
     ).outcomeType).toBe('payment_handoff')
     expect(requestsPaymentHandoff('stop before any booking or payment step')).toBe(false)
+  })
+
+  it('groups independent missing flight fields in a stable order', () => {
+    expect(flightContextFields(
+      'Tell me the departure date, budget, and passenger count.',
+      ['departure_date', 'budget', 'passengers'],
+    )).toEqual(['departure_date', 'budget', 'passengers'])
   })
 
   it.each([

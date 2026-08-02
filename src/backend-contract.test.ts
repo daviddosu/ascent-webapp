@@ -737,6 +737,9 @@ describe('agent execution security contract', () => {
   it('does not repeat answered pre-search flight context or hand back before selection', () => {
     expect(taskAgentFunction).toContain('flight_context_answers')
     expect(taskAgentFunction).toContain('flight_context_pending')
+    expect(taskAgentFunction).toContain('flightContextFields')
+    expect(taskAgentFunction).toContain('pendingFlightFields')
+    expect(taskAgentFunction).toContain('remainingFlightFields')
     expect(taskAgentFunction).toContain('context_already_provided')
     expect(taskAgentFunction).toContain('Used the flight detail already provided.')
     expect(taskAgentFunction).toContain('flightPaymentHandoffRequested')
@@ -744,6 +747,18 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('flight_handoff_evidence')
     expect(taskAgentFunction).toContain('payment_boundary_reached: true')
     expect(taskAgentFunction).toContain('preserveFlightResult')
+  })
+
+  it('keeps flight recovery bounded and separates provider intervention from retries', () => {
+    expect(taskAgentFunction).toContain('workerAttemptsByOperation')
+    expect(taskAgentFunction).toContain('browserOperationAttemptCount')
+    expect(taskAgentFunction).toContain('isBrowserUserInterventionFailure')
+    expect(taskAgentFunction).toContain('isFlightConstraintFailure')
+    expect(taskAgentFunction).toContain('flightTripShapeNeedsUserDecision')
+    expect(taskAgentFunction).toContain('selectedReturnFlight')
+    expect(flightBrowser).toContain('isFlightResultCardText')
+    expect(flightBrowser).toContain('flight_provider_challenge')
+    expect(flightBrowser).toContain('stale_result_cards')
   })
 
   it('keeps delayed-reply simulation behind explicit development gates', () => {

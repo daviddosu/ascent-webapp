@@ -504,7 +504,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         type: 'string',
         enum: ['economy', 'premium_economy', 'business', 'first'],
       },
-      max_stops: { type: 'integer', minimum: 0, maximum: 2 },
+      max_stops: { type: 'integer', minimum: 0, maximum: 3 },
       budget_amount: {
         type: ['number', 'null'],
         minimum: 0,
@@ -519,6 +519,15 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         items: stringValue('Optional preferred airline.', 120),
         maxItems: 10,
       },
+      excluded_airlines: {
+        type: 'array',
+        items: stringValue('Airline to exclude from the results.', 120),
+        maxItems: 10,
+      },
+      adults: { type: 'integer', minimum: 1, maximum: 9 },
+      children: { type: 'integer', minimum: 0, maximum: 8 },
+      infants: { type: 'integer', minimum: 0, maximum: 4 },
+      allow_nearby_airports: { type: 'boolean' },
     }, [
       'session_id',
       'origin_code',
@@ -530,6 +539,11 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       'budget_amount',
       'currency',
       'preferred_airlines',
+      'excluded_airlines',
+      'adults',
+      'children',
+      'infants',
+      'allow_nearby_airports',
     ]),
     strict: true,
   },
@@ -678,9 +692,10 @@ function validateRecipientBuckets(to: unknown, cc: unknown, bcc: unknown) {
 }
 
 function validateDateOnly(value: unknown) {
-  return typeof value === 'string' &&
-    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
 }
 
 function validateString(value: unknown, maximum: number, allowEmpty = false) {
@@ -848,14 +863,26 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         ['economy', 'premium_economy', 'business', 'first'].includes(String(value.cabin)) &&
         Number.isInteger(value.max_stops) &&
         Number(value.max_stops) >= 0 &&
-        Number(value.max_stops) <= 2 &&
+        Number(value.max_stops) <= 3 &&
         (value.budget_amount === null ||
           (typeof value.budget_amount === 'number' &&
             Number.isFinite(value.budget_amount) &&
             value.budget_amount >= 0 &&
             value.budget_amount <= 1_000_000)) &&
         ['USD', 'GBP', 'EUR', 'NGN'].includes(String(value.currency)) &&
-        validateStringArray(value.preferred_airlines, 10, 120)
+        validateStringArray(value.preferred_airlines, 10, 120) &&
+        validateStringArray(value.excluded_airlines, 10, 120) &&
+        Number.isInteger(value.adults) &&
+        Number(value.adults) >= 1 &&
+        Number(value.adults) <= 9 &&
+        Number.isInteger(value.children) &&
+        Number(value.children) >= 0 &&
+        Number(value.children) <= 8 &&
+        Number.isInteger(value.infants) &&
+        Number(value.infants) >= 0 &&
+        Number(value.infants) <= 4 &&
+        Number(value.infants) <= Number(value.adults) &&
+        typeof value.allow_nearby_airports === 'boolean'
     case 'browser.select_flight':
       return validateString(value.session_id, 64) &&
         /^[a-f0-9]{16,128}$/i.test(String(value.option_id))

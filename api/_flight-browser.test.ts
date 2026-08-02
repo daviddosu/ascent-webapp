@@ -3,10 +3,14 @@ import {
   buildGoogleFlightsUrl,
   BrowserExecutionError,
   chooseFlightCandidate,
+  isGoogleFlightsDomainAllowed,
   isRecoverableFlightReadError,
   isRecoverableBrowserRuntimeError,
+  isFlightResultCardText,
+  flightProviderNeedsUser,
   maxSharedBrowserUses,
   maximumFlightSelectionAttempts,
+  normalizeFlightSearchInput,
   parseGoogleFlightListItem,
   rankFlightOptions,
   shouldReloadFlightResults,
@@ -75,6 +79,37 @@ describe('flight browser worker', () => {
     expect(url.searchParams.get('q')).not.toContain('returning')
   })
 
+  it('normalizes structured constraints and rejects impossible calendar dates', () => {
+    expect(normalizeFlightSearchInput({
+      ...input,
+      originCode: ' los ',
+      destinationCode: ' lon ',
+      departureDate: '2026-08-20',
+      returnDate: null,
+      adultCount: 2,
+      childCount: 1,
+      infantCount: 1,
+      excludedAirlines: [' KLM ', 'KLM'],
+      allowNearbyAirports: true,
+    })).toMatchObject({
+      originCode: 'LOS',
+      destinationCode: 'LON',
+      adultCount: 2,
+      childCount: 1,
+      infantCount: 1,
+      excludedAirlines: ['KLM'],
+      allowNearbyAirports: true,
+    })
+    expect(() => normalizeFlightSearchInput({ ...input, departureDate: '2026-02-30' })).toThrow('valid YYYY-MM-DD')
+    expect(() => normalizeFlightSearchInput({ ...input, returnDate: input.departureDate })).toThrow('return date')
+  })
+
+  it('accepts either normalized Google host alias for the flight worker', () => {
+    expect(isGoogleFlightsDomainAllowed(['https://google.com:443/'])).toBe(true)
+    expect(isGoogleFlightsDomainAllowed(['www.google.com'])).toBe(true)
+    expect(isGoogleFlightsDomainAllowed(['https://accounts.google.com'])).toBe(false)
+  })
+
   it('recycles Chromium only for transient runtime failures', () => {
     expect(maxSharedBrowserUses).toBe(1)
     expect(isRecoverableBrowserRuntimeError(new Error('browserContext.newPage: Target page, context or browser has been closed'))).toBe(true)
@@ -92,6 +127,10 @@ describe('flight browser worker', () => {
       'The flight changed.',
       false,
     ))).toBe(false)
+    expect(isRecoverableFlightReadError(new BrowserExecutionError(
+      'browser_worker_timeout',
+      'The browser worker timed out.',
+    ))).toBe(true)
     expect(isRecoverableFlightReadError(new Error('submit timed out'))).toBe(false)
   })
 
@@ -114,13 +153,36 @@ describe('flight browser worker', () => {
     expect(chooseFlightCandidate([changed], expected)).toBeNull()
   })
 
+  it('does not auto-select an ambiguous semantic match', () => {
+    const expected = rankFlightOptions(results, input)[0]!
+    const candidate = {
+      ...expected,
+      id: 'changed-a',
+      durationMinutes: expected.durationMinutes + 1,
+      amount: expected.amount + 1,
+    }
+    const second = { ...candidate, id: 'changed-b' }
+    expect(chooseFlightCandidate([candidate, second], expected)).toBeNull()
+  })
+
   it('bounds safe selection retries', () => {
     expect(maximumFlightSelectionAttempts).toBe(3)
   })
 
   it('recognizes explicit Google Flights provider failure states', () => {
     expect(shouldReloadFlightResults('No results returned. Oops, something went wrong. Reload')).toBe(true)
+    expect(shouldReloadFlightResults('Results unavailable. Try again')).toBe(true)
     expect(shouldReloadFlightResults('Search results 12 flights')).toBe(false)
+  })
+
+  it('requires semantic flight-card evidence before treating the page as ready', () => {
+    expect(isFlightResultCardText(results[0]!)).toBe(true)
+    expect(isFlightResultCardText('$1,118\nSponsored travel link')).toBe(false)
+  })
+
+  it('stops on provider verification instead of retrying a challenge forever', () => {
+    expect(flightProviderNeedsUser('Please verify that you are human before continuing')).toBe(true)
+    expect(flightProviderNeedsUser('Live flight results are ready')).toBe(false)
   })
 
   it('parses a live-result list item without retaining raw page text', () => {
@@ -128,6 +190,7 @@ describe('flight browser worker', () => {
       results[0]!,
       'USD',
       buildGoogleFlightsUrl(input),
+      input,
     )
     expect(parsed).toMatchObject({
       airline: 'Kenya Airways',
@@ -136,6 +199,8 @@ describe('flight browser worker', () => {
       stopCount: 1,
       amount: 1_118,
       provider: 'Google Flights',
+      departureDate: input.departureDate,
+      returnDate: input.returnDate,
     })
     expect(parsed?.id).toMatch(/^[a-f0-9]{24}$/)
   })
@@ -152,5 +217,25 @@ describe('flight browser worker', () => {
   it('returns no options rather than silently violating a hard budget', () => {
     const ranked = rankFlightOptions(results, { ...input, budgetAmount: 500 })
     expect(ranked).toEqual([])
+  })
+
+  it('enforces excluded airlines as a hard constraint', () => {
+    const ranked = rankFlightOptions(results, { ...input, excludedAirlines: ['KLM', 'Kenya Airways'] })
+    expect(ranked).toEqual([])
+  })
+
+  it('parses 24-hour times and localized decimal prices', () => {
+    const parsed = parseGoogleFlightListItem(
+      `08:05\n–\n16:30+1\nExample Air\n9 hr 25 min\nAAA – BBB\n1 stop\n€1.234,50`,
+      'EUR',
+      buildGoogleFlightsUrl({ ...input, currency: 'EUR' }),
+    )
+    expect(parsed).toMatchObject({
+      departureTime: '08:05',
+      arrivalTime: '16:30+1',
+      amount: 1234.5,
+      durationMinutes: 565,
+      route: 'AAA–BBB',
+    })
   })
 })
