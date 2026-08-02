@@ -87,6 +87,12 @@ describe('ShotCount specialist contracts', () => {
       'Lagos to London Find a live flight and prepare a calendar reference.',
       'What return date should I use?',
     )).toBeNull()
+    expect(nextSpecialistForCapabilityRequest(
+      route.stages,
+      1,
+      'Lagos to London Find a live flight and prepare a calendar reference.',
+      'Live Google Flights access is unavailable in this specialist session.',
+    )).toBeNull()
   })
 
   it('derives provider-confirmed effects and preserves them across typed handoff', () => {

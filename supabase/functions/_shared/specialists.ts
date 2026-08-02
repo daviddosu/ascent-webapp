@@ -278,9 +278,11 @@ export function nextSpecialistForCapabilityRequest(
   if (!nextStage) return null
   const registeredTools = capabilityToolsByContract[nextStage.taskContract] ?? []
   if (!registeredTools.some(toolName => specialistCanUseTool(nextStage.specialistId, toolName))) return null
-  const capabilityText = `${objective} ${question}`
+  const nextContractTerms = capabilityTermsByContract[nextStage.taskContract]
   const capabilityUnavailable = /\b(?:capability|access|unavailable|not available|reconnect)\b/i.test(question)
-  return capabilityUnavailable && capabilityTermsByContract[nextStage.taskContract].test(capabilityText)
+  return capabilityUnavailable &&
+    nextContractTerms.test(objective) &&
+    nextContractTerms.test(question)
     ? nextStage
     : null
 }

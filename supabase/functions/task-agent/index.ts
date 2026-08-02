@@ -1718,18 +1718,22 @@ async function executeProviderTool(
 
   if (toolName === 'browser.start_session') {
     const configured = configuredBrowserDomains()
-    const requested = (argumentsValue.allowed_domains as string[]).map(domain => domain.toLocaleLowerCase())
+    let requested = (argumentsValue.allowed_domains as string[]).map(domain => domain.toLocaleLowerCase())
     const caspianFlightSession = run.active_specialist_id === 'caspian' && run.task_contract === 'travel.flight_search'
     if (caspianFlightSession && (!requested.includes('google.com') || !requested.includes('www.google.com'))) {
-      return {
-        kind: 'output',
-        value: {
-          ok: false,
-          error_code: 'browser_domain_not_allowed',
-          error_message: 'Caspian must use the registered Google Flights destination for live flight search.',
-          allowed_domains: ['google.com', 'www.google.com'],
-        },
-        publicSummary: 'Rejected an unregistered flight-search destination.',
+      if (requested.some(domain => domain === 'google.com' || domain === 'www.google.com')) {
+        requested = ['google.com', 'www.google.com']
+      } else {
+        return {
+          kind: 'output',
+          value: {
+            ok: false,
+            error_code: 'browser_domain_not_allowed',
+            error_message: 'Caspian must use the registered Google Flights destination for live flight search.',
+            allowed_domains: ['google.com', 'www.google.com'],
+          },
+          publicSummary: 'Rejected an unregistered flight-search destination.',
+        }
       }
     }
     if (!configured.size || requested.some(domain => !configured.has(domain))) {
