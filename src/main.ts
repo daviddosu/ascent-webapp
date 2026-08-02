@@ -3164,6 +3164,24 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
   </section>`
 }
 
+function agentFlightDetail(option: Record<string, unknown>) {
+  const departureDate = String(option.departureDate ?? '').trim()
+  const arrivalDate = String(option.arrivalDate ?? '').trim()
+  const arrivalDayOffset = Number(option.arrivalDayOffset)
+  return [
+    String(option.airline ?? '').trim(),
+    String(option.route ?? '').trim(),
+    String(option.stops ?? '').trim(),
+    String(option.duration ?? '').trim(),
+    String(option.price ?? '').trim(),
+    departureDate ? `departs ${departureDate}` : '',
+    arrivalDate && arrivalDate !== departureDate ? `arrives ${arrivalDate}` : '',
+    Number.isInteger(arrivalDayOffset) && arrivalDayOffset > 0
+      ? `arrival +${arrivalDayOffset} day${arrivalDayOffset === 1 ? '' : 's'}`
+      : '',
+  ].filter(Boolean).join(' · ')
+}
+
 function formatAgentContextPrompt(prompt: string) {
   const numbered = [...prompt.matchAll(/(?:^|\s)\(\d+\)\s*([\s\S]*?)(?=\s*\(\d+\)|$)/g)]
     .map(match => match[1].trim().replace(/[;.]$/, ''))
@@ -3242,20 +3260,17 @@ function renderAgentPanel(task: Task) {
     const selectedFlight = run.result.selectedFlight && typeof run.result.selectedFlight === 'object'
       ? run.result.selectedFlight as Record<string, unknown>
       : null
-    const selectedFlightDetail = selectedFlight
-      ? [
-          String(selectedFlight.airline ?? '').trim(),
-          String(selectedFlight.route ?? '').trim(),
-          String(selectedFlight.stops ?? '').trim(),
-          String(selectedFlight.duration ?? '').trim(),
-          String(selectedFlight.price ?? '').trim(),
-        ].filter(Boolean).join(' · ')
-      : ''
+    const selectedReturnFlight = run.result.selectedReturnFlight && typeof run.result.selectedReturnFlight === 'object'
+      ? run.result.selectedReturnFlight as Record<string, unknown>
+      : null
+    const selectedFlightDetail = selectedFlight ? agentFlightDetail(selectedFlight) : ''
+    const selectedReturnFlightDetail = selectedReturnFlight ? agentFlightDetail(selectedReturnFlight) : ''
     return `<section class="task-agent-card task-agent-card--result">
       <header>${specialistHeader(task, run)}<em>${resultLabel}</em></header>
       <p>${escapeHtml(run.result.summary)}</p>
       <div class="task-agent-result">
         ${flightHandoffUrl && selectedFlight ? `<article class="agent-selected-flight"><span>Selected flight</span><strong>${escapeHtml(String(selectedFlight.label ?? 'Your selected option'))}</strong><p>${escapeHtml(selectedFlightDetail || 'Ready to continue to payment.')}</p></article>` : ''}
+        ${flightHandoffUrl && selectedReturnFlight ? `<article class="agent-selected-flight"><span>Return flight</span><strong>${escapeHtml(String(selectedReturnFlight.label ?? 'Selected return option'))}</strong><p>${escapeHtml(selectedReturnFlightDetail || 'Return leg included in the booking handoff.')}</p></article>` : ''}
         ${run.result.sections.map(section => `<article><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.body)}</p></article>`).join('')}
         ${run.result.drafts.map(draft => `<article class="agent-draft"><strong>${escapeHtml(draft.title)}</strong><p>${escapeHtml(draft.body).replaceAll('\n', '<br>')}</p></article>`).join('')}
       </div>

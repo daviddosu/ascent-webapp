@@ -661,6 +661,8 @@ describe('agent execution security contract', () => {
   it('keeps the selected flight visible in the completed payment handoff', () => {
     expect(mainUi).toContain('class="agent-selected-flight"')
     expect(mainUi).toContain('Selected flight')
+    expect(mainUi).toContain('selectedReturnFlight')
+    expect(mainUi).toContain('Return flight')
   })
 
   it('routes both visible microphone buttons through one capture pipeline', () => {
