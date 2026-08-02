@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   REASONING_MODEL_ID,
   createSpecialistHandoff,
+  flightStageNeedsPreflightHandoff,
   legacySpecialistRoute,
   nextSpecialistForCapabilityRequest,
   nextSpecialistForTool,
@@ -73,6 +74,13 @@ describe('ShotCount specialist contracts', () => {
     expect(nextSpecialistForTool(route.stages, 1, 'browser.search_flights')).toBeNull()
   })
 
+  it('preflights a mixed flight task into Caspian without changing its route', () => {
+    const route = routeTask('Lagos to London', 'Find a live flight and add the selected itinerary to my calendar.')
+    expect(flightStageNeedsPreflightHandoff('flight_search', route.stages[0], route.stages[1])).toBe(true)
+    expect(flightStageNeedsPreflightHandoff('flight_search', route.stages[1], route.stages[2])).toBe(false)
+    expect(flightStageNeedsPreflightHandoff('flight_search', route.stages[0], undefined)).toBe(false)
+  })
+
   it('forwards a capability-unavailable context request to the registered next stage', () => {
     const route = routeTask('Lagos to London', 'Find a live flight and prepare a calendar reference.')
     expect(nextSpecialistForCapabilityRequest(
@@ -97,6 +105,9 @@ describe('ShotCount specialist contracts', () => {
 
   it('derives provider-confirmed effects and preserves them across typed handoff', () => {
     expect(specialistRequiredEffects('roon', 'Send the itinerary by email.', 'communication.email')).toEqual(['gmail_send'])
+    expect(specialistRequiredEffects('roon', 'Schedule the meeting without sending an email.', 'communication.scheduling')).toEqual(['calendar_write'])
+    expect(specialistRequiredEffects('roon', 'Create a calendar event; no email or invitation.', 'communication.scheduling')).toEqual(['calendar_write'])
+    expect(specialistRequiredEffects('roon', 'Do not reply; summarize the message.', 'communication.email')).toEqual([])
     expect(specialistRequiredEffects('caspian', 'Book the selected flight.', 'travel.flight_search')).toEqual(['booking_handoff'])
     expect(specialistRequiredEffects('caspian', 'Find a flight and stop before payment.', 'travel.flight_search')).toEqual(['booking_handoff'])
     expect(specialistRequiredEffects('david', 'Prepare the application documents.', 'applications.planning')).toEqual(['application_plan'])
@@ -118,6 +129,17 @@ describe('ShotCount specialist contracts', () => {
     expect(handoff.toSpecialistVersion).toBe('roon@1')
     expect(handoff.completedEffects).toEqual(['validated_itinerary'])
     expect(handoff.unsatisfiedEffects).toEqual(['booking_handoff'])
+  })
+
+  it('keeps event-topic emails separate from Calendar coordination', () => {
+    expect(routeTask('Email Ada', 'Tell Ada that the meeting is tomorrow.').taskContract).toBe('communication.email')
+    expect(routeTask('Email Ada', 'Tell Ada about scheduling the meeting, but do not change the Calendar.').taskContract).toBe('communication.email')
+    expect(routeTask('Create event', 'Create an event tomorrow.').taskContract).toBe('communication.calendar')
+    expect(routeTask('Schedule meeting', 'Schedule a meeting tomorrow.').taskContract).toBe('communication.scheduling')
+    expect(routeTask('Set up meeting', 'Set up a meeting tomorrow.').taskContract).toBe('communication.scheduling')
+    expect(routeTask('Reschedule meeting', 'Reschedule the meeting to Friday.').taskContract).toBe('communication.scheduling')
+    expect(routeTask('Find a free slot', 'Find a free time with Ada next week.').taskContract).toBe('communication.scheduling')
+    expect(routeTask('Cancel event', 'Cancel the event tomorrow.').taskContract).toBe('communication.calendar')
   })
 
   it('migrates legacy domain assignments without relabelling travel or applications as Roon', () => {

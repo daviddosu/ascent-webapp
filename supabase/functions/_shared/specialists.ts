@@ -289,6 +289,22 @@ export function nextSpecialistForCapabilityRequest(
     : null
 }
 
+/**
+ * Mixed flight tasks may register a communication stage before the travel
+ * stage. That stage must not spend model turns trying to execute the flight
+ * itself; the runtime can preserve the route and advance to Caspian directly.
+ */
+export function flightStageNeedsPreflightHandoff(
+  capability: string | null | undefined,
+  currentStage: SpecialistStage | null | undefined,
+  nextStage: SpecialistStage | null | undefined,
+) {
+  return capability === 'flight_search' &&
+    currentStage?.taskContract !== 'travel.flight_search' &&
+    nextStage?.specialistId === 'caspian' &&
+    nextStage.taskContract === 'travel.flight_search'
+}
+
 export function specialistRequiredEffects(
   id: SpecialistId,
   objective: string,
@@ -376,7 +392,7 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
     /\b(?:what documents|missing documents)\b[\s\S]{0,80}\b(?:application|programme|program|school|university)\b/.test(text)
   const hasEmail = hasEmailIntent(text)
   const hasCalendar = hasCalendarIntent(text)
-  const hasScheduling = /\b(?:schedule|scheduled|scheduling|availability|reschedule|arrange|coordinate|organize|slot|free)\b/.test(text)
+  const hasScheduling = /\b(?:set\s*up|schedule|scheduled|scheduling|availability|reschedule|arrange|coordinate|organize|slot|free)\b/.test(text)
 
   if (hasFlight && (hasEmail || hasCalendar || /\b(?:arrange|coordinate|organize)\b/.test(text))) {
     const firstContract: TaskContract = hasCalendar ? 'communication.scheduling' : 'communication.email'
@@ -417,8 +433,10 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
     )
   }
 
-  const calendarCoordination = hasScheduling ||
-    /\b(?:invite|add|put|place|sync|coordinate|organize|find\s+(?:a\s+)?(?:free|available)\s+(?:slot|time))\b/.test(text)
+  const calendarCoordination = actionIsAffirmed(text, 'calendar_write') ||
+    /\b(?:invite|add|put|place|sync)\b/.test(text) ||
+    /\b(?:set\s*up|arrange|coordinate|organize|schedule|reschedule)\b[\s\S]{0,80}\b(?:meeting|call|appointment)\b[\s\S]{0,80}\bwith\b/.test(text) ||
+    /\b(?:find|check|look\s+for)\b[\s\S]{0,60}\b(?:free|available)\s+(?:slot|time)\b[\s\S]{0,60}\bwith\b/.test(text)
   if (hasEmail && hasCalendar && calendarCoordination) {
     return routeTo(
       'roon',
@@ -435,7 +453,10 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
       'The Calendar wording describes the message topic rather than a requested Calendar change.',
     )
   }
-  if (hasCalendar && hasScheduling && /\b(?:meeting|meet|appointment|call|event|calendar)\b/.test(text)) {
+  if (hasCalendar && hasScheduling && (
+    /\b(?:meeting|meet|appointment|call|event|calendar)\b/.test(text) ||
+    /\b(?:find|check|look\s+for)\b[\s\S]{0,60}\b(?:free|available)\s+(?:slot|time)\b[\s\S]{0,60}\bwith\b/.test(text)
+  )) {
     return routeTo(
       'roon',
       'communication.scheduling',

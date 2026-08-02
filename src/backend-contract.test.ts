@@ -344,6 +344,12 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('return handoffToNextSpecialist(admin, current, openaiKey)')
   })
 
+  it('preflights the mixed flight route before Roon can exhaust its model-step budget', () => {
+    expect(taskAgentFunction).toContain('flightStageNeedsPreflightHandoff')
+    expect(taskAgentFunction).toContain("trigger_source: 'flight_stage_preflight'")
+    expect(taskAgentFunction).toContain('return handoffToNextSpecialist(admin, current, openaiKey)')
+  })
+
   it('keeps Caspian flight sessions on the registered Google destination', () => {
     expect(taskAgentFunction).toContain('googleFlightsBrowserDomains')
     expect(taskAgentFunction).toContain('normalizeBrowserDomains')
