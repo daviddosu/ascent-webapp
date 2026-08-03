@@ -835,18 +835,88 @@ export function safeExternalProviderHandoffUrl(value: unknown) {
   }
 }
 
+const providerHandoffControlPattern = /(?:continue\s+to\s+book(?:\s+with)?|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i
+const providerHandoffBlockedPattern = /\b(?:pay|purchase|buy|confirm|sign\s*in|log\s*in|create\s+account)\b/i
+const providerLinkEvidencePattern = /(?:book|deal|offer|airline|provider|flight|travel|website|site|booking|fly)/i
+
+/**
+ * Google may expose a provider as a direct link, a Google redirect, a popup,
+ * or a navigation request. Normalize all of those forms before allowing the
+ * worker to leave the Google domain.
+ */
+export function safeProviderNavigationUrl(raw: unknown) {
+  let candidate = typeof raw === 'string' ? raw.trim() : ''
+  if (!candidate) return ''
+  for (let depth = 0; depth < 3; depth += 1) {
+    const direct = safeExternalProviderHandoffUrl(candidate)
+    if (direct) return direct
+    try {
+      const url = new URL(candidate)
+      const hostname = url.hostname.toLocaleLowerCase()
+      if (hostname !== 'google.com' && !hostname.endsWith('.google.com')) return ''
+      const nested = ['url', 'q', 'destination', 'redirect', 'target']
+        .map(key => url.searchParams.get(key)?.trim() ?? '')
+        .find(value => value.startsWith('https://'))
+      if (!nested) return ''
+      candidate = nested
+    } catch {
+      return ''
+    }
+  }
+  return ''
+}
+
+function providerLabel(label: string, href = '') {
+  return label
+    .replace(/^.*?(?:continue\s+to\s+book(?:\s+with)?|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))\s*/i, '')
+    .replace(/^.*?\b(?:book|view)\s+(?:the\s+)?(?:deal|offer)\s*(?:with|at)?\s*/i, '')
+    .replace(/\s+(?:airline|for)\b.*$/i, '')
+    .trim()
+    .slice(0, 120) || (() => {
+      try {
+        return new URL(href).hostname.replace(/^www\./i, '').slice(0, 120)
+      } catch {
+        return 'Airline'
+      }
+    })()
+}
+
+async function providerLinkTarget(page: Page) {
+  const links = await page.locator('a[href]:visible').evaluateAll(elements => elements
+    .map(element => ({
+      href: (element as HTMLAnchorElement).href,
+      label: `${element.getAttribute('aria-label') ?? ''} ${element.textContent ?? ''}`.replace(/\s+/g, ' ').trim(),
+      context: `${element.parentElement?.textContent ?? ''}`.replace(/\s+/g, ' ').trim().slice(0, 500),
+    }))
+    .slice(0, 100),
+  ).catch(error => {
+    if (/frame\s+was\s+detached|execution\s+context\s+was\s+destroyed|target\s+closed/i.test(String(error))) return []
+    throw error
+  })
+  for (const link of links) {
+    const safeUrl = safeProviderNavigationUrl(link.href)
+    if (!safeUrl) continue
+    const evidence = `${link.label} ${link.context} ${link.href}`
+    if (!providerLinkEvidencePattern.test(evidence) && !/[$£€₦]\s?[\d,.]+|(?:USD|GBP|EUR|NGN)\s?[\d,.]+/i.test(link.context)) continue
+    return { href: safeUrl, label: link.label || link.context }
+  }
+  return null
+}
+
 async function continueToProviderBooking(page: Page) {
   const deadline = Date.now() + 30_000
+  let providerLink: Awaited<ReturnType<typeof providerLinkTarget>> = null
   let providerControlReady = false
   while (Date.now() < deadline) {
     const targets = [
-      page.getByRole('button', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
-      page.getByRole('link', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
+      page.getByRole('button', { name: providerHandoffControlPattern }).all(),
+      page.getByRole('link', { name: providerHandoffControlPattern }).all(),
     ]
     for (const group of targets) {
       try {
         for (const candidate of await group) {
-          if (await candidate.isVisible().catch(() => false)) {
+          const label = `${await candidate.getAttribute('aria-label').catch(() => '')} ${await candidate.innerText().catch(() => '')}`.trim()
+          if (await candidate.isVisible().catch(() => false) && !providerHandoffBlockedPattern.test(label)) {
             providerControlReady = true
             break
           }
@@ -856,12 +926,13 @@ async function continueToProviderBooking(page: Page) {
       }
       if (providerControlReady) break
     }
-    if (providerControlReady) break
+    if (!providerControlReady) providerLink = await providerLinkTarget(page)
+    if (providerControlReady || providerLink) break
     await page.waitForTimeout(500)
   }
   const targets = [
-    page.getByRole('button', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
-    page.getByRole('link', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
+    page.getByRole('button', { name: providerHandoffControlPattern }).all(),
+    page.getByRole('link', { name: providerHandoffControlPattern }).all(),
   ]
   let target: Locator | null = null
   let label = ''
@@ -869,36 +940,75 @@ async function continueToProviderBooking(page: Page) {
     for (const candidate of await group) {
       if (!await candidate.isVisible().catch(() => false)) continue
       const candidateLabel = `${await candidate.getAttribute('aria-label').catch(() => '')} ${await candidate.innerText().catch(() => '')}`.trim()
-      if (/\b(?:pay|purchase|buy|confirm|sign\s*in|log\s*in)\b/i.test(candidateLabel)) continue
+      if (providerHandoffBlockedPattern.test(candidateLabel)) continue
       target = candidate
       label = candidateLabel
       break
     }
     if (target) break
   }
-  if (!target) return null
-
-  const provider = label
-    .replace(/^.*?(?:continue\s+to\s+book(?:\s+with)?|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))\s*/i, '')
-    .replace(/\s+(?:airline|for)\b.*$/i, '')
-    .trim()
-    .slice(0, 120) || 'Airline'
-  const popupPromise = page.waitForEvent('popup', { timeout: 12_000 }).catch(() => null)
-  const samePagePromise = page.waitForURL(
-    url => Boolean(safeExternalProviderHandoffUrl(url.toString())),
-    { timeout: 12_000 },
-  ).then(() => page).catch(() => null)
-  await target.click({ noWaitAfter: true }).catch(() => undefined)
-  const destination = await Promise.race([popupPromise, samePagePromise])
-  if (!destination) return null
-  await destination.waitForLoadState('domcontentloaded', { timeout: 12_000 }).catch(() => undefined)
-  if (!safeExternalProviderHandoffUrl(destination.url())) {
-    await destination.waitForURL(
-      url => Boolean(safeExternalProviderHandoffUrl(url.toString())),
-      { timeout: 12_000 },
-    ).catch(() => undefined)
+  if (!target && !providerLink) {
+    throw new BrowserExecutionError(
+      'flight_provider_handoff_unavailable',
+      'Google Flights did not expose a safe direct provider booking link for this itinerary.',
+      true,
+    )
   }
-  const url = safeExternalProviderHandoffUrl(destination.url())
+
+  const provider = providerLabel(label || providerLink?.label || '', providerLink?.href)
+  const existingPages = new Set(page.context().pages())
+  const safeDestination = async (candidate: Page | null) => {
+    if (!candidate) return null
+    const initial = safeProviderNavigationUrl(candidate.url())
+    if (initial && !safeExternalProviderHandoffUrl(candidate.url())) {
+      await candidate.goto(initial, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+    }
+    if (!safeProviderNavigationUrl(candidate.url())) {
+      await candidate.waitForURL(
+        url => Boolean(safeProviderNavigationUrl(url.toString())),
+        { timeout: 20_000 },
+      ).catch(() => undefined)
+    }
+    const url = safeProviderNavigationUrl(candidate.url())
+    if (!url) return null
+    if (!safeExternalProviderHandoffUrl(candidate.url())) {
+      await candidate.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+    }
+    const currentUrl = safeExternalProviderHandoffUrl(candidate.url())
+    return currentUrl ? { page: candidate, url: currentUrl } : null
+  }
+  const popupPromise = page.waitForEvent('popup', { timeout: 20_000 })
+    .then(popup => safeDestination(popup))
+    .catch(() => null)
+  const samePagePromise = page.waitForURL(
+    url => Boolean(safeProviderNavigationUrl(url.toString())),
+    { timeout: 20_000 },
+  ).then(() => safeDestination(page)).catch(() => null)
+  const contextPagePromise = page.context().waitForEvent('page', { timeout: 20_000 })
+    .then(candidate => safeDestination(candidate))
+    .catch(() => null)
+  const providerDocumentRequest = page.context().waitForEvent('request', {
+    timeout: 20_000,
+    predicate: request => request.isNavigationRequest() && Boolean(safeProviderNavigationUrl(request.url())),
+  }).then(request => safeProviderNavigationUrl(request.url())).catch(() => null)
+  if (target) await target.click({ noWaitAfter: true }).catch(() => undefined)
+  else if (providerLink?.href) await page.goto(providerLink.href, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+  let destination = await Promise.race([popupPromise, contextPagePromise, samePagePromise, providerDocumentRequest])
+  if (typeof destination === 'string') {
+    await page.goto(destination, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+    const currentUrl = safeExternalProviderHandoffUrl(page.url())
+    destination = currentUrl ? { page, url: currentUrl } : null
+  }
+  if (!destination) {
+    const newlyOpenedPages = page.context().pages().filter(candidate => !existingPages.has(candidate))
+    for (const candidate of newlyOpenedPages) {
+      destination = await safeDestination(candidate)
+      if (destination) break
+    }
+  }
+  if (!destination) return null
+  await destination.page.waitForLoadState('domcontentloaded', { timeout: 20_000 }).catch(() => undefined)
+  const url = safeExternalProviderHandoffUrl(destination.page.url())
   return url ? { url, provider } : null
 }
 
@@ -968,10 +1078,17 @@ export async function resumeFlightSelection(
         false,
       )
     }
-    const providerHandoff = await continueToProviderBooking(page).catch(() => null)
-    const finalHandoffUrl = providerHandoff?.url ?? handoffUrl
-    const finalHandoffProvider = providerHandoff?.provider ?? 'Google Flights'
-    const finalHandoffStage = providerHandoff ? 'provider_booking' as const : 'google_booking_options' as const
+    const providerHandoff = await continueToProviderBooking(page)
+    if (!providerHandoff) {
+      throw new BrowserExecutionError(
+        'flight_provider_handoff_unavailable',
+        'The provider booking page did not remain available after the bounded handoff attempt.',
+        true,
+      )
+    }
+    const finalHandoffUrl = providerHandoff.url
+    const finalHandoffProvider = providerHandoff.provider
+    const finalHandoffStage = 'provider_booking' as const
     // Reaching Google Flights' booking page, or a verified HTTPS airline
     // booking page reached through Google's labelled handoff, is the payment
     // boundary. Never click a provider payment or purchase control.

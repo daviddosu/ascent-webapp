@@ -231,7 +231,6 @@ export function isBrowserUserInterventionFailure(code: string) {
     'flight_checkout_option_unmatched',
     'flight_checkout_input_invalid',
     'flight_checkout_recovery_exhausted',
-    'flight_provider_handoff_unavailable',
   ].includes(code)
 }
 

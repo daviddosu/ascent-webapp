@@ -14,6 +14,7 @@ import {
   parseGoogleFlightListItem,
   rankFlightOptions,
   flightOptionSatisfiesConstraints,
+  safeProviderNavigationUrl,
   safeExternalProviderHandoffUrl,
   shouldReloadFlightResults,
   type FlightSearchInput,
@@ -283,5 +284,14 @@ describe('flight browser worker', () => {
     expect(safeExternalProviderHandoffUrl('https://www.google.com/travel/flights/booking')).toBe('')
     expect(safeExternalProviderHandoffUrl('https://user:secret@www.klm.com/booking')).toBe('')
     expect(safeExternalProviderHandoffUrl('https://www.klm.com:8443/booking')).toBe('')
+  })
+
+  it('normalizes direct and nested Google provider redirects without allowing Google as the provider', () => {
+    expect(safeProviderNavigationUrl('https://www.travelwings.com/ng/en/flight-review/LOS-LHR/offer'))
+      .toBe('https://www.travelwings.com/ng/en/flight-review/LOS-LHR/offer')
+    expect(safeProviderNavigationUrl('https://www.google.com/url?q=https%3A%2F%2Fwww.travelwings.com%2Fng%2Fen%2Fflight-review%2Foffer'))
+      .toBe('https://www.travelwings.com/ng/en/flight-review/offer')
+    expect(safeProviderNavigationUrl('https://www.google.com/url?url=https%3A%2F%2Fwww.google.com%2Ftravel%2Fflights%2Fbooking'))
+      .toBe('')
   })
 })

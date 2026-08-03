@@ -510,9 +510,10 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('purchaseConfirmed: false')
   })
 
-  it('treats the verified Google Flights booking page as the terminal demo handoff', () => {
-    expect(flightBrowser).toContain("'google_booking_options' as const")
-    expect(flightBrowser).toContain("'Google Flights'")
+  it('requires a verified provider booking page before the payment handoff', () => {
+    expect(flightBrowser).toContain("'provider_booking' as const")
+    expect(flightBrowser).toContain('flight_provider_handoff_unavailable')
+    expect(flightBrowser).toContain("safeProviderNavigationUrl")
     expect(taskAgentFunction).toContain('p_mark_task_complete: true')
     expect(taskAgentFunction).toContain('Your flight handoff is ready. Payment remains under your control.')
     expect(taskAgentFunction).toContain("checkpoint.pendingOperation?.type === 'select_flight'")

@@ -39,14 +39,9 @@ it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
     const selection = await resumeFlightSelection(input, search.options, search.options[0]!.id)
     const handoff = new URL(selection.handoffUrl)
     expect(handoff.protocol).toBe('https:')
-    expect(selection.handoffStage).toMatch(/^(provider_booking|google_booking_options)$/)
-    if (selection.handoffStage === 'provider_booking') {
-      expect(handoff.hostname).not.toBe('www.google.com')
-      expect(selection.handoffProvider).not.toBe('Google Flights')
-    } else {
-      expect(handoff.hostname).toBe('www.google.com')
-      expect(handoff.pathname).toMatch(/^\/travel\/flights\/booking/)
-    }
+    expect(selection.handoffStage).toBe('provider_booking')
+    expect(handoff.hostname).not.toMatch(/(?:^|\.)google\.com$/)
+    expect(selection.handoffProvider).not.toBe('Google Flights')
     expect(selection.paymentBoundaryReached).toBe(true)
     expect(selection.resumable).toBe(true)
   },
@@ -73,6 +68,8 @@ it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
 
     const selection = await resumeFlightSelection(input, search.options, search.options[0]!.id)
     expect(selection.selectedReturnOption).toBeUndefined()
+    expect(selection.handoffStage).toBe('provider_booking')
+    expect(new URL(selection.handoffUrl).hostname).not.toMatch(/(?:^|\.)google\.com$/)
     expect(selection.paymentBoundaryReached).toBe(true)
     expect(selection.resumable).toBe(true)
     expect(selection.handoffUrl.startsWith('https://')).toBe(true)
