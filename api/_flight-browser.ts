@@ -1269,11 +1269,12 @@ async function activateFlightOption(
     }
     const selected = candidates.find(candidate => candidate.option.id === chosen.candidate.id)!
     if (selected.option.amount !== expected.amount) {
-      throw new BrowserExecutionError(
-        'flight_price_changed',
-        'The flight price changed since the search. Review fresh options before continuing.',
-        false,
-      )
+      traceEvent(trace, 'price_changed', {
+        attempt,
+        expectedAmount: expected.amount,
+        observedAmount: selected.option.amount,
+        withinConstraints: flightOptionSatisfiesConstraints(selected.option, input),
+      })
     }
     traceEvent(trace, 'chosen_candidate', {
       attempt, id: selected.option.id, score: chosen.score, index: selected.index,

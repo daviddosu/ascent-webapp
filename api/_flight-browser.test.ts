@@ -204,6 +204,14 @@ describe('flight browser worker', () => {
     expect(chosen!.score).toBeGreaterThanOrEqual(80)
   })
 
+  it('keeps a semantically matching itinerary when live price changes within constraints', () => {
+    const expected = rankFlightOptions(results, input)[0]!
+    const repriced = { ...expected, id: 'repriced-card', amount: expected.amount + 45, price: '$1,163' }
+    const chosen = chooseFlightCandidate([repriced], expected)
+    expect(chosen?.candidate).toMatchObject({ id: 'repriced-card', amount: expected.amount + 45 })
+    expect(flightOptionSatisfiesConstraints(repriced, input)).toBe(true)
+  })
+
   it('does not select a reordered card that no longer matches the itinerary facts', () => {
     const expected = rankFlightOptions(results, input)[0]!
     const changed = { ...expected, id: 'changed', airline: 'Different Air', route: 'LOS–CDG' }
