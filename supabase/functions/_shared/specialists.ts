@@ -110,6 +110,7 @@ const caspianTools = [
   'browser.observe',
   'browser.search_flights',
   'browser.select_flight',
+  'browser.prepare_flight_checkout',
 ] as const
 
 const davidTools = [
@@ -188,6 +189,7 @@ export const specialistRegistry: Readonly<Record<SpecialistId, SpecialistRegistr
     requiredEffectDerivation: requiredEffectsForCaspian,
     approvalRules: {
       'browser.select_flight': 'allow',
+      'browser.prepare_flight_checkout': 'allow',
       'browser.purchase': 'deny',
     },
     verifier: 'validated itinerary evidence and safe booking handoff',

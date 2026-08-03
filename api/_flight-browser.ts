@@ -2,7 +2,7 @@ import chromium from '@sparticuz/chromium'
 import { createHash } from 'node:crypto'
 import { access } from 'node:fs/promises'
 import { isIP } from 'node:net'
-import { chromium as playwright, type Browser, type Page } from 'playwright-core'
+import { chromium as playwright, type Browser, type Locator, type Page } from 'playwright-core'
 
 export type FlightSearchInput = {
   originCode: string
@@ -586,7 +586,7 @@ async function openFlightSearch(page: Page, searchUrl: string) {
   )
 }
 
-async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promise<T>) {
+export async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promise<T>) {
   // One isolated browser per worker invocation avoids one failed read closing a
   // browser that another invocation is still using. Durable retries happen at
   // the task-owned session layer, outside this bounded serverless invocation.
@@ -837,21 +837,26 @@ export function safeExternalProviderHandoffUrl(value: unknown) {
 
 async function continueToProviderBooking(page: Page) {
   const targets = [
-    page.getByRole('button', { name: /continue\s+to\s+book(?:\s+with)?/i }).first(),
-    page.getByRole('link', { name: /continue\s+to\s+book(?:\s+with)?/i }).first(),
+    page.getByRole('button', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
+    page.getByRole('link', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
   ]
-  let target: (typeof targets)[number] | null = null
-  for (const candidate of targets) {
-    if (await candidate.count() && await candidate.isVisible().catch(() => false)) {
+  let target: Locator | null = null
+  let label = ''
+  for (const group of targets) {
+    for (const candidate of await group) {
+      if (!await candidate.isVisible().catch(() => false)) continue
+      const candidateLabel = `${await candidate.getAttribute('aria-label').catch(() => '')} ${await candidate.innerText().catch(() => '')}`.trim()
+      if (/\b(?:pay|purchase|buy|confirm|sign\s*in|log\s*in)\b/i.test(candidateLabel)) continue
       target = candidate
+      label = candidateLabel
       break
     }
+    if (target) break
   }
   if (!target) return null
 
-  const label = `${await target.getAttribute('aria-label').catch(() => '')} ${await target.innerText().catch(() => '')}`.trim()
   const provider = label
-    .replace(/^.*?continue\s+to\s+book(?:\s+with)?\s+/i, '')
+    .replace(/^.*?(?:continue\s+to\s+book(?:\s+with)?|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))\s*/i, '')
     .replace(/\s+(?:airline|for)\b.*$/i, '')
     .trim()
     .slice(0, 120) || 'Airline'

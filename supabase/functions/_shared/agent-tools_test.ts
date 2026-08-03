@@ -299,3 +299,55 @@ Deno.test('flight search is structured, bounded, and cannot cross payment policy
     option_id: 'not-a-worker-option',
   }), false)
 })
+
+Deno.test('flight checkout preparation accepts traveler data but rejects incomplete or payment-shaped data', () => {
+  const checkout = {
+    session_id: 'cdd9dba7-af84-48ae-b61a-d85d9e514d80',
+    travelers: [{
+      traveler_type: 'adult',
+      title: null,
+      given_name: 'Ada',
+      middle_name: null,
+      family_name: 'Lovelace',
+      date_of_birth: '1815-12-10',
+      gender: null,
+      nationality: 'GB',
+      residence_country: null,
+      document_type: 'passport',
+      document_number: 'P1234567',
+      document_issuing_country: 'GB',
+      document_expiry: '2030-12-10',
+    }],
+    contact_email: 'traveler@example.com',
+    contact_phone: '+2348000000000',
+  }
+  assertEquals(policyForAgentTool('browser.prepare_flight_checkout'), {
+    risk: 'prepare',
+    approvalKind: null,
+  })
+  assertEquals(validateAgentToolArguments('browser.prepare_flight_checkout', checkout), true)
+  assertEquals(validateAgentToolArguments('browser.prepare_flight_checkout', {
+    ...checkout,
+    travelers: [{ ...checkout.travelers[0], document_number: 'P123', document_expiry: null }],
+  }), false)
+  assertEquals(validateAgentToolArguments('browser.prepare_flight_checkout', {
+    ...checkout,
+    contact_email: 'not-an-email',
+  }), false)
+  assertEquals(validateAgentToolArguments('browser.prepare_flight_checkout', {
+    ...checkout,
+    contact_phone: 'not a phone number',
+  }), false)
+  assertEquals(validateAgentToolArguments('browser.prepare_flight_checkout', {
+    ...checkout,
+    travelers: [{ ...checkout.travelers[0], date_of_birth: '2999-01-01' }],
+  }), false)
+  assertEquals(validateAgentToolArguments('browser.prepare_flight_checkout', {
+    ...checkout,
+    card_number: '4111111111111111',
+  }), false)
+  assertEquals(validateAgentToolArguments('browser.prepare_flight_checkout', {
+    ...checkout,
+    travelers: [{ ...checkout.travelers[0], cvv: '123' }],
+  }), false)
+})

@@ -33,6 +33,7 @@ const scheduledReminderFunction = readFileSync(resolve(root, 'supabase/functions
 const browserWorker = readFileSync(resolve(root, 'api/browser-worker.ts'), 'utf8')
 const browserSelectWorker = readFileSync(resolve(root, 'api/browser-select-worker.ts'), 'utf8')
 const flightBrowser = readFileSync(resolve(root, 'api/_flight-browser.ts'), 'utf8')
+const flightCheckout = readFileSync(resolve(root, 'api/_flight-checkout.ts'), 'utf8')
 const publicBrowser = readFileSync(resolve(root, 'api/_public-browser.ts'), 'utf8')
 const agentClient = readFileSync(resolve(root, 'src/data/agent.ts'), 'utf8')
 const mainUi = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
@@ -695,11 +696,32 @@ describe('agent execution security contract', () => {
   })
 
   it('keeps flight selection idempotent and never follows a payment action', () => {
-    expect(taskAgentFunction).toContain("'browser.select_flight', 'browser.submit'")
+    expect(taskAgentFunction).toContain("'browser.select_flight', 'browser.prepare_flight_checkout'")
+    expect(taskAgentFunction).toContain("'browser.submit', 'browser.search_flights'")
     expect(taskAgentFunction).toContain('operation again')
     expect(taskAgentFunction).toContain("complete_demo_flight_handoff")
     expect(taskAgentFunction).toContain("policy.risk === 'financial'")
     expect(agentTools).toContain("'browser.purchase'")
+  })
+
+  it('prepares airline traveler details without crossing the payment boundary', () => {
+    expect(agentTools).toContain("name: 'browser.prepare_flight_checkout'")
+    expect(agentTools).toContain('Never provide payment details to this tool')
+    expect(taskAgentFunction).toContain('flightCheckoutRequested')
+    expect(taskAgentFunction).toContain('flight_checkout_evidence')
+    expect(taskAgentFunction).toContain("flight_checkout_missing_details")
+    expect(taskAgentFunction).toContain("flight_checkout_passenger_mismatch")
+    expect(flightCheckout).toContain("flight_checkout_user_intervention")
+    expect(flightCheckout).toContain('export async function prepareFlightCheckout')
+    expect(flightCheckout).toContain('isSafeFlightCheckoutAdvanceLabel')
+    expect(flightCheckout).toContain('safeGoogleFlightsBookingUrl')
+    expect(flightCheckout).toContain('date_of_birth_month')
+    expect(browserWorker).toContain("flight_checkout_timeout")
+    expect(taskAgentFunction).toContain("flight_checkout_retry_exhausted")
+    expect(taskAgentFunction).toContain('!result.flightCheckout')
+    expect(mainUi).toContain('preparedTravelerCount')
+    expect(mainUi).toContain('flightCheckoutReady')
+    expect(mainUi).toContain('manualCheckoutStep')
   })
 
   it('replaces stale airport choices with trip-type choices', () => {
@@ -724,7 +746,7 @@ describe('agent execution security contract', () => {
 
   it('isolates flight selection from the search worker process pool', () => {
     expect(taskAgentFunction).toContain('SHOTCOUNT_BROWSER_SELECTION_WORKER_URL')
-    expect(taskAgentFunction).toContain("operation.type === 'select_flight' ? config.selectionUrl : config.url")
+    expect(taskAgentFunction).toContain("['select_flight', 'prepare_flight_checkout'].includes(operation.type)")
     expect(browserSelectWorker).toContain("from './browser-worker.js'")
   })
 

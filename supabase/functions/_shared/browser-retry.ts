@@ -222,7 +222,17 @@ export function isFlightConstraintFailure(code: string) {
 }
 
 export function isBrowserUserInterventionFailure(code: string) {
-  return ['flight_provider_challenge', 'browser_sensitive_field_blocked', 'browser_submission_status_unknown'].includes(code)
+  return [
+    'flight_provider_challenge',
+    'browser_sensitive_field_blocked',
+    'browser_submission_status_unknown',
+    'flight_checkout_user_intervention',
+    'flight_checkout_missing_details',
+    'flight_checkout_option_unmatched',
+    'flight_checkout_input_invalid',
+    'flight_checkout_recovery_exhausted',
+    'flight_provider_handoff_unavailable',
+  ].includes(code)
 }
 
 export function shouldRecycleBrowserSession(operationType: string, code: string, completedAttempts: number) {

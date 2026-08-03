@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { classifySharedAgentIntent, flightContextField, needsSharedAgentContext, requestsPaymentHandoff } from './agent-intent.ts'
+import { classifySharedAgentIntent, flightContextField, mergeFlightContextAnswer, needsSharedAgentContext, requestsPaymentHandoff } from './agent-intent.ts'
 
 Deno.test('read-only Gmail and Calendar tasks use prepared-result completion', () => {
   assertEquals(
@@ -51,9 +51,23 @@ Deno.test('flight context answers have stable fields and stop-before-payment mea
   assertEquals(flightContextField('What date will you return?', []), 'return_date')
   assertEquals(flightContextField('What is the maximum number of stops?', []), 'max_stops')
   assertEquals(flightContextField('How many adults and children are travelling?', []), 'passengers')
+  assertEquals(flightContextField('Provide each traveler’s legal name, date of birth, and passport details.', ['traveler_details']), 'traveler_details')
   assertEquals(flightContextField('Can I use nearby airports?', []), 'airport_preferences')
   assertEquals(flightContextField('Which airline should I avoid?', []), 'airline')
   assertEquals(flightContextField('Is this a multi-city trip?', []), 'trip_type')
+})
+
+Deno.test('traveler context accumulates provider follow-up details without repeating the profile question', () => {
+  const first = mergeFlightContextAnswer('traveler_details', null, 'Ada Lovelace; DOB 1815-12-10; contact ada@example.com')
+  assertEquals(first, 'Ada Lovelace; DOB 1815-12-10; contact ada@example.com')
+  assertEquals(
+    mergeFlightContextAnswer('traveler_details', first, 'Passport P1234567, expires 2030-12-10'),
+    'Ada Lovelace; DOB 1815-12-10; contact ada@example.com\nPassport P1234567, expires 2030-12-10',
+  )
+  assertEquals(
+    mergeFlightContextAnswer('traveler_details', first, first),
+    first,
+  )
 })
 
 Deno.test('provider writes and meeting coordination keep external-change completion', () => {

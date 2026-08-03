@@ -153,6 +153,11 @@ const toolPolicies: Record<string, ToolPolicy> = {
     decision: 'allow',
     reason: 'Selecting a returned itinerary may prepare checkout but cannot cross the payment boundary.',
   },
+  'browser.prepare_flight_checkout': {
+    risk: 'prepare',
+    decision: 'allow',
+    reason: 'Filling observed traveler details may prepare checkout but cannot enter payment data or cross the payment boundary.',
+  },
   'browser.observe': {
     risk: 'read',
     decision: 'allow',

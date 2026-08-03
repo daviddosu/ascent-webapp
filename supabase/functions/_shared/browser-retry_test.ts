@@ -10,10 +10,13 @@ Deno.test('safe browser reads back off between durable worker attempts', () => {
 
 Deno.test('classifies provider failures, preserves canonical search, and recycles poisoned sessions', () => {
   assertEquals(browserFailureClass('flight_results_timeout'), 'PROVIDER_OR_BROWSER_INFRA')
+  assertEquals(browserFailureClass('flight_checkout_timeout'), 'PROVIDER_OR_BROWSER_INFRA')
   assertEquals(browserFailureClass('browser_result_invalid'), 'PROVIDER_OR_BROWSER_INFRA')
   assertEquals(isFlightConstraintFailure('no_flight_results'), true)
   assertEquals(isFlightConstraintFailure('browser_result_invalid'), false)
   assertEquals(isBrowserUserInterventionFailure('flight_provider_challenge'), true)
+  assertEquals(isBrowserUserInterventionFailure('flight_checkout_input_invalid'), true)
+  assertEquals(isBrowserUserInterventionFailure('flight_checkout_recovery_exhausted'), true)
   assertEquals(isBrowserUserInterventionFailure('flight_results_timeout'), false)
   assertEquals(shouldRecycleBrowserSession('search_flights', 'flight_results_timeout', 2), true)
   assertEquals(shouldRecycleBrowserSession('submit', 'network_timeout', 2), false)

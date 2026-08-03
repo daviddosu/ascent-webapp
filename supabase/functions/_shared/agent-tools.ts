@@ -572,6 +572,41 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'browser.prepare_flight_checkout',
+    description: 'Fill the observed airline traveler and contact-information pages for the selected flight, advance only through safe review/payment handoff controls, and stop before any card or purchase action. Never provide payment details to this tool.',
+    parameters: objectSchema({
+      session_id: stringValue('Browser execution session ID.', 64),
+      travelers: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 9,
+        items: objectSchema({
+          traveler_type: { type: 'string', enum: ['adult', 'child', 'infant'] },
+          title: nullableString('Passenger title or salutation, or null when not supplied.', 30),
+          given_name: stringValue('Legal given/first name exactly as on the travel document.', 80),
+          middle_name: nullableString('Legal middle name, or null.', 80),
+          family_name: stringValue('Legal family/surname exactly as on the travel document.', 80),
+          date_of_birth: stringValue('Date of birth in YYYY-MM-DD format.', 10),
+          gender: nullableString('Gender/sex when required by the provider, or null.', 40),
+          nationality: nullableString('Nationality/citizenship when supplied, or null.', 80),
+          residence_country: nullableString('Country of residence when supplied, or null.', 80),
+          document_type: { type: ['string', 'null'], description: 'passport, national_id, or null when the provider does not require a document yet.' },
+          document_number: nullableString('Passport or national ID number, or null until required.', 80),
+          document_issuing_country: nullableString('Document issuing country, or null.', 80),
+          document_expiry: nullableString('Document expiry date in YYYY-MM-DD format, or null.', 10),
+        }, [
+          'traveler_type', 'title', 'given_name', 'middle_name', 'family_name',
+          'date_of_birth', 'gender', 'nationality', 'residence_country',
+          'document_type', 'document_number', 'document_issuing_country', 'document_expiry',
+        ]),
+      },
+      contact_email: stringValue('Contact email for the booking provider.', 320),
+      contact_phone: stringValue('Contact phone number for the booking provider.', 80),
+    }, ['session_id', 'travelers', 'contact_email', 'contact_phone']),
+    strict: true,
+  },
+  {
+    type: 'function',
     name: 'browser.observe',
     description: 'Read the current task-owned browser page state.',
     parameters: objectSchema({
@@ -637,6 +672,7 @@ const policies: Record<string, ToolPolicy> = {
   'browser.navigate': { risk: 'read', approvalKind: null },
   'browser.search_flights': { risk: 'read', approvalKind: null },
   'browser.select_flight': { risk: 'prepare', approvalKind: null },
+  'browser.prepare_flight_checkout': { risk: 'prepare', approvalKind: null },
   'browser.observe': { risk: 'read', approvalKind: null },
   'browser.act': { risk: 'prepare', approvalKind: null },
   'browser.submit': { risk: 'external_write', approvalKind: 'browser_submit' },
@@ -709,6 +745,18 @@ function validateDateOnly(value: unknown) {
   const parsed = new Date(`${value}T00:00:00Z`)
   return !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === value
+}
+
+function validatePastDateOnly(value: unknown) {
+  return validateDateOnly(value) && String(value) <= new Date().toISOString().slice(0, 10)
+}
+
+function validatePhone(value: unknown) {
+  if (typeof value !== 'string') return false
+  const digits = value.replace(/\D/g, '')
+  return digits.length >= 7 &&
+    digits.length <= 20 &&
+    /^\+?[0-9().\s-]+$/.test(value)
 }
 
 function validateTimeWindow(value: unknown) {
@@ -916,6 +964,43 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
     case 'browser.select_flight':
       return validateString(value.session_id, 64) &&
         /^[a-f0-9]{16,128}$/i.test(String(value.option_id))
+    case 'browser.prepare_flight_checkout':
+      if (Object.keys(value).some(key => /card|cvv|cvc|security|payment|billing|bank|password|otp/i.test(key))) return false
+      return validateString(value.session_id, 64) &&
+        Array.isArray(value.travelers) &&
+        value.travelers.length >= 1 &&
+        value.travelers.length <= 9 &&
+        value.travelers.every((item: unknown) => {
+          if (!isRecord(item)) return false
+          const traveler = item as Record<string, unknown>
+          if (Object.keys(traveler).some(key => /card|cvv|cvc|security|payment|billing|bank|password|otp/i.test(key))) return false
+          const nullable = (candidate: unknown, maximum: number) => candidate === null || validateString(candidate, maximum)
+          const documentType = traveler.document_type
+          const documentNumber = traveler.document_number
+          const documentIssuingCountry = traveler.document_issuing_country
+          const documentExpiry = traveler.document_expiry
+          const anyDocumentDetail = documentType !== null || documentNumber !== null || documentIssuingCountry !== null || documentExpiry !== null
+          const completeDocument = documentType !== null &&
+            validateString(documentNumber, 80) &&
+            validateString(documentIssuingCountry, 80) &&
+            validateDateOnly(documentExpiry)
+          return ['adult', 'child', 'infant'].includes(String(traveler.traveler_type)) &&
+            nullable(traveler.title, 30) &&
+            validateString(traveler.given_name, 80) &&
+            nullable(traveler.middle_name, 80) &&
+            validateString(traveler.family_name, 80) &&
+            validatePastDateOnly(traveler.date_of_birth) &&
+            nullable(traveler.gender, 40) &&
+            nullable(traveler.nationality, 80) &&
+            nullable(traveler.residence_country, 80) &&
+            (documentType === null || documentType === 'passport' || documentType === 'national_id') &&
+            nullable(traveler.document_number, 80) &&
+            nullable(traveler.document_issuing_country, 80) &&
+            (traveler.document_expiry === null || validateDateOnly(traveler.document_expiry)) &&
+            (!anyDocumentDetail || completeDocument)
+        }) &&
+        validateEmail(value.contact_email) &&
+        validatePhone(value.contact_phone)
     case 'browser.observe':
     case 'browser.purchase':
       return validateString(value.session_id, 64)

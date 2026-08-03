@@ -61,6 +61,8 @@ describe('ShotCount specialist contracts', () => {
     expect(specialistCanUseTool('roon', 'gmail.send_message')).toBe(true)
     expect(specialistCanUseTool('roon', 'browser.search_flights')).toBe(false)
     expect(specialistCanUseTool('caspian', 'browser.select_flight')).toBe(true)
+    expect(specialistCanUseTool('caspian', 'browser.prepare_flight_checkout')).toBe(true)
+    expect(specialistCanUseTool('roon', 'browser.prepare_flight_checkout')).toBe(false)
     expect(specialistCanUseTool('caspian', 'gmail.send_message')).toBe(false)
     expect(specialistCanUseTool('david', 'application.generate_document')).toBe(true)
     expect(specialistCanUseTool('david', 'browser.submit')).toBe(false)

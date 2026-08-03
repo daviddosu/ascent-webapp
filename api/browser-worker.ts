@@ -7,9 +7,12 @@ import {
   normalizeFlightSearchInput,
   resumeFlightSelection,
   runLiveFlightSearch,
+  safeExternalProviderHandoffUrl,
+  withBrowser,
   type FlightOption,
   type FlightSearchInput,
 } from './_flight-browser.js'
+import { prepareFlightCheckout, safeGoogleFlightsBookingUrl, type FlightCheckoutInput } from './_flight-checkout.js'
 import {
   actOnPublicPage,
   navigatePublicPage,
@@ -38,7 +41,7 @@ type WorkerResponse = {
 
 type BrowserOperation = {
   id: string
-  type: 'navigate' | 'act' | 'submit' | 'search_flights' | 'select_flight'
+  type: 'navigate' | 'act' | 'submit' | 'search_flights' | 'select_flight' | 'prepare_flight_checkout'
   arguments: Record<string, unknown>
 }
 
@@ -60,6 +63,7 @@ type BrowserCheckpoint = {
     options: FlightOption[]
   }
   selectedFlight?: Record<string, unknown>
+  flightCheckout?: Record<string, unknown>
   publicBrowser?: PublicBrowserState
   submissionAttempted?: {
     operationId: string
@@ -138,7 +142,11 @@ function publicError(error: unknown, operationType: BrowserOperation['type']) {
     : String(error).slice(0, 500)
   if (/timeout|timed out|exceeded/i.test(message)) {
     return {
-      code: operationType === 'search_flights' ? 'flight_results_timeout' : 'browser_worker_timeout',
+      code: operationType === 'search_flights'
+        ? 'flight_results_timeout'
+        : operationType === 'prepare_flight_checkout'
+          ? 'flight_checkout_timeout'
+          : 'browser_worker_timeout',
       message: 'The browser worker timed out before the safe step finished.',
       retryable: operationType !== 'submit',
     }
@@ -206,7 +214,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
   if (
     !operation ||
     operation.id !== operationId ||
-    !['navigate', 'act', 'submit', 'search_flights', 'select_flight'].includes(operation.type)
+    !['navigate', 'act', 'submit', 'search_flights', 'select_flight', 'prepare_flight_checkout'].includes(operation.type)
   ) {
     if (
       checkpoint.lastOperation?.id === operationId &&
@@ -226,6 +234,25 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
   ) {
     response.status(403).json({ error: 'The requested domain is not allowed for this browser session' })
     return
+  }
+  if (operation.type === 'prepare_flight_checkout') {
+    const selectedFlight = checkpoint.selectedFlight
+    const handoffUrl = typeof selectedFlight?.handoffUrl === 'string'
+      ? selectedFlight.handoffUrl
+      : typeof selectedFlight?.handoff_url === 'string'
+        ? selectedFlight.handoff_url
+        : ''
+    const providerHandoff = safeExternalProviderHandoffUrl(handoffUrl)
+    const googleHandoff = safeGoogleFlightsBookingUrl(handoffUrl)
+    const handoffHost = providerHandoff ? new URL(providerHandoff).hostname.toLocaleLowerCase() : ''
+    const allowedHosts = session.allowed_domains.map((value: unknown) => String(value).toLocaleLowerCase())
+    const allowed = googleHandoff
+      ? isGoogleFlightsDomainAllowed(session.allowed_domains)
+      : Boolean(providerHandoff && allowedHosts.includes(handoffHost))
+    if (!allowed) {
+      response.status(403).json({ error: 'The selected provider handoff is not allowed for this browser session' })
+      return
+    }
   }
   if (operation.type === 'submit' && checkpoint.submissionAttempted?.operationId === operation.id) {
     const uncertainError = {
@@ -354,6 +381,50 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
           completedAt: new Date().toISOString(),
         },
       }
+    } else if (operation.type === 'prepare_flight_checkout') {
+      const selectedFlight = checkpoint.selectedFlight
+      const handoffUrl = typeof selectedFlight?.handoffUrl === 'string'
+        ? selectedFlight.handoffUrl
+        : typeof selectedFlight?.handoff_url === 'string'
+          ? selectedFlight.handoff_url
+          : ''
+      const handoffProvider = typeof selectedFlight?.handoffProvider === 'string'
+        ? selectedFlight.handoffProvider
+        : typeof selectedFlight?.handoff_provider === 'string'
+          ? selectedFlight.handoff_provider
+          : 'Airline provider'
+      if (!handoffUrl || (!safeExternalProviderHandoffUrl(handoffUrl) && !safeGoogleFlightsBookingUrl(handoffUrl))) {
+        throw new BrowserExecutionError(
+          'flight_provider_handoff_unavailable',
+          'The selected flight did not produce a direct safe airline booking page.',
+          false,
+        )
+      }
+      const result = await withBrowser(async (_browser, page) => prepareFlightCheckout(
+        page,
+        operation.arguments as unknown as FlightCheckoutInput,
+        handoffUrl,
+        handoffProvider,
+      ))
+      output = result as unknown as Record<string, unknown>
+      currentUrl = result.currentUrl
+      paymentBoundaryReached = true
+      nextCheckpoint = {
+        ...claimedCheckpoint,
+        pendingOperation: null,
+        flightCheckout: output,
+        selectedFlight: {
+          ...(claimedCheckpoint.selectedFlight ?? {}),
+          checkout: output,
+        },
+        lastOperation: {
+          id: operation.id,
+          type: operation.type,
+          status: 'succeeded',
+          output,
+          completedAt: new Date().toISOString(),
+        },
+      }
     } else if (operation.type === 'navigate') {
       const state = await navigatePublicPage(String(operation.arguments.url ?? ''), session.allowed_domains)
       output = { observation: state.observation, resumable: true }
@@ -441,10 +512,17 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
       }
     }
 
+    const nextAllowedDomains = new Set(
+      (Array.isArray(session.allowed_domains) ? session.allowed_domains : [])
+        .map((value: unknown) => String(value).toLocaleLowerCase()),
+    )
+    const externalHandoff = safeExternalProviderHandoffUrl(currentUrl)
+    if (externalHandoff) nextAllowedDomains.add(new URL(externalHandoff).hostname.toLocaleLowerCase())
     const finished = await admin
       .from('browser_execution_sessions')
       .update({
         status: 'completed',
+        allowed_domains: [...nextAllowedDomains],
         current_domain: new URL(currentUrl).hostname,
         current_url: currentUrl,
         checkpoint: nextCheckpoint,

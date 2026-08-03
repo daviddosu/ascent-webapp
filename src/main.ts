@@ -3118,8 +3118,12 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ? safeAgentHandoffUrl(run.result.paymentHandoffUrl)
     : ''
   const flightTask = run.capability === 'flight_search'
+  const flightCheckoutRequired = flightTask && run.intent.outcomeType === 'payment_handoff'
+  const flightCheckoutReady = run.result?.flightCheckout?.paymentBoundaryReached === true
+  const paymentHandoffAvailable = Boolean(paymentHandoffUrl && (!flightCheckoutRequired || flightCheckoutReady))
+  const manualCheckoutStep = Boolean(paymentHandoffUrl && flightCheckoutRequired && !flightCheckoutReady && run.status === 'waiting_for_user')
   const flightHandoffLabel = 'Continue to payment'
-  const awaitingFlightSelection = run.status === 'waiting_for_user' && flightOptions.length > 0 && !paymentHandoffUrl
+  const awaitingFlightSelection = run.status === 'waiting_for_user' && flightOptions.length > 0 && !paymentHandoffAvailable && !manualCheckoutStep
   const staleFlightSelection = awaitingFlightSelection &&
     ['flight_option_invalid', 'flight_search_checkpoint_missing'].includes(run.errorCode ?? '')
   const needsGoogle = run.errorCode?.startsWith('google_') ||
@@ -3151,18 +3155,24 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
         </button>`).join('')}
       </div>
       <small>Live prices can change. ${escapeHtml(ownerName)} rechecks the selected option before handing it back.</small>
-    ` : paymentHandoffUrl ? `
+    ` : paymentHandoffAvailable ? `
       <div class="task-agent-payment-handoff">
         <strong>Ready for you</strong>
         <span>Your itinerary is selected. Payment and the final purchase remain under your control.</span>
         <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">${flightHandoffLabel}</a>
+      </div>
+    ` : manualCheckoutStep ? `
+      <div class="task-agent-payment-handoff">
+        <strong>Provider needs you</strong>
+        <span>${escapeHtml(run.waitingReason || 'Complete the provider step before payment can continue.')}</span>
+        <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Open provider step</a>
       </div>
     ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(external && flightTask && flightOptions.length ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>`}
     ${replySimulation}
     ${renderRoonGeneratedFiles(task)}
     <footer>
       <button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>
-      ${paymentHandoffUrl ? '' : awaitingFlightSelection && !staleFlightSelection ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Refreshing…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : staleFlightSelection ? 'Refresh options' : 'Try again'}</button>`}
+     ${paymentHandoffAvailable || manualCheckoutStep ? '' : awaitingFlightSelection && !staleFlightSelection ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Refreshing…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : staleFlightSelection ? 'Refresh options' : 'Try again'}</button>`}
     </footer>
   </section>`
 }
@@ -3266,6 +3276,10 @@ function renderAgentPanel(task: Task) {
     const selectedReturnFlight = run.result.selectedReturnFlight && typeof run.result.selectedReturnFlight === 'object'
       ? run.result.selectedReturnFlight as Record<string, unknown>
       : null
+    const flightCheckout = run.result.flightCheckout && typeof run.result.flightCheckout === 'object'
+      ? run.result.flightCheckout
+      : null
+    const preparedTravelerCount = Number(flightCheckout?.preparedTravelerCount ?? 0)
     const selectedFlightDetail = selectedFlight ? agentFlightDetail(selectedFlight) : ''
     const selectedReturnFlightDetail = selectedReturnFlight ? agentFlightDetail(selectedReturnFlight) : ''
     return `<section class="task-agent-card task-agent-card--result">
@@ -3281,7 +3295,7 @@ function renderAgentPanel(task: Task) {
       ${run.result.sources.length ? `<div class="agent-sources"><strong>Sources</strong>${run.result.sources.map(source => `<a href="${safeAgentUrl(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)} ↗</a>`).join('')}</div>` : ''}
       ${run.result.followUps.length ? `<div class="agent-followups"><strong>Suggested next actions</strong>${run.result.followUps.map(title => `<span>＋ ${escapeHtml(title)}</span>`).join('')}</div><button class="agent-add-followups" type="button" data-action="add-agent-followups" data-task-id="${task.id}">Add follow-up tasks</button>` : ''}
       ${run.result.applicationReviewUrl ? `<a class="agent-primary agent-review-application" href="${safeAgentUrl(run.result.applicationReviewUrl)}" target="_blank" rel="noreferrer">Review application</a>` : ''}
-      ${flightHandoffUrl ? `<a class="agent-primary agent-review-application" href="${flightHandoffUrl}" target="_blank" rel="noreferrer">${flightHandoffLabel}</a><small>Task complete — payment and any purchase remain entirely yours.</small>` : ''}
+      ${flightHandoffUrl ? `<a class="agent-primary agent-review-application" href="${flightHandoffUrl}" target="_blank" rel="noreferrer">${flightHandoffLabel}</a><small>${preparedTravelerCount > 0 ? `${preparedTravelerCount} traveler${preparedTravelerCount === 1 ? '' : 's'} prepared. ` : ''}Payment and any purchase remain entirely yours.</small>` : ''}
       <small>Private to you · Agent context and output never appear in the community feed.</small>
     </section>`
   }

@@ -41,6 +41,14 @@ export type AgentResult = {
   paymentHandoffUrl?: string
   paymentHandoffProvider?: string
   paymentHandoffStage?: 'provider_booking' | 'google_booking_options'
+  flightCheckout?: {
+    provider?: string
+    preparedFields?: string[]
+    preparedTravelerCount?: number
+    paymentBoundaryReached?: boolean
+    handoffUrl?: string
+    currentUrl?: string
+  }
   applicationReviewUrl?: string
   outcome?: {
     preparedResult: boolean

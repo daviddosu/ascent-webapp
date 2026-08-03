@@ -38,6 +38,7 @@ describe('agent policy', () => {
     expect(policyForTool('gmail.create_draft').decision).toBe('allow')
     expect(policyForTool('gmail.wait_for_reply').decision).toBe('allow')
     expect(policyForTool('calendar.get_availability').risk).toBe('read')
+    expect(policyForTool('browser.prepare_flight_checkout')).toMatchObject({ risk: 'prepare', decision: 'allow' })
   })
 
   it('requires approval for external writes and never delegates payment', () => {

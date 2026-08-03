@@ -11,11 +11,11 @@ ShotCount uses a signed Vercel Node worker for tasks without a first-party API. 
 - The worker uses a fresh isolated browser context and never returns cookies, storage, raw page dumps, or credentials.
 - Public page content is bounded, sanitized, and explicitly labelled as untrusted external content before the model sees it.
 - Navigation is HTTPS-only, exact-domain allowlisted, and rejects IP, local-network, credential-bearing, and unsafe redirect destinations.
-- Generic actions can type or select only non-sensitive fields. Password, one-time-code, payment, banking, and private-identifier fields are blocked.
+- Generic actions can type or select only non-sensitive fields. Password, one-time-code, payment, banking, and private-identifier fields are blocked. The flight-specific checkout action is the only exception: it can fill explicitly user-provided traveler identity fields on an observed airline checkout page, and it never exposes those values as result evidence.
 - Generic clicks can only follow safe links. Form submission is a separate typed tool that always requires exact approval.
 - Public cookie consent is rejected rather than accepted.
 - No card data is entered or stored.
-- No provider payment or purchase button is clicked. A single labelled Google-to-airline booking handoff may be opened so the user is left at the provider's payment-ready page.
+- No provider payment or purchase button is clicked. A single labelled Google-to-airline booking handoff may be opened so the user is left at the provider's payment-ready page; if Google exposes only booking options first, Caspian resolves one safe provider link before filling checkout.
 
 ## Public-web tasks
 
@@ -57,9 +57,10 @@ When the user chooses an option:
 4. If price or availability changed, it stops and returns a recoverable state.
 5. It selects the outbound and return legs.
 6. It verifies the `https://www.google.com/travel/flights/booking` itinerary.
-7. Where Google exposes a labelled direct airline booking option, it opens that one navigation-only control and verifies the resulting public HTTPS provider handoff. If the provider handoff does not load safely, it falls back to the verified Google booking-options URL.
-8. It sets `payment_boundary_reached = true`.
-9. ShotCount shows Continue to payment and leaves the task `waiting_for_user`.
+7. Where Google exposes a labelled direct airline booking option, it opens that one navigation-only control and verifies the resulting public HTTPS provider handoff. If Google exposes booking options first, the checkout worker can recover one safe provider link from that page. If no provider handoff loads safely, it stops with a recoverable provider-handoff state.
+8. For a payment-handoff task, Caspian asks once for the missing traveler/contact details, uses `browser.prepare_flight_checkout` to fill only observed passenger and contact fields, verifies each fill, and advances only through safe review/continue controls.
+9. It stops at the first payment/card boundary, persists the prepared-field evidence without raw identity values, and sets `payment_boundary_reached = true`.
+10. ShotCount shows Continue to payment and leaves the task waiting for the user. It never enters card details, CVV, passwords, OTPs, or clicks purchase/payment/confirm-booking controls.
 
 The Chromium process may be fresh after a serverless restart, but the task-owned session, checkpoint, option, provider URL, and operation identity are the same durable browser run. ShotCount does not automate further after the external provider handoff.
 
@@ -89,10 +90,10 @@ The worker records stable public codes for runtime missing, unsafe URLs or field
 
 ## Live verification
 
-The normal test suite uses deterministic result text. To exercise Google Flights itself with future dates, run:
+The normal test suite uses deterministic result text and a controlled checkout-page fixture. To exercise Google Flights itself with future dates, run:
 
 ```bash
 pnpm test:flight:live
 ```
 
-This performs a real search, selects one returned itinerary, verifies the booking handoff, and stops without entering passenger details or clicking a payment action.
+This performs a real search, selects one returned itinerary, verifies the booking handoff, and stops without using real traveler identity or payment data. Checkout field mapping, verification, bounded progression, and payment stopping are covered by the controlled browser tests.
