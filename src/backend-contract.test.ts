@@ -730,6 +730,8 @@ describe('agent execution security contract', () => {
     expect(mainUi).toContain('!run.result?.selectedFlight')
     expect(mainUi).toContain("Choose a saved itinerary to retry the provider handoff.")
     expect(mainUi).toContain("status: 'waiting_for_user'")
+    expect(taskAgentFunction).toContain('bounded recovery. Choose a saved itinerary')
+    expect(taskAgentFunction).toContain('bounded_recovery_exhausted: true')
   })
 
   it('continues automatic flight selection into checkout on the same model turn', () => {

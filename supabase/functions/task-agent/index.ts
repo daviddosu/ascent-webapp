@@ -4051,6 +4051,31 @@ async function pollBrowserExecutionRun(
       const retried = await retryWaitingProviderAction(admin, waiting, openaiKey)
       return retried ?? waiting
     }
+    if (
+      retryable &&
+      operation.type === 'select_flight' &&
+      Array.isArray(run.result?.flightOptions) &&
+      run.result.flightOptions.length > 0 &&
+      !run.result.selectedFlight
+    ) {
+      const waiting = await updateRun(admin, run, {
+        status: 'waiting_for_user',
+        waiting_reason: 'The live provider timed out after bounded recovery. Choose a saved itinerary to retry the same handoff.',
+        error_code: errorCode,
+        error: message,
+        retryable: true,
+        result: run.result ?? null,
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      await addEvent(admin, waiting, 'agent_waiting_for_user', waiting.status, waiting.waiting_reason, {
+        browser_session_id: session.id,
+        operation_type: operation.type,
+        validated_itinerary_available: true,
+        bounded_recovery_exhausted: true,
+      })
+      return waiting
+    }
     if (retryable && operation.type !== 'submit' && browserFailureClass(errorCode) === 'PROVIDER_OR_BROWSER_INFRA') {
       const waitingMessage = operation.type === 'prepare_flight_checkout'
         ? 'The provider checkout is temporarily unavailable. Your selected itinerary and traveler details remain saved and can resume safely.'
