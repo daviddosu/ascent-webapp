@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildGoogleFlightsUrl,
+  buildKissAndFlySearchUrl,
   BrowserExecutionError,
   chooseFlightCandidate,
+  chooseKissAndFlyItinerary,
   isGoogleFlightsDomainAllowed,
   isRecoverableFlightReadError,
   isRecoverableBrowserRuntimeError,
   isFlightResultCardText,
   flightProviderNeedsUser,
   maxSharedBrowserUses,
+  maximumPublicProviderSelectionAttempts,
   maximumFlightSelectionAttempts,
   normalizeFlightSearchInput,
   parseGoogleFlightListItem,
+  parseKissAndFlyCardSnapshot,
   rankFlightOptions,
   flightOptionSatisfiesConstraints,
   safeProviderNavigationUrl,
@@ -80,6 +84,33 @@ describe('flight browser worker', () => {
     const url = new URL(buildGoogleFlightsUrl({ ...input, returnDate: null }))
     expect(url.searchParams.get('q')).toContain('one way')
     expect(url.searchParams.get('q')).not.toContain('returning')
+  })
+
+  it('builds provider search URLs for both round-trip and one-way itineraries', () => {
+    const outbound = {
+      route: 'LOS–LHR',
+    }
+    const returning = {
+      route: 'LHR–LOS',
+    }
+    const roundTrip = new URL(buildKissAndFlySearchUrl({
+      ...input,
+      departureDate: '2026-08-20',
+      returnDate: '2026-09-30',
+      currency: 'USD',
+    }, outbound, returning))
+    expect(roundTrip.origin).toBe('https://kissandfly.ng')
+    expect(roundTrip.pathname).toBe('/avia/search/preloader/LOS-LHR-20.08.2026/LHR-LOS-30.09.2026')
+    expect(roundTrip.searchParams.get('class')).toBe('E')
+    expect(roundTrip.searchParams.get('adults')).toBe('1')
+
+    const oneWay = new URL(buildKissAndFlySearchUrl({
+      ...input,
+      departureDate: '2026-08-20',
+      returnDate: null,
+    }, outbound))
+    expect(oneWay.pathname).toBe('/avia/search/preloader/LOS-LHR-20.08.2026')
+    expect(oneWay.pathname).not.toContain('undefined')
   })
 
   it('carries child ages, infant seat choice, and local time windows into the provider query', () => {
@@ -193,6 +224,7 @@ describe('flight browser worker', () => {
 
   it('bounds safe selection retries', () => {
     expect(maximumFlightSelectionAttempts).toBe(3)
+    expect(maximumPublicProviderSelectionAttempts).toBe(2)
   })
 
   it('recognizes explicit Google Flights provider failure states', () => {
@@ -274,6 +306,71 @@ describe('flight browser worker', () => {
       durationMinutes: 565,
       route: 'AAA–BBB',
     })
+  })
+
+  it('parses one-way provider cards into structured itinerary evidence', () => {
+    const oneWayInput = { ...input, departureDate: '2026-08-20', returnDate: null, budgetAmount: 1_600 }
+    const parsed = parseKissAndFlyCardSnapshot({
+      index: 0,
+      airline: 'Royal Air Maroc Economy Class',
+      price: '$ 1,103.20',
+      standardAvailable: true,
+      legs: [{
+        times: ['06:50', '15:50'],
+        duration: '9h 00min',
+        routeCodes: ['LOS', 'CMN', 'LGW'],
+        dateText: '',
+      }],
+    }, oneWayInput, 'https://kissandfly.ng/avia/search/result?session_id=test', 'USD')
+    expect(parsed).toMatchObject({
+      provider: 'KissandFly',
+      amount: 1103.2,
+      currency: 'USD',
+      legs: [{
+        airline: 'Royal Air Maroc',
+        route: 'LOS–LGW',
+        stopCount: 1,
+        departureDate: '2026-08-20',
+        arrivalDate: '2026-08-20',
+      }],
+    })
+  })
+
+  it('matches a round-trip provider card semantically after stale-card reordering', () => {
+    const roundTripInput = { ...input, departureDate: '2026-08-20', returnDate: '2026-09-30', budgetAmount: 1_600 }
+    const searchUrl = 'https://kissandfly.ng/avia/search/result?session_id=test'
+    const googleOutbound = {
+      ...parseGoogleFlightListItem(
+        `06:50\n–\n16:50\nRoyal Air Maroc\n10 hr 00 min\nLOS–LHR\n1 stop\n$1,099\nround trip`,
+        'USD',
+        buildGoogleFlightsUrl(roundTripInput),
+        roundTripInput,
+      )!,
+      label: 'Best overall' as const,
+    }
+    const googleReturn = {
+      ...parseGoogleFlightListItem(
+        `18:50\n–\n5:50 AM+1\nRoyal Air Maroc\n11 hr 00 min\nLHR–LOS\n1 stop\n$1,099\nround trip`,
+        'USD',
+        buildGoogleFlightsUrl(roundTripInput),
+        { ...roundTripInput, departureDate: roundTripInput.returnDate!, returnDate: null },
+      )!,
+      label: 'Also worth considering' as const,
+    }
+    const matching = parseKissAndFlyCardSnapshot({
+      index: 3,
+      airline: 'Royal Air Maroc Economy Class',
+      price: '$ 1,050.00',
+      standardAvailable: true,
+      legs: [
+        { times: ['06:50', '16:50'], duration: '10h 00min', routeCodes: ['LOS', 'CMN', 'LHR'], dateText: '' },
+        { times: ['18:50', '05:50'], duration: '11h 00min', routeCodes: ['LHR', 'CMN', 'LOS'], dateText: '01 Oct 2026' },
+      ],
+    }, roundTripInput, searchUrl, 'USD')!
+    const unrelated = { ...matching, amount: 1_200, legs: matching.legs.map(leg => ({ ...leg, route: 'LOS–LGW' })) }
+    expect(chooseKissAndFlyItinerary([unrelated, matching], roundTripInput, googleOutbound, googleReturn)).toBe(matching)
+    expect(chooseKissAndFlyItinerary([{ ...matching, amount: 1_601 }], roundTripInput, googleOutbound, googleReturn)).toBeNull()
+    expect(chooseKissAndFlyItinerary([{ ...matching, currency: 'NGN' }], roundTripInput, googleOutbound, googleReturn)).toBeNull()
   })
 
   it('accepts only safe public HTTPS airline handoffs', () => {

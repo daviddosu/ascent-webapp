@@ -227,7 +227,15 @@ export function browserFailureClass(code: string) {
 }
 
 export function isFlightConstraintFailure(code: string) {
-  return ['flight_input_invalid', 'no_flight_results', 'flight_option_invalid', 'flight_price_changed', 'flight_sold_out', 'return_flight_unavailable'].includes(code)
+  return [
+    'flight_input_invalid',
+    'no_flight_results',
+    'flight_option_invalid',
+    'flight_price_changed',
+    'flight_sold_out',
+    'return_flight_unavailable',
+    'flight_provider_itinerary_unavailable',
+  ].includes(code)
 }
 
 export function isBrowserUserInterventionFailure(code: string) {

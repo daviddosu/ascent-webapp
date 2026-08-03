@@ -686,6 +686,7 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("context: { ...(run.context ?? {}),")
     expect(taskAgentFunction).toContain('flight_search_evidence')
     expect(taskAgentFunction).toContain('flight_handoff_evidence')
+    expect(taskAgentFunction).toContain('providerEvidence')
     expect(browserWorker).toContain('payment_boundary_reached: paymentBoundaryReached')
   })
 
@@ -703,6 +704,8 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("complete_demo_flight_handoff")
     expect(taskAgentFunction).toContain("policy.risk === 'financial'")
     expect(agentTools).toContain("'browser.purchase'")
+    expect(flightBrowser).toContain('public_provider_selection_clicked')
+    expect(flightBrowser).toContain('maximumPublicProviderSelectionAttempts')
   })
 
   it('continues automatic flight selection into checkout on the same model turn', () => {

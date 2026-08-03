@@ -65,12 +65,50 @@ export type FlightSelectionResult = {
   paymentBoundaryReached: true
   resumable: true
   selectionTrace: FlightSelectionTraceEvent[]
+  providerEvidence?: PublicProviderItineraryEvidence
 }
 
 export type FlightSelectionTraceEvent = {
   stage: string
   at: string
   details: Record<string, unknown>
+}
+
+export type PublicProviderLegEvidence = {
+  airline: string
+  departureTime: string
+  arrivalTime: string
+  duration: string
+  durationMinutes: number
+  route: string
+  stopCount: number
+  departureDate: string
+  arrivalDate: string
+  arrivalDayOffset: number
+}
+
+export type PublicProviderItineraryEvidence = {
+  provider: 'KissandFly'
+  searchUrl: string
+  handoffUrl?: string
+  price: string
+  amount: number
+  currency: FlightSearchInput['currency']
+  legs: PublicProviderLegEvidence[]
+}
+
+export type PublicProviderCardSnapshot = {
+  index: number
+  airline: string
+  price: string
+  standardAvailable: boolean
+  legs: Array<{
+    airline?: string
+    times: string[]
+    duration: string
+    routeCodes: string[]
+    dateText: string
+  }>
 }
 
 export class BrowserExecutionError extends Error {
@@ -494,6 +532,206 @@ export function rankFlightOptions(
   return selected.slice(0, 3)
 }
 
+const publicProviderBaseUrl = 'https://kissandfly.ng'
+const publicProviderClassByCabin: Record<FlightSearchInput['cabin'], string> = {
+  economy: 'E',
+  premium_economy: 'W',
+  business: 'B',
+  first: 'F',
+}
+
+function publicProviderBase() {
+  const configured = String(process.env.SHOTCOUNT_FLIGHT_PROVIDER_BASE_URL ?? publicProviderBaseUrl).trim()
+  const safe = safeExternalProviderHandoffUrl(configured)
+  if (!safe) {
+    throw new BrowserExecutionError(
+      'flight_provider_not_configured',
+      'The configured public flight provider is not a safe HTTPS destination.',
+      false,
+    )
+  }
+  const url = new URL(safe)
+  url.pathname = url.pathname.replace(/\/+$/, '') || '/'
+  url.search = ''
+  url.hash = ''
+  return url
+}
+
+function airportCodes(route: string) {
+  return route.toLocaleUpperCase().match(/\b[A-Z]{3}\b/g) ?? []
+}
+
+function providerRouteSegment(
+  route: string,
+  fallbackOrigin: string,
+  fallbackDestination: string,
+) {
+  const codes = airportCodes(route)
+  const origin = codes[0] ?? fallbackOrigin
+  const destination = codes.at(-1) ?? fallbackDestination
+  return `${origin}-${destination}`
+}
+
+function providerDate(value: string) {
+  const [year, month, day] = value.split('-')
+  return `${day}.${month}.${year}`
+}
+
+export function buildKissAndFlySearchUrl(
+  input: FlightSearchInput,
+  selectedOption: Pick<FlightOption, 'route'>,
+  selectedReturnOption?: Pick<FlightOption, 'route'>,
+) {
+  const normalized = normalizeFlightSearchInput(input)
+  const outbound = providerRouteSegment(
+    selectedOption.route,
+    normalized.originCode,
+    normalized.destinationCode,
+  )
+  const segments = [`${outbound}-${providerDate(normalized.departureDate)}`]
+  if (normalized.returnDate) {
+    const returnRoute = selectedReturnOption
+      ? providerRouteSegment(selectedReturnOption.route, normalized.destinationCode, normalized.originCode)
+      : `${normalized.destinationCode}-${normalized.originCode}`
+    segments.push(`${returnRoute}-${providerDate(normalized.returnDate)}`)
+  }
+  const base = publicProviderBase()
+  base.pathname = `${base.pathname.replace(/\/$/, '')}/avia/search/preloader/${segments.join('/')}`
+  base.searchParams.set('adults', String(normalized.adultCount ?? 1))
+  base.searchParams.set('children', String(normalized.childCount ?? 0))
+  base.searchParams.set('infants', String(normalized.infantCount ?? 0))
+  base.searchParams.set('class', publicProviderClassByCabin[normalized.cabin])
+  return base.toString()
+}
+
+function providerMonth(value: string) {
+  return {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+  }[value.slice(0, 3).toLocaleLowerCase()]
+}
+
+function providerDateFromText(value: string, fallback: string) {
+  const match = value.match(/\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})\b/)
+  if (!match) return fallback
+  const month = providerMonth(match[2]!)
+  if (!month) return fallback
+  const day = Number(match[1])
+  const year = Number(match[3])
+  const candidate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return validDateOnly(candidate) ? candidate : fallback
+}
+
+function providerAirlineName(value: string) {
+  return value
+    .replace(/\b(?:Premium\s+Economy|Economy|Business|First)(?:\s+Class)?\b/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function parseKissAndFlyCardSnapshot(
+  snapshot: PublicProviderCardSnapshot,
+  input: FlightSearchInput,
+  searchUrl: string,
+  currency: FlightSearchInput['currency'] = input.currency,
+): PublicProviderItineraryEvidence | null {
+  const normalized = normalizeFlightSearchInput(input)
+  const airline = providerAirlineName(snapshot.airline)
+  const price = snapshot.price.trim()
+  const amount = priceAmount(price)
+  if (
+    !snapshot.standardAvailable ||
+    !airline ||
+    !price ||
+    !Number.isFinite(amount) ||
+    !flightCurrencies.has(currency) ||
+    !Array.isArray(snapshot.legs) ||
+    !snapshot.legs.length ||
+    snapshot.legs.length > 2
+  ) return null
+
+  const legs: PublicProviderLegEvidence[] = []
+  for (const [index, leg] of snapshot.legs.entries()) {
+    const times = Array.isArray(leg.times) ? leg.times : []
+    const routeCodes = Array.isArray(leg.routeCodes) ? leg.routeCodes.filter(Boolean) : []
+    const duration = String(leg.duration ?? '').trim()
+    const durationMinutes = durationInMinutes(duration)
+    if (times.length < 2 || routeCodes.length < 2 || !duration || !Number.isFinite(durationMinutes)) return null
+    const departureDate = index === 0
+      ? normalized.departureDate
+      : normalized.returnDate ?? normalized.departureDate
+    const arrivalDate = providerDateFromText(String(leg.dateText ?? ''), departureDate)
+    const arrivalDayOffset = Math.max(0, Math.round(
+      (Date.parse(`${arrivalDate}T00:00:00Z`) - Date.parse(`${departureDate}T00:00:00Z`)) / (24 * 60 * 60 * 1000),
+    ))
+    const legAirline = providerAirlineName(String(leg.airline ?? snapshot.airline))
+    if (!legAirline) return null
+    legs.push({
+      airline: legAirline,
+      departureTime: times[0]!,
+      arrivalTime: times[1]!,
+      duration,
+      durationMinutes,
+      route: `${routeCodes[0]}–${routeCodes.at(-1)}`,
+      stopCount: Math.max(0, routeCodes.length - 2),
+      departureDate,
+      arrivalDate,
+      arrivalDayOffset,
+    })
+  }
+
+  return {
+    provider: 'KissandFly',
+    searchUrl,
+    price,
+    amount,
+    currency,
+    legs,
+  }
+}
+
+function normalizedAirline(value: string) {
+  return value.toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+function publicProviderLegMatches(
+  candidate: PublicProviderLegEvidence,
+  expected: Pick<FlightOption, 'airline' | 'route' | 'departureTime' | 'arrivalTime' | 'durationMinutes' | 'stopCount'>,
+) {
+  const candidateAirline = normalizedAirline(candidate.airline)
+  const expectedAirline = normalizedAirline(expected.airline)
+  const candidateCodes = airportCodes(candidate.route)
+  const expectedCodes = airportCodes(expected.route)
+  const sameAirline = candidateAirline === expectedAirline ||
+    candidateAirline.includes(expectedAirline) ||
+    expectedAirline.includes(candidateAirline)
+  const sameRoute = candidateCodes[0] === expectedCodes[0] && candidateCodes.at(-1) === expectedCodes.at(-1)
+  const sameDeparture = timeOfDayMinutes(candidate.departureTime) === timeOfDayMinutes(expected.departureTime)
+  const sameArrival = timeOfDayMinutes(candidate.arrivalTime) === timeOfDayMinutes(expected.arrivalTime)
+  return sameAirline &&
+    sameRoute &&
+    sameDeparture &&
+    sameArrival &&
+    Math.abs(candidate.durationMinutes - expected.durationMinutes) <= 15 &&
+    candidate.stopCount === expected.stopCount
+}
+
+export function chooseKissAndFlyItinerary(
+  candidates: PublicProviderItineraryEvidence[],
+  input: FlightSearchInput,
+  selectedOption: FlightOption,
+  selectedReturnOption?: FlightOption,
+) {
+  const normalized = normalizeFlightSearchInput(input)
+  const expectedLegs = selectedReturnOption ? [selectedOption, selectedReturnOption] : [selectedOption]
+  return candidates
+    .filter(candidate => candidate.currency === normalized.currency)
+    .filter(candidate => normalized.budgetAmount === null || candidate.amount <= normalized.budgetAmount)
+    .filter(candidate => candidate.legs.length === expectedLegs.length)
+    .filter(candidate => candidate.legs.every((leg, index) => publicProviderLegMatches(leg, expectedLegs[index]!)))
+    .sort((left, right) => left.amount - right.amount)[0] ?? null
+}
+
 async function executablePath() {
   if (process.env.CHROME_EXECUTABLE_PATH) return process.env.CHROME_EXECUTABLE_PATH
   if (process.platform === 'linux') return chromium.executablePath()
@@ -584,6 +822,249 @@ async function openFlightSearch(page: Page, searchUrl: string) {
     'flight_results_timeout',
     'Google Flights took too long to return live options. Try again in a moment.',
   )
+}
+
+async function visibleButtonByText(page: Page, predicate: (value: string) => boolean) {
+  const buttons = page.locator('button:visible')
+  const count = await buttons.count()
+  for (let index = 0; index < count; index += 1) {
+    const button = buttons.nth(index)
+    const label = (await button.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+    if (predicate(label)) return button
+  }
+  return null
+}
+
+async function waitForKissAndFlyResults(page: Page) {
+  const deadline = Date.now() + 45_000
+  let reloads = 0
+  while (Date.now() < deadline) {
+    const cardCount = await page.locator('.avia-item:visible').count().catch(() => 0)
+    if (cardCount > 0) return
+    const body = await page.locator('body').innerText().catch(() => '')
+    if (flightProviderNeedsUser(body)) {
+      throw new BrowserExecutionError(
+        'flight_provider_challenge',
+        'The public flight provider requires a user verification step before it will show live results.',
+        false,
+      )
+    }
+    if (shouldReloadFlightResults(body) && reloads < 1) {
+      reloads += 1
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+    }
+    await page.waitForTimeout(750)
+  }
+  throw new BrowserExecutionError(
+    'flight_provider_results_timeout',
+    'The public flight provider took too long to return live options.',
+  )
+}
+
+async function ensureKissAndFlyCurrency(page: Page, currency: FlightSearchInput['currency']) {
+  const header = await visibleButtonByText(page, value => /^English\/(?:USD|GBP|EUR|NGN)$/i.test(value))
+  if (!header) {
+    throw new BrowserExecutionError(
+      'flight_provider_currency_unavailable',
+      'The public flight provider did not expose a currency selector for the requested price currency.',
+      false,
+    )
+  }
+  const current = (await header.innerText()).replace(/\s+/g, '').trim().toLocaleUpperCase().split('/')[1]
+  if (current === currency) return
+
+  await header.click()
+  const desired = await visibleButtonByText(page, value => value.toLocaleUpperCase() === currency)
+  if (!desired) {
+    throw new BrowserExecutionError(
+      'flight_provider_currency_unavailable',
+      'The public flight provider does not support the requested price currency.',
+      false,
+    )
+  }
+  await desired.click()
+  const confirm = await visibleButtonByText(page, value => {
+    const compact = value.replace(/\s+/g, '')
+    return compact === 'OK' || compact === '\u039f\u041a'
+  })
+  if (!confirm) {
+    throw new BrowserExecutionError(
+      'flight_provider_currency_unavailable',
+      'The public flight provider did not expose a safe currency confirmation control.',
+      false,
+    )
+  }
+  await confirm.click()
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const updatedHeader = await visibleButtonByText(page, value => /^English\/(?:USD|GBP|EUR|NGN)$/i.test(value))
+    const updated = updatedHeader
+      ? (await updatedHeader.innerText()).replace(/\s+/g, '').trim().toLocaleUpperCase().split('/')[1]
+      : ''
+    if (updated === currency) return
+    await page.waitForTimeout(500)
+  }
+  throw new BrowserExecutionError(
+    'flight_provider_currency_unavailable',
+    'The public flight provider did not apply the requested price currency.',
+    false,
+  )
+}
+
+async function kissAndFlyCardSnapshots(page: Page) {
+  const cards = page.locator('.avia-item:visible')
+  const snapshots = await cards.evaluateAll(elements => elements.map((element, index) => {
+    const text = (value: string | null | undefined) => (value ?? '').replace(/\s+/g, ' ').trim()
+    const airlines = Array.from(element.querySelectorAll('.avia-item-recommendation-general'))
+      .map(item => text(item.textContent))
+    const trips = Array.from(element.querySelectorAll('.avia-item-recommendation-trip')).map((trip, tripIndex) => ({
+      airline: airlines[tripIndex] ?? airlines[0] ?? '',
+      times: Array.from(trip.querySelectorAll('.info .time')).map(item => text(item.textContent)).filter(Boolean),
+      duration: text(trip.querySelector('.info .duration')?.textContent),
+      routeCodes: Array.from(trip.querySelectorAll('.iata'))
+        .map(item => text(item.textContent).match(/\b[A-Z]{3}\b/)?.[0] ?? '')
+        .filter(Boolean),
+      dateText: text(trip.querySelector('.date')?.textContent),
+    }))
+    const standardButton = element.querySelector('button.t-btn.preset-2')
+    const price = text(standardButton?.parentElement?.querySelector('.t-price')?.textContent)
+    return {
+      index,
+      airline: airlines[0] ?? '',
+      price,
+      standardAvailable: Boolean(standardButton),
+      legs: trips,
+    }
+  }))
+  return { cards, snapshots }
+}
+
+export const maximumPublicProviderSelectionAttempts = 2
+
+async function continueToKissAndFlyBooking(
+  page: Page,
+  input: FlightSearchInput,
+  selectedOption: FlightOption,
+  selectedReturnOption: FlightOption | undefined,
+  trace: FlightSelectionTraceEvent[],
+) {
+  const searchUrl = buildKissAndFlySearchUrl(input, selectedOption, selectedReturnOption)
+  const providerHost = new URL(publicProviderBase()).hostname.toLocaleLowerCase()
+  traceEvent(trace, 'public_provider_search_started', {
+    provider: 'KissandFly',
+    searchUrl,
+    currency: input.currency,
+    tripType: input.returnDate ? 'round_trip' : 'one_way',
+  })
+  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 })
+  await waitForKissAndFlyResults(page)
+  await ensureKissAndFlyCurrency(page, input.currency)
+  await waitForKissAndFlyResults(page)
+
+  for (let attempt = 1; attempt <= maximumPublicProviderSelectionAttempts; attempt += 1) {
+    const { cards, snapshots } = await kissAndFlyCardSnapshots(page)
+    const candidates = snapshots
+      .map(snapshot => parseKissAndFlyCardSnapshot(snapshot, input, searchUrl, input.currency))
+      .filter((candidate): candidate is PublicProviderItineraryEvidence => Boolean(candidate))
+    const chosen = chooseKissAndFlyItinerary(candidates, input, selectedOption, selectedReturnOption)
+    traceEvent(trace, 'public_provider_cards_found', {
+      attempt,
+      count: candidates.length,
+      matching: Boolean(chosen),
+      candidates: candidates.slice(0, 12).map(candidate => ({
+        index: snapshots.find(snapshot => snapshot.price === candidate.price)?.index,
+        airline: candidate.legs[0]?.airline,
+        legs: candidate.legs.map(leg => ({
+          route: leg.route,
+          departureTime: leg.departureTime,
+          arrivalTime: leg.arrivalTime,
+          durationMinutes: leg.durationMinutes,
+          stopCount: leg.stopCount,
+        })),
+        amount: candidate.amount,
+        currency: candidate.currency,
+      })),
+    })
+    if (!chosen) {
+      if (attempt < maximumPublicProviderSelectionAttempts) {
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+        await waitForKissAndFlyResults(page)
+        traceEvent(trace, 'public_provider_recovered_state', {
+          attempt,
+          source: 'stale_result_cards',
+          url: page.url(),
+        })
+        continue
+      }
+      throw new BrowserExecutionError(
+        'flight_provider_itinerary_unavailable',
+        'The public flight provider no longer shows a validated match for the selected itinerary.',
+        true,
+        { searchUrl, candidateCount: candidates.length },
+      )
+    }
+
+    const matchingIndex = snapshots.findIndex(snapshot => {
+      const parsed = parseKissAndFlyCardSnapshot(snapshot, input, searchUrl, input.currency)
+      return parsed?.price === chosen.price &&
+        parsed.amount === chosen.amount &&
+        parsed.legs.length === chosen.legs.length &&
+        parsed.legs.every((leg, index) => leg.route === chosen.legs[index]?.route && leg.departureTime === chosen.legs[index]?.departureTime)
+    })
+    if (matchingIndex < 0) {
+      if (attempt < maximumPublicProviderSelectionAttempts) {
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+        await waitForKissAndFlyResults(page)
+        continue
+      }
+      throw new BrowserExecutionError('flight_provider_itinerary_unavailable', 'The validated provider card became stale before booking.', true)
+    }
+
+    const card = cards.nth(matchingIndex)
+    const book = card.locator('button.t-btn.preset-2:visible')
+    if (await book.count() !== 1) {
+      throw new BrowserExecutionError(
+        'flight_provider_selection_failed',
+        'The validated provider card did not expose exactly one standard booking control.',
+        true,
+      )
+    }
+    await book.click({ noWaitAfter: true })
+    traceEvent(trace, 'public_provider_selection_clicked', {
+      attempt,
+      cardIndex: matchingIndex,
+      provider: 'KissandFly',
+      amount: chosen.amount,
+      currency: chosen.currency,
+    })
+    const deadline = Date.now() + 30_000
+    while (Date.now() < deadline) {
+      const safeUrl = safeExternalProviderHandoffUrl(page.url())
+      const safeHostname = safeUrl ? new URL(safeUrl).hostname.toLocaleLowerCase() : ''
+      if (safeUrl && (safeHostname === providerHost || safeHostname.endsWith(`.${providerHost}`)) &&
+        new URL(safeUrl).pathname.includes('/avia/search/book')) {
+        const evidence = { ...chosen, handoffUrl: safeUrl }
+        traceEvent(trace, 'public_provider_handoff_verified', {
+          provider: 'KissandFly',
+          hostname: new URL(safeUrl).hostname,
+          paymentBoundaryReached: true,
+          itineraryEvidence: true,
+        })
+        return {
+          url: safeUrl,
+          provider: 'KissandFly',
+          evidence,
+        }
+      }
+      await page.waitForTimeout(500)
+    }
+    throw new BrowserExecutionError(
+      'flight_provider_selection_timeout',
+      'The public provider did not open the validated passenger-details page after one safe booking action.',
+      true,
+    )
+  }
+  throw new BrowserExecutionError('flight_provider_selection_failed', 'The public provider selection path was exhausted.', true)
 }
 
 export async function withBrowser<T>(operation: (browser: Browser, page: Page) => Promise<T>) {
@@ -918,8 +1399,8 @@ async function providerLinkTarget(page: Page) {
   return null
 }
 
-async function continueToProviderBooking(page: Page) {
-  const deadline = Date.now() + 30_000
+async function continueToProviderBooking(page: Page, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs
   let providerLink: Awaited<ReturnType<typeof providerLinkTarget>> = null
   let providerControlReady = false
   while (Date.now() < deadline) {
@@ -976,41 +1457,41 @@ async function continueToProviderBooking(page: Page) {
     if (!candidate) return null
     const initial = safeProviderNavigationUrl(candidate.url())
     if (initial && !safeExternalProviderHandoffUrl(candidate.url())) {
-      await candidate.goto(initial, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+      await candidate.goto(initial, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(() => undefined)
     }
     if (!safeProviderNavigationUrl(candidate.url())) {
       await candidate.waitForURL(
         url => Boolean(safeProviderNavigationUrl(url.toString())),
-        { timeout: 20_000 },
+        { timeout: timeoutMs },
       ).catch(() => undefined)
     }
     const url = safeProviderNavigationUrl(candidate.url())
     if (!url) return null
     if (!safeExternalProviderHandoffUrl(candidate.url())) {
-      await candidate.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+      await candidate.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(() => undefined)
     }
     const currentUrl = safeExternalProviderHandoffUrl(candidate.url())
     return currentUrl ? { page: candidate, url: currentUrl } : null
   }
-  const popupPromise = page.waitForEvent('popup', { timeout: 20_000 })
+  const popupPromise = page.waitForEvent('popup', { timeout: timeoutMs })
     .then(popup => safeDestination(popup))
     .catch(() => null)
   const samePagePromise = page.waitForURL(
     url => Boolean(safeProviderNavigationUrl(url.toString())),
-    { timeout: 20_000 },
+    { timeout: timeoutMs },
   ).then(() => safeDestination(page)).catch(() => null)
-  const contextPagePromise = page.context().waitForEvent('page', { timeout: 20_000 })
+  const contextPagePromise = page.context().waitForEvent('page', { timeout: timeoutMs })
     .then(candidate => safeDestination(candidate))
     .catch(() => null)
   const providerDocumentRequest = page.context().waitForEvent('request', {
-    timeout: 20_000,
+    timeout: timeoutMs,
     predicate: request => request.isNavigationRequest() && Boolean(safeProviderNavigationUrl(request.url())),
   }).then(request => safeProviderNavigationUrl(request.url())).catch(() => null)
   if (target) await target.click({ noWaitAfter: true }).catch(() => undefined)
-  else if (providerLink?.href) await page.goto(providerLink.href, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+  else if (providerLink?.href) await page.goto(providerLink.href, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(() => undefined)
   let destination = await Promise.race([popupPromise, contextPagePromise, samePagePromise, providerDocumentRequest])
   if (typeof destination === 'string') {
-    await page.goto(destination, { waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
+    await page.goto(destination, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(() => undefined)
     const currentUrl = safeExternalProviderHandoffUrl(page.url())
     destination = currentUrl ? { page, url: currentUrl } : null
   }
@@ -1022,7 +1503,7 @@ async function continueToProviderBooking(page: Page) {
     }
   }
   if (!destination) return null
-  await destination.page.waitForLoadState('domcontentloaded', { timeout: 20_000 }).catch(() => undefined)
+  await destination.page.waitForLoadState('domcontentloaded', { timeout: timeoutMs }).catch(() => undefined)
   const url = safeExternalProviderHandoffUrl(destination.page.url())
   return url ? { url, provider } : null
 }
@@ -1093,13 +1574,27 @@ export async function resumeFlightSelection(
         false,
       )
     }
-    const providerHandoff = await continueToProviderBooking(page)
+    let providerEvidence: PublicProviderItineraryEvidence | undefined
+    let providerHandoff: { url: string; provider: string } | null = null
+    try {
+      providerHandoff = await continueToProviderBooking(page)
+    } catch (error) {
+      if (!(error instanceof BrowserExecutionError) || error.code !== 'flight_provider_handoff_unavailable') throw error
+      traceEvent(selectionTrace, 'google_provider_handoff_unavailable', {
+        reason: error.code,
+        recovery: 'public_provider_fallback',
+      })
+    }
     if (!providerHandoff) {
-      throw new BrowserExecutionError(
-        'flight_provider_handoff_unavailable',
-        'The provider booking page did not remain available after the bounded handoff attempt.',
-        true,
+      const fallback = await continueToKissAndFlyBooking(
+        page,
+        normalized,
+        selectedOutboundOption,
+        selectedReturnOption,
+        selectionTrace,
       )
+      providerHandoff = { url: fallback.url, provider: fallback.provider }
+      providerEvidence = fallback.evidence
     }
     const finalHandoffUrl = providerHandoff.url
     const finalHandoffProvider = providerHandoff.provider
@@ -1124,6 +1619,7 @@ export async function resumeFlightSelection(
       paymentBoundaryReached: true,
       resumable: true,
       selectionTrace,
+      ...(providerEvidence ? { providerEvidence } : {}),
     }
     })
   } catch (error) {

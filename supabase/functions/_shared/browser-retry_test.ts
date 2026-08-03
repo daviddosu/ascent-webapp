@@ -38,6 +38,9 @@ Deno.test('consequential submissions and exhausted reads never retry automatical
 Deno.test('provider handoff availability is recoverable, not an immediate user intervention', () => {
   assertEquals(isBrowserUserInterventionFailure('flight_provider_handoff_unavailable'), false)
   assertEquals(browserFailureClass('flight_provider_handoff_unavailable'), 'PROVIDER_OR_BROWSER_INFRA')
+  assertEquals(browserFailureClass('flight_provider_results_timeout'), 'PROVIDER_OR_BROWSER_INFRA')
+  assertEquals(browserFailureClass('flight_provider_selection_timeout'), 'PROVIDER_OR_BROWSER_INFRA')
+  assertEquals(isFlightConstraintFailure('flight_provider_itinerary_unavailable'), true)
 })
 
 Deno.test('browser retry budgets are isolated per operation', () => {

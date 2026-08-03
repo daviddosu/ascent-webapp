@@ -4558,12 +4558,18 @@ async function pollBrowserExecutionRun(
     paymentBoundaryReached: true,
     observedAt: safeString(output.observedAt, 80) || new Date().toISOString(),
     selectionTrace: Array.isArray(output.selectionTrace) ? output.selectionTrace : [],
+    ...(output.providerEvidence && typeof output.providerEvidence === 'object' && !Array.isArray(output.providerEvidence)
+      ? { providerEvidence: output.providerEvidence }
+      : {}),
   }
   const result: Record<string, unknown> = {
     ...(run.result ?? {}),
     summary: 'Your flight handoff is ready. Payment remains under your control.',
     selectedFlight,
     ...(selectedReturnOption ? { selectedReturnFlight: selectedReturnOption } : {}),
+    ...(output.providerEvidence && typeof output.providerEvidence === 'object' && !Array.isArray(output.providerEvidence)
+      ? { providerEvidence: output.providerEvidence }
+      : {}),
     paymentHandoffUrl: handoffUrl,
     paymentHandoffProvider: handoffProvider || (handoffStage === 'provider_booking' ? 'Airline' : 'Google Flights'),
     paymentHandoffStage: handoffStage,

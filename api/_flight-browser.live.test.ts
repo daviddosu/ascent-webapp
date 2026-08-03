@@ -44,6 +44,7 @@ it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
     expect(selection.handoffProvider).not.toBe('Google Flights')
     expect(selection.paymentBoundaryReached).toBe(true)
     expect(selection.resumable).toBe(true)
+    if (selection.providerEvidence) expect(selection.providerEvidence.provider).toBe('KissandFly')
   },
 )
 
@@ -73,5 +74,6 @@ it.runIf(process.env.SHOTCOUNT_LIVE_FLIGHT_TEST === 'true')(
     expect(selection.paymentBoundaryReached).toBe(true)
     expect(selection.resumable).toBe(true)
     expect(selection.handoffUrl.startsWith('https://')).toBe(true)
+    if (selection.providerEvidence) expect(selection.providerEvidence.provider).toBe('KissandFly')
   },
 )
