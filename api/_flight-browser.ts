@@ -910,9 +910,16 @@ async function waitForKissAndFlyResults(page: Page, searchUrl?: string) {
     }
     await page.waitForTimeout(750)
   }
+  const providerPath = (() => {
+    try { return new URL(page.url()).pathname } catch { return '' }
+  })()
+  const visibleCardCount = await page.locator('.avia-item:visible').count().catch(() => 0)
+  const domCardCount = await page.locator('.avia-item').count().catch(() => 0)
   throw new BrowserExecutionError(
     'flight_provider_results_timeout',
     'The public flight provider took too long to return live options.',
+    true,
+    { providerPath, visibleCardCount, domCardCount, staleSessionRecoveryUsed: reloads > 0 },
   )
 }
 
