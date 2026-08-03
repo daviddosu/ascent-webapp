@@ -3352,6 +3352,17 @@ function renderAgentPanel(task: Task) {
   }
 
   if (run.status === 'failed') {
+    if (
+      run.capability === 'flight_search' &&
+      (run.result?.flightOptions?.length ?? 0) > 0 &&
+      !run.result?.selectedFlight
+    ) {
+      return renderAgentWaitingPanel(task, {
+        ...run,
+        status: 'waiting_for_user',
+        waitingReason: run.error || 'Choose a saved itinerary to retry the provider handoff.',
+      })
+    }
     if (isPreviewMode && previewAgentState !== 'error') return renderAgentProgressPanel(task, 2, true)
     return renderAgentErrorPanel(task, run.error ?? `${specialistName(task, run)} could not complete this task.`)
   }

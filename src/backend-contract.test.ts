@@ -708,6 +708,30 @@ describe('agent execution security contract', () => {
     expect(flightBrowser).toContain('maximumPublicProviderSelectionAttempts')
   })
 
+  it('reopens an explicit flight retry without creating a second action row', () => {
+    expect(taskAgentFunction).toContain("let action = await recordAction(admin, run, 'browser.select_flight'")
+    expect(taskAgentFunction).toContain(".eq('id', action.id).eq('status', 'failed')")
+    expect(taskAgentFunction).toContain("error_code: 'browser_worker_pending'")
+    expect(taskAgentFunction).toContain('recovery_attempt: Number(action.recovery_attempt ?? 0) + 1')
+  })
+
+  it('uses the canonical payment-handoff intent when accepting a saved flight choice', () => {
+    const selector = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('async function selectFlightOption'),
+      taskAgentFunction.indexOf('async function advanceRun'),
+    )
+    expect(selector).toContain('flightPaymentHandoffRequested(run)')
+    expect(selector).toContain("'browser_retry_exhausted', 'agent_execution_error', 'flight_provider_handoff_unavailable'")
+    expect(selector).not.toContain("run.task_completion_policy !== 'payment_handoff'")
+  })
+
+  it('keeps validated flight choices visible after a bounded provider retry failure', () => {
+    expect(mainUi).toContain("run.capability === 'flight_search'")
+    expect(mainUi).toContain('!run.result?.selectedFlight')
+    expect(mainUi).toContain("Choose a saved itinerary to retry the provider handoff.")
+    expect(mainUi).toContain("status: 'waiting_for_user'")
+  })
+
   it('continues automatic flight selection into checkout on the same model turn', () => {
     expect(taskAgentFunction).toContain('continuationCallId = \'\'')
     expect(taskAgentFunction).toContain("recordAction(admin, run, 'browser.select_flight', continuationCallId")
@@ -757,6 +781,15 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('A stale checkout action can sit later in the ledger')
     expect(flightBrowser).toContain('const browser = await launchBrowser()')
     expect(flightBrowser).not.toContain('sharedBrowserPromise')
+  })
+
+  it('reaches the configured provider fallback after an exhausted Google handoff', () => {
+    expect(taskAgentFunction).toContain('providerFallbackRecoveryAvailable')
+    expect(taskAgentFunction).toContain('Trying the configured public flight provider fallback.')
+    expect(taskAgentFunction).toContain('flight_provider_fallback_recovery_attempts')
+    expect(taskAgentFunction).toContain('function configuredFlightProviderDomains')
+    expect(taskAgentFunction).toContain('SHOTCOUNT_FLIGHT_PROVIDER_BASE_URL')
+    expect(taskAgentFunction).toContain('allowed_domains: expandedDomains')
   })
 
   it('isolates flight selection from the search worker process pool', () => {

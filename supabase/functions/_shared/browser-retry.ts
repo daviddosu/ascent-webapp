@@ -186,6 +186,19 @@ export function browserOperationAttemptCount(checkpoint: unknown, operationId: s
   return Number.isFinite(legacyAttempt) && legacyAttempt >= 0 ? legacyAttempt : 0
 }
 
+export function browserDispatchAttemptCount(checkpoint: unknown, operationId: string) {
+  if (!checkpoint || typeof checkpoint !== 'object' || Array.isArray(checkpoint)) return 0
+  const record = checkpoint as Record<string, unknown>
+  const byOperation = record.browserDispatchAttemptsByOperation
+  if (!byOperation || typeof byOperation !== 'object' || Array.isArray(byOperation)) return 0
+  const attempt = Number((byOperation as Record<string, unknown>)[operationId])
+  return Number.isFinite(attempt) && attempt >= 0 ? attempt : 0
+}
+
+export function browserDispatchAllowed(checkpoint: unknown, operationId: string, maximum = 3) {
+  return browserDispatchAttemptCount(checkpoint, operationId) < maximum
+}
+
 export function canonicalFlightSearch(argumentsValue: Record<string, unknown>, stage: CanonicalFlightSearch['stage'] = 'searching'): CanonicalFlightSearch {
   return {
     origin: String(argumentsValue.origin_code ?? argumentsValue.origin ?? '').trim().toUpperCase(),

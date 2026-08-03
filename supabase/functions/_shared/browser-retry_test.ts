@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttemptCount, browserRetryPrerequisiteSatisfied, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession, validatedFlightEvidence } from './browser-retry.ts'
+import { allowsGoogleFlightsDomain, browserDispatchAllowed, browserDispatchAttemptCount, browserFailureClass, browserOperationAttemptCount, browserRetryPrerequisiteSatisfied, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession, validatedFlightEvidence } from './browser-retry.ts'
 
 Deno.test('safe browser reads back off between durable worker attempts', () => {
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'browser_worker_failed', 1), 8_000)
@@ -51,6 +51,16 @@ Deno.test('browser retry budgets are isolated per operation', () => {
   assertEquals(browserOperationAttemptCount(checkpoint, 'search-1'), 3)
   assertEquals(browserOperationAttemptCount(checkpoint, 'select-1'), 0)
   assertEquals(browserOperationAttemptCount(checkpoint, 'legacy-operation'), 3)
+})
+
+Deno.test('stale worker dispatches retry within a bounded per-operation budget', () => {
+  const checkpoint = {
+    browserDispatchAttemptsByOperation: { 'search-1': 2, 'select-1': 3 },
+  }
+  assertEquals(browserDispatchAttemptCount(checkpoint, 'search-1'), 2)
+  assertEquals(browserDispatchAllowed(checkpoint, 'search-1'), true)
+  assertEquals(browserDispatchAllowed(checkpoint, 'select-1'), false)
+  assertEquals(browserDispatchAllowed({}, 'new-operation'), true)
 })
 
 Deno.test('immediate selection retries only the known PostgREST single-object coercion race', () => {

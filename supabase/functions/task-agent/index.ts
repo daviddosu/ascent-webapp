@@ -38,7 +38,7 @@ import {
   type SpecialistVersion,
   type TaskContract,
 } from '../_shared/specialists.ts'
-import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttemptCount, browserRetryPrerequisiteSatisfied, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
+import { allowsGoogleFlightsDomain, browserDispatchAllowed, browserDispatchAttemptCount, browserFailureClass, browserOperationAttemptCount, browserRetryPrerequisiteSatisfied, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
 import { requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
 import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
@@ -88,6 +88,8 @@ type RequestBody = {
 }
 
 const maxProviderRecoveryAttempts = 3
+const browserDispatchGraceMs = 15_000
+const maximumBrowserDispatchAttempts = 3
 
 type AgentIntent = {
   capability: string
@@ -188,6 +190,7 @@ type BrowserOperation = {
 type BrowserCheckpoint = {
   workerAttempts?: number
   workerAttemptsByOperation?: Record<string, number>
+  browserDispatchAttemptsByOperation?: Record<string, number>
   pendingOperation?: BrowserOperation | null
   lastOperation?: {
     id: string
@@ -1315,6 +1318,12 @@ function configuredBrowserDomains() {
   return new Set(normalizeBrowserDomains(Deno.env.get('SHOTCOUNT_BROWSER_ALLOWED_DOMAINS') ?? ''))
 }
 
+function configuredFlightProviderDomains() {
+  const configured = configuredBrowserDomains()
+  return normalizeBrowserDomains(Deno.env.get('SHOTCOUNT_FLIGHT_PROVIDER_BASE_URL') ?? '')
+    .filter(domain => configured.has(domain))
+}
+
 function upsertHistoryToolOutput(
   history: OpenAIOutputItem[],
   callId: string,
@@ -1446,11 +1455,22 @@ async function queueBrowserOperation(
       message: 'This browser session is unavailable or belongs to another task.',
     }
   }
-  const allowedDomains = Array.isArray(session.allowed_domains)
+  let allowedDomains = Array.isArray(session.allowed_domains)
     ? session.allowed_domains.map((domain: unknown) => safeString(domain, 253).toLocaleLowerCase())
     : []
   const checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
   const flightOperation = operation.type === 'search_flights' || operation.type === 'select_flight'
+  if (flightOperation || operation.type === 'prepare_flight_checkout') {
+    const providerDomains = configuredFlightProviderDomains()
+    const expandedDomains = [...new Set([...allowedDomains, ...providerDomains])]
+    if (expandedDomains.length !== allowedDomains.length) {
+      const expanded = await admin.from('browser_execution_sessions').update({
+        allowed_domains: expandedDomains,
+      }).eq('id', session.id).eq('run_id', run.id).eq('user_id', run.user_id)
+      if (expanded.error) throw new Error(expanded.error.message)
+      allowedDomains = expandedDomains
+    }
+  }
   if (flightOperation && !allowsGoogleFlightsDomain(allowedDomains)) {
     return {
       kind: 'unavailable' as const,
@@ -1760,7 +1780,21 @@ async function queueFlightSelectionOperation(
   // browser.search_flights call rather than from a second model turn. Carry
   // that call id forward so completion can close the original tool call and
   // let Caspian continue to the checkout form instead of waiting forever.
-  const action = await recordAction(admin, run, 'browser.select_flight', continuationCallId, argumentsValue, 'running')
+  let action = await recordAction(admin, run, 'browser.select_flight', continuationCallId, argumentsValue, 'running')
+  if (action.status === 'failed') {
+    const reopened = await admin.from('agent_actions').update({
+      status: 'running',
+      output: null,
+      error_code: 'browser_worker_pending',
+      error_message: 'Preparing the selected itinerary.',
+      retryable: true,
+      recovery_attempt: Number(action.recovery_attempt ?? 0) + 1,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+    }).eq('id', action.id).eq('status', 'failed').select('*').maybeSingle()
+    if (reopened.error) throw new Error(reopened.error.message)
+    if (reopened.data) action = reopened.data
+  }
   const operation: BrowserOperation = {
     id: String(action.idempotency_key),
     type: 'select_flight',
@@ -2077,15 +2111,16 @@ async function executeProviderTool(
     const configured = configuredBrowserDomains()
     const requestedDomains = normalizeBrowserDomains(argumentsValue.allowed_domains)
     const caspianFlightSession = run.active_specialist_id === 'caspian' && run.task_contract === 'travel.flight_search'
+    const providerDomains = configuredFlightProviderDomains()
     // Caspian owns one provider-specific browser contract. Normalize any
     // model-suggested provider/domain to the registered Google Flights pair;
     // a malformed provider suggestion must not prevent the specialist from
     // reaching its structured search tool.
     const requested = caspianFlightSession
-      ? [...googleFlightsBrowserDomains]
+      ? [...new Set([...googleFlightsBrowserDomains, ...providerDomains])]
       : requestedDomains
     const requestedDomainsAllowed = caspianFlightSession
-      ? allowsGoogleFlightsDomain([...configured])
+      ? allowsGoogleFlightsDomain([...configured]) && requested.every(domain => configured.has(domain))
       : requested.every(domain => configured.has(domain))
     if (!requested.length || !configured.size || !requestedDomainsAllowed) {
       return {
@@ -2108,7 +2143,7 @@ async function executeProviderTool(
     if (existing.error) throw new Error(existing.error.message)
     if (existing.data) {
       const existingDomains = normalizeBrowserDomains(existing.data.allowed_domains)
-      if (caspianFlightSession && !allowsGoogleFlightsDomain(existingDomains)) {
+      if (caspianFlightSession && requested.some(domain => !existingDomains.includes(domain))) {
         const repaired = await admin.from('browser_execution_sessions').update({
           allowed_domains: requested,
         }).eq('id', existing.data.id).eq('run_id', run.id).eq('user_id', run.user_id)
@@ -3740,7 +3775,76 @@ async function pollBrowserExecutionRun(
     if (!recovered.data) return run
     session = recovered.data
   }
-  if (session.status === 'waiting_external') return run
+  if (session.status === 'waiting_external') {
+    const pendingOperation = checkpoint.pendingOperation
+    if (!pendingOperation) return run
+    const waitingAgeMs = Number.isFinite(updatedAt) ? Date.now() - updatedAt : Number.POSITIVE_INFINITY
+    if (waitingAgeMs < browserDispatchGraceMs) return run
+
+    // A task-agent response can finish after the Edge Runtime has returned,
+    // before its fire-and-forget worker dispatch is delivered. Re-dispatch the
+    // same operation from the durable checkpoint instead of leaving Caspian in
+    // an unbounded waiting state. The worker claims the operation with its own
+    // timestamp CAS, so concurrent dispatches cannot duplicate a browser step.
+    const dispatchAttempts = browserDispatchAttemptCount(checkpoint, pendingOperation.id)
+    const workerConfig = browserWorkerConfig()
+    if (workerConfig && browserDispatchAllowed(checkpoint, pendingOperation.id, maximumBrowserDispatchAttempts)) {
+      const nextCheckpoint: BrowserCheckpoint = {
+        ...checkpoint,
+        browserDispatchAttemptsByOperation: {
+          ...(checkpoint.browserDispatchAttemptsByOperation ?? {}),
+          [pendingOperation.id]: dispatchAttempts + 1,
+        },
+      }
+      const redispatched = await admin.from('browser_execution_sessions').update({
+        checkpoint: nextCheckpoint,
+        last_observed_at: new Date().toISOString(),
+      }).eq('id', session.id).eq('run_id', run.id).eq('user_id', run.user_id)
+        .eq('updated_at', session.updated_at).select('*').maybeSingle()
+      if (redispatched.error) throw new Error(redispatched.error.message)
+      if (!redispatched.data) return run
+      await addEvent(admin, run, 'agent_browser_worker_redispatched', run.status, 'Re-dispatched the saved browser step after the worker did not claim it.', {
+        browser_session_id: session.id,
+        operation_type: pendingOperation.type,
+        operation_id: pendingOperation.id,
+        dispatch_attempt: dispatchAttempts + 1,
+      })
+      await dispatchBrowserWorker(admin, session.id, pendingOperation, workerConfig)
+      return run
+    }
+
+    if (workerConfig && dispatchAttempts >= maximumBrowserDispatchAttempts) {
+      const exhaustedCheckpoint: BrowserCheckpoint = {
+        ...checkpoint,
+        pendingOperation: null,
+        lastOperation: {
+          id: pendingOperation.id,
+          type: pendingOperation.type,
+          status: 'failed',
+          error: {
+            code: 'browser_worker_dispatch_timeout',
+            message: 'The browser worker did not claim this safe step after bounded dispatch attempts.',
+            retryable: pendingOperation.type !== 'submit',
+          },
+          completedAt: new Date().toISOString(),
+        },
+      }
+      const exhausted = await admin.from('browser_execution_sessions').update({
+        status: 'failed',
+        checkpoint: exhaustedCheckpoint,
+        worker_session_id: null,
+        resumable: true,
+        last_observed_at: new Date().toISOString(),
+      }).eq('id', session.id).eq('run_id', run.id).eq('user_id', run.user_id)
+        .eq('updated_at', session.updated_at).select('*').maybeSingle()
+      if (exhausted.error) throw new Error(exhausted.error.message)
+      if (!exhausted.data) return run
+      session = exhausted.data
+      checkpoint = exhaustedCheckpoint
+    } else {
+      return run
+    }
+  }
   const operation = checkpoint.lastOperation
   if (!operation) return run
 
@@ -3769,6 +3873,25 @@ async function pollBrowserExecutionRun(
         retryable: operation.error?.retryable !== false,
         completed_at: new Date().toISOString(),
       }).eq('id', actionResult.data.id)
+    }
+    const providerFallbackRecoveryAvailable = operation.type === 'select_flight' &&
+      errorCode === 'flight_provider_handoff_unavailable' &&
+      Boolean(openaiKey) &&
+      Boolean(browserWorkerConfig()) &&
+      Number(run.context?.flight_provider_fallback_recovery_attempts ?? 0) < 1
+    if (providerFallbackRecoveryAvailable) {
+      const waiting = await updateRun(admin, run, {
+        status: 'waiting_external',
+        waiting_reason: 'Trying the configured public flight provider fallback.',
+        error_code: errorCode,
+        error: message,
+        retryable: true,
+        external_correlation_id: `browser-session:${session.id}`,
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      const retried = await retryWaitingProviderAction(admin, waiting, openaiKey!)
+      return retried ?? waiting
     }
     const refreshableSelectionError = [
       'flight_option_invalid',
@@ -4751,7 +4874,11 @@ async function retryWaitingProviderAction(
   }
 
   const recoveryAttempt = Number(action.recovery_attempt ?? 0)
-  if (!retryAttemptAllowed(recoveryAttempt, maxProviderRecoveryAttempts)) {
+  const providerFallbackRecoveryAllowed = toolName === 'browser.select_flight' &&
+    safeString(action.error_code, 120) === 'flight_provider_handoff_unavailable' &&
+    Boolean(browserWorkerConfig()) &&
+    Number(run.context?.flight_provider_fallback_recovery_attempts ?? 0) < 1
+  if (!retryAttemptAllowed(recoveryAttempt, maxProviderRecoveryAttempts) && !providerFallbackRecoveryAllowed) {
     const checkoutRetry = toolName === 'browser.prepare_flight_checkout'
     const message = checkoutRetry
       ? 'The provider checkout could not finish after the bounded recovery attempts. Review the open booking page and continue manually.'
@@ -4785,12 +4912,27 @@ async function retryWaitingProviderAction(
     return waiting
   }
 
+  let retryRun = run
+  if (providerFallbackRecoveryAllowed) {
+    retryRun = await updateRun(admin, run, {
+      context: {
+        ...(run.context ?? {}),
+        flight_provider_fallback_recovery_attempts: Number(run.context?.flight_provider_fallback_recovery_attempts ?? 0) + 1,
+      },
+    })
+    await addEvent(admin, retryRun, 'agent_provider_fallback_retry', retryRun.status, 'Retrying the saved flight selection through the configured provider fallback.', {
+      tool_name: toolName,
+      action_id: action.id,
+      recovery_attempt: recoveryAttempt,
+    })
+  }
+
   const lastStartedAt = safeString(action.started_at, 80)
   if (
     action.status === 'running' &&
     lastStartedAt &&
     Date.parse(lastStartedAt) > Date.now() - 2 * 60 * 1000
-  ) return run
+  ) return retryRun
 
   let retryClaimQuery = admin.from('agent_actions').update({
     status: 'running',
@@ -4808,7 +4950,7 @@ async function retryWaitingProviderAction(
 
   const execution = await executeProviderTool(
     admin,
-    run,
+    retryRun,
     toolName,
     action.arguments as Record<string, unknown>,
     String(action.idempotency_key),
@@ -4829,7 +4971,7 @@ async function retryWaitingProviderAction(
       completed_at: actionStatus === 'running' ? null : new Date().toISOString(),
     }).eq('id', action.id)
     if (actionStatus !== 'running' && execution.status === 'waiting_for_user') {
-      let history = await loadModelHistory(admin, run)
+      let history = await loadModelHistory(admin, retryRun)
       const callId = safeString(action.model_call_id, 256)
       if (callId && !historyHasToolOutput(history, callId)) {
         history = [...history, {
@@ -4842,17 +4984,17 @@ async function retryWaitingProviderAction(
             error_message: execution.message,
           }),
         }]
-        await saveModelHistory(admin, run, history)
+        await saveModelHistory(admin, retryRun, history)
       }
     }
-    const waiting = await updateRun(admin, run, {
+    const waiting = await updateRun(admin, retryRun, {
       status: execution.status,
       waiting_reason: execution.message,
       ...(advanceStep
         ? {
-            current_step: run.current_step + 1,
+            current_step: retryRun.current_step + 1,
             progress: [
-              ...(Array.isArray(run.progress) ? run.progress : []),
+              ...(Array.isArray(retryRun.progress) ? retryRun.progress : []),
               execution.message,
             ],
           }
@@ -4892,18 +5034,18 @@ async function retryWaitingProviderAction(
   if (persistedAction.error || !persistedAction.data) {
     throw new Error(persistedAction.error?.message ?? 'The provider result could not be persisted safely.')
   }
-  let history = await loadModelHistory(admin, run)
+  let history = await loadModelHistory(admin, retryRun)
   const callId = safeString(action.model_call_id, 256)
   if (callId) history = upsertHistoryToolOutput(history, callId, execution.value)
-  const resumed = await updateRun(admin, run, {
+  const resumed = await updateRun(admin, retryRun, {
     status: 'running',
     waiting_reason: '',
     error: null,
     error_code: null,
     retryable: true,
-    current_step: run.current_step + 1,
+    current_step: retryRun.current_step + 1,
     progress: [
-      ...(Array.isArray(run.progress) ? run.progress : []),
+      ...(Array.isArray(retryRun.progress) ? retryRun.progress : []),
       execution.publicSummary,
     ],
     lease_owner: null,
@@ -5360,9 +5502,15 @@ async function selectFlightOption(
   optionId: string,
   openaiKey?: string,
 ) {
+  const savedFlightRetryReady = run.status === 'waiting_for_user' ||
+    (run.status === 'failed' &&
+      ['browser_retry_exhausted', 'agent_execution_error', 'flight_provider_handoff_unavailable'].includes(run.error_code ?? '') &&
+      Array.isArray(run.result?.flightOptions) &&
+      run.result.flightOptions.length > 0 &&
+      !run.result.selectedFlight)
   if (
-    run.task_completion_policy !== 'payment_handoff' ||
-    run.status !== 'waiting_for_user' ||
+    !flightPaymentHandoffRequested(run) ||
+    !savedFlightRetryReady ||
     !run.browser_session_id
   ) {
     throw new Error('This task is not ready for a flight selection.')

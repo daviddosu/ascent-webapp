@@ -724,12 +724,49 @@ export function chooseKissAndFlyItinerary(
 ) {
   const normalized = normalizeFlightSearchInput(input)
   const expectedLegs = selectedReturnOption ? [selectedOption, selectedReturnOption] : [selectedOption]
+  const outboundCodes = airportCodes(selectedOption.route)
+  const expectedReturnRoute = selectedReturnOption?.route ?? (
+    `${outboundCodes.at(-1) ?? normalized.destinationCode}–${outboundCodes[0] ?? normalized.originCode}`
+  )
   return candidates
     .filter(candidate => candidate.currency === normalized.currency)
     .filter(candidate => normalized.budgetAmount === null || candidate.amount <= normalized.budgetAmount)
-    .filter(candidate => candidate.legs.length === expectedLegs.length)
-    .filter(candidate => candidate.legs.every((leg, index) => publicProviderLegMatches(leg, expectedLegs[index]!)))
+    .filter(candidate => candidate.legs.length === (normalized.returnDate ? 2 : 1))
+    .filter(candidate => publicProviderLegMatches(candidate.legs[0]!, expectedLegs[0]!))
+    .filter(candidate => !normalized.returnDate || (
+      candidate.legs[1]?.route === expectedReturnRoute &&
+      candidate.legs[1]?.departureDate === normalized.returnDate
+    ))
+    .filter(candidate => !selectedReturnOption || publicProviderLegMatches(candidate.legs[1]!, expectedLegs[1]!))
     .sort((left, right) => left.amount - right.amount)[0] ?? null
+}
+
+function providerLegAsFlightOption(
+  leg: PublicProviderLegEvidence,
+  evidence: PublicProviderItineraryEvidence,
+  id: string,
+): FlightOption {
+  return {
+    id,
+    label: 'Also worth considering',
+    airline: leg.airline,
+    departureTime: leg.departureTime,
+    arrivalTime: leg.arrivalTime,
+    duration: leg.duration,
+    durationMinutes: leg.durationMinutes,
+    route: leg.route,
+    stops: leg.stopCount === 0 ? 'Nonstop' : `${leg.stopCount} stop${leg.stopCount === 1 ? '' : 's'}`,
+    stopCount: leg.stopCount,
+    price: evidence.price,
+    amount: evidence.amount,
+    currency: evidence.currency,
+    provider: 'Google Flights',
+    searchUrl: evidence.searchUrl,
+    departureDate: leg.departureDate,
+    returnDate: null,
+    arrivalDate: leg.arrivalDate,
+    arrivalDayOffset: leg.arrivalDayOffset,
+  }
 }
 
 async function executablePath() {
@@ -1623,6 +1660,38 @@ export async function resumeFlightSelection(
     }
     })
   } catch (error) {
+    if (isRecoverableFlightReadError(error)) {
+      const recoveryCode = error instanceof BrowserExecutionError ? error.code : 'browser_worker_timeout'
+      traceEvent(selectionTrace, 'google_selection_recovery', {
+        reason: recoveryCode,
+        recovery: 'public_provider_fallback',
+      })
+      const fallback = await withBrowser(async (_browser, page) =>
+        continueToKissAndFlyBooking(
+          page,
+          normalized,
+          selectedOption,
+          selectedReturnOption,
+          selectionTrace,
+        ),
+      )
+      const fallbackReturnOption = normalized.returnDate && fallback.evidence.legs[1]
+        ? providerLegAsFlightOption(fallback.evidence.legs[1], fallback.evidence, `${selectedOption.id}-return`)
+        : undefined
+      return {
+        provider: 'Google Flights' as const,
+        selectedOption,
+        ...(fallbackReturnOption ? { selectedReturnOption: fallbackReturnOption } : {}),
+        handoffUrl: fallback.url,
+        handoffProvider: fallback.provider,
+        handoffStage: 'provider_booking' as const,
+        observedAt: new Date().toISOString(),
+        paymentBoundaryReached: true as const,
+        resumable: true as const,
+        selectionTrace,
+        providerEvidence: fallback.evidence,
+      }
+    }
     if (error instanceof BrowserExecutionError) {
       error.details = { ...(error.details ?? {}), selectionTrace }
     }
