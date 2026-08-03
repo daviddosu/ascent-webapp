@@ -3639,6 +3639,30 @@ function browserFlightResult(
   }
 }
 
+async function browserContinuationCallId(
+  admin: AdminClient,
+  run: AgentRunRow,
+  operation: BrowserOperation,
+  action: Record<string, unknown> | null,
+) {
+  const direct = safeString(action?.model_call_id, 256)
+  if (direct || operation.type !== 'select_flight') return direct
+  // Recover automatic selections created by versions that did not yet carry
+  // the originating search call id. This is read-only bookkeeping recovery;
+  // it never creates or replays a browser action.
+  const priorSearch = await admin.from('agent_actions')
+    .select('model_call_id')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('tool_name', 'browser.search_flights')
+    .not('model_call_id', 'is', null)
+    .order('step_index', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (priorSearch.error) throw new Error(priorSearch.error.message)
+  return safeString(priorSearch.data?.model_call_id, 256)
+}
+
 async function pollBrowserExecutionRun(
   admin: AdminClient,
   run: AgentRunRow,
@@ -4523,19 +4547,20 @@ async function pollBrowserExecutionRun(
     },
   }
   if (flightCheckoutRequested(run)) {
+    const continuationCallId = await browserContinuationCallId(admin, run, operation, actionResult.data as Record<string, unknown> | null)
     const staged = await updateRun(admin, run, {
-      status: openaiKey && actionResult.data?.model_call_id ? 'running' : 'waiting_external',
+      status: openaiKey && continuationCallId ? 'running' : 'waiting_external',
       result,
       context: {
         ...(run.context ?? {}),
         flight_handoff_evidence: flightHandoffEvidence,
         flight_checkout_required: true,
       },
-      waiting_reason: openaiKey && actionResult.data?.model_call_id
+      waiting_reason: openaiKey && continuationCallId
         ? ''
         : 'The selected itinerary is saved; the checkout continuation is not available yet.',
       error: null,
-      error_code: openaiKey && actionResult.data?.model_call_id ? null : 'browser_resume_context_missing',
+      error_code: openaiKey && continuationCallId ? null : 'browser_resume_context_missing',
       retryable: true,
       current_step: run.current_step + 1,
       progress: [...(Array.isArray(run.progress) ? run.progress : []), operationSummary],
@@ -4543,7 +4568,7 @@ async function pollBrowserExecutionRun(
       lease_owner: null,
       lease_expires_at: null,
     })
-    if (!openaiKey || !actionResult.data?.model_call_id) {
+    if (!openaiKey || !continuationCallId) {
       await addEvent(admin, staged, 'agent_waiting_external', staged.status, staged.waiting_reason, {
         browser_session_id: session.id,
         operation_type: operation.type,
@@ -4552,7 +4577,7 @@ async function pollBrowserExecutionRun(
       return staged
     }
     let history = await loadModelHistory(admin, staged)
-    const callId = safeString(actionResult.data.model_call_id, 256)
+    const callId = continuationCallId
     if (!historyHasToolOutput(history, callId)) {
       history = [...history, {
         type: 'function_call_output',
