@@ -517,7 +517,7 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('p_mark_task_complete: true')
     expect(taskAgentFunction).toContain('Your flight handoff is ready. Payment remains under your control.')
     expect(taskAgentFunction).toContain("checkpoint.pendingOperation?.type === 'select_flight'")
-    expect(taskAgentFunction).toContain('75_000')
+    expect(taskAgentFunction).toContain('135_000')
   })
 
   it('recovers a missing Gmail draft within the same run instead of failing the task', () => {
@@ -777,6 +777,8 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("code: 'browser_worker_timeout'")
     expect(taskAgentFunction).toContain("retryable: checkpoint.pendingOperation!.type !== 'submit'")
     expect(taskAgentFunction).toContain('workerTimeoutMs')
+    expect(taskAgentFunction).toContain('browserSelectionWorkerTimeoutMs')
+    expect(taskAgentFunction).toContain('? browserSelectionWorkerTimeoutMs')
     expect(taskAgentFunction).toContain('Date.now() - updatedAt > workerTimeoutMs')
     expect(taskAgentFunction).toContain('safeBrowserRetryDelayMs')
     expect(taskAgentFunction).toContain('browserRetryPrerequisiteSatisfied')

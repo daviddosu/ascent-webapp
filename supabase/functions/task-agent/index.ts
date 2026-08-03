@@ -90,6 +90,7 @@ type RequestBody = {
 const maxProviderRecoveryAttempts = 3
 const browserDispatchGraceMs = 15_000
 const maximumBrowserDispatchAttempts = 3
+const browserSelectionWorkerTimeoutMs = 135_000
 
 type AgentIntent = {
   capability: string
@@ -3741,7 +3742,7 @@ async function pollBrowserExecutionRun(
   const updatedAt = Date.parse(safeString(session.updated_at, 80))
   if (['planning', 'working'].includes(session.status)) {
     const workerTimeoutMs = checkpoint.pendingOperation?.type === 'select_flight'
-      ? 75_000
+      ? browserSelectionWorkerTimeoutMs
       : 120_000
     const stale = checkpoint.pendingOperation && Number.isFinite(updatedAt) && Date.now() - updatedAt > workerTimeoutMs
     if (!stale) return run
