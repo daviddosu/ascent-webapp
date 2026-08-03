@@ -878,7 +878,37 @@ async function visibleButtonByText(page: Page, predicate: (value: string) => boo
 export const kissAndFlyResultsTimeoutMs = 90_000
 export const kissAndFlyStaleSessionRecoveryAfterMs = 30_000
 
-async function waitForKissAndFlyResults(page: Page, searchUrl?: string): Promise<Page> {
+type KissAndFlyNetworkState = {
+  responses: Array<{ path: string; status: number }>
+  failures: Array<{ path: string; error: string }>
+}
+
+function observeKissAndFlyNetwork(page: Page, state: KissAndFlyNetworkState) {
+  page.on('response', response => {
+    try {
+      const url = new URL(response.url())
+      if (!/^\/api\/avia\/(?:search|results|results-calendar-price)$/.test(url.pathname)) return
+      if (state.responses.length < 12) state.responses.push({ path: url.pathname, status: response.status() })
+    } catch { /* ignore malformed third-party URLs */ }
+  })
+  page.on('requestfailed', request => {
+    try {
+      const url = new URL(request.url())
+      if (!/^\/api\/avia\/(?:search|results|results-calendar-price)$/.test(url.pathname)) return
+      if (state.failures.length < 8) state.failures.push({
+        path: url.pathname,
+        error: request.failure()?.errorText ?? 'request_failed',
+      })
+    } catch { /* ignore malformed third-party URLs */ }
+  })
+}
+
+async function waitForKissAndFlyResults(
+  page: Page,
+  searchUrl?: string,
+  networkState: KissAndFlyNetworkState = { responses: [], failures: [] },
+): Promise<Page> {
+  observeKissAndFlyNetwork(page, networkState)
   const deadline = Date.now() + kissAndFlyResultsTimeoutMs
   const startedAt = Date.now()
   let reloads = 0
@@ -903,6 +933,7 @@ async function waitForKissAndFlyResults(page: Page, searchUrl?: string): Promise
       const freshPage = await page.context().newPage().catch(() => null)
       if (freshPage) {
         freshPage.setDefaultTimeout(20_000)
+        observeKissAndFlyNetwork(freshPage, networkState)
         await freshPage.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 }).catch(() => undefined)
         await dismissPublicCookiePrompt(freshPage)
         await page.close().catch(() => undefined)
@@ -925,7 +956,13 @@ async function waitForKissAndFlyResults(page: Page, searchUrl?: string): Promise
     'flight_provider_results_timeout',
     'The public flight provider took too long to return live options.',
     true,
-    { providerPath, visibleCardCount, domCardCount, staleSessionRecoveryUsed: reloads > 0 },
+    {
+      providerPath,
+      visibleCardCount,
+      domCardCount,
+      staleSessionRecoveryUsed: reloads > 0,
+      network: networkState,
+    },
   )
 }
 
@@ -1039,11 +1076,12 @@ async function continueToKissAndFlyBooking(
     tripType: input.returnDate ? 'round_trip' : 'one_way',
   })
   let providerPage = page
+  const networkState: KissAndFlyNetworkState = { responses: [], failures: [] }
   await providerPage.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 })
   await dismissPublicCookiePrompt(providerPage)
-  providerPage = await waitForKissAndFlyResults(providerPage, searchUrl)
+  providerPage = await waitForKissAndFlyResults(providerPage, searchUrl, networkState)
   await ensureKissAndFlyCurrency(providerPage, input.currency)
-  providerPage = await waitForKissAndFlyResults(providerPage, searchUrl)
+  providerPage = await waitForKissAndFlyResults(providerPage, searchUrl, networkState)
 
   for (let attempt = 1; attempt <= maximumPublicProviderSelectionAttempts; attempt += 1) {
     const { cards, snapshots } = await kissAndFlyCardSnapshots(providerPage)
@@ -1072,7 +1110,7 @@ async function continueToKissAndFlyBooking(
     if (!chosen) {
       if (attempt < maximumPublicProviderSelectionAttempts) {
         await providerPage.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
-        providerPage = await waitForKissAndFlyResults(providerPage, searchUrl)
+        providerPage = await waitForKissAndFlyResults(providerPage, searchUrl, networkState)
         traceEvent(trace, 'public_provider_recovered_state', {
           attempt,
           source: 'stale_result_cards',
@@ -1098,7 +1136,7 @@ async function continueToKissAndFlyBooking(
     if (matchingIndex < 0) {
       if (attempt < maximumPublicProviderSelectionAttempts) {
         await providerPage.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
-        providerPage = await waitForKissAndFlyResults(providerPage, searchUrl)
+        providerPage = await waitForKissAndFlyResults(providerPage, searchUrl, networkState)
         continue
       }
       throw new BrowserExecutionError('flight_provider_itinerary_unavailable', 'The validated provider card became stale before booking.', true)
