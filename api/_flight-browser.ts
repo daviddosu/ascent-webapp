@@ -836,6 +836,29 @@ export function safeExternalProviderHandoffUrl(value: unknown) {
 }
 
 async function continueToProviderBooking(page: Page) {
+  const deadline = Date.now() + 30_000
+  let providerControlReady = false
+  while (Date.now() < deadline) {
+    const targets = [
+      page.getByRole('button', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
+      page.getByRole('link', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
+    ]
+    for (const group of targets) {
+      try {
+        for (const candidate of await group) {
+          if (await candidate.isVisible().catch(() => false)) {
+            providerControlReady = true
+            break
+          }
+        }
+      } catch (error) {
+        if (!/frame\s+was\s+detached|execution\s+context\s+was\s+destroyed|target\s+closed/i.test(String(error))) throw error
+      }
+      if (providerControlReady) break
+    }
+    if (providerControlReady) break
+    await page.waitForTimeout(500)
+  }
   const targets = [
     page.getByRole('button', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
     page.getByRole('link', { name: /(?:continue\s+to\s+book|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i }).all(),
