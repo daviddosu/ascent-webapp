@@ -831,6 +831,7 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   gap: 10px;
 }
 .task-agent-card header strong {
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   color: #222;
@@ -838,18 +839,19 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   font-weight: 700;
 }
 .specialist-identity {
+  flex: 1 1 auto;
   min-width: 0;
   display: grid;
   gap: 1px;
 }
 .specialist-identity b { font-size: 11px; line-height: 1.1; }
 .specialist-identity small {
+  max-width: 205px;
   color: #858589;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 600;
-  letter-spacing: .04em;
-  line-height: 1.1;
-  text-transform: uppercase;
+  letter-spacing: .01em;
+  line-height: 1.25;
 }
 .specialist-icon--roon { color: #1d1d1f; }
 .specialist-icon--caspian { color: #4d7f9d; }

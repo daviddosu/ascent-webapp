@@ -79,6 +79,8 @@ describe('reference screens', () => {
     expect(document.querySelector('.screen-title h1')?.textContent).toBe('Today')
     expect(document.querySelector('.screen-count')?.getAttribute('data-count')).toBe('5')
     expect(document.querySelectorAll('.task-row')).toHaveLength(5)
+    expect(document.querySelector('.task-list > .today-task-group')?.classList.contains('today-task-group--today')).toBe(true)
+    expect(document.querySelector('.task-list > .today-task-group:last-child')?.classList.contains('today-task-group--carried')).toBe(true)
     expect(document.querySelector('.today-task-group--carried h2')?.textContent).toBe('Carried over')
     expect(document.querySelector('.today-task-group--carried .task-row strong')?.textContent).toBe('Research content ideas')
     expect(document.querySelector('.today-task-group--today h2')?.textContent).toBe('Today')
@@ -244,7 +246,7 @@ describe('reference screens', () => {
 
     const newTaskCheckbox = document.querySelector<HTMLButtonElement>('.task-row.selected [data-complete]')!
     newTaskCheckbox.click()
-    const rows = [...document.querySelectorAll('.task-row')]
+    const rows = [...document.querySelectorAll('.today-task-group--today .task-row')]
     const completedRowIndex = rows.findIndex(row => row.querySelector('strong')?.textContent === 'Write launch notes')
     const lastActiveRowIndex = rows.map(row => row.classList.contains('completed')).lastIndexOf(false)
     expect(completedRowIndex).toBeGreaterThan(lastActiveRowIndex)

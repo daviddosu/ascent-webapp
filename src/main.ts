@@ -1084,10 +1084,59 @@ function specialistName(task: Pick<Task, 'title' | 'description'>, run?: AgentRu
   return specialistForTask(task, run)?.displayName ?? 'ShotCount'
 }
 
+function specialistActivity(
+  task: Pick<Task, 'title' | 'description'>,
+  run: AgentRun | null | undefined,
+  specialist: NonNullable<ReturnType<typeof getSpecialist>>,
+) {
+  if (run?.status === 'needs_context') {
+    return specialist.id === 'caspian'
+      ? 'Waiting for the trip details that unlock the search'
+      : specialist.id === 'david'
+        ? 'Waiting for the missing application detail'
+        : 'Waiting for the detail that unlocks the next move'
+  }
+  if (run?.status === 'needs_approval') return 'Ready for your review before anything changes'
+  if (run?.status === 'waiting_external') {
+    return specialist.id === 'caspian'
+      ? 'Watching the provider while you get on with your day'
+      : 'Keeping watch for the next external update'
+  }
+  if (run?.status === 'waiting_for_user') return 'Holding the work here for your call'
+  if (run?.status === 'failed') return 'Rechecking the path after an interruption'
+  if (run?.status === 'completed') return 'Finished the groundwork and left it ready for you'
+
+  const taskText = `${task.title} ${task.description}`.toLocaleLowerCase()
+  const capability = run?.capability ?? (
+    specialist.id === 'caspian' || /\b(?:flight|itinerary|airline|airport)\b/.test(taskText)
+      ? 'flight_search'
+      : specialist.id === 'david' || isApplicationIntent(task.title, task.description)
+        ? 'research_draft'
+        : /\b(?:calendar|schedule|meeting|availability)\b/.test(taskText)
+          ? 'scheduling'
+          : /\b(?:email|gmail|inbox|reply|message)\b/.test(taskText)
+            ? 'gmail'
+            : specialist.id === 'roon'
+              ? 'research'
+              : 'draft'
+  )
+  const activityByCapability: Record<string, string> = {
+    gmail: 'Reviewing threads · preparing the next safe step',
+    calendar: 'Reading your calendar · finding the cleanest opening',
+    scheduling: 'Checking availability · lining up the next move',
+    flight_search: 'Comparing flights · protecting your constraints',
+    browser: 'Opening the right page · working through the details',
+    draft: 'Shaping a polished draft · keeping your voice intact',
+    research_draft: 'Researching the signal · building a grounded draft',
+    research: 'Gathering the useful signal · distilling the answer',
+  }
+  return activityByCapability[capability] ?? 'Preparing the next safe move for you'
+}
+
 function specialistHeader(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
   const specialist = specialistForTask(task, run)
   if (!specialist) return '<strong>ShotCount</strong>'
-  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentSparkleIcon()}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialist.roleDescription)}</small></span></strong>`
+  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentSparkleIcon()}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialistActivity(task, run, specialist))}</small></span></strong>`
 }
 
 function agentUpdateToast(run: AgentRun) {
@@ -2761,16 +2810,16 @@ function renderToday() {
       </div>`}
       <div class="task-list">
         ${hasTasks
-          ? `${carriedOverTasks.length ? `<section class="today-task-group today-task-group--carried" aria-labelledby="carried-over-heading">
-              <h2 id="carried-over-heading">Carried over</h2>
-              ${carriedOverTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')}
-            </section>` : ''}
-            <section class="today-task-group today-task-group--today" aria-labelledby="today-tasks-heading">
+          ? `<section class="today-task-group today-task-group--today" aria-labelledby="today-tasks-heading">
               <h2 id="today-tasks-heading"><span>Today</span></h2>
               ${todayTasks.length
                 ? todayTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')
                 : '<div class="planner-empty planner-empty--small"><strong>Nothing else for today.</strong><p>Add a task when you are ready.</p></div>'}
-            </section>`
+            </section>
+            ${carriedOverTasks.length ? `<section class="today-task-group today-task-group--carried" aria-labelledby="carried-over-heading">
+              <h2 id="carried-over-heading">Carried over</h2>
+              ${carriedOverTasks.map(task => renderTaskRow(task, task.id === selectedTaskId)).join('')}
+            </section>` : ''}`
           : '<div class="planner-empty"><strong>Your day is clear.</strong><p>Add your first task when you are ready.</p></div>'}
       </div>
     </section>
