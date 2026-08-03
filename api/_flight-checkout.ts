@@ -697,8 +697,17 @@ async function openProviderBooking(page: Page) {
         const contextPagePromise = page.context().waitForEvent('page', { timeout: navigationTimeout })
           .then(candidate => safeDestination(candidate))
           .catch(() => null)
+        const providerDocumentRequest = page.context().waitForEvent('request', {
+          timeout: navigationTimeout,
+          predicate: request => request.isNavigationRequest() && Boolean(safeProviderNavigationUrl(request.url())),
+        }).then(request => safeProviderNavigationUrl(request.url())).catch(() => null)
         await control.click({ noWaitAfter: true }).catch(() => undefined)
-        let destination = await Promise.race([popupPromise, contextPagePromise, samePagePromise])
+        let destination = await Promise.race([popupPromise, contextPagePromise, samePagePromise, providerDocumentRequest])
+        if (typeof destination === 'string') {
+          await page.goto(destination, { waitUntil: 'domcontentloaded', timeout: navigationTimeout }).catch(() => undefined)
+          const currentUrl = providerUrlAllowed(page.url())
+          destination = currentUrl ? { page, url: currentUrl } : null
+        }
         if (!destination) {
           const newlyOpenedPages = page.context().pages().filter(candidate => !existingPages.has(candidate))
           for (const candidate of newlyOpenedPages) {
