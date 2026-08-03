@@ -594,6 +594,29 @@ export function safeGoogleFlightsBookingUrl(raw: unknown) {
   }
 }
 
+export function safeProviderNavigationUrl(raw: string) {
+  const direct = providerUrlAllowed(raw)
+  if (direct) return direct
+  let candidate = raw
+  for (let depth = 0; depth < 2; depth += 1) {
+    try {
+      const url = new URL(candidate)
+      const hostname = url.hostname.toLocaleLowerCase()
+      if (hostname !== 'google.com' && !hostname.endsWith('.google.com')) return ''
+      const nested = ['url', 'q', 'destination', 'redirect', 'target']
+        .map(key => url.searchParams.get(key) ?? '')
+        .find(value => value.startsWith('https://'))
+      if (!nested) return ''
+      const nestedSafe = providerUrlAllowed(nested)
+      if (nestedSafe) return nestedSafe
+      candidate = nested
+    } catch {
+      return ''
+    }
+  }
+  return ''
+}
+
 async function locateProviderLink(page: Page) {
   const links = (await Promise.all(
     checkoutSurfaces(page).map(surface =>
@@ -650,20 +673,25 @@ async function openProviderBooking(page: Page) {
         const existingPages = new Set(page.context().pages())
         const safeDestination = async (candidate: Page | null) => {
           if (!candidate) return null
-          const existingUrl = providerUrlAllowed(candidate.url())
-          if (existingUrl) return { page: candidate, url: existingUrl }
+          const existingUrl = safeProviderNavigationUrl(candidate.url())
+          if (existingUrl && providerUrlAllowed(candidate.url())) return { page: candidate, url: existingUrl }
           await candidate.waitForURL(
-            url => Boolean(providerUrlAllowed(url.toString())),
+            url => Boolean(safeProviderNavigationUrl(url.toString())),
             { timeout: navigationTimeout },
           ).catch(() => undefined)
-          const url = providerUrlAllowed(candidate.url())
-          return url ? { page: candidate, url } : null
+          const url = safeProviderNavigationUrl(candidate.url())
+          if (!url) return null
+          if (!providerUrlAllowed(candidate.url())) {
+            await candidate.goto(url, { waitUntil: 'domcontentloaded', timeout: navigationTimeout }).catch(() => undefined)
+          }
+          const currentUrl = providerUrlAllowed(candidate.url())
+          return currentUrl ? { page: candidate, url: currentUrl } : null
         }
         const popupPromise = page.waitForEvent('popup', { timeout: navigationTimeout })
           .then(popup => safeDestination(popup))
           .catch(() => null)
         const samePagePromise = page.waitForURL(
-          url => Boolean(providerUrlAllowed(url.toString())),
+          url => Boolean(safeProviderNavigationUrl(url.toString())),
           { timeout: navigationTimeout },
         ).then(() => safeDestination(page)).catch(() => null)
         const contextPagePromise = page.context().waitForEvent('page', { timeout: navigationTimeout })

@@ -5,6 +5,7 @@ import {
   normalizeFlightCheckoutInput,
   prepareFlightCheckout,
   safeGoogleFlightsBookingUrl,
+  safeProviderNavigationUrl,
 } from './_flight-checkout'
 
 const traveler = {
@@ -71,6 +72,13 @@ describe('flight checkout preparation', () => {
     expect(safeGoogleFlightsBookingUrl('https://www.google.com/travel/flights?q=LOS')).toBe('')
     expect(safeGoogleFlightsBookingUrl('https://www.google.com/travel/flights/booking')).not.toBe('')
     expect(safeGoogleFlightsBookingUrl('https://user:secret@www.google.com/travel/flights/booking')).toBe('')
+  })
+
+  it('normalizes a safe external provider target wrapped by a Google redirect', () => {
+    expect(safeProviderNavigationUrl('https://www.google.com/url?url=https%3A%2F%2Fbook.example-airline.test%2Fcheckout%3Foffer%3D1'))
+      .toBe('https://book.example-airline.test/checkout?offer=1')
+    expect(safeProviderNavigationUrl('https://www.google.com/url?url=https%3A%2F%2Fwww.google.com%2Ftravel%2Fflights%2Fbooking'))
+      .toBe('')
   })
 
   it('allows only non-consequential checkout progression labels', () => {
