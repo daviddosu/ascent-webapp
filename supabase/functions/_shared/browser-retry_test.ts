@@ -1,9 +1,10 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttemptCount, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession, validatedFlightEvidence } from './browser-retry.ts'
+import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttemptCount, browserRetryPrerequisiteSatisfied, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession, validatedFlightEvidence } from './browser-retry.ts'
 
 Deno.test('safe browser reads back off between durable worker attempts', () => {
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'browser_worker_failed', 1), 8_000)
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'browser_worker_failed', 2), 16_000)
+  assertEquals(safeBrowserRetryDelayMs('select_flight', 'browser_worker_unreachable', 0), 8_000)
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'flight_results_timeout', 1), 15_000)
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'flight_results_timeout', 2), 30_000)
 })
@@ -130,4 +131,10 @@ Deno.test('a retry payload cannot overwrite an already validated flight result',
 Deno.test('reuses a completed browser operation instead of creating a duplicate flight action', () => {
   assertEquals(isCompletedBrowserOperation({ id: 'flight-operation', status: 'succeeded' }, 'flight-operation'), true)
   assertEquals(isCompletedBrowserOperation({ id: 'flight-operation', status: 'failed' }, 'flight-operation'), false)
+})
+
+Deno.test('does not retry checkout before the selected flight handoff exists', () => {
+  assertEquals(browserRetryPrerequisiteSatisfied('browser.prepare_flight_checkout', false), false)
+  assertEquals(browserRetryPrerequisiteSatisfied('browser.prepare_flight_checkout', true), true)
+  assertEquals(browserRetryPrerequisiteSatisfied('browser.select_flight', false), true)
 })

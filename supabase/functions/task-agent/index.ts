@@ -38,7 +38,7 @@ import {
   type SpecialistVersion,
   type TaskContract,
 } from '../_shared/specialists.ts'
-import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttemptCount, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
+import { allowsGoogleFlightsDomain, browserFailureClass, browserOperationAttemptCount, browserRetryPrerequisiteSatisfied, canonicalFlightSearch, caspianFlightHandoffAllowed, googleFlightsBrowserDomains, isBrowserUserInterventionFailure, isCompletedBrowserOperation, isFlightConstraintFailure, isTransientSingleObjectCoercionError, normalizeBrowserDomains, preferValidatedFlightEvidence, safeBrowserRetryDelayMs, shouldRecycleBrowserSession } from '../_shared/browser-retry.ts'
 import { requiredEffectsForObjective, requiredEffectsSatisfied, unresolvedRequiredEffects, verifiedCrossToolStage } from '../_shared/execution-order.ts'
 import { reconcileGmailIdentity } from '../_shared/gmail-reconciliation.ts'
 import {
@@ -4697,10 +4697,34 @@ async function retryWaitingProviderAction(
     .in('status', ['failed', 'running'])
     .eq('retryable', true)
     .order('step_index', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .limit(20)
   if (actionResult.error) throw new Error(actionResult.error.message)
-  const action = actionResult.data
+  let action = null as (NonNullable<typeof actionResult.data>[number] | null)
+  for (const candidate of actionResult.data ?? []) {
+    const toolName = safeString(candidate.tool_name, 120)
+    if (toolName === 'browser.prepare_flight_checkout') {
+      const candidateArguments = candidate.arguments as Record<string, unknown>
+      const candidateSession = await loadOwnedBrowserSession(
+        admin,
+        run,
+        safeString(candidateArguments.session_id ?? run.browser_session_id, 64),
+      )
+      const checkpoint = (candidateSession?.checkpoint ?? {}) as BrowserCheckpoint
+      const selectedFlight = (run.result?.selectedFlight ?? checkpoint.selectedFlight) as Record<string, unknown> | null
+      const handoffUrl = safeString(selectedFlight?.handoffUrl ?? selectedFlight?.handoff_url, 4_000)
+      const handoffStage = safeString(selectedFlight?.handoffStage ?? selectedFlight?.handoff_stage, 40)
+      const hasSelectedFlightHandoff = Boolean(
+        safePaymentHandoffUrl(handoffUrl, handoffStage || 'provider_booking') ||
+        safeGoogleFlightsBookingUrl(handoffUrl),
+      )
+      // A stale checkout action can sit later in the ledger than the failed
+      // selection that must produce its handoff. Skip it until that prerequisite
+      // is durable, then let the earlier selection retry use the same action.
+      if (!browserRetryPrerequisiteSatisfied(toolName, hasSelectedFlightHandoff)) continue
+    }
+    action = candidate
+    break
+  }
   const toolName = safeString(action?.tool_name, 120)
   if (
     !action ||

@@ -825,14 +825,29 @@ export function safeExternalProviderHandoffUrl(value: unknown) {
       hostname.endsWith('.localhost') ||
       hostname.endsWith('.local') ||
       hostname.endsWith('.internal') ||
-      hostname === 'google.com' ||
-      hostname.endsWith('.google.com') ||
+      isGoogleOwnedHostname(hostname) ||
       !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(hostname)
     ) return ''
     return url.toString()
   } catch {
     return ''
   }
+}
+
+function isGoogleOwnedHostname(hostname: string) {
+  const normalized = hostname.toLocaleLowerCase().replace(/\.$/, '')
+  return normalized === 'google' ||
+    normalized.endsWith('.google') ||
+    normalized === 'google.com' ||
+    normalized.endsWith('.google.com') ||
+    normalized === 'googleusercontent.com' ||
+    normalized.endsWith('.googleusercontent.com') ||
+    normalized === 'googleapis.com' ||
+    normalized.endsWith('.googleapis.com') ||
+    normalized === 'gstatic.com' ||
+    normalized.endsWith('.gstatic.com') ||
+    normalized === 'googletraveladservices.com' ||
+    normalized.endsWith('.googletraveladservices.com')
 }
 
 const providerHandoffControlPattern = /(?:continue\s+to\s+book(?:\s+with)?|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))/i

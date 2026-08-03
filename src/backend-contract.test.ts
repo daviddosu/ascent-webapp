@@ -750,6 +750,8 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('workerTimeoutMs')
     expect(taskAgentFunction).toContain('Date.now() - updatedAt > workerTimeoutMs')
     expect(taskAgentFunction).toContain('safeBrowserRetryDelayMs')
+    expect(taskAgentFunction).toContain('browserRetryPrerequisiteSatisfied')
+    expect(taskAgentFunction).toContain('A stale checkout action can sit later in the ledger')
     expect(flightBrowser).toContain('const browser = await launchBrowser()')
     expect(flightBrowser).not.toContain('sharedBrowserPromise')
   })

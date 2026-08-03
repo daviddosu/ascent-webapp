@@ -3,9 +3,18 @@ export function safeBrowserRetryDelayMs(
   errorCode: string,
   completedAttempts: number,
 ) {
-  if (operationType === 'submit' || completedAttempts < 1 || completedAttempts >= 3) return null
+  if (operationType === 'submit' || completedAttempts >= 3) return null
   const providerDelay = errorCode === 'flight_results_timeout' ? 15_000 : 8_000
-  return providerDelay * completedAttempts
+  // A dispatch/unreachable failure can be recorded before the worker claims
+  // the operation, so zero is still the first bounded retry attempt.
+  return providerDelay * Math.max(1, completedAttempts)
+}
+
+export function browserRetryPrerequisiteSatisfied(
+  toolName: string,
+  hasSelectedFlightHandoff: boolean,
+) {
+  return toolName !== 'browser.prepare_flight_checkout' || hasSelectedFlightHandoff
 }
 
 export function isTransientSingleObjectCoercionError(message: string) {
