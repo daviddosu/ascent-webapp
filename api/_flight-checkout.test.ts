@@ -85,6 +85,7 @@ describe('flight checkout preparation', () => {
   it('fills observed traveler and contact controls, verifies them, and stops when payment controls appear', async () => {
     const values = new Map<number, string>()
     let paymentVisible = false
+    let detachedOnce = true
     const fields = [
       { index: 0, tag: 'input', type: 'text', label: 'Passenger 1 First name', name: 'passenger_1_first_name', autocomplete: '', required: true, disabled: false, options: [] },
       { index: 1, tag: 'input', type: 'text', label: 'Passenger 1 Last name', name: 'passenger_1_last_name', autocomplete: '', required: true, disabled: false, options: [] },
@@ -110,6 +111,10 @@ describe('flight checkout preparation', () => {
         if (selector === 'body') return { async innerText() { return paymentVisible ? 'Payment method Card details' : 'Passenger details' } }
         return {
           async evaluateAll<T>(_callback: (elements: unknown[]) => T) {
+            if (detachedOnce) {
+              detachedOnce = false
+              throw new Error('locator.evaluateAll: Frame was detached')
+            }
             return (paymentVisible
               ? [...fields, { index: 6, tag: 'input', type: 'text', label: 'Card number', name: 'card_number', autocomplete: 'cc-number', required: true, disabled: false, options: [] }]
               : fields) as T
@@ -120,7 +125,7 @@ describe('flight checkout preparation', () => {
       },
       getByRole() { return { async all() { return [] } } },
       async waitForLoadState() {},
-      async waitForTimeout() { paymentVisible = true },
+      async waitForTimeout() {},
     } as never
 
     const result = await prepareFlightCheckout(

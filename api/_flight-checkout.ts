@@ -91,6 +91,16 @@ function clean(value: unknown, maximum = 300) {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, maximum)
 }
 
+function isStaleCheckoutDomError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  return /frame\s+was\s+detached|execution\s+context\s+was\s+destroyed|frame\s+.*detached|target\s+closed/i.test(message)
+}
+
+async function waitForFreshCheckoutDom(page: Page) {
+  await page.waitForLoadState('domcontentloaded', { timeout: 5_000 }).catch(() => undefined)
+  await page.waitForTimeout(250)
+}
+
 function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const date = new Date(`${value}T00:00:00Z`)
@@ -236,7 +246,7 @@ function checkoutSurfaces(page: Page): CheckoutSurface[] {
   return [page, ...frames.filter(frame => frame !== mainFrame)]
 }
 
-async function describeFields(page: Page): Promise<CheckoutFieldDescriptor[]> {
+async function describeFieldsOnce(page: Page): Promise<CheckoutFieldDescriptor[]> {
   const fields: Array<{
     surface: CheckoutSurface
     index: number
@@ -327,6 +337,20 @@ async function describeFields(page: Page): Promise<CheckoutFieldDescriptor[]> {
       kind,
     }
   })
+}
+
+async function describeFields(page: Page): Promise<CheckoutFieldDescriptor[]> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await describeFieldsOnce(page)
+    } catch (error) {
+      lastError = error
+      if (!isStaleCheckoutDomError(error) || attempt === 2) throw error
+      await waitForFreshCheckoutDom(page)
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('The provider checkout DOM could not be read.')
 }
 
 function valueForTraveler(traveler: FlightCheckoutTraveler, kind: CheckoutFieldKind) {
@@ -527,9 +551,16 @@ async function checkoutUserInterventionReason(page: Page, body: string) {
   if (/\b(?:captcha|verify\s+(?:that\s+)?you(?:'re| are)\s+human|unusual\s+traffic|robot\s+check)\b/i.test(text)) {
     return 'The provider requires a user-controlled verification step before checkout can continue.'
   }
-  const sensitiveControlCount = (await Promise.all(checkoutSurfaces(page).map(surface => surface.locator(
-    'input:visible[type="password"], input:visible[autocomplete="one-time-code"], input:visible[name*="otp" i], input:visible[id*="otp" i]',
-  ).count().catch(() => 0)))).reduce((total, count) => total + count, 0)
+  const sensitiveControlCount = (await Promise.all(checkoutSurfaces(page).map(async surface => {
+    try {
+      return await surface.locator(
+        'input:visible[type="password"], input:visible[autocomplete="one-time-code"], input:visible[name*="otp" i], input:visible[id*="otp" i]',
+      ).count()
+    } catch (error) {
+      if (isStaleCheckoutDomError(error)) return 0
+      throw error
+    }
+  }))).reduce((total, count) => total + count, 0)
   if (sensitiveControlCount > 0 || /\b(?:one[- ]?time\s+code|verification\s+code|enter\s+(?:your\s+)?otp)\b/i.test(text)) {
     return 'The provider requires a user-controlled sign-in or verification step before checkout can continue.'
   }
@@ -568,7 +599,10 @@ async function locateProviderLink(page: Page) {
           href: (element as HTMLAnchorElement).href,
         }))
         .filter(item => /\b(?:book|select|continue|airline|provider)\b/i.test(item.text)),
-      ),
+      ).catch(error => {
+        if (isStaleCheckoutDomError(error)) return []
+        throw error
+      }),
     ),
   )).flat()
   for (const item of links) {
