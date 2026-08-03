@@ -4981,8 +4981,7 @@ async function pollWaitingExternalRun(
       run.external_correlation_id === `browser-session:${run.browser_session_id}` ||
       (
         run.capability === 'flight_search' &&
-        flightCheckoutRequested(run) &&
-        Boolean(run.result?.selectedFlight)
+        Boolean(run.result?.flightOptions || run.result?.selectedFlight)
       )
     )
   ) return pollBrowserExecutionRun(admin, run, openaiKey)
