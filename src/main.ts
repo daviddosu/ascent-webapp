@@ -3006,6 +3006,8 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
     : owner?.id === 'david'
       ? 'I’m organizing the application requirements, deadlines, and missing documents.'
       : ''
+  const canCheckExternalWork = run?.status === 'waiting_external' && !placeholder
+  const checkExternalBusy = canCheckExternalWork && agentDecisionBusy.has(run?.id ?? '')
   const capabilityMessage: Record<string, string> = {
     gmail: 'I’m reviewing the relevant Gmail threads and preparing the next safe step.',
     calendar: 'I’m checking your calendar and looking for a conflict-free next step.',
@@ -3023,7 +3025,7 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
       ${progressLabels.map((label, index) => `<div class="${index < activeIndex ? 'done' : index === activeIndex ? 'active' : ''}"><i>${index < activeIndex ? '✓' : index === activeIndex ? '◔' : ''}</i><span>${escapeHtml(label)}</span></div>`).join('')}
     </div>
     ${renderRoonGeneratedFiles(task)}
-    <footer><button type="button" data-action="view-agent-progress" data-task-id="${task.id}">View progress</button><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
+    <footer><button type="button" data-action="view-agent-progress" data-task-id="${task.id}">View progress</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${task.id}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
   </section>
   <aside class="task-agent-notification">${icon('bell')}<span>You’ll be notified when this is ready.</span></aside>`
 }
