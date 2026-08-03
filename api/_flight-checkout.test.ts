@@ -58,6 +58,7 @@ describe('flight checkout preparation', () => {
     expect(classifyFlightCheckoutField('passport_expiry_month', 'text')).toBe('document_expiry_month')
     expect(classifyFlightCheckoutField('additional-name', 'text')).toBe('middle_name')
     expect(classifyFlightCheckoutField('Passenger name', 'text')).toBe('full_name')
+    expect(classifyFlightCheckoutField('Sex', 'radio')).toBe('gender')
     expect(classifyFlightCheckoutField('Card number', 'text')).toBe('payment')
     expect(classifyFlightCheckoutField('CVV security code', 'text')).toBe('payment')
     expect(classifyFlightCheckoutField('Security question', 'text')).toBe('unknown')
@@ -218,7 +219,7 @@ describe('flight checkout preparation', () => {
     const result = await prepareFlightCheckout(
       page,
       {
-        travelers: [{ ...traveler, gender: 'female', nationality: 'GB' }],
+        travelers: [{ ...traveler, gender: 'F', nationality: 'GB' }],
         contact_email: 'traveler@example.com',
         contact_phone: '+2348000000000',
       },

@@ -371,9 +371,9 @@ function optionSemanticValues(descriptor: CheckoutFieldDescriptor, value: string
   const values = [value, regionDisplayName(value)]
   if (descriptor.kind === 'gender') {
     const normalized = normalizedOptionValue(value)
-    if (['male', 'man'].includes(normalized)) values.push('m', 'man')
-    if (['female', 'woman'].includes(normalized)) values.push('f', 'woman')
-    if (['nonbinary', 'nonbinarygender'].includes(normalized)) values.push('x', 'non binary', 'non-binary')
+    if (['male', 'man', 'm'].includes(normalized)) values.push('male', 'man', 'm')
+    if (['female', 'woman', 'f'].includes(normalized)) values.push('female', 'woman', 'f')
+    if (['nonbinary', 'nonbinarygender', 'x'].includes(normalized)) values.push('x', 'non binary', 'non-binary')
   }
   if (descriptor.kind.endsWith('_month')) {
     const month = Number(value)
