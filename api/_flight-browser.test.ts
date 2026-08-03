@@ -235,7 +235,7 @@ describe('flight browser worker', () => {
   it('bounds safe selection retries', () => {
     expect(maximumFlightSelectionAttempts).toBe(3)
     expect(maximumPublicProviderSelectionAttempts).toBe(2)
-    expect(kissAndFlyResultsTimeoutMs).toBe(75_000)
+    expect(kissAndFlyResultsTimeoutMs).toBe(90_000)
     expect(kissAndFlyStaleSessionRecoveryAfterMs).toBe(30_000)
   })
 

@@ -875,7 +875,7 @@ async function visibleButtonByText(page: Page, predicate: (value: string) => boo
 // The provider's preloader can resolve after Google has already handed off.
 // Keep this read bounded, but long enough for the provider's dynamic result
 // session to finish in production browser workers.
-export const kissAndFlyResultsTimeoutMs = 75_000
+export const kissAndFlyResultsTimeoutMs = 90_000
 export const kissAndFlyStaleSessionRecoveryAfterMs = 30_000
 
 async function waitForKissAndFlyResults(page: Page, searchUrl?: string) {
