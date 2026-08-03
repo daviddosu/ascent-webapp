@@ -794,6 +794,8 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('function configuredFlightProviderDomains')
     expect(taskAgentFunction).toContain('SHOTCOUNT_FLIGHT_PROVIDER_BASE_URL')
     expect(taskAgentFunction).toContain('allowed_domains: expandedDomains')
+    expect(flightBrowser).toContain('const currentSelector = await visibleButtonByText')
+    expect(flightBrowser).toContain('currency list behind a second control')
   })
 
   it('isolates flight selection from the search worker process pool', () => {

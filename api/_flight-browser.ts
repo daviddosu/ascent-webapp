@@ -911,7 +911,21 @@ async function ensureKissAndFlyCurrency(page: Page, currency: FlightSearchInput[
   if (current === currency) return
 
   await header.click()
-  const desired = await visibleButtonByText(page, value => value.toLocaleUpperCase() === currency)
+  let desired = await visibleButtonByText(page, value => value.toLocaleUpperCase() === currency)
+  if (!desired) {
+    // KissandFly exposes the currency list behind a second control when the
+    // current currency is not the requested one (for example NGN -> USD).
+    // Open that nested selector before looking for the requested currency.
+    const currentSelector = await visibleButtonByText(page, value => value.toLocaleUpperCase() === current)
+    if (currentSelector) {
+      await currentSelector.click()
+      const deadline = Date.now() + 5_000
+      while (Date.now() < deadline && !desired) {
+        desired = await visibleButtonByText(page, value => value.toLocaleUpperCase() === currency)
+        if (!desired) await page.waitForTimeout(250)
+      }
+    }
+  }
   if (!desired) {
     throw new BrowserExecutionError(
       'flight_provider_currency_unavailable',
