@@ -57,6 +57,7 @@ describe('flight checkout preparation', () => {
     expect(classifyFlightCheckoutField('date_of_birth', 'date')).toBe('date_of_birth')
     expect(classifyFlightCheckoutField('passport_expiry_month', 'text')).toBe('document_expiry_month')
     expect(classifyFlightCheckoutField('additional-name', 'text')).toBe('middle_name')
+    expect(classifyFlightCheckoutField('Passenger name', 'text')).toBe('full_name')
     expect(classifyFlightCheckoutField('Card number', 'text')).toBe('payment')
     expect(classifyFlightCheckoutField('CVV security code', 'text')).toBe('payment')
     expect(classifyFlightCheckoutField('Security question', 'text')).toBe('unknown')
@@ -143,5 +144,97 @@ describe('flight checkout preparation', () => {
       'contact_phone',
     ]))
     expect(values.get(6)).toBeUndefined()
+  })
+
+  it('fills embedded select, radio, and month controls without confusing radio options for separate travelers', async () => {
+    let paymentVisible = false
+    const values = new Map<string, string>()
+    const fields = [
+      { index: 0, tag: 'select', type: '', label: 'Nationality', name: 'nationality', autocomplete: '', inputValue: '', groupKey: '', required: true, disabled: false, options: [{ value: 'NG', label: 'Nigeria' }, { value: 'GB', label: 'United Kingdom' }] },
+      { index: 1, tag: 'input', type: 'radio', label: 'Gender Male', name: 'gender', autocomplete: '', inputValue: 'male', groupKey: 'gender', required: true, disabled: false, options: [] },
+      { index: 2, tag: 'input', type: 'radio', label: 'Gender Female', name: 'gender', autocomplete: '', inputValue: 'female', groupKey: 'gender', required: true, disabled: false, options: [] },
+      { index: 3, tag: 'input', type: 'month', label: 'Passport expiry month', name: 'passport_expiry', autocomplete: '', inputValue: '', groupKey: '', required: true, disabled: false, options: [] },
+    ]
+
+    const controlFor = (field: typeof fields[number]) => ({
+      async inputValue() { return values.get(`${field.index}:value`) ?? '' },
+      async fill(value: string) { values.set(`${field.index}:value`, value) },
+      async selectOption(value: string) {
+        values.set(`${field.index}:value`, value)
+        values.set(`${field.index}:label`, field.options.find(option => option.value === value)?.label ?? '')
+      },
+      async check() { values.set(`${field.index}:checked`, 'true') },
+      async evaluate<T>(callback: (element: unknown) => T) {
+        if (field.type === 'radio') return Boolean(values.get(`${field.index}:checked`)) as T
+        if (field.tag === 'select') return { value: values.get(`${field.index}:value`) ?? '', label: values.get(`${field.index}:label`) ?? '' } as T
+        return values.get(`${field.index}:value`) ?? '' as T
+      },
+      async count() { return 1 },
+      async isVisible() { return true },
+      async getAttribute() { return null },
+      async innerText() { return '' },
+    })
+
+    const makeSurface = (surfaceFields: typeof fields) => ({
+      locator(selector: string) {
+        if (selector === 'body') return { async innerText() { return paymentVisible ? 'Payment method Card details' : 'Passenger details' } }
+        return {
+          async evaluateAll<T>(_callback: (elements: unknown[]) => T) {
+            return (paymentVisible
+              ? [...surfaceFields, { index: 4, tag: 'input', type: 'text', label: 'Card number', name: 'card_number', autocomplete: 'cc-number', inputValue: '', groupKey: '', required: true, disabled: false, options: [] }]
+              : surfaceFields) as T
+          },
+          nth(index: number) { return controlFor(surfaceFields[index] ?? { index, tag: 'input', type: 'text', label: '', name: '', autocomplete: '', inputValue: '', groupKey: '', required: false, disabled: false, options: [] }) },
+          async count() { return 0 },
+        }
+      },
+      getByRole(role: string) {
+        if (role !== 'button' || paymentVisible) return { async all() { return [] } }
+        return {
+          async all() {
+            return [{
+              async isVisible() { return true },
+              async getAttribute() { return null },
+              async innerText() { return 'Continue to payment' },
+              async click() { paymentVisible = true },
+            }]
+          },
+        }
+      },
+    })
+
+    const embeddedFrame = makeSurface(fields)
+    const mainFrame = makeSurface([])
+    const page = {
+      async goto() {},
+      url() { return 'https://www.example-airline.test/booking/passengers' },
+      mainFrame() { return mainFrame },
+      frames() { return [mainFrame, embeddedFrame] },
+      ...makeSurface([]),
+      async waitForLoadState() {},
+      async waitForTimeout() {},
+    } as never
+
+    const result = await prepareFlightCheckout(
+      page,
+      {
+        travelers: [{ ...traveler, gender: 'female', nationality: 'GB' }],
+        contact_email: 'traveler@example.com',
+        contact_phone: '+2348000000000',
+      },
+      'https://www.example-airline.test/booking/passengers',
+      'Example Airline',
+    )
+
+    expect(result.paymentBoundaryReached).toBe(true)
+    expect(result.preparedFields).toEqual(expect.arrayContaining([
+      'traveler_1.nationality',
+      'traveler_1.gender',
+      'traveler_1.document_expiry_month',
+    ]))
+    expect(values.get('0:value')).toBe('GB')
+    expect(values.get('2:checked')).toBe('true')
+    expect(values.get('3:value')).toBe('2030-12')
+    expect(values.get('1:checked')).toBeUndefined()
   })
 })

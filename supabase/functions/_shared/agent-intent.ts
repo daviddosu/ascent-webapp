@@ -71,6 +71,10 @@ function contextFieldFromName(value: unknown): FlightContextField | null {
   if (normalized.includes('budget') || normalized.includes('price')) return 'budget'
   if (normalized.includes('stop') || normalized.includes('layover')) return 'max_stops'
   if (normalized.includes('cabin') || normalized.includes('class')) return 'cabin'
+  if (
+    (normalized.includes('traveler') || normalized.includes('traveller') || normalized.includes('passenger')) &&
+    /detail|name|given|middle|family|surname|title|birth|dob|gender|sex|nationality|residence|document|passport|expiry|email|phone|contact/.test(normalized)
+  ) return 'traveler_details'
   if (normalized.includes('passenger') || normalized.includes('adult') || normalized.includes('child') || normalized.includes('infant')) return 'passengers'
   if (normalized.includes('traveler_detail') || normalized.includes('traveller_detail') || normalized.includes('passport') || normalized.includes('identity_document') || normalized.includes('legal_name')) return 'traveler_details'
   if (normalized.includes('nearby') || normalized.includes('airport_preference')) return 'airport_preferences'
@@ -101,7 +105,7 @@ export function flightContextFields(question: string, missingFields: unknown): F
       /\b(?:destination[_ ]?(?:code)?|arriv(?:e|ing)?|flying\s+into|fly\s+to|where)\b[\s\S]{0,90}\b(?:airport|city|fly|go|travel|destination|to|into)\b/.test(text)) add('destination')
   if (/\b(?:departure[_ ]?date|outbound\s+date|travel\s+date|flight\s+date|date\s+range|flexible\s+dates?)\b|\b(?:when|what\s+date|which\s+date)\b[\s\S]{0,50}\b(?:fly|depart|leave|travel)\b/.test(text)) add('departure_date')
   if (/\b(?:max[_ ]?stops?|stop|stops|connection|layover)\b/.test(text)) add('max_stops')
-  const asksTravelerDetails = /\b(?:travell?er|passenger)\b[\s\S]{0,100}\b(?:name|passport|date of birth|nationality|identity|document)\b|\b(?:passport|travel document|traveler details|passenger details|legal name)\b/.test(text)
+  const asksTravelerDetails = /\b(?:travell?er|passenger)\b[\s\S]{0,100}\b(?:name|passport|date of birth|nationality|identity|document|title|gender|sex|residence|expiry|email|phone)\b|\b(?:passport|travel document|traveler details|passenger details|legal name|given name|family name|date of birth|document expiry)\b/.test(text)
   if (asksTravelerDetails) add('traveler_details')
   else if (/\b(?:passenger|travell?er|adult|child(?:ren)?|infant|baby|how many people)\b/.test(text)) add('passengers')
   if (/\b(?:budget|price|cost|spend|under|maximum)\b/.test(text)) add('budget')

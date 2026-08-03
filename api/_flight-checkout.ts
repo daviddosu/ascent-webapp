@@ -1,5 +1,5 @@
 import { isIP } from 'node:net'
-import type { Locator, Page } from 'playwright-core'
+import type { Frame, Locator, Page } from 'playwright-core'
 import { BrowserExecutionError, safeExternalProviderHandoffUrl } from './_flight-browser.js'
 
 export type FlightCheckoutTraveler = {
@@ -62,13 +62,15 @@ type CheckoutFieldKind =
   | 'unknown'
 
 type CheckoutFieldDescriptor = {
+  surface: CheckoutSurface
   index: number
-  tag: 'input' | 'select' | 'textarea'
+  tag: 'input' | 'select' | 'textarea' | 'contenteditable'
   type: string
   inputValue: string
   label: string
   name: string
   autocomplete: string
+  groupKey: string
   required: boolean
   disabled: boolean
   explicitTravelerIndex: number | null
@@ -76,6 +78,10 @@ type CheckoutFieldDescriptor = {
   options: Array<{ value: string; label: string }>
   kind: CheckoutFieldKind
 }
+
+type CheckoutSurface = Page | Frame
+
+const checkoutFieldSelector = 'input:visible, select:visible, textarea:visible, [contenteditable="true"]:visible'
 
 const paymentControlPattern = /(?:cc[-_ ]?(?:number|name|expiry|expiration|cvc|cvv)|card|credit|debit|cvv|cvc|security\s+(?:code|number)|billing|payment|paypal|klarna|affirm|afterpay)/i
 const blockedAdvancePattern = /\b(?:pay|purchase|buy|reserve|book\s+now|complete\s+booking|confirm\s+booking|place\s+order|issue\s+ticket|submit\s+order|sign\s*in|log\s*in|create\s+account)\b/i
@@ -200,6 +206,7 @@ export function classifyFlightCheckoutField(text: string, type = 'text'): Checko
   if (/\bmiddle(?:\s+name)?\b|\bsecond\s+given\b|\badditional(?:\s+name)?\b|\badditional-name\b/.test(value)) return 'middle_name'
   if (/\b(?:last|family|surname)\s*name\b|\b(?:last|family|surname)\b|\blname\b/.test(value)) return 'family_name'
   if (/\b(?:title|salutation)\b/.test(value)) return 'title'
+  if (/\b(?:passenger|travell?er)\s+name\b|\bname\b/.test(value)) return 'full_name'
   if (/\b(?:gender|sex)\b/.test(value)) return 'gender'
   if (/\b(?:nationality|citizenship)\b/.test(value)) return 'nationality'
   if (/\b(?:country of residence|residence country|residential country)\b/.test(value)) return 'residence_country'
@@ -222,41 +229,96 @@ function travelerIndexFromText(value: string) {
   return /[\[(]\d+[\])]/.test(bracket[0]) ? number : number - 1
 }
 
+function checkoutSurfaces(page: Page): CheckoutSurface[] {
+  const browserPage = page as Page & { frames?: () => Frame[]; mainFrame?: () => Frame }
+  const frames = typeof browserPage.frames === 'function' ? browserPage.frames() : []
+  const mainFrame = typeof browserPage.mainFrame === 'function' ? browserPage.mainFrame() : null
+  return [page, ...frames.filter(frame => frame !== mainFrame)]
+}
+
 async function describeFields(page: Page): Promise<CheckoutFieldDescriptor[]> {
-  const values = await page.locator('input:visible, select:visible, textarea:visible').evaluateAll(elements => elements.map((element, index) => {
-    const input = element as HTMLInputElement
-    const labels = input.labels ? [...input.labels].map(label => label.textContent ?? '').join(' ') : ''
-    const parentLabel = input.closest('label')?.textContent ?? ''
-    const fieldset = input.closest('fieldset')?.querySelector('legend')?.textContent ?? ''
-    const label = [labels, parentLabel, input.getAttribute('aria-label') ?? '', input.getAttribute('placeholder') ?? '', input.name, input.id].join(' ')
-    const select = element as HTMLSelectElement
-    const options = select.tagName.toLocaleLowerCase() === 'select'
-      ? [...select.options].slice(0, 50).map(option => ({ value: option.value, label: option.textContent ?? '' }))
-      : []
-    return {
-      index,
-      tag: element.tagName.toLocaleLowerCase(),
-      type: input.type || '',
-      inputValue: input.value || '',
-      label: `${label} ${fieldset}`.replace(/\s+/g, ' ').trim().slice(0, 600),
-      name: input.name || '',
-      autocomplete: input.autocomplete || '',
-      required: input.required || input.getAttribute('aria-required') === 'true',
-      disabled: input.disabled || input.readOnly,
-      options,
-    }
-  }))
+  const fields: Array<{
+    surface: CheckoutSurface
+    index: number
+    tag: string
+    type: string
+    inputValue: string
+    label: string
+    name: string
+    autocomplete: string
+    groupKey: string
+    required: boolean
+    disabled: boolean
+    options: Array<{ value: string; label: string }>
+  }> = []
+
+  for (const surface of checkoutSurfaces(page)) {
+    const values = await surface.locator(checkoutFieldSelector).evaluateAll(elements => elements.map((element, index) => {
+      const tag = element.tagName.toLocaleLowerCase()
+      const input = element as HTMLInputElement
+      const labels = 'labels' in input && input.labels
+        ? [...input.labels].map(label => label.textContent ?? '').join(' ')
+        : ''
+      const parentLabel = input.closest('label')?.textContent ?? ''
+      const fieldset = input.closest('fieldset')?.querySelector('legend')?.textContent ?? ''
+      const label = [labels, parentLabel, input.getAttribute('aria-label') ?? '', input.getAttribute('placeholder') ?? '', input.name, input.id].join(' ')
+      const select = element as HTMLSelectElement
+      const options = tag === 'select'
+        ? [...select.options].slice(0, 50).map(option => ({ value: option.value, label: option.textContent ?? '' }))
+        : []
+      const inputValue = tag === 'select'
+        ? select.value || ''
+        : tag === 'textarea' || tag === 'input'
+          ? input.value || ''
+          : element.textContent || ''
+      const type = tag === 'input' ? input.type || '' : ''
+      const groupKey = type === 'radio'
+        ? input.name || fieldset || input.getAttribute('aria-labelledby') || label
+        : ''
+      return {
+        index,
+        tag,
+        type,
+        inputValue,
+        label: `${label} ${fieldset}`.replace(/\s+/g, ' ').trim().slice(0, 600),
+        name: input.name || '',
+        autocomplete: input.autocomplete || '',
+        groupKey,
+        required: input.required || input.getAttribute('aria-required') === 'true',
+        disabled: input.disabled || input.readOnly || input.getAttribute('aria-disabled') === 'true',
+        options,
+      }
+    }))
+    fields.push(...values.map(value => ({ ...value, surface })))
+  }
 
   const occurrence = new Map<CheckoutFieldKind, number>()
-  return values.map(value => {
+  const radioGroupOccurrence = new Map<string, number>()
+  const radioKindOccurrence = new Map<CheckoutFieldKind, number>()
+  return fields.map(value => {
     const searchText = `${value.label} ${value.name} ${value.autocomplete}`
     const kind = classifyFlightCheckoutField(searchText, value.type)
     const explicitTravelerIndex = travelerIndexFromText(searchText)
-    const nextOccurrence = occurrence.get(kind) ?? 0
-    occurrence.set(kind, nextOccurrence + 1)
+    const occurrenceKey = value.type === 'radio'
+      ? `radio:${kind}:${value.groupKey || value.label}`
+      : kind
+    let nextOccurrence: number
+    if (value.type === 'radio') {
+      const existingGroup = radioGroupOccurrence.get(occurrenceKey)
+      if (existingGroup !== undefined) {
+        nextOccurrence = existingGroup
+      } else {
+        nextOccurrence = radioKindOccurrence.get(kind) ?? 0
+        radioKindOccurrence.set(kind, nextOccurrence + 1)
+        radioGroupOccurrence.set(occurrenceKey, nextOccurrence)
+      }
+    } else {
+      nextOccurrence = occurrence.get(kind) ?? 0
+      occurrence.set(kind, nextOccurrence + 1)
+    }
     return {
       ...value,
-      tag: value.tag as CheckoutFieldDescriptor['tag'],
+      tag: (value.tag === 'div' || value.tag === 'span' ? 'contenteditable' : value.tag) as CheckoutFieldDescriptor['tag'],
       label: clean(value.label, 600),
       name: clean(value.name, 160),
       autocomplete: clean(value.autocomplete, 160),
@@ -348,9 +410,11 @@ function selectedOption(descriptor: CheckoutFieldDescriptor, value: string) {
 }
 
 function formatDateForDescriptor(descriptor: CheckoutFieldDescriptor, value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || descriptor.kind.endsWith('_day') || descriptor.kind.endsWith('_month') || descriptor.kind.endsWith('_year')) return value
-  if (descriptor.type === 'date') return value
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
   const [, year, month, day] = value.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? []
+  if (descriptor.type === 'month') return `${year}-${month}`
+  if (descriptor.kind.endsWith('_day') || descriptor.kind.endsWith('_month') || descriptor.kind.endsWith('_year')) return value
+  if (descriptor.type === 'date') return value
   const label = descriptor.label.toLocaleLowerCase()
   if (year && month && day && /(?:dd|d)[/.-](?:mm|m)[/.-](?:yyyy|yy)|\bday\b[\s,/-]+\bmonth\b/.test(label)) return `${day}/${month}/${year}`
   if (year && month && day && /(?:mm|m)[/.-](?:dd|d)[/.-](?:yyyy|yy)|\bmonth\b[\s,/-]+\bday\b/.test(label)) return `${month}/${day}/${year}`
@@ -360,14 +424,16 @@ function formatDateForDescriptor(descriptor: CheckoutFieldDescriptor, value: str
 
 async function verifyField(locator: Locator, descriptor: CheckoutFieldDescriptor, expected: string) {
   const actual = await locator.evaluate(element => {
+    const tag = element.tagName.toLocaleLowerCase()
     const input = element as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    if (input instanceof HTMLSelectElement) {
+    if (tag === 'select') {
       return {
-        value: input.value,
-        label: input.selectedOptions[0]?.textContent?.trim() ?? '',
+        value: (input as HTMLSelectElement).value,
+        label: (input as HTMLSelectElement).selectedOptions[0]?.textContent?.trim() ?? '',
       }
     }
-    return { value: input.value, label: '' }
+    if ('value' in element) return { value: (element as HTMLInputElement | HTMLTextAreaElement).value, label: '' }
+    return { value: element.textContent ?? '', label: '' }
   })
   const actualRecord = actual && typeof actual === 'object' && !Array.isArray(actual)
     ? actual as { value?: unknown; label?: unknown }
@@ -394,12 +460,14 @@ async function verifyField(locator: Locator, descriptor: CheckoutFieldDescriptor
   }
 }
 
-async function fillDescriptor(page: Page, descriptor: CheckoutFieldDescriptor, value: string) {
-  const locator = page.locator('input:visible, select:visible, textarea:visible').nth(descriptor.index)
+async function fillDescriptor(descriptor: CheckoutFieldDescriptor, value: string) {
+  const locator = descriptor.surface.locator(checkoutFieldSelector).nth(descriptor.index)
   if (descriptor.type === 'radio') {
     const expectedValues = optionSemanticValues(descriptor, value)
     const actualValues = [descriptor.inputValue, descriptor.label, descriptor.name]
-    const matches = expectedValues.some(expected => actualValues.some(actual => optionMatches(expected, actual)))
+    const matches = expectedValues.some(expected => actualValues.some(actual => descriptor.kind === 'gender'
+      ? normalizedOptionValue(expected) === normalizedOptionValue(actual)
+      : optionMatches(expected, actual)))
     if (!matches) return false
     await locator.check()
     const checked = await locator.evaluate(element => Boolean((element as HTMLInputElement).checked))
@@ -439,7 +507,7 @@ export function isSafeFlightCheckoutAdvanceLabel(value: string) {
 
 async function paymentBoundary(page: Page) {
   const descriptors = await describeFields(page)
-  const body = await page.locator('body').innerText().catch(() => '')
+  const body = (await Promise.all(checkoutSurfaces(page).map(surface => surface.locator('body').innerText().catch(() => '')))).join('\n')
   const paymentControl = descriptors.some(descriptor => descriptor.kind === 'payment' && !descriptor.disabled)
   const paymentText = /\b(?:payment method|card details|billing details|billing address|credit card|debit card|card number|pay securely|enter (?:your )?card)\b/i.test(body)
   return paymentControl || paymentText
@@ -459,9 +527,9 @@ async function checkoutUserInterventionReason(page: Page, body: string) {
   if (/\b(?:captcha|verify\s+(?:that\s+)?you(?:'re| are)\s+human|unusual\s+traffic|robot\s+check)\b/i.test(text)) {
     return 'The provider requires a user-controlled verification step before checkout can continue.'
   }
-  const sensitiveControlCount = await page.locator(
+  const sensitiveControlCount = (await Promise.all(checkoutSurfaces(page).map(surface => surface.locator(
     'input:visible[type="password"], input:visible[autocomplete="one-time-code"], input:visible[name*="otp" i], input:visible[id*="otp" i]',
-  ).count().catch(() => 0)
+  ).count().catch(() => 0)))).reduce((total, count) => total + count, 0)
   if (sensitiveControlCount > 0 || /\b(?:one[- ]?time\s+code|verification\s+code|enter\s+(?:your\s+)?otp)\b/i.test(text)) {
     return 'The provider requires a user-controlled sign-in or verification step before checkout can continue.'
   }
@@ -492,10 +560,17 @@ export function safeGoogleFlightsBookingUrl(raw: unknown) {
 }
 
 async function locateProviderLink(page: Page) {
-  const links = await page.locator('a[href]:visible').evaluateAll(elements => elements.map(element => ({
-    text: (element.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 180),
-    href: (element as HTMLAnchorElement).href,
-  })).filter(item => /\b(?:book|select|continue|airline|provider)\b/i.test(item.text)))
+  const links = (await Promise.all(
+    checkoutSurfaces(page).map(surface =>
+      surface.locator('a[href]:visible').evaluateAll(elements => elements
+        .map(element => ({
+          text: (element.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 180),
+          href: (element as HTMLAnchorElement).href,
+        }))
+        .filter(item => /\b(?:book|select|continue|airline|provider)\b/i.test(item.text)),
+      ),
+    ),
+  )).flat()
   for (const item of links) {
     const href = providerUrlAllowed(item.href)
     if (href) return { ...item, href }
@@ -504,20 +579,25 @@ async function locateProviderLink(page: Page) {
 }
 
 async function clickSafeAdvance(page: Page) {
-  const candidates = [
-    page.getByRole('button', { name: /^(?:continue|next|proceed|go\s+to|review)(?:\s+[\s\S]{0,120})?$/i }).all(),
-    page.getByRole('link', { name: /^(?:continue|next|proceed|go\s+to|review)(?:\s+[\s\S]{0,120})?$/i }).all(),
-  ]
-  for (const group of candidates) {
-    const controls = await group
-    for (const control of controls) {
-      if (!await control.isVisible().catch(() => false)) continue
-      const label = `${await control.getAttribute('aria-label').catch(() => '')} ${await control.innerText().catch(() => '')}`.trim()
-      if (!isSafeFlightCheckoutAdvanceLabel(label)) continue
-      await control.click({ noWaitAfter: true })
-      await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => undefined)
-      await page.waitForTimeout(700)
-      return label
+  for (const surface of checkoutSurfaces(page)) {
+    const candidates = [
+      surface.getByRole('button', { name: /^(?:continue|next|proceed|go\s+to|review)(?:\s+[\s\S]{0,120})?$/i }).all(),
+      surface.getByRole('link', { name: /^(?:continue|next|proceed|go\s+to|review)(?:\s+[\s\S]{0,120})?$/i }).all(),
+    ]
+    for (const group of candidates) {
+      const controls = await group
+      for (const control of controls) {
+        if (!await control.isVisible().catch(() => false)) continue
+        const label = [
+          await control.getAttribute('aria-label').catch(() => ''),
+          await control.innerText().catch(() => ''),
+        ].filter(Boolean).join(' ').trim()
+        if (!isSafeFlightCheckoutAdvanceLabel(label)) continue
+        await control.click({ noWaitAfter: true })
+        await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => undefined)
+        await page.waitForTimeout(700)
+        return label
+      }
     }
   }
   return ''
@@ -546,7 +626,7 @@ export async function prepareFlightCheckout(
     if (!safeCurrentProviderUrl && !safeCurrentGoogleUrl) {
       throw new BrowserExecutionError('unsafe_payment_handoff', 'The provider redirected outside the verified HTTPS booking domain.', false)
     }
-    const body = await page.locator('body').innerText().catch(() => '')
+    const body = (await Promise.all(checkoutSurfaces(page).map(surface => surface.locator('body').innerText().catch(() => '')))).join('\n')
     const interventionReason = await checkoutUserInterventionReason(page, body)
     if (interventionReason) {
       throw new BrowserExecutionError('flight_checkout_user_intervention', interventionReason, false, {
@@ -596,6 +676,8 @@ export async function prepareFlightCheckout(
         const traveler = normalized.travelers[candidateIndex]
         if (!traveler) continue
         expected = valueForTraveler(traveler, descriptor.kind)
+        if (descriptor.type === 'month' && descriptor.kind === 'document_expiry_month') expected = traveler.document_expiry
+        if (descriptor.type === 'month' && descriptor.kind === 'date_of_birth_month') expected = traveler.date_of_birth
         fieldName = `traveler_${candidateIndex + 1}.${descriptor.kind}`
       }
 
@@ -609,17 +691,21 @@ export async function prepareFlightCheckout(
         continue
       }
 
-      const locator = page.locator('input:visible, select:visible, textarea:visible').nth(descriptor.index)
+      const locator = descriptor.surface.locator(checkoutFieldSelector).nth(descriptor.index)
       if (descriptor.type === 'radio') {
-        const filled = await fillDescriptor(page, descriptor, expected)
+        const filled = await fillDescriptor(descriptor, expected)
         if (filled) preparedFields.add(fieldName)
         continue
       }
-      const alreadyFilled = await locator.inputValue().catch(() => '')
-      if (alreadyFilled.trim()) {
-        await verifyField(locator, descriptor, formatDateForDescriptor(descriptor, expected))
+      if (descriptor.tag === 'select') {
+        await fillDescriptor(descriptor, expected)
       } else {
-        await fillDescriptor(page, descriptor, expected)
+        const alreadyFilled = await locator.inputValue().catch(() => '')
+        if (alreadyFilled.trim()) {
+          await verifyField(locator, descriptor, formatDateForDescriptor(descriptor, expected))
+        } else {
+          await fillDescriptor(descriptor, expected)
+        }
       }
       preparedFields.add(fieldName)
     }

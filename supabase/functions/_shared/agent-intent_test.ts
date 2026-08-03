@@ -52,6 +52,8 @@ Deno.test('flight context answers have stable fields and stop-before-payment mea
   assertEquals(flightContextField('What is the maximum number of stops?', []), 'max_stops')
   assertEquals(flightContextField('How many adults and children are travelling?', []), 'passengers')
   assertEquals(flightContextField('Provide each traveler’s legal name, date of birth, and passport details.', ['traveler_details']), 'traveler_details')
+  assertEquals(flightContextField('The provider requires the missing traveler title.', ['traveler_1.title']), 'traveler_details')
+  assertEquals(flightContextField('The provider requires passport expiry.', ['traveler_1.document_expiry']), 'traveler_details')
   assertEquals(flightContextField('Can I use nearby airports?', []), 'airport_preferences')
   assertEquals(flightContextField('Which airline should I avoid?', []), 'airline')
   assertEquals(flightContextField('Is this a multi-city trip?', []), 'trip_type')
