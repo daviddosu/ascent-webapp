@@ -872,8 +872,13 @@ async function visibleButtonByText(page: Page, predicate: (value: string) => boo
   return null
 }
 
+// The provider's preloader can resolve after Google has already handed off.
+// Keep this read bounded, but long enough for the provider's dynamic result
+// session to finish in production browser workers.
+export const kissAndFlyResultsTimeoutMs = 75_000
+
 async function waitForKissAndFlyResults(page: Page) {
-  const deadline = Date.now() + 45_000
+  const deadline = Date.now() + kissAndFlyResultsTimeoutMs
   let reloads = 0
   while (Date.now() < deadline) {
     const cardCount = await page.locator('.avia-item:visible').count().catch(() => 0)

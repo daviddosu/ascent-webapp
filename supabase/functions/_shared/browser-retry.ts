@@ -4,7 +4,9 @@ export function safeBrowserRetryDelayMs(
   completedAttempts: number,
 ) {
   if (operationType === 'submit' || completedAttempts >= 3) return null
-  const providerDelay = errorCode === 'flight_results_timeout' ? 15_000 : 8_000
+  const providerDelay = ['flight_results_timeout', 'flight_provider_results_timeout'].includes(errorCode)
+    ? 15_000
+    : 8_000
   // A dispatch/unreachable failure can be recorded before the worker claims
   // the operation, so zero is still the first bounded retry attempt.
   return providerDelay * Math.max(1, completedAttempts)

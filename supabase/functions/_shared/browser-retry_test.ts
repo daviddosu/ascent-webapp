@@ -7,6 +7,7 @@ Deno.test('safe browser reads back off between durable worker attempts', () => {
   assertEquals(safeBrowserRetryDelayMs('select_flight', 'browser_worker_unreachable', 0), 8_000)
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'flight_results_timeout', 1), 15_000)
   assertEquals(safeBrowserRetryDelayMs('search_flights', 'flight_results_timeout', 2), 30_000)
+  assertEquals(safeBrowserRetryDelayMs('select_flight', 'flight_provider_results_timeout', 1), 15_000)
 })
 
 Deno.test('classifies provider failures, preserves canonical search, and recycles poisoned sessions', () => {
