@@ -625,6 +625,7 @@ function providerNameFromCheckoutLabel(value: string) {
 }
 
 async function openProviderBooking(page: Page) {
+  const navigationTimeout = 20_000
   for (const surface of checkoutSurfaces(page)) {
     const groups = [
       surface.getByRole('button', { name: providerHandoffControlPattern }).all(),
@@ -646,23 +647,41 @@ async function openProviderBooking(page: Page) {
         ].filter(Boolean).join(' ').trim()
         if (!providerHandoffControlPattern.test(label) || blockedAdvancePattern.test(label)) continue
 
-        const popupPromise = page.waitForEvent('popup', { timeout: 15_000 })
-          .then(async popup => {
-            await popup.waitForURL(url => Boolean(providerUrlAllowed(url.toString())), { timeout: 15_000 }).catch(() => undefined)
-            return popup
-          })
+        const existingPages = new Set(page.context().pages())
+        const safeDestination = async (candidate: Page | null) => {
+          if (!candidate) return null
+          const existingUrl = providerUrlAllowed(candidate.url())
+          if (existingUrl) return { page: candidate, url: existingUrl }
+          await candidate.waitForURL(
+            url => Boolean(providerUrlAllowed(url.toString())),
+            { timeout: navigationTimeout },
+          ).catch(() => undefined)
+          const url = providerUrlAllowed(candidate.url())
+          return url ? { page: candidate, url } : null
+        }
+        const popupPromise = page.waitForEvent('popup', { timeout: navigationTimeout })
+          .then(popup => safeDestination(popup))
           .catch(() => null)
         const samePagePromise = page.waitForURL(
           url => Boolean(providerUrlAllowed(url.toString())),
-          { timeout: 15_000 },
-        ).then(() => page).catch(() => null)
-        await control.click({ noWaitAfter: true })
-        const destination = await Promise.race([popupPromise, samePagePromise])
-        if (!destination) return null
-        await destination.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => undefined)
-        const url = providerUrlAllowed(destination.url())
-        if (url) return { page: destination, url, provider: providerNameFromCheckoutLabel(label) }
-        return null
+          { timeout: navigationTimeout },
+        ).then(() => safeDestination(page)).catch(() => null)
+        const contextPagePromise = page.context().waitForEvent('page', { timeout: navigationTimeout })
+          .then(candidate => safeDestination(candidate))
+          .catch(() => null)
+        await control.click({ noWaitAfter: true }).catch(() => undefined)
+        let destination = await Promise.race([popupPromise, contextPagePromise, samePagePromise])
+        if (!destination) {
+          const newlyOpenedPages = page.context().pages().filter(candidate => !existingPages.has(candidate))
+          for (const candidate of newlyOpenedPages) {
+            destination = await safeDestination(candidate)
+            if (destination) break
+          }
+        }
+        if (destination) {
+          await destination.page.waitForLoadState('domcontentloaded', { timeout: navigationTimeout }).catch(() => undefined)
+          return { ...destination, provider: providerNameFromCheckoutLabel(label) }
+        }
       }
     }
   }
