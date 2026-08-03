@@ -704,6 +704,12 @@ describe('agent execution security contract', () => {
     expect(agentTools).toContain("'browser.purchase'")
   })
 
+  it('continues automatic flight selection into checkout on the same model turn', () => {
+    expect(taskAgentFunction).toContain('continuationCallId = \'\'')
+    expect(taskAgentFunction).toContain("recordAction(admin, run, 'browser.select_flight', continuationCallId")
+    expect(taskAgentFunction).toContain('safeString(actionResult.data?.model_call_id, 256)')
+  })
+
   it('prepares airline traveler details without crossing the payment boundary', () => {
     expect(agentTools).toContain("name: 'browser.prepare_flight_checkout'")
     expect(agentTools).toContain('Never provide payment details to this tool')

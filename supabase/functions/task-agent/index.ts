@@ -1716,6 +1716,7 @@ async function queueFlightSelectionOperation(
   optionId: string,
   openaiKey?: string,
   automatic = false,
+  continuationCallId = '',
 ): Promise<AgentRunRow> {
   if (!run.browser_session_id) throw new Error('The flight browser session is unavailable.')
   const session = await loadOwnedBrowserSession(admin, run, run.browser_session_id)
@@ -1735,7 +1736,11 @@ async function queueFlightSelectionOperation(
     session_id: run.browser_session_id,
     option_id: optionId,
   }
-  const action = await recordAction(admin, run, 'browser.select_flight', '', argumentsValue, 'running')
+  // Automatic best-option selection is orchestrated from the original
+  // browser.search_flights call rather than from a second model turn. Carry
+  // that call id forward so completion can close the original tool call and
+  // let Caspian continue to the checkout form instead of waiting forever.
+  const action = await recordAction(admin, run, 'browser.select_flight', continuationCallId, argumentsValue, 'running')
   const operation: BrowserOperation = {
     id: String(action.idempotency_key),
     type: 'select_flight',
@@ -4220,6 +4225,7 @@ async function pollBrowserExecutionRun(
         safeString(bestOption.id, 128),
         openaiKey,
         true,
+        safeString(actionResult.data?.model_call_id, 256),
       )
     }
 
