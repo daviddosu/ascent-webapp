@@ -649,6 +649,7 @@ function providerNameFromCheckoutLabel(value: string) {
 
 async function openProviderBooking(page: Page) {
   const navigationTimeout = 20_000
+  const attemptedLabels: string[] = []
   for (const surface of checkoutSurfaces(page)) {
     const groups = [
       surface.getByRole('button', { name: providerHandoffControlPattern }).all(),
@@ -669,6 +670,7 @@ async function openProviderBooking(page: Page) {
           await control.innerText().catch(() => ''),
         ].filter(Boolean).join(' ').trim()
         if (!providerHandoffControlPattern.test(label) || blockedAdvancePattern.test(label)) continue
+        attemptedLabels.push(label.slice(0, 180))
 
         const existingPages = new Set(page.context().pages())
         const safeDestination = async (candidate: Page | null) => {
@@ -722,6 +724,10 @@ async function openProviderBooking(page: Page) {
       }
     }
   }
+  console.error('[flight-checkout] provider handoff capture produced no safe destination', {
+    attemptedLabels,
+    pageUrls: page.context().pages().map(candidate => candidate.url()).slice(0, 8),
+  })
   return null
 }
 
