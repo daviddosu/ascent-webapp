@@ -639,6 +639,37 @@ async function locateProviderLink(page: Page) {
   return null
 }
 
+async function providerHandoffControlVisible(page: Page) {
+  for (const surface of checkoutSurfaces(page)) {
+    const groups = [
+      surface.getByRole('button', { name: providerHandoffControlPattern }).all(),
+      surface.getByRole('link', { name: providerHandoffControlPattern }).all(),
+    ]
+    for (const group of groups) {
+      let controls: Locator[]
+      try {
+        controls = await group
+      } catch (error) {
+        if (isStaleCheckoutDomError(error)) continue
+        throw error
+      }
+      for (const control of controls) {
+        if (await control.isVisible().catch(() => false)) return true
+      }
+    }
+  }
+  return Boolean(await locateProviderLink(page))
+}
+
+async function waitForGoogleBookingOptions(page: Page) {
+  const deadline = Date.now() + 30_000
+  while (Date.now() < deadline) {
+    if (await providerHandoffControlVisible(page)) return true
+    await page.waitForTimeout(500)
+  }
+  return false
+}
+
 function providerNameFromCheckoutLabel(value: string) {
   return clean(value, 180)
     .replace(/^.*?(?:continue\s+to\s+book(?:\s+with)?|book\s+with|visit\s+(?:site|airline))\s*/i, '')
@@ -649,7 +680,6 @@ function providerNameFromCheckoutLabel(value: string) {
 
 async function openProviderBooking(page: Page) {
   const navigationTimeout = 20_000
-  const attemptedLabels: string[] = []
   for (const surface of checkoutSurfaces(page)) {
     const groups = [
       surface.getByRole('button', { name: providerHandoffControlPattern }).all(),
@@ -670,7 +700,6 @@ async function openProviderBooking(page: Page) {
           await control.innerText().catch(() => ''),
         ].filter(Boolean).join(' ').trim()
         if (!providerHandoffControlPattern.test(label) || blockedAdvancePattern.test(label)) continue
-        attemptedLabels.push(label.slice(0, 180))
 
         const existingPages = new Set(page.context().pages())
         const safeDestination = async (candidate: Page | null) => {
@@ -724,10 +753,6 @@ async function openProviderBooking(page: Page) {
       }
     }
   }
-  console.error('[flight-checkout] provider handoff capture produced no safe destination', {
-    attemptedLabels,
-    pageUrls: page.context().pages().map(candidate => candidate.url()).slice(0, 8),
-  })
   return null
 }
 
@@ -779,6 +804,7 @@ export async function prepareFlightCheckout(
     if (!safeCurrentProviderUrl && !safeCurrentGoogleUrl) {
       throw new BrowserExecutionError('unsafe_payment_handoff', 'The provider redirected outside the verified HTTPS booking domain.', false)
     }
+    if (safeCurrentGoogleUrl) await waitForGoogleBookingOptions(page)
     const body = (await Promise.all(checkoutSurfaces(page).map(surface => surface.locator('body').innerText().catch(() => '')))).join('\n')
     const interventionReason = await checkoutUserInterventionReason(page, body)
     if (interventionReason) {
