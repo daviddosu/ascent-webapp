@@ -1,5 +1,9 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/browser-worker.ts": { "maxDuration": 120, "regions": ["fra1"] },
+    "api/browser-select-worker.ts": { "maxDuration": 120, "regions": ["fra1"] }
+  }
 }
