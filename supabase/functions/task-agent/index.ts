@@ -4979,10 +4979,7 @@ async function pollWaitingExternalRun(
     run.browser_session_id &&
     (
       run.external_correlation_id === `browser-session:${run.browser_session_id}` ||
-      (
-        run.capability === 'flight_search' &&
-        Boolean(run.result?.flightOptions || run.result?.selectedFlight)
-      )
+      run.capability === 'flight_search'
     )
   ) return pollBrowserExecutionRun(admin, run, openaiKey)
   const providerRetry = await retryWaitingProviderAction(admin, run, openaiKey)

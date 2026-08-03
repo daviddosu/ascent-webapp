@@ -710,7 +710,7 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('safeString(actionResult.data?.model_call_id, 256)')
     expect(taskAgentFunction).toContain('function browserContinuationCallId')
     expect(taskAgentFunction).toContain(".eq('tool_name', 'browser.search_flights')")
-    expect(taskAgentFunction).toContain('run.result?.flightOptions || run.result?.selectedFlight')
+    expect(taskAgentFunction).toContain("run.capability === 'flight_search'")
   })
 
   it('prepares airline traveler details without crossing the payment boundary', () => {
