@@ -3647,8 +3647,16 @@ async function browserContinuationCallId(
 ) {
   const direct = safeString(action?.model_call_id, 256)
   if (direct || operation.type !== 'select_flight') return direct
+  const history = await loadModelHistory(admin, run)
+  const priorSelectionCall = [...history].reverse().find(item =>
+    item.type === 'function_call' &&
+    item.name === 'browser__select_flight' &&
+    typeof item.call_id === 'string' &&
+    item.call_id.trim(),
+  )
+  if (priorSelectionCall?.type === 'function_call') return priorSelectionCall.call_id
   // Recover automatic selections created by versions that did not yet carry
-  // the originating search call id. This is read-only bookkeeping recovery;
+  // the originating selection call id. This is read-only bookkeeping recovery;
   // it never creates or replays a browser action.
   const priorSearch = await admin.from('agent_actions')
     .select('model_call_id')
@@ -4580,13 +4588,10 @@ async function pollBrowserExecutionRun(
     }
     let history = await loadModelHistory(admin, staged)
     const callId = continuationCallId
-    if (!historyHasToolOutput(history, callId)) {
-      history = [...history, {
-        type: 'function_call_output',
-        call_id: callId,
-        output: JSON.stringify(output),
-      }]
-    }
+    // A provider retry may have already left an older selection output in the
+    // durable model history. Replace that output with the newly validated
+    // provider handoff so the model cannot resume with stale Google-only data.
+    if (callId) history = upsertHistoryToolOutput(history, callId, output)
     await saveModelHistory(admin, staged, history)
       await addEvent(admin, staged, 'agent_resumed', staged.status, operationSummary, {
         browser_session_id: session.id,
