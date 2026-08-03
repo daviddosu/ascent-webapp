@@ -13,6 +13,7 @@ import {
   maxSharedBrowserUses,
   maximumPublicProviderSelectionAttempts,
   kissAndFlyResultsTimeoutMs,
+  kissAndFlyStaleSessionRecoveryAfterMs,
   maximumFlightSelectionAttempts,
   normalizeFlightSearchInput,
   parseGoogleFlightListItem,
@@ -235,6 +236,7 @@ describe('flight browser worker', () => {
     expect(maximumFlightSelectionAttempts).toBe(3)
     expect(maximumPublicProviderSelectionAttempts).toBe(2)
     expect(kissAndFlyResultsTimeoutMs).toBe(75_000)
+    expect(kissAndFlyStaleSessionRecoveryAfterMs).toBe(30_000)
   })
 
   it('recognizes explicit Google Flights provider failure states', () => {

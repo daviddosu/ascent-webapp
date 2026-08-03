@@ -876,13 +876,16 @@ async function visibleButtonByText(page: Page, predicate: (value: string) => boo
 // Keep this read bounded, but long enough for the provider's dynamic result
 // session to finish in production browser workers.
 export const kissAndFlyResultsTimeoutMs = 75_000
+export const kissAndFlyStaleSessionRecoveryAfterMs = 30_000
 
-async function waitForKissAndFlyResults(page: Page) {
+async function waitForKissAndFlyResults(page: Page, searchUrl?: string) {
   const deadline = Date.now() + kissAndFlyResultsTimeoutMs
+  const startedAt = Date.now()
   let reloads = 0
   while (Date.now() < deadline) {
     const cardCount = await page.locator('.avia-item:visible').count().catch(() => 0)
     if (cardCount > 0) return
+    await dismissPublicCookiePrompt(page)
     const body = await page.locator('body').innerText().catch(() => '')
     if (flightProviderNeedsUser(body)) {
       throw new BrowserExecutionError(
@@ -890,6 +893,16 @@ async function waitForKissAndFlyResults(page: Page) {
         'The public flight provider requires a user verification step before it will show live results.',
         false,
       )
+    }
+    const providerPath = (() => {
+      try { return new URL(page.url()).pathname } catch { return '' }
+    })()
+    if (reloads < 1 && searchUrl && Date.now() - startedAt >= kissAndFlyStaleSessionRecoveryAfterMs &&
+      /\/avia\/search\/(?:preloader|result)/i.test(providerPath)) {
+      reloads += 1
+      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 }).catch(() => undefined)
+      await dismissPublicCookiePrompt(page)
+      continue
     }
     if (shouldReloadFlightResults(body) && reloads < 1) {
       reloads += 1
@@ -1013,9 +1026,10 @@ async function continueToKissAndFlyBooking(
     tripType: input.returnDate ? 'round_trip' : 'one_way',
   })
   await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45_000 })
-  await waitForKissAndFlyResults(page)
+  await dismissPublicCookiePrompt(page)
+  await waitForKissAndFlyResults(page, searchUrl)
   await ensureKissAndFlyCurrency(page, input.currency)
-  await waitForKissAndFlyResults(page)
+  await waitForKissAndFlyResults(page, searchUrl)
 
   for (let attempt = 1; attempt <= maximumPublicProviderSelectionAttempts; attempt += 1) {
     const { cards, snapshots } = await kissAndFlyCardSnapshots(page)
@@ -1044,7 +1058,7 @@ async function continueToKissAndFlyBooking(
     if (!chosen) {
       if (attempt < maximumPublicProviderSelectionAttempts) {
         await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
-        await waitForKissAndFlyResults(page)
+        await waitForKissAndFlyResults(page, searchUrl)
         traceEvent(trace, 'public_provider_recovered_state', {
           attempt,
           source: 'stale_result_cards',
@@ -1070,7 +1084,7 @@ async function continueToKissAndFlyBooking(
     if (matchingIndex < 0) {
       if (attempt < maximumPublicProviderSelectionAttempts) {
         await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => undefined)
-        await waitForKissAndFlyResults(page)
+        await waitForKissAndFlyResults(page, searchUrl)
         continue
       }
       throw new BrowserExecutionError('flight_provider_itinerary_unavailable', 'The validated provider card became stale before booking.', true)
