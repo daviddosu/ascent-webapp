@@ -1118,7 +1118,27 @@ async function recordAction(
     .eq('idempotency_key', idempotencyKey)
     .limit(1)
     .maybeSingle()
-  if (existing.data) return existing.data
+  if (existing.data) {
+    // A safe browser action can be retried from a later model continuation
+    // while retaining its stable action identity. Keep the single ledger row,
+    // but attach the current function-call id so the verified provider output
+    // is returned to the right model turn.
+    if (
+      modelCallId &&
+      existing.data.model_call_id !== modelCallId &&
+      ['failed', 'running'].includes(String(existing.data.status)) &&
+      !existing.data.provider_action_id
+    ) {
+      const repaired = await admin.from('agent_actions')
+        .update({ model_call_id: modelCallId, arguments: argumentsValue })
+        .eq('id', existing.data.id)
+        .select('*')
+        .maybeSingle()
+      if (repaired.error) throw new Error(repaired.error.message)
+      if (repaired.data) return repaired.data
+    }
+    return existing.data
+  }
 
   const policy = policyForAgentTool(toolName)
   const { data, error } = await admin.from('agent_actions').insert({
