@@ -3642,7 +3642,7 @@ function browserFlightResult(
 async function browserContinuationCallId(
   admin: AdminClient,
   run: AgentRunRow,
-  operation: BrowserOperation,
+  operation: Pick<BrowserOperation, 'type'>,
   action: Record<string, unknown> | null,
 ) {
   const direct = safeString(action?.model_call_id, 256)
@@ -4564,7 +4564,9 @@ async function pollBrowserExecutionRun(
       retryable: true,
       current_step: run.current_step + 1,
       progress: [...(Array.isArray(run.progress) ? run.progress : []), operationSummary],
-      external_correlation_id: null,
+      external_correlation_id: openaiKey && continuationCallId
+        ? null
+        : `browser-session:${session.id}`,
       lease_owner: null,
       lease_expires_at: null,
     })
@@ -4586,12 +4588,12 @@ async function pollBrowserExecutionRun(
       }]
     }
     await saveModelHistory(admin, staged, history)
-    await addEvent(admin, staged, 'agent_resumed', staged.status, operationSummary, {
-      browser_session_id: session.id,
-      operation_type: operation.type,
-      action_id: actionResult.data.id,
-      checkout_required: true,
-    })
+      await addEvent(admin, staged, 'agent_resumed', staged.status, operationSummary, {
+        browser_session_id: session.id,
+        operation_type: operation.type,
+        action_id: actionResult.data?.id ?? operation.id,
+        checkout_required: true,
+      })
     return advanceRun(admin, staged, openaiKey)
   }
   if (hasNextSpecialistStage(run)) {
@@ -4975,7 +4977,14 @@ async function pollWaitingExternalRun(
   if (run.status !== 'waiting_external') return run
   if (
     run.browser_session_id &&
-    run.external_correlation_id === `browser-session:${run.browser_session_id}`
+    (
+      run.external_correlation_id === `browser-session:${run.browser_session_id}` ||
+      (
+        run.capability === 'flight_search' &&
+        flightCheckoutRequested(run) &&
+        Boolean(run.result?.selectedFlight)
+      )
+    )
   ) return pollBrowserExecutionRun(admin, run, openaiKey)
   const providerRetry = await retryWaitingProviderAction(admin, run, openaiKey)
   if (providerRetry) return providerRetry
