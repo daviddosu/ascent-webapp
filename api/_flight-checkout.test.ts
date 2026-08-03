@@ -80,6 +80,8 @@ describe('flight checkout preparation', () => {
     expect(isSafeFlightCheckoutAdvanceLabel('Pay now')).toBe(false)
     expect(isSafeFlightCheckoutAdvanceLabel('Confirm and purchase')).toBe(false)
     expect(isSafeFlightCheckoutAdvanceLabel('Sign in to continue')).toBe(false)
+    expect(isSafeFlightCheckoutAdvanceLabel('Continue to book with Travelwings')).toBe(false)
+    expect(isSafeFlightCheckoutAdvanceLabel('Book with kiss&fly')).toBe(false)
   })
 
   it('fills observed traveler and contact controls, verifies them, and stops when payment controls appear', async () => {

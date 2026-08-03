@@ -86,6 +86,7 @@ const checkoutFieldSelector = 'input:visible, select:visible, textarea:visible, 
 const paymentControlPattern = /(?:cc[-_ ]?(?:number|name|expiry|expiration|cvc|cvv)|card|credit|debit|cvv|cvc|security\s+(?:code|number)|billing|payment|paypal|klarna|affirm|afterpay)/i
 const blockedAdvancePattern = /\b(?:pay|purchase|buy|reserve|book\s+now|complete\s+booking|confirm\s+booking|place\s+order|issue\s+ticket|submit\s+order|sign\s*in|log\s*in|create\s+account)\b/i
 const safeAdvancePattern = /^(?:(?:continue|next|proceed|go\s+to)\b[\s\S]{0,120}|review(?:\s+and\s+continue)?(?:\s+[\s\S]{0,100})?)$/i
+const providerHandoffControlPattern = /\b(?:continue\s+to\s+book(?:\s+with)?|book\s+with|view\s+(?:deal|offer)|visit\s+(?:site|airline))\b/i
 
 function clean(value: unknown, maximum = 300) {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, maximum)
@@ -526,7 +527,10 @@ function advanceLabel(value: string) {
 
 export function isSafeFlightCheckoutAdvanceLabel(value: string) {
   const label = advanceLabel(value)
-  return Boolean(label) && !blockedAdvancePattern.test(label) && safeAdvancePattern.test(label)
+  return Boolean(label) &&
+    !blockedAdvancePattern.test(label) &&
+    !providerHandoffControlPattern.test(label) &&
+    safeAdvancePattern.test(label)
 }
 
 async function paymentBoundary(page: Page) {
@@ -608,6 +612,59 @@ async function locateProviderLink(page: Page) {
   for (const item of links) {
     const href = providerUrlAllowed(item.href)
     if (href) return { ...item, href }
+  }
+  return null
+}
+
+function providerNameFromCheckoutLabel(value: string) {
+  return clean(value, 180)
+    .replace(/^.*?(?:continue\s+to\s+book(?:\s+with)?|book\s+with|visit\s+(?:site|airline))\s*/i, '')
+    .replace(/\s+(?:for|at)\s+[$€£₦\d].*$/i, '')
+    .trim()
+    .slice(0, 120) || 'Airline provider'
+}
+
+async function openProviderBooking(page: Page) {
+  for (const surface of checkoutSurfaces(page)) {
+    const groups = [
+      surface.getByRole('button', { name: providerHandoffControlPattern }).all(),
+      surface.getByRole('link', { name: providerHandoffControlPattern }).all(),
+    ]
+    for (const group of groups) {
+      let controls: Locator[]
+      try {
+        controls = await group
+      } catch (error) {
+        if (isStaleCheckoutDomError(error)) continue
+        throw error
+      }
+      for (const control of controls) {
+        if (!await control.isVisible().catch(() => false)) continue
+        const label = [
+          await control.getAttribute('aria-label').catch(() => ''),
+          await control.innerText().catch(() => ''),
+        ].filter(Boolean).join(' ').trim()
+        if (!providerHandoffControlPattern.test(label) || blockedAdvancePattern.test(label)) continue
+
+        const popupPromise = page.waitForEvent('popup', { timeout: 15_000 })
+          .then(async popup => {
+            await popup.waitForURL(url => Boolean(providerUrlAllowed(url.toString())), { timeout: 15_000 }).catch(() => undefined)
+            return popup
+          })
+          .catch(() => null)
+        const samePagePromise = page.waitForURL(
+          url => Boolean(providerUrlAllowed(url.toString())),
+          { timeout: 15_000 },
+        ).then(() => page).catch(() => null)
+        await control.click({ noWaitAfter: true })
+        const destination = await Promise.race([popupPromise, samePagePromise])
+        if (!destination) return null
+        await destination.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => undefined)
+        const url = providerUrlAllowed(destination.url())
+        if (url) return { page: destination, url, provider: providerNameFromCheckoutLabel(label) }
+        return null
+      }
+    }
   }
   return null
 }
@@ -760,6 +817,14 @@ export async function prepareFlightCheckout(
 
     const label = await clickSafeAdvance(page)
     if (label) continue
+    if (safeCurrentGoogleUrl) {
+      const providerBooking = await openProviderBooking(page)
+      if (providerBooking) {
+        page = providerBooking.page
+        provider = providerBooking.provider
+        continue
+      }
+    }
     const providerLink = safeCurrentGoogleUrl
       ? await locateProviderLink(page)
       : null
