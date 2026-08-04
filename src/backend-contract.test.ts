@@ -827,6 +827,11 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('flight_handoff_evidence')
     expect(taskAgentFunction).toContain('payment_boundary_reached: true')
     expect(taskAgentFunction).toContain('preserveFlightResult')
+    expect(taskAgentFunction).toContain('flight_context_owner_specialist_id')
+    expect(taskAgentFunction).toContain('flightContextQuestion')
+    expect(taskAgentFunction).toContain('fields: [requestedFlightField]')
+    expect(taskAgentFunction).toContain('flight_context_owner_specialist_id: remainingFlightFields.length ? \'roon\' : null')
+    expect(taskAgentFunction).toContain('Roon owns traveler and contact questions.')
   })
 
   it('keeps flight recovery bounded and separates provider intervention from retries', () => {

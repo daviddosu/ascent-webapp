@@ -98,6 +98,8 @@ export type AgentRun = {
   specialistVersion: SpecialistVersion | null
   activeSpecialistId: SpecialistId | null
   activeSpecialistVersion: SpecialistVersion | null
+  /** Roon owns the user-facing question while a specialist remains active. */
+  contextOwnerSpecialistId?: SpecialistId | null
   reasoningModel: typeof REASONING_MODEL_ID
   taskContract: TaskContract | null
   routingSource: 'deterministic' | 'semantic' | 'legacy_migration'
@@ -150,8 +152,10 @@ type AgentRunRow = {
     user_context?: string
     recipient_resolution_pending?: AgentRun['recipientResolution']
     scheduling_options?: AgentRun['schedulingOptions']
+    flight_context_owner_specialist_id?: SpecialistId | null
   } | null
   recipientResolution?: AgentRun['recipientResolution']
+  contextOwnerSpecialistId?: SpecialistId | null
   capability: AgentCapability
   intent: AgentIntent | null
   specialist_id?: SpecialistId | null
@@ -216,6 +220,7 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     specialistVersion: row.specialist_version ?? specialist?.version ?? null,
     activeSpecialistId: row.active_specialist_id ?? specialistId,
     activeSpecialistVersion: row.active_specialist_version ?? row.specialist_version ?? specialist?.version ?? null,
+    contextOwnerSpecialistId: row.contextOwnerSpecialistId ?? row.context?.flight_context_owner_specialist_id ?? null,
     reasoningModel: REASONING_MODEL_ID,
     taskContract: row.task_contract ?? route.taskContract,
     routingSource: row.routing_source ?? 'legacy_migration',

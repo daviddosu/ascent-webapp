@@ -1071,7 +1071,12 @@ function taskSpecialistRoute(task: Pick<Task, 'title' | 'description'>): Special
 
 function specialistForTask(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
   const route = taskSpecialistRoute(task)
-  const assigned = run?.activeSpecialistId ?? run?.specialistId ?? route.primarySpecialistId
+  const providerFailure = run?.status === 'needs_context' && run.capability === 'flight_search' &&
+    /live flight-search results were not returned|reconnect flight-search access/i.test(run.waitingReason)
+  const contextOwner = run?.status === 'needs_context' && !providerFailure ? run.contextOwnerSpecialistId : null
+  const assigned = contextOwner
+    ? contextOwner
+    : run?.activeSpecialistId ?? run?.specialistId ?? route.primarySpecialistId
   if (assigned) return getSpecialist(assigned)
   // Legacy tasks that were previously delegated to Roon retain a subtle
   // identity treatment in the existing inspector while the server performs
@@ -1090,8 +1095,10 @@ function specialistActivity(
   specialist: NonNullable<ReturnType<typeof getSpecialist>>,
 ) {
   if (run?.status === 'needs_context') {
-    return specialist.id === 'caspian'
-      ? 'Waiting for the trip details that unlock the search'
+    return specialist.id === 'roon'
+      ? 'Asking for one detail at a time'
+      : specialist.id === 'caspian'
+        ? 'Getting the trip details ready'
       : specialist.id === 'david'
         ? 'Waiting for the missing application detail'
         : 'Waiting for the detail that unlocks the next move'
@@ -1099,7 +1106,7 @@ function specialistActivity(
   if (run?.status === 'needs_approval') return 'Ready for your review before anything changes'
   if (run?.status === 'waiting_external') {
     return specialist.id === 'caspian'
-      ? 'Watching the provider while you get on with your day'
+      ? 'Checking live flight options'
       : 'Keeping watch for the next external update'
   }
   if (run?.status === 'waiting_for_user') return 'Holding the work here for your call'
@@ -1124,7 +1131,7 @@ function specialistActivity(
     gmail: 'Reviewing threads · preparing the next safe step',
     calendar: 'Reading your calendar · finding the cleanest opening',
     scheduling: 'Checking availability · lining up the next move',
-    flight_search: 'Comparing flights · protecting your constraints',
+    flight_search: 'Comparing live flights',
     browser: 'Opening the right page · working through the details',
     draft: 'Shaping a polished draft · keeping your voice intact',
     research_draft: 'Researching the signal · building a grounded draft',
@@ -3051,7 +3058,7 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
   const activeIndex = completedProgress.length ? progressLabels.length - 1 : progressIndex
   const owner = specialistForTask(task, run)
   const ownerMessage = owner?.id === 'caspian'
-    ? 'I’m preserving your flight constraints and validating the strongest itinerary.'
+    ? 'I’m checking live flights and comparing the best matches.'
     : owner?.id === 'david'
       ? 'I’m organizing the application requirements, deadlines, and missing documents.'
       : ''
@@ -3061,7 +3068,7 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
     gmail: 'I’m reviewing the relevant Gmail threads and preparing the next safe step.',
     calendar: 'I’m checking your calendar and looking for a conflict-free next step.',
     scheduling: 'I’m checking availability and preparing the scheduling outreach.',
-    flight_search: 'I’m starting a live flight search and comparing the strongest options.',
+    flight_search: 'I’m checking live flights and comparing the best matches.',
     browser: 'I’m working through the relevant website for you.',
     draft: 'I’m preparing the requested draft for your review.',
     research_draft: 'I’m researching and preparing the requested draft.',
@@ -3182,6 +3189,11 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
   const owner = specialistForTask(task, run)
   const ownerName = owner?.displayName ?? 'ShotCount'
   const title = external ? 'Waiting' : `${ownerName} needs you`
+  const userFacingWaitingReason = flightTask && /live provider timed out after bounded recovery/i.test(run.waitingReason)
+    ? 'The live flight site is taking too long. Your options are saved—choose one to try again.'
+    : flightTask && /provider checkout is temporarily unavailable/i.test(run.waitingReason)
+      ? 'The flight site is taking too long. Your itinerary and traveler details are saved.'
+      : run.waitingReason
   const detail = external
     ? flightTask
       ? 'The isolated browser worker is continuing this same task. You can leave this screen.'
@@ -3196,7 +3208,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     : ''
   return `<section class="task-agent-card task-agent-card--waiting">
     <header>${specialistHeader(task, run)}<em>${external ? 'Waiting' : 'Needs you'}</em></header>
-    <p>${escapeHtml(run.waitingReason || title)}</p>
+    <p>${escapeHtml(userFacingWaitingReason || title)}</p>
     ${awaitingFlightSelection ? `
       <div class="task-agent-flight-options">
         ${flightOptions.map(option => `<button type="button" data-action="select-agent-flight" data-task-id="${task.id}" data-flight-option-id="${escapeHtml(option.id)}" ${busy ? 'disabled' : ''}>
@@ -3215,7 +3227,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ` : manualCheckoutStep ? `
       <div class="task-agent-payment-handoff">
         <strong>Provider needs you</strong>
-        <span>${escapeHtml(run.waitingReason || 'Complete the provider step before payment can continue.')}</span>
+        <span>${escapeHtml(userFacingWaitingReason || 'Complete the provider step before payment can continue.')}</span>
         <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Open provider step</a>
       </div>
     ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(external && flightTask && flightOptions.length ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>`}
@@ -3288,12 +3300,15 @@ function renderAgentPanel(task: Task) {
     const needsFlightDescription = run.capability === 'flight_search' && !hasDirectChoice && !schedulingOptions.length
     const canReplyInPanel = !hasDirectChoice && !canUseAttachedCv
     const draft = roonContextDrafts.get(run.id) ?? ''
-    const replyLabel = asksForConfirmation ? 'Your confirmation' : requestsAttachment ? 'Add a note (optional)' : 'Your reply'
-    const replyPlaceholder = asksForConfirmation ? 'Confirm or correct these details' : requestsAttachment ? `Anything ${ownerName} should know about this file` : sopAuthoringOptions ? `Anything ${ownerName} should share with the expert` : tripTypeOptions ? 'Add a return date if needed' : schedulingOptions.length ? 'Enter another airport or city' : `Write the details ${ownerName} needs`
+    const flightContext = run.capability === 'flight_search' && owner?.id === 'roon'
+    const replyLabel = asksForConfirmation ? 'Your confirmation' : requestsAttachment ? 'Add a note (optional)' : flightContext ? 'Your answer' : 'Your reply'
+    const replyPlaceholder = asksForConfirmation ? 'Confirm or correct these details' : requestsAttachment ? `Anything ${ownerName} should know about this file` : sopAuthoringOptions ? `Anything ${ownerName} should share with the expert` : tripTypeOptions ? 'Add a return date if needed' : schedulingOptions.length ? 'Enter another airport or city' : flightContext ? 'Type your answer' : `Write the details ${ownerName} needs`
     const attachmentHint = 'Roon checks it automatically once it is attached.'.replace('Roon', ownerName)
+    const contextStatus = flightContext ? 'One detail at a time' : 'Needs context'
     return `<section class="task-agent-card task-agent-card--context">
-      <header>${specialistHeader(task, run)}<em>Needs context</em></header>
+      <header>${specialistHeader(task, run)}<em>${contextStatus}</em></header>
       ${formattedPrompt}
+      ${flightContext ? '<small class="task-agent-context-hint">Roon asks the questions. Caspian continues as soon as you answer.</small>' : ''}
       ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${task.id}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. ${escapeHtml(ownerName)} will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${task.id}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label.replace(/Roon/gi, ownerName))}</strong><span>${sopAuthoringOptions ? 'Choose this path' : 'Use this option'}</span></button>`).join('')}</div><small>${sopAuthoringOptions ? `${escapeHtml(ownerName)} stays in the driver’s seat—from expert brief to final submission-ready pack.` : tripTypeOptions ? 'Choose your trip type, or add the return date below.' : `Choose an option, or give ${escapeHtml(ownerName)} a different airport or city below.`}</small>` : ''}
       ${canReplyInPanel ? `<label class="task-agent-context-input"><span>${replyLabel}</span><textarea class="task-agent-context" data-agent-context-input data-run-id="${run.id}" placeholder="${replyPlaceholder}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${escapeHtml(draft)}</textarea></label>` : ''}
       ${requestsAttachment ? `<small class="task-agent-attachment-hint">Use the attachment control in Description to add the file. ${escapeHtml(attachmentHint)}</small>` : ''}
@@ -3390,6 +3405,7 @@ function renderInspector(task: Task) {
   const goal = goals.find(item => item.id === task.goalId)
   const recording = descriptionRecordingTaskId === task.id
   const transcribing = descriptionTranscribingTaskId === task.id
+  const run = agentRuns.get(task.id)
   return `
     <aside class="inspector">
       <button type="button" class="inspector-close" data-action="close-inspector" aria-label="Close task details">${icon('chevron')}</button>
@@ -3408,6 +3424,7 @@ function renderInspector(task: Task) {
             </button>
           </div>
         </div>
+        ${run?.capability === 'flight_search' ? '<small class="flight-context-hint">Roon will ask for missing trip or traveler details here, one question at a time.</small>' : ''}
         ${renderTaskAttachments(task)}
         ${renderInspectorRoonAction(task)}
 

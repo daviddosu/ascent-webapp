@@ -23,6 +23,54 @@ export type FlightContextField =
   | 'arrival_time'
 
 /**
+ * Keep flight questions short and focused on one fact. The model may describe
+ * several missing facts in a tool call, but the product presents only the
+ * next safe question to the user.
+ */
+export function flightContextQuestion(field: FlightContextField, originalQuestion = '') {
+  const text = originalQuestion.toLocaleLowerCase()
+  if (field === 'traveler_details') {
+    if (/passport|travel\s+document/.test(text) && /expir|valid\s+until/.test(text)) {
+      return 'When does the traveler’s passport expire? Use YYYY-MM-DD.'
+    }
+    if (/passport|travel\s+document/.test(text) && /issu(?:ing|ed)|country/.test(text)) {
+      return 'Which country issued the traveler’s passport?'
+    }
+    if (/passport|travel\s+document/.test(text) && /number|no\.?\b/.test(text)) {
+      return 'What is the traveler’s passport number?'
+    }
+    if (/legal\s+name|given\s+name|family\s+name|full\s+name/.test(text)) {
+      return 'What is the traveler’s full legal name?'
+    }
+    if (/date\s+of\s+birth|\bdob\b|birthdate/.test(text)) {
+      return 'What is the traveler’s date of birth? Use YYYY-MM-DD.'
+    }
+    if (/email|e-mail/.test(text)) return 'What email should the booking use?'
+    if (/phone|mobile|telephone/.test(text)) return 'What phone number should the booking use?'
+    if (/title|salutation/.test(text)) return 'What title should I use for the traveler?'
+    if (/gender|sex/.test(text)) return 'What gender or sex should I enter for the traveler?'
+    if (/nationality|citizenship/.test(text)) return 'What is the traveler’s nationality?'
+    if (/residence|living\s+in/.test(text)) return 'Which country does the traveler live in?'
+    return 'What is the traveler’s full legal name?'
+  }
+  switch (field) {
+    case 'trip_type': return 'Is this trip one-way or round trip?'
+    case 'return_date': return 'What date would you like to return? Use YYYY-MM-DD.'
+    case 'origin': return 'Which airport or city are you flying from?'
+    case 'destination': return 'Which airport or city are you flying to?'
+    case 'departure_date': return 'What date would you like to leave? Use YYYY-MM-DD.'
+    case 'budget': return 'What is the most you want to spend?'
+    case 'max_stops': return 'How many stops are okay?'
+    case 'cabin': return 'Which cabin would you like?'
+    case 'passengers': return 'How many people are traveling?'
+    case 'airport_preferences': return 'Should I include nearby airports?'
+    case 'airline': return 'Do you have an airline preference or one to avoid?'
+    case 'departure_time': return 'What departure time window works for you?'
+    case 'arrival_time': return 'What arrival time window works for you?'
+  }
+}
+
+/**
  * Traveler details can arrive in two turns: the initial profile answer and a
  * later provider-specific request such as a passport expiry. Keep both
  * answers in the same durable field so the model never has to ask for the

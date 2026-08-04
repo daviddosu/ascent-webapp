@@ -18,4 +18,18 @@ describe('Roon context panel', () => {
     expect(mainSource).toContain('data-action="check-attached-context"')
     expect(mainSource).toContain('Roon checks it automatically once it is attached.')
   })
+
+  it('shows flight context as a Roon-owned one-question conversation', () => {
+    expect(mainSource).toContain('contextOwnerSpecialistId')
+    expect(mainSource).toContain('Roon asks the questions. Caspian continues as soon as you answer.')
+    expect(mainSource).toContain('One detail at a time')
+    expect(mainSource).toContain('Roon will ask for missing trip or traveler details here, one question at a time.')
+  })
+
+  it('keeps Caspian copy simple and action-oriented', () => {
+    expect(mainSource).toContain('Checking live flight options')
+    expect(mainSource).toContain('Comparing live flights')
+    expect(mainSource).toContain('I’m checking live flights and comparing the best matches.')
+    expect(mainSource).toContain('The live flight site is taking too long. Your options are saved')
+  })
 })

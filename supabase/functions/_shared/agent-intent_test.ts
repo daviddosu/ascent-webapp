@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { classifySharedAgentIntent, flightContextField, mergeFlightContextAnswer, needsSharedAgentContext, requestsPaymentHandoff } from './agent-intent.ts'
+import { classifySharedAgentIntent, flightContextField, flightContextQuestion, mergeFlightContextAnswer, needsSharedAgentContext, requestsPaymentHandoff } from './agent-intent.ts'
 
 Deno.test('read-only Gmail and Calendar tasks use prepared-result completion', () => {
   assertEquals(
@@ -57,6 +57,19 @@ Deno.test('flight context answers have stable fields and stop-before-payment mea
   assertEquals(flightContextField('Can I use nearby airports?', []), 'airport_preferences')
   assertEquals(flightContextField('Which airline should I avoid?', []), 'airline')
   assertEquals(flightContextField('Is this a multi-city trip?', []), 'trip_type')
+})
+
+Deno.test('flight context questions stay plain and ask for one fact', () => {
+  assertEquals(flightContextQuestion('origin'), 'Which airport or city are you flying from?')
+  assertEquals(flightContextQuestion('departure_date'), 'What date would you like to leave? Use YYYY-MM-DD.')
+  assertEquals(
+    flightContextQuestion('traveler_details', 'The provider requires passport expiry.'),
+    'When does the traveler’s passport expire? Use YYYY-MM-DD.',
+  )
+  assertEquals(
+    flightContextQuestion('traveler_details', 'Provide the legal name, date of birth, and passport details.'),
+    'What is the traveler’s full legal name?',
+  )
 })
 
 Deno.test('traveler context accumulates provider follow-up details without repeating the profile question', () => {
