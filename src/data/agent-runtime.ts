@@ -173,6 +173,16 @@ const toolPolicies: Record<string, ToolPolicy> = {
     decision: 'require_approval',
     reason: 'Submitting a form may represent the user or create an external change.',
   },
+  'application.submit': {
+    risk: 'external_write',
+    decision: 'require_approval',
+    reason: 'Submitting an application is a consequential external action and requires exact final-package approval.',
+  },
+  'application.request_roon': {
+    risk: 'prepare',
+    decision: 'allow',
+    reason: 'Creating a typed handoff keeps Gmail, Calendar, contacts, and OTP work with Roon without performing the external action here.',
+  },
   'browser.purchase': {
     risk: 'financial',
     decision: 'deny',

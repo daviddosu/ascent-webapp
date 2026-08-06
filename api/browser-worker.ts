@@ -451,15 +451,27 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
         value: operation.arguments.value === null ? null : String(operation.arguments.value ?? ''),
       }
       const state = await actOnPublicPage(checkpoint.publicBrowser, action, session.allowed_domains, async assetId => {
-        const run = await admin.from('agent_runs').select('task_id').eq('id', session.run_id).eq('user_id', session.user_id).single()
+        const run = await admin.from('agent_runs').select('task_id,context').eq('id', session.run_id).eq('user_id', session.user_id).single()
         if (!run.data) throw new BrowserExecutionError('browser_asset_inaccessible', 'The private file is not available to this task.', false)
-        const asset = await admin.from('file_assets').select('original_filename,mime_type,storage_key,size_bytes')
-          .eq('id', assetId).eq('user_id', session.user_id).eq('task_id', run.data.task_id).maybeSingle()
+        const runContext = run.data.context && typeof run.data.context === 'object' && !Array.isArray(run.data.context)
+          ? run.data.context as Record<string, unknown>
+          : {}
+        const applicationCaseId = typeof operation.arguments.application_case_id === 'string'
+          ? operation.arguments.application_case_id.slice(0, 80)
+          : typeof runContext.application_case_id === 'string'
+            ? runContext.application_case_id.slice(0, 80)
+            : ''
+        let assetQuery = admin.from('file_assets').select('original_filename,mime_type,storage_key,size_bytes,checksum,application_case_id,task_id')
+          .eq('id', assetId).eq('user_id', session.user_id)
+        const asset = await assetQuery.maybeSingle()
         const row = asset.data
-        if (!row || Number(row.size_bytes) > 20 * 1024 * 1024) throw new BrowserExecutionError('browser_asset_inaccessible', 'The private file is not available to this task.', false)
+        const sameApplicationCase = Boolean(applicationCaseId && row?.application_case_id === applicationCaseId)
+        const sameTaskUpload = Boolean(!row?.application_case_id && row?.task_id === run.data.task_id)
+        const ownedByScope = applicationCaseId ? sameApplicationCase || sameTaskUpload : sameTaskUpload
+        if (!row || !ownedByScope || Number(row.size_bytes) > 20 * 1024 * 1024) throw new BrowserExecutionError('browser_asset_inaccessible', 'The private file is not available to this task.', false)
         const downloaded = await admin.storage.from('private-file-assets').download(row.storage_key)
         if (downloaded.error || !downloaded.data) throw new BrowserExecutionError('browser_file_materialisation_failed', 'The private file could not be materialised.', true)
-        return { name: row.original_filename, mimeType: row.mime_type, buffer: Buffer.from(await downloaded.data.arrayBuffer()) }
+        return { name: row.original_filename, mimeType: row.mime_type, checksum: row.checksum, buffer: Buffer.from(await downloaded.data.arrayBuffer()) }
       })
       output = { observation: state.observation, upload_evidence: state.lastEvidence ?? null, resumable: true }
       currentUrl = state.currentUrl
@@ -537,11 +549,6 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     response.status(200).json({ ok: true })
   } catch (error) {
     const safeError = publicError(error, operation.type)
-    console.error('[browser-worker] operation failed', {
-      operationType: operation.type,
-      errorCode: safeError.code,
-      retryable: safeError.retryable,
-    })
     await admin
       .from('browser_execution_sessions')
       .update({

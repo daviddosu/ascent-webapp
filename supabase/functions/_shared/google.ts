@@ -432,6 +432,30 @@ async function attachmentMetadataFromDraftRecord(
 ): Promise<EmailAttachmentMetadata[]> {
   const argumentsValue = draftRecord?.arguments ?? {}
   const output = draftRecord?.output ?? {}
+  const savedAttachments = Array.isArray(output.attachments)
+    ? output.attachments
+    : Array.isArray(argumentsValue.attachments)
+      ? argumentsValue.attachments
+      : []
+  if (savedAttachments.length) {
+    const metadata: EmailAttachmentMetadata[] = []
+    for (const item of savedAttachments) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+      const value = item as Record<string, unknown>
+      const encoded = safeString(value.base64, 12_000_000)
+      const fromBytes = encoded
+        ? await attachmentMetadataFromBase64(value.name, value.mime_type ?? value.mimeType, encoded)
+        : null
+      if (encoded && !fromBytes) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The saved attachment is invalid. Choose it again.', false)
+      const name = safeHeader(value.name).slice(0, 160)
+      const sha256 = safeString(value.sha256, 128)
+      const size = Number(value.size ?? 0)
+      if (fromBytes) metadata.push(fromBytes)
+      else if (name && sha256 && Number.isFinite(size) && size > 0) metadata.push({ name, mime_type: safeHeader(value.mime_type ?? value.mimeType).toLocaleLowerCase() || 'application/octet-stream', size, sha256 })
+      else throw new GoogleIntegrationError('gmail_attachment_metadata_missing', 'The saved attachment details are incomplete. Choose the attachment again.', false)
+    }
+    return metadata
+  }
   const name = argumentsValue.attachment_name ?? output.attachment_name
   const mimeType = argumentsValue.attachment_mime_type ?? output.attachment_mime_type
   const base64 = argumentsValue.attachment_base64
@@ -491,6 +515,48 @@ async function gmailReadMessage(admin: AdminClient, userId: string, messageId: s
     `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?format=full`,
   )
   return compactMessage(message)
+}
+
+async function gmailReadAttachments(
+  admin: AdminClient,
+  userId: string,
+  messageId: string,
+  requestedAttachmentIds: string[] = [],
+) {
+  const message = await googleRequest<GmailMessage>(
+    admin,
+    userId,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?format=full`,
+  )
+  const requested = new Set(requestedAttachmentIds.filter(Boolean))
+  const parts = attachmentParts(message.payload as GmailAttachmentPart | undefined)
+    .filter(part => !requested.size || requested.has(String(part.body?.attachmentId ?? '')) || requested.has(String(part.filename ?? '')))
+    .slice(0, 8)
+  if (requested.size && parts.length !== requested.size) {
+    throw new GoogleIntegrationError('gmail_attachment_missing', 'The requested Gmail attachment is no longer available.', false)
+  }
+  const attachments: Array<Record<string, unknown>> = []
+  let totalBytes = 0
+  for (const part of parts) {
+    const encoded = await attachmentBase64ForPart(admin, userId, message, part)
+    if (!encoded || encoded.length > 14_000_000) {
+      throw new GoogleIntegrationError('gmail_attachment_too_large', 'The Gmail attachment exceeds the safe application limit.', false)
+    }
+    const metadata = await attachmentMetadataFromBase64(part.filename, part.mimeType, encoded)
+    if (!metadata || metadata.size > 10 * 1024 * 1024) {
+      throw new GoogleIntegrationError('gmail_attachment_invalid', 'The Gmail attachment could not be verified.', false)
+    }
+    totalBytes += metadata.size
+    if (totalBytes > 18 * 1024 * 1024) {
+      throw new GoogleIntegrationError('gmail_attachment_limit', 'The Gmail attachments exceed the safe application limit.', false)
+    }
+    attachments.push({ ...metadata, base64: encoded })
+  }
+  return {
+    message_id: message.id ?? messageId,
+    thread_id: message.threadId ?? '',
+    attachments,
+  }
 }
 
 async function gmailReadThread(
@@ -638,6 +704,7 @@ async function gmailCreateDraft(
       bcc: normalizedEmails(existingMessage.bcc),
       subject: existingMessage.subject,
       body_text: existingMessage.body_text,
+      ...(existingAttachments.length ? { attachments: existingAttachments } : {}),
       ...(firstAttachment ? {
         attachment_name: firstAttachment.name,
         attachment_mime_type: firstAttachment.mime_type,
@@ -647,43 +714,58 @@ async function gmailCreateDraft(
       already_created: true,
     }
   }
-  const attachmentName = safeHeader(argumentsValue.benchmark_attachment_name)
+  const rawAttachments = Array.isArray(argumentsValue.attachments) ? argumentsValue.attachments : []
+  if (rawAttachments.length > 8) throw new GoogleIntegrationError('gmail_attachment_limit', 'An email may include at most eight controlled attachments.', false)
+  const attachments: Array<{ metadata: EmailAttachmentMetadata; base64: string }> = []
+  for (const item of rawAttachments) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The email attachment metadata is invalid.', false)
+    const value = item as Record<string, unknown>
+    const name = safeHeader(value.name).replace(/[^a-zA-Z0-9._ -]/g, '').slice(0, 160)
+    const mimeType = safeHeader(value.mime_type ?? value.mimeType).toLocaleLowerCase().slice(0, 160) || 'application/octet-stream'
+    const base64 = safeString(value.base64, 12_000_000).replace(/\s+/g, '')
+    const metadata = await attachmentMetadataFromBase64(name, mimeType, base64)
+    if (!metadata) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The email attachment is too large or invalid.', false)
+    attachments.push({ metadata, base64 })
+  }
+  const legacyAttachmentName = safeHeader(argumentsValue.benchmark_attachment_name)
     .replace(/[^a-zA-Z0-9._ -]/g, '')
     .slice(0, 160)
-  const attachmentBase64 = String(argumentsValue.benchmark_attachment_base64 ?? '')
-  const benchmarkAttachment = attachmentName && attachmentBase64 && attachmentBase64.length <= 1_400_000
-    ? await attachmentMetadataFromBase64(attachmentName, 'application/pdf', attachmentBase64)
+  const legacyAttachmentBase64 = String(argumentsValue.benchmark_attachment_base64 ?? '').replace(/\s+/g, '')
+  const legacyAttachment = legacyAttachmentName && legacyAttachmentBase64 && legacyAttachmentBase64.length <= 1_400_000
+    ? await attachmentMetadataFromBase64(legacyAttachmentName, 'application/pdf', legacyAttachmentBase64)
     : null
-  if (attachmentName && !benchmarkAttachment) {
-    throw new GoogleIntegrationError('gmail_attachment_invalid', 'The attachment is too large or invalid.', false)
-  }
-  const hasBenchmarkAttachment = Boolean(benchmarkAttachment)
+  if (legacyAttachmentName && !legacyAttachment) throw new GoogleIntegrationError('gmail_attachment_invalid', 'The attachment is too large or invalid.', false)
+  if (legacyAttachment) attachments.push({ metadata: legacyAttachment, base64: legacyAttachmentBase64 })
+  if (attachments.length > 8) throw new GoogleIntegrationError('gmail_attachment_limit', 'An email may include at most eight controlled attachments.', false)
+  const hasAttachments = attachments.length > 0
   const boundary = `shotcount-${idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
   const headers = [
     ...gmailRecipientHeaderLines(to, cc, bcc),
     `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
-    hasBenchmarkAttachment
+    hasAttachments
       ? `Content-Type: multipart/mixed; boundary="${boundary}"`
       : 'Content-Type: text/plain; charset=UTF-8',
-    ...(hasBenchmarkAttachment ? [] : ['Content-Transfer-Encoding: 8bit']),
+    ...(hasAttachments ? [] : ['Content-Transfer-Encoding: 8bit']),
     `Message-ID: ${messageIdHeader}`,
     ...(reply.inReplyTo ? [`In-Reply-To: ${reply.inReplyTo}`] : []),
     ...(reply.references ? [`References: ${reply.references}`] : []),
   ]
-  const mimeBody = hasBenchmarkAttachment
+  const mimeBody = hasAttachments
     ? [
         `--${boundary}`,
         'Content-Type: text/plain; charset=UTF-8',
         'Content-Transfer-Encoding: 8bit',
         '',
         bodyText,
-        `--${boundary}`,
-        'Content-Type: application/pdf',
-        'Content-Transfer-Encoding: base64',
-        `Content-Disposition: attachment; filename="${attachmentName}"`,
-        '',
-        attachmentBase64.replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'),
+        ...attachments.flatMap(attachment => [
+          `--${boundary}`,
+          `Content-Type: ${attachment.metadata.mime_type}`,
+          'Content-Transfer-Encoding: base64',
+          `Content-Disposition: attachment; filename="${attachment.metadata.name}"`,
+          '',
+          attachment.base64.replace(/(.{76})/g, '$1\r\n'),
+        ]),
         `--${boundary}--`,
       ].join('\r\n')
     : bodyText
@@ -713,11 +795,14 @@ async function gmailCreateDraft(
     bcc,
     subject,
     body_text: bodyText,
-    ...(benchmarkAttachment ? {
-      attachment_name: benchmarkAttachment.name,
-      attachment_mime_type: benchmarkAttachment.mime_type,
-      attachment_size: benchmarkAttachment.size,
-      attachment_sha256: benchmarkAttachment.sha256,
+    ...(attachments.length ? {
+      attachments: attachments.map(attachment => attachment.metadata),
+      ...(attachments.length === 1 ? {
+        attachment_name: attachments[0]!.metadata.name,
+        attachment_mime_type: attachments[0]!.metadata.mime_type,
+        attachment_size: attachments[0]!.metadata.size,
+        attachment_sha256: attachments[0]!.metadata.sha256,
+      } : {}),
     } : {}),
     already_created: false,
   }
@@ -1475,6 +1560,13 @@ export async function executeGoogleTool(
     case 'gmail.read_message': {
       const value = await gmailReadMessage(admin, userId, String(argumentsValue.message_id))
       return { value, providerActionId: value.id, publicSummary: 'Read the relevant Gmail message.' }
+    }
+    case 'gmail.read_attachments': {
+      const attachmentIds = Array.isArray(argumentsValue.attachment_ids)
+        ? argumentsValue.attachment_ids.map(value => safeString(value, 256)).filter(Boolean)
+        : []
+      const value = await gmailReadAttachments(admin, userId, String(argumentsValue.message_id), attachmentIds)
+      return { value, providerActionId: value.message_id, publicSummary: `Read ${value.attachments.length} Gmail attachment(s).` }
     }
     case 'gmail.read_thread': {
       const value = await gmailReadThread(

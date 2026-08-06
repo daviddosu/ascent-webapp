@@ -7,7 +7,7 @@ export type ProviderActionEvidence = {
   completed_at?: string | null
 }
 
-export type RequiredEffect = 'gmail_send' | 'calendar_write'
+export type RequiredEffect = 'gmail_send' | 'calendar_write' | 'application_submission'
 
 /**
  * A Calendar read (availability/listing) is not a required external write.
@@ -29,14 +29,18 @@ export function requiredEffectsSatisfied(required: RequiredEffect[], confirmedTo
   const confirmed = new Set(confirmedTools)
   return required.every(effect => effect === 'gmail_send'
     ? confirmed.has('gmail.send_message')
-    : ['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
+    : effect === 'application_submission'
+      ? confirmed.has('application.submit') || confirmed.has('browser.submit')
+      : ['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
 }
 
 export function unresolvedRequiredEffects(required: RequiredEffect[], confirmedTools: string[]) {
   const confirmed = new Set(confirmedTools)
   return required.filter(effect => effect === 'gmail_send'
     ? !confirmed.has('gmail.send_message')
-    : !['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
+    : effect === 'application_submission'
+      ? !confirmed.has('application.submit') && !confirmed.has('browser.submit')
+      : !['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
 }
 
 export function verifiedCrossToolStage(actions: ProviderActionEvidence[]) {

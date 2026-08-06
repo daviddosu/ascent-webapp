@@ -5584,3 +5584,54 @@ body[data-theme='dark'] .reference-app select option:disabled,
 body[data-theme='dark'] .profile-popover select option:disabled {
   color: #7f8991;
 }
+
+.david-application-status {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0 4px;
+  padding: 12px 13px;
+  border: 1px solid #e4e8e8;
+  border-radius: 13px;
+  background: #fafbfb;
+}
+
+.david-application-status-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #202525;
+  font-size: 12px;
+}
+
+.david-application-status-heading span {
+  color: #818989;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.david-application-status p {
+  margin: 0;
+  color: #666f70;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.david-application-status small {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: #9a6c24;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.david-application-status small svg { width: 12px; height: 12px; flex: 0 0 auto; }
+
+body[data-theme='dark'] .david-application-status {
+  border-color: var(--dark-border);
+  background: var(--dark-raised);
+}
+
+body[data-theme='dark'] .david-application-status-heading { color: var(--dark-text); }
+body[data-theme='dark'] .david-application-status p { color: var(--dark-muted); }

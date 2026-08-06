@@ -21,7 +21,9 @@ export type ApplicationState = {
 export function isApplicationIntent(title: string, description = '') {
   const value = `${title} ${description}`.trim()
   return /^apply\s+to\s+(?:this|it|that)$/i.test(value) ||
-    /\bapply\b[\s\S]{0,80}\b(programme|program|phd|scholarship|fellowship|accelerator|job|role|position|opportunity)\b/i.test(value)
+    /\b(?:apply|applications?|admissions?|grad(?:uate)?\s+school|phd|doctoral|master'?s|msc|job\s+application|grant application|statement of purpose|personal statement|recommendation letters?|referees?)\b/i.test(value) ||
+    /\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b[\s\S]{0,100}\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b/i.test(value) ||
+    /\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b[\s\S]{0,100}\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b/i.test(value)
 }
 
 export function preferOfficialSource<T extends { url: string; value: string }>(

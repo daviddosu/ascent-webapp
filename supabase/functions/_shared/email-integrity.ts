@@ -244,14 +244,27 @@ export function persistedEmailArguments(
   const {
     attachment_base64: _attachmentBase64,
     benchmark_attachment_base64: _benchmarkAttachmentBase64,
+    attachments: rawAttachments,
     ...safeArguments
   } = argumentsValue
   const attachmentName = String(output.attachment_name ?? safeArguments.attachment_name ?? '').slice(0, 160)
   const attachmentMimeType = String(output.attachment_mime_type ?? safeArguments.attachment_mime_type ?? '').slice(0, 160)
   const attachmentSize = Number(output.attachment_size ?? safeArguments.attachment_size ?? 0)
   const attachmentSha256 = String(output.attachment_sha256 ?? safeArguments.attachment_sha256 ?? '').slice(0, 128)
+  const attachments = Array.isArray(rawAttachments)
+    ? rawAttachments.flatMap(item => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+      const value = item as Record<string, unknown>
+      const name = String(value.name ?? '').slice(0, 160)
+      const mimeType = String(value.mime_type ?? value.mimeType ?? 'application/octet-stream').slice(0, 160)
+      const size = Number(value.size ?? 0)
+      const sha256 = String(value.sha256 ?? '').slice(0, 128)
+      return name && sha256 && size > 0 ? [{ name, mime_type: mimeType, size, sha256 }] : []
+    })
+    : []
   return {
     ...safeArguments,
+    ...(attachments.length ? { attachments } : {}),
     ...(attachmentName && attachmentSha256 && attachmentSize > 0 ? {
       attachment_name: attachmentName,
       attachment_mime_type: attachmentMimeType || 'application/octet-stream',

@@ -1,4 +1,5 @@
 import { actionIsAffirmed, calendarCoordinationIsAffirmed, calendarInviteIsAffirmed, calendarWriteIsAffirmed } from './communication-safety.ts'
+import { isApplicationIntent } from './application.ts'
 
 export type SharedAgentIntent = {
   capability: 'research' | 'draft' | 'research_draft' | 'gmail' | 'calendar' | 'scheduling' | 'browser' | 'flight_search'
@@ -173,8 +174,7 @@ export function flightContextField(question: string, missingFields: unknown): Fl
 
 export function classifySharedAgentIntent(title: string, description = ''): SharedAgentIntent {
   const value = `${title} ${description}`.toLocaleLowerCase()
-  const applicationIntent = /^apply\s+to\s+(?:this|it|that)$/i.test(value.trim()) ||
-    /\bapply\b[\s\S]{0,80}\b(programme|program|phd|scholarship|fellowship|accelerator|job|role|position|opportunity)\b/.test(value)
+  const applicationIntent = isApplicationIntent(title, description)
   const hasEmail = hasEmailIntent(value)
   const calendarCoordination = calendarCoordinationIsAffirmed(value) || calendarInviteIsAffirmed(value)
   const hasCalendar = hasCalendarIntent(value) || calendarCoordination

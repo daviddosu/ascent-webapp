@@ -29,14 +29,53 @@ This runs the domain tests, browser-like interaction journeys, automated accessi
 4. Add the project URL and public anonymous key.
 5. Restart the development server.
 
-Deploy the account-deletion function before launch:
+Deploy the database, application workers, and account functions before launch. Replace
+`<project-ref>` and `<vercel-project>` with the real deployment values; these commands
+are intentionally not run from this repository because they change cloud state.
 
 ```bash
+export SUPABASE_PROJECT_REF=<project-ref>
+supabase login
+supabase link --project-ref "$SUPABASE_PROJECT_REF"
+supabase db push
 supabase functions deploy delete-account
 supabase functions deploy ai-coach
+supabase functions deploy task-agent
+supabase functions deploy agent-watch-sweep
+supabase functions deploy google-oauth-start
+supabase functions deploy google-oauth-callback
+
+vercel link --yes --project <vercel-project>
+vercel deploy --prod
 ```
 
-Set `OPENAI_API_KEY` as a server-side Supabase Function secret. It must never be added to a `VITE_` environment variable or shipped to the browser.
+Set the server-only Supabase Function secrets from `.env.example`, including
+`SHOTCOUNT_LATEX_COMPILER_URL=https://<vercel-project>.vercel.app/api/application-cv`
+and the matching `SHOTCOUNT_LATEX_COMPILER_TOKEN`. The Vercel route runs the approved
+`pdflatex` renderer and always requires that server-only token.
+`OPENAI_API_KEY` must never be added to a `VITE_` environment variable or shipped to
+the browser.
+
+The watch-sweep migration also expects a Vault secret named
+`shotcount_cron_token` containing the same value as `SHOTCOUNT_CRON_TOKEN`. If the
+Supabase project URL is not available through the database runtime setting, create a
+second Vault secret named `shotcount_supabase_url` containing the project URL before
+the cron migration runs. Verify the deployed worker without printing secrets:
+
+Run these two statements in the Supabase SQL editor after linking the project
+(do not commit the literal values):
+
+```sql
+select vault.create_secret('<32+ character cron token>', 'shotcount_cron_token');
+select vault.create_secret('https://<project-ref>.supabase.co', 'shotcount_supabase_url');
+```
+
+```bash
+curl -fsS -X POST "https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/agent-watch-sweep" \
+  -H "X-ShotCount-Cron-Token: ${SHOTCOUNT_CRON_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"scheduled_at":"manual-readiness-check"}'
+```
 
 The durable execution layer also uses server-only Google OAuth and signed browser-worker values listed in `.env.example`. Internal implementation and demo notes live in:
 

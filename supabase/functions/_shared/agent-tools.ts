@@ -32,7 +32,7 @@ export type AgentCompletionEvidence = {
   externalChangeConfirmed: boolean
   purchaseConfirmed: boolean
   providerConfirmedTools: string[]
-  requiredExternalEffects?: Array<'gmail_send' | 'calendar_write'>
+  requiredExternalEffects?: Array<'gmail_send' | 'calendar_write' | 'application_submission'>
 }
 
 export function openAIToolName(toolName: string) {
@@ -66,7 +66,9 @@ export function agentCompletionEvidenceSatisfied(
   if (evidence.requiredExternalEffects?.length) {
     return evidence.requiredExternalEffects.every(effect => effect === 'gmail_send'
       ? confirmedTools.has('gmail.send_message')
-      : [...calendarWriteTools].some(tool => confirmedTools.has(tool)))
+      : effect === 'application_submission'
+        ? confirmedTools.has('application.submit') || confirmedTools.has('browser.submit')
+        : [...calendarWriteTools].some(tool => confirmedTools.has(tool)))
   }
   if (evidence.capability === 'gmail') {
     return confirmedTools.has('gmail.send_message')
@@ -77,7 +79,7 @@ export function agentCompletionEvidenceSatisfied(
   if (evidence.capability === 'calendar') {
     return [...calendarWriteTools].some(tool => confirmedTools.has(tool))
   }
-  return confirmedTools.has('browser.submit')
+  return confirmedTools.has('browser.submit') || confirmedTools.has('application.submit')
 }
 
 const weekdayIndexes: Record<string, number> = {
@@ -205,6 +207,198 @@ const nullableString = (description: string, maxLength = 500) => ({
 export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
+    name: 'application.record_opportunity',
+    description: 'Persist one source-backed opportunity in the current David campaign. Use official citations and never mark an opportunity verified without an official or government source.',
+    parameters: objectSchema({
+      campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
+      opportunity: { type: 'object', description: 'Normalized opportunity fields and fit evidence.', additionalProperties: true },
+      citations: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 20 },
+      idempotency_key: stringValue('Stable key for this official URL snapshot.', 300),
+    }, ['campaign_id', 'opportunity', 'citations', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.create_case',
+    description: 'Create or reuse one durable ApplicationCase after the user approves the shortlist. Every requirement must be explicit and source-backed.',
+    parameters: objectSchema({
+      campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
+      opportunity_id: stringValue('Durable Opportunity ID.', 64),
+      portal_account: { type: 'object', additionalProperties: true },
+      requirements: { type: 'array', items: { type: 'object', additionalProperties: true }, minItems: 1, maxItems: 80 },
+      deadlines: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 20 },
+      next_action: stringValue('The next safe action for this case.', 500),
+      idempotency_key: stringValue('Stable key for this case creation request.', 300),
+    }, ['campaign_id', 'opportunity_id', 'portal_account', 'requirements', 'deadlines', 'next_action', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.record_contact',
+    description: 'Persist one professor, admissions contact, referee, writer, editor, or programme administrator and attach it to the current application case. Recording a contact never sends a message.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      kind: { type: 'string', enum: ['professor', 'admissions', 'referee', 'writer', 'editor', 'administrator'] },
+      name: stringValue('Contact name.', 500),
+      email: nullableString('Contact email address.', 320),
+      provider_contact_id: nullableString('Existing provider contact identifier.', 256),
+      gmail_thread_id: nullableString('Existing Gmail thread identifier.', 256),
+      last_provider_message_id: nullableString('Latest provider message identifier.', 256),
+      consent_to_contact: { type: 'boolean', description: 'Whether the user has approved first contact with this person.' },
+      data: { type: 'object', additionalProperties: true },
+      idempotency_key: stringValue('Stable key for this contact record.', 300),
+    }, ['application_case_id', 'kind', 'name', 'email', 'provider_contact_id', 'gmail_thread_id', 'last_provider_message_id', 'consent_to_contact', 'data', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.register_writer',
+    description: 'Persist one user-provided writer or editor record for later application assignment selection. This never sends a message or makes a payment.',
+    parameters: objectSchema({
+      name: stringValue('Writer or editor name.', 240),
+      email: stringValue('Writer or editor email.', 320),
+      specialties: { type: 'array', items: stringValue('Specialty.', 160), maxItems: 20 },
+      degree_fields: { type: 'array', items: stringValue('Degree or research field.', 160), maxItems: 20 },
+      programme_familiarity: { type: 'array', items: stringValue('Programme type or institution familiarity.', 240), maxItems: 20 },
+      price: { type: ['number', 'null'], minimum: 0 },
+      price_currency: nullableString('ISO currency.', 3),
+      turnaround_hours: { type: ['integer', 'null'], minimum: 1, maximum: 8760 },
+      availability: { type: 'string', enum: ['available', 'busy', 'unavailable'] },
+      quality_score: { type: ['number', 'null'], minimum: 0, maximum: 100 },
+      reliability_score: { type: ['number', 'null'], minimum: 0, maximum: 100 },
+      revision_rate: { type: ['number', 'null'], minimum: 0, maximum: 100 },
+      idempotency_key: stringValue('Stable key for this writer record.', 300),
+    }, ['name', 'email', 'specialties', 'degree_fields', 'programme_familiarity', 'price', 'price_currency', 'turnaround_hours', 'availability', 'quality_score', 'reliability_score', 'revision_rate', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.select_writer',
+    description: 'Rank the user’s available writer records for one application case using specialty, degree field, programme familiarity, quality, reliability, revisions, and price. When replacing an unavailable writer, cancel the old assignment before creating the replacement assignment.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      specialty: stringValue('Required writing or editing specialty.', 240),
+      degree_field: stringValue('Applicant degree or research field.', 240),
+      programme: stringValue('Programme or institution context.', 500),
+      maximum_price: { type: ['number', 'null'], minimum: 0 },
+      replacement_assignment_id: nullableString('Existing assignment to cancel before creating a replacement.', 80),
+      idempotency_key: stringValue('Stable key for this writer selection.', 300),
+    }, ['application_case_id', 'specialty', 'degree_field', 'programme', 'maximum_price', 'replacement_assignment_id', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.update_requirement',
+    description: 'Advance one explicit application requirement only after its source, artifact, or provider evidence is available. This never invents a completion state.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      requirement_id: stringValue('Durable requirement ID.', 64),
+      status: { type: 'string', enum: ['unknown', 'verified', 'missing', 'in_progress', 'awaiting_user', 'awaiting_writer', 'awaiting_referee', 'awaiting_institution', 'ready', 'approved', 'submitted', 'rejected', 'waived', 'expired'] },
+      linked_artifact_id: nullableString('ApplicationArtifact ID supporting this requirement.', 80),
+      verification_evidence_ids: { type: 'array', items: stringValue('Evidence ID.', 120), maxItems: 30 },
+      blocker_reason: nullableString('Why the requirement is blocked, if applicable.', 1_000),
+      idempotency_key: stringValue('Stable key for this requirement update.', 300),
+    }, ['application_case_id', 'requirement_id', 'status', 'linked_artifact_id', 'verification_evidence_ids', 'blocker_reason', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.record_portal_checkpoint',
+    description: 'Persist a typed portal execution contract and read-after-write checkpoint after one meaningful section. Never advance an ambiguous or unverified section.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      session_id: stringValue('Task-owned browser session ID.', 64),
+      checkpoint: { type: 'object', additionalProperties: true },
+      idempotency_key: stringValue('Stable key for this portal section checkpoint.', 300),
+    }, ['application_case_id', 'session_id', 'checkpoint', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.record_evidence',
+    description: 'Attach one immutable evidence record to an ApplicationCase, such as an official citation, saved-section screenshot, approval record, or submission confirmation.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      kind: { type: 'string', enum: ['official_requirement_source', 'programme_snapshot', 'sent_message', 'received_message', 'uploaded_file_verification', 'saved_section_screenshot', 'submission_confirmation', 'application_id', 'receipt', 'status_email', 'approval_record', 'otp_retrieval', 'calendar_event'] },
+      source_url: nullableString('Evidence source URL.', 2000),
+      provider: nullableString('Provider name.', 120),
+      provider_message_id: nullableString('Provider message ID.', 256),
+      provider_thread_id: nullableString('Provider thread ID.', 256),
+      asset_id: nullableString('Private FileAsset ID.', 64),
+      excerpt: nullableString('Short redacted evidence excerpt.', 2000),
+      metadata: { type: 'object', additionalProperties: true },
+      idempotency_key: stringValue('Stable key for this evidence record.', 300),
+    }, ['application_case_id', 'kind', 'source_url', 'provider', 'provider_message_id', 'provider_thread_id', 'asset_id', 'excerpt', 'metadata', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.record_communication',
+    description: 'Attach a redacted inbound or outbound provider message to the correct application case, classify it, and advance the case state. Never persist a password, OTP, or full message body.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      contact_id: nullableString('Durable application contact ID.', 64),
+      provider: stringValue('Provider name.', 120),
+      provider_message_id: nullableString('Provider message ID.', 256),
+      provider_thread_id: nullableString('Provider thread ID.', 256),
+      direction: { type: 'string', enum: ['inbound', 'outbound'] },
+      subject: stringValue('Message subject used for classification.', 998),
+      excerpt: nullableString('Short redacted excerpt; do not include the full body or verification code.', 2_000),
+      classification: nullableString('Optional known application reply classification.', 80),
+      data: { type: 'object', additionalProperties: true },
+      idempotency_key: stringValue('Stable key for this communication record.', 300),
+    }, ['application_case_id', 'contact_id', 'provider', 'provider_message_id', 'provider_thread_id', 'direction', 'subject', 'excerpt', 'classification', 'data', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.create_human_assignment',
+    description: 'Create a durable writer or editor assignment with a factual brief, source materials, deadline, and review expectations. Roon handles the email communication.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      writer_id: stringValue('Writer or editor record identifier.', 160),
+      specialty: stringValue('Writer specialty.', 240),
+      deliverable: stringValue('Exact document deliverable.', 500),
+      brief: stringValue('Detailed assignment brief with factual constraints.', 12000),
+      source_material_ids: { type: 'array', items: stringValue('Private source asset or evidence ID.', 120), maxItems: 80 },
+      deadline_at: nullableString('ISO deadline.', 80),
+      deadline_timezone: nullableString('IANA timezone.', 120),
+      price: { type: ['number', 'null'], minimum: 0 },
+      price_currency: nullableString('ISO currency.', 3),
+      idempotency_key: stringValue('Stable key for this assignment.', 300),
+    }, ['application_case_id', 'writer_id', 'specialty', 'deliverable', 'brief', 'source_material_ids', 'deadline_at', 'deadline_timezone', 'price', 'price_currency', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.build_referee_support_pack',
+    description: 'Build and persist a source-linked referee support pack for one application. This prepares the referee workflow; first contact remains approval-gated through Roon.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      referee: { type: 'object', additionalProperties: true },
+      applicant_asset_ids: { type: 'array', items: stringValue('Private applicant asset ID.', 120), maxItems: 40 },
+      relationship_context: stringValue('How the referee knows the applicant.', 4_000),
+      relevant_achievements: { type: 'array', items: stringValue('Grounded achievement.', 1_000), maxItems: 30 },
+      suggested_evidence: { type: 'array', items: stringValue('Evidence suggestion.', 1_000), maxItems: 30 },
+      recommendation_draft: nullableString('Optional clearly labelled rough draft.', 12_000),
+      idempotency_key: stringValue('Stable key for this support pack.', 300),
+    }, ['application_case_id', 'referee', 'applicant_asset_ids', 'relationship_context', 'relevant_achievements', 'suggested_evidence', 'recommendation_draft', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.build_readiness_report',
+    description: 'Build and persist the deterministic final application readiness report. This never submits; it only prepares the exact package for user approval.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      referee_status: { type: 'array', items: stringValue('Current referee status.', 500), maxItems: 20 },
+      declarations: { type: 'array', items: stringValue('Declaration that will appear in the portal.', 1000), maxItems: 20 },
+      portal_validation_state: { type: 'array', items: stringValue('Read-after-write portal validation result.', 500), maxItems: 30 },
+    }, ['application_case_id', 'referee_status', 'declarations', 'portal_validation_state']),
+    strict: true,
+  },
+  {
+    type: 'function',
     name: 'application.generate_document',
     description: 'Create a private derived PDF application document from authorised applicant context. Never invent facts.',
     parameters: objectSchema({
@@ -215,6 +409,52 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       word_limit: { type: ['integer', 'null'], minimum: 1, maximum: 10000 },
       character_limit: { type: ['integer', 'null'], minimum: 1, maximum: 50000 },
     }, ['title', 'filename', 'body', 'original_asset_id', 'word_limit', 'character_limit']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.generate_cv',
+    description: 'Render a programme-specific CV from confirmed structured facts using the immutable graduate_application_cv_v1 template. The renderer, not the model, owns all LaTeX commands.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      filename: stringValue('Safe final PDF filename.', 255),
+      page_target: { type: 'string', enum: ['one_page', 'two_page', 'academic'] },
+      section_order: { type: 'array', items: stringValue('Structured CV section name.', 80), maxItems: 20 },
+      cv_data: { type: 'object', additionalProperties: true, description: 'Structured CV content. Every rendered item must include confirmed provenance.' },
+      meta_prompt_version: stringValue('Version of the programme-specific selection prompt.', 80),
+      idempotency_key: stringValue('Stable key for this CV version.', 300),
+    }, ['application_case_id', 'filename', 'page_target', 'section_order', 'cv_data', 'meta_prompt_version', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.submit',
+    description: 'Submit one application through the verified portal session after a deterministic readiness report and exact user approval. This action is never available to Roon or Caspian and is idempotent per application case.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      session_id: stringValue('Verified task-owned browser session ID.', 64),
+      target: stringValue('Exact final submission target observed in the portal.', 1000),
+      expected_effect: stringValue('The exact application submission effect the user approved.', 1200),
+      portal_checkpoint_id: stringValue('Latest verified portal checkpoint ID.', 64),
+      package_checksum: stringValue('Checksum of the approved submission package.', 128),
+    }, ['application_case_id', 'session_id', 'target', 'expected_effect', 'portal_checkpoint_id', 'package_checksum']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.request_roon',
+    description: 'Create a typed, durable request for Roon to send or monitor application email, resolve a contact, schedule an interview, or retrieve an email verification code. Never perform Gmail or Calendar work directly as David.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        request_kind: { type: 'string', enum: ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp'] },
+        payload: { type: 'object', additionalProperties: true, description: 'Typed request payload. Never include passwords, payment data, or a raw OTP.' },
+        idempotency_key: stringValue('Stable request key for retries.', 300),
+      },
+      required: ['application_case_id', 'request_kind', 'payload', 'idempotency_key'],
+      additionalProperties: false,
+    },
     strict: true,
   },
   {
@@ -654,7 +894,22 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
 const policies: Record<string, ToolPolicy> = {
   'agent.request_context': { risk: 'read', approvalKind: null },
   'agent.complete': { risk: 'read', approvalKind: null },
+  'application.record_opportunity': { risk: 'prepare', approvalKind: null },
+  'application.create_case': { risk: 'prepare', approvalKind: null },
+  'application.record_contact': { risk: 'prepare', approvalKind: null },
+  'application.register_writer': { risk: 'prepare', approvalKind: null },
+  'application.select_writer': { risk: 'read', approvalKind: null },
+  'application.update_requirement': { risk: 'prepare', approvalKind: null },
+  'application.record_portal_checkpoint': { risk: 'prepare', approvalKind: null },
+  'application.record_evidence': { risk: 'prepare', approvalKind: null },
+  'application.record_communication': { risk: 'prepare', approvalKind: null },
+  'application.create_human_assignment': { risk: 'prepare', approvalKind: null },
+  'application.build_referee_support_pack': { risk: 'prepare', approvalKind: null },
+  'application.build_readiness_report': { risk: 'prepare', approvalKind: null },
   'application.generate_document': { risk: 'prepare', approvalKind: null },
+  'application.generate_cv': { risk: 'prepare', approvalKind: null },
+  'application.submit': { risk: 'external_write', approvalKind: 'browser_submit' },
+  'application.request_roon': { risk: 'prepare', approvalKind: null },
   'gmail.search_messages': { risk: 'read', approvalKind: null },
   'gmail.read_message': { risk: 'read', approvalKind: null },
   'gmail.read_thread': { risk: 'read', approvalKind: null },
@@ -787,6 +1042,92 @@ function validateStringArray(
 export function validateAgentToolArguments(toolName: string, value: unknown) {
   if (!isRecord(value)) return false
   switch (toolName) {
+    case 'application.record_opportunity':
+      return validateString(value.campaign_id, 64) && isRecord(value.opportunity) &&
+        Array.isArray(value.citations) && value.citations.length <= 20 && value.citations.every(isRecord) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.create_case':
+      return validateString(value.campaign_id, 64) &&
+        validateString(value.opportunity_id, 64) &&
+        isRecord(value.portal_account) &&
+        Array.isArray(value.requirements) && value.requirements.length >= 1 && value.requirements.length <= 80 && value.requirements.every(isRecord) &&
+        Array.isArray(value.deadlines) && value.deadlines.length <= 20 && value.deadlines.every(isRecord) &&
+        validateString(value.next_action, 500, true) && validateString(value.idempotency_key, 300)
+    case 'application.record_contact':
+      return validateString(value.application_case_id, 64) &&
+        ['professor', 'admissions', 'referee', 'writer', 'editor', 'administrator'].includes(String(value.kind)) &&
+        validateString(value.name, 500) &&
+        (value.email === null || validateString(value.email, 320)) &&
+        (value.provider_contact_id === null || validateString(value.provider_contact_id, 256)) &&
+        (value.gmail_thread_id === null || validateString(value.gmail_thread_id, 256)) &&
+        (value.last_provider_message_id === null || validateString(value.last_provider_message_id, 256)) &&
+        typeof value.consent_to_contact === 'boolean' && isRecord(value.data) && validateString(value.idempotency_key, 300)
+    case 'application.register_writer':
+      return validateString(value.name, 240) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value.email)) &&
+        validateStringArray(value.specialties, 20, 160) && validateStringArray(value.degree_fields, 20, 160) &&
+        validateStringArray(value.programme_familiarity, 20, 240) &&
+        (value.price === null || (typeof value.price === 'number' && Number.isFinite(value.price) && value.price >= 0)) &&
+        (value.price_currency === null || validateString(value.price_currency, 3)) &&
+        (value.turnaround_hours === null || (Number.isInteger(value.turnaround_hours) && Number(value.turnaround_hours) >= 1 && Number(value.turnaround_hours) <= 8760)) &&
+        ['available', 'busy', 'unavailable'].includes(String(value.availability)) &&
+        (value.quality_score === null || (typeof value.quality_score === 'number' && Number.isFinite(value.quality_score) && value.quality_score >= 0 && value.quality_score <= 100)) &&
+        (value.reliability_score === null || (typeof value.reliability_score === 'number' && Number.isFinite(value.reliability_score) && value.reliability_score >= 0 && value.reliability_score <= 100)) &&
+        (value.revision_rate === null || (typeof value.revision_rate === 'number' && Number.isFinite(value.revision_rate) && value.revision_rate >= 0 && value.revision_rate <= 100)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.select_writer':
+      return validateString(value.application_case_id, 64) && validateString(value.specialty, 240, true) &&
+        validateString(value.degree_field, 240, true) && validateString(value.programme, 500, true) &&
+        (value.maximum_price === null || (typeof value.maximum_price === 'number' && Number.isFinite(value.maximum_price) && value.maximum_price >= 0)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.update_requirement':
+      return validateString(value.application_case_id, 64) && validateString(value.requirement_id, 64) &&
+        ['unknown', 'verified', 'missing', 'in_progress', 'awaiting_user', 'awaiting_writer', 'awaiting_referee', 'awaiting_institution', 'ready', 'approved', 'submitted', 'rejected', 'waived', 'expired'].includes(String(value.status)) &&
+        (value.linked_artifact_id === null || validateString(value.linked_artifact_id, 80)) &&
+        validateStringArray(value.verification_evidence_ids, 30, 120) &&
+        (value.blocker_reason === null || validateString(value.blocker_reason, 1000)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.record_portal_checkpoint':
+      return validateString(value.application_case_id, 64) && validateString(value.session_id, 64) && isRecord(value.checkpoint) && validateString(value.idempotency_key, 300)
+    case 'application.record_evidence':
+      return validateString(value.application_case_id, 64) &&
+        ['official_requirement_source', 'programme_snapshot', 'sent_message', 'received_message', 'uploaded_file_verification', 'saved_section_screenshot', 'submission_confirmation', 'application_id', 'receipt', 'status_email', 'approval_record', 'otp_retrieval', 'calendar_event'].includes(String(value.kind)) &&
+        (value.source_url === null || validateHttpUrl(value.source_url)) &&
+        (value.provider === null || validateString(value.provider, 120)) &&
+        (value.provider_message_id === null || validateString(value.provider_message_id, 256)) &&
+        (value.provider_thread_id === null || validateString(value.provider_thread_id, 256)) &&
+        (value.asset_id === null || validateString(value.asset_id, 64)) &&
+        (value.excerpt === null || validateString(value.excerpt, 2000)) &&
+        isRecord(value.metadata) && validateString(value.idempotency_key, 300)
+    case 'application.record_communication':
+      return validateString(value.application_case_id, 64) &&
+        (value.contact_id === null || validateString(value.contact_id, 64)) &&
+        validateString(value.provider, 120) &&
+        (value.provider_message_id === null || validateString(value.provider_message_id, 256)) &&
+        (value.provider_thread_id === null || validateString(value.provider_thread_id, 256)) &&
+        ['inbound', 'outbound'].includes(String(value.direction)) &&
+        validateString(value.subject, 998, true) &&
+        (value.excerpt === null || validateString(value.excerpt, 2000)) &&
+        (value.classification === null || validateString(value.classification, 80)) &&
+        isRecord(value.data) && validateString(value.idempotency_key, 300)
+    case 'application.create_human_assignment':
+      return validateString(value.application_case_id, 64) && validateString(value.writer_id, 160) &&
+        validateString(value.specialty, 240, true) && validateString(value.deliverable, 500) && validateString(value.brief, 12000) &&
+        validateStringArray(value.source_material_ids, 80, 120) &&
+        (value.deadline_at === null || validateString(value.deadline_at, 80)) &&
+        (value.deadline_timezone === null || validateString(value.deadline_timezone, 120)) &&
+        (value.price === null || (typeof value.price === 'number' && Number.isFinite(value.price) && value.price >= 0)) &&
+        (value.price_currency === null || validateString(value.price_currency, 3)) && validateString(value.idempotency_key, 300)
+    case 'application.build_referee_support_pack':
+      return validateString(value.application_case_id, 64) && isRecord(value.referee) &&
+        validateStringArray(value.applicant_asset_ids, 40, 120) &&
+        validateString(value.relationship_context, 4000, true) &&
+        validateStringArray(value.relevant_achievements, 30, 1000) &&
+        validateStringArray(value.suggested_evidence, 30, 1000) &&
+        (value.recommendation_draft === null || validateString(value.recommendation_draft, 12000)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.build_readiness_report':
+      return validateString(value.application_case_id, 64) && validateStringArray(value.referee_status, 20, 500) &&
+        validateStringArray(value.declarations, 20, 1000) && validateStringArray(value.portal_validation_state, 30, 500)
     case 'agent.request_context':
       return validateString(value.question, 400) &&
         validateStringArray(value.missing_fields, 6, 80) &&
@@ -1021,6 +1362,27 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         (value.original_asset_id === null || /^[0-9a-f-]{36}$/i.test(String(value.original_asset_id))) &&
         (value.word_limit === null || (Number.isInteger(value.word_limit) && Number(value.word_limit) > 0)) &&
         (value.character_limit === null || (Number.isInteger(value.character_limit) && Number(value.character_limit) > 0))
+    case 'application.generate_cv':
+      return validateString(value.application_case_id, 64) &&
+        validateString(value.filename, 255) &&
+        /\.pdf$/i.test(String(value.filename)) &&
+        ['one_page', 'two_page', 'academic'].includes(String(value.page_target)) &&
+        validateStringArray(value.section_order, 20, 80) &&
+        isRecord(value.cv_data) &&
+        validateString(value.meta_prompt_version, 80) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.submit':
+      return validateString(value.application_case_id, 64) &&
+        validateString(value.session_id, 64) &&
+        validateString(value.target, 1000) &&
+        validateString(value.expected_effect, 1200) &&
+        validateString(value.portal_checkpoint_id, 64) &&
+        validateString(value.package_checksum, 128)
+    case 'application.request_roon':
+      return validateString(value.application_case_id, 64) &&
+        ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp'].includes(String(value.request_kind)) &&
+        isRecord(value.payload) &&
+        validateString(value.idempotency_key, 300)
     default:
       return false
   }

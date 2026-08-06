@@ -1,13 +1,7 @@
--- Resume waiting AgentRuns while the web app is closed.
--- The cron token is intentionally stored outside migrations in Supabase Vault
--- under the name `shotcount_cron_token`.
-
-create extension if not exists pg_cron with schema pg_catalog;
-create extension if not exists pg_net with schema extensions;
-create extension if not exists supabase_vault with schema vault;
-
-create schema if not exists private;
-revoke all on schema private from public, anon, authenticated;
+-- Keep the scheduled Roon sweep portable across Supabase projects.
+-- The preceding migration created the schedule; this migration only replaces
+-- its target function so the URL comes from deployment state instead of a
+-- repository-specific project reference.
 
 create or replace function private.invoke_agent_watch_sweep()
 returns bigint
@@ -36,7 +30,6 @@ begin
     supabase_url := current_setting('app.settings.supabase_url', true);
   end if;
 
-  -- Deployments remain safe before the server-only token is configured.
   if cron_token is null or length(cron_token) < 32
      or supabase_url is null or supabase_url !~ '^https://[^/]+/?$' then
     return null;
@@ -58,9 +51,3 @@ end;
 $$;
 
 revoke all on function private.invoke_agent_watch_sweep() from public, anon, authenticated;
-
-select cron.schedule(
-  'shotcount-agent-watch-sweep',
-  '*/5 * * * *',
-  $cron$select private.invoke_agent_watch_sweep();$cron$
-);

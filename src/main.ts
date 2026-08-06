@@ -666,6 +666,7 @@ const icons: Record<string, string> = {
   mic: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M8.5 21h7"/>',
   paperclip: '<path d="m20.5 11.5-8.9 8.9a5 5 0 0 1-7.1-7.1l9.6-9.6a3.5 3.5 0 1 1 5 5l-9.7 9.6a2 2 0 0 1-2.8-2.8l8.9-8.8"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7.5h.01"/>',
 }
 
 function icon(name: string) {
@@ -1059,10 +1060,11 @@ const agentPreviewProgressLabels = [
   'Identifying key takeaways',
 ]
 const applicationProgressLabels = [
-  'Reading the attached opportunity',
-  'Verifying the official programme page',
-  'Checking requirements and eligibility',
-  'Preparing a safe review handoff',
+  'Researching programmes',
+  'Verifying official requirements',
+  'Preparing application documents',
+  'Coordinating writers and referees',
+  'Completing the university portal',
 ]
 
 function taskSpecialistRoute(task: Pick<Task, 'title' | 'description'>): SpecialistRoute {
@@ -3077,6 +3079,7 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
   return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
     <header>${specialistHeader(task, run)}<em><i aria-hidden="true">◔</i> In progress</em></header>
     <p>${placeholder ? 'I’m reading and summarizing the report for you.' : escapeHtml(ownerMessage || (capabilityMessage[run?.capability ?? 'research'] ?? capabilityMessage.research))}</p>
+    ${renderDavidApplicationStatus(task, run)}
     <div class="task-agent-progress">
       ${progressLabels.map((label, index) => `<div class="${index < activeIndex ? 'done' : index === activeIndex ? 'active' : ''}"><i>${index < activeIndex ? '✓' : index === activeIndex ? '◔' : ''}</i><span>${escapeHtml(label)}</span></div>`).join('')}
     </div>
@@ -3084,6 +3087,28 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
     <footer><button type="button" data-action="view-agent-progress" data-task-id="${task.id}">View progress</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${task.id}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
   </section>
   <aside class="task-agent-notification">${icon('bell')}<span>You’ll be notified when this is ready.</span></aside>`
+}
+
+function renderDavidApplicationStatus(task: Task, run?: AgentRun | null) {
+  if (!isApplicationIntent(task.title, task.description) || !run?.applicationState) return ''
+  const state = run.applicationState
+  const progress = state.progress
+  const statusLabel = state.status === 'awaiting_shortlist_approval'
+    ? 'Waiting for shortlist approval'
+    : state.status === 'awaiting_submission_approval' || state.stage === 'submission_approval'
+      ? 'Submission approval needed'
+      : state.stage === 'submitted' || state.status === 'submitted'
+        ? 'Submitted'
+        : progress.label || 'Application in progress'
+  const opportunityLabel = state.verifiedOpportunityCount > 0
+    ? `${state.verifiedOpportunityCount} opportunities verified`
+    : ''
+  const blocker = state.blockers[0] || progress.blockers[0]
+  return `<section class="david-application-status" aria-label="David application progress">
+    <div class="david-application-status-heading"><strong>${escapeHtml(statusLabel)}</strong>${opportunityLabel ? `<span>${escapeHtml(opportunityLabel)}</span>` : ''}</div>
+    <p>${escapeHtml(state.nextAction || progress.nextAction)}</p>
+    ${blocker ? `<small>${icon('info')} ${escapeHtml(blocker)}</small>` : ''}
+  </section>`
 }
 
 function renderAgentErrorPanel(task: Task, error: string) {
@@ -3351,6 +3376,7 @@ function renderAgentPanel(task: Task) {
     return `<section class="task-agent-card task-agent-card--result">
       <header>${specialistHeader(task, run)}<em>${resultLabel}</em></header>
       <p>${escapeHtml(run.result.summary)}</p>
+      ${renderDavidApplicationStatus(task, run)}
       <div class="task-agent-result">
         ${flightHandoffUrl && selectedFlight ? `<article class="agent-selected-flight"><span>Selected flight</span><strong>${escapeHtml(String(selectedFlight.label ?? 'Your selected option'))}</strong><p>${escapeHtml(selectedFlightDetail || 'Ready to continue to payment.')}</p></article>` : ''}
         ${flightHandoffUrl && selectedReturnFlight ? `<article class="agent-selected-flight"><span>Return flight</span><strong>${escapeHtml(String(selectedReturnFlight.label ?? 'Selected return option'))}</strong><p>${escapeHtml(selectedReturnFlightDetail || 'Return leg included in the booking handoff.')}</p></article>` : ''}

@@ -7,6 +7,7 @@ import {
   type DurableAgentRunStatus,
 } from './agent-runtime'
 import { needsSharedAgentContext } from '../../supabase/functions/_shared/agent-intent'
+import { isApplicationIntent } from '../../supabase/functions/_shared/application'
 import {
   REASONING_MODEL_ID,
   legacySpecialistRoute,
@@ -21,6 +22,7 @@ import {
   type TaskContract,
 } from '../../supabase/functions/_shared/specialists'
 import type { Task } from './planner-model'
+import type { DavidApplicationState } from '../../supabase/functions/_shared/david-applications'
 
 export type AgentRunStatus = DurableAgentRunStatus
 
@@ -50,6 +52,16 @@ export type AgentResult = {
     currentUrl?: string
   }
   applicationReviewUrl?: string
+  application?: {
+    campaignId?: string | null
+    caseIds?: string[]
+    status?: string
+    stage?: string
+    nextAction?: string
+    blockers?: string[]
+    verifiedOpportunityCount?: number
+    evidenceCount?: number
+  }
   outcome?: {
     preparedResult: boolean
     externalChangeConfirmed: boolean
@@ -112,6 +124,7 @@ export type AgentRun = {
   progressIndex: number
   progress: string[]
   result: AgentResult | null
+  applicationState?: DavidApplicationState | null
   error?: string
   errorCode?: string
   durable: boolean
@@ -173,6 +186,7 @@ type AgentRunRow = {
   waiting_reason: string
   progress: string[] | null
   result: AgentResult | null
+  application_state?: DavidApplicationState | null
   error: string | null
   error_code: string | null
   created_at: string
@@ -232,6 +246,7 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     waitingReason: row.waiting_reason,
     progressIndex: row.current_step,
     progress: Array.isArray(row.progress) ? row.progress : [],
+    applicationState: row.application_state ?? null,
     result: row.result,
     error: row.error ?? undefined,
     errorCode: row.error_code ?? undefined,
@@ -333,6 +348,28 @@ export function createAgentRun(task: Task, context = ''): AgentRun {
     progressIndex: -1,
     progress: [],
     result: null,
+    applicationState: isApplicationIntent(task.title, task.description)
+      ? {
+          schemaVersion: 1,
+          campaignId: null,
+          caseIds: [],
+          currentCaseId: null,
+          status: 'intake',
+          stage: 'intake',
+          progress: {
+            completed: 0,
+            total: 5,
+            label: 'Researching programmes',
+            nextAction: 'Verify official opportunities and requirements.',
+            blockers: [],
+            evidenceCount: 0,
+          },
+          nextAction: 'Verify official opportunities and requirements.',
+          blockers: [],
+          verifiedOpportunityCount: 0,
+          lastEvidenceAt: null,
+        }
+      : null,
     durable: false,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -405,7 +442,7 @@ export async function loadAgentRuns(): Promise<AgentRun[]> {
   if (!client || !user) return []
   const { data, error } = await client
     .from('agent_runs')
-      .select('id,task_id,status,objective,context,capability,intent,specialist_id,specialist_version,active_specialist_id,active_specialist_version,reasoning_model,task_contract,routing_source,specialist_stage_index,specialist_stages,completed_effects,unsatisfied_effects,current_step,waiting_reason,progress,result,error,error_code,created_at,updated_at')
+    .select('id,task_id,status,objective,context,capability,intent,specialist_id,specialist_version,active_specialist_id,active_specialist_version,reasoning_model,task_contract,routing_source,specialist_stage_index,specialist_stages,completed_effects,unsatisfied_effects,current_step,waiting_reason,progress,application_state,result,error,error_code,created_at,updated_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(250)

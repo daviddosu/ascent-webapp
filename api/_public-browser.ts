@@ -218,7 +218,7 @@ async function assertNonSensitive(locator: Locator, target: string, value: strin
   }
 }
 
-type FileMaterializer = (assetId: string) => Promise<{ name: string; mimeType: string; buffer: Buffer }>
+type FileMaterializer = (assetId: string) => Promise<{ name: string; mimeType: string; buffer: Buffer; checksum?: string }>
 
 async function applyAction(page: Page, action: PublicBrowserAction, domains: unknown, replay = false, materialize?: FileMaterializer) {
   if (action.action === 'wait') {
@@ -250,7 +250,7 @@ async function applyAction(page: Page, action: PublicBrowserAction, domains: unk
       return uploaded ? { filename: uploaded.name, size: uploaded.size, populated: input.files?.length === 1 } : null
     })
     if (!evidence?.populated || evidence.filename !== file.name) throw new BrowserExecutionError('browser_upload_unverified', 'The page did not acknowledge the uploaded document.', true)
-    return { kind: 'file_upload', asset_id: action.value, ...evidence }
+    return { kind: 'file_upload', asset_id: action.value, checksum: file.checksum ?? null, ...evidence }
   } else if (action.action === 'type') {
     await assertNonSensitive(locator, action.target, action.value)
     await locator.fill(action.value ?? '')

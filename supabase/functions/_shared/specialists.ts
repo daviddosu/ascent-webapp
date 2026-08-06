@@ -61,7 +61,7 @@ export type SpecialistRegistryEntry = {
 
 export type RouteClassification = 'deterministic' | 'semantic' | 'unsupported'
 export type RouteConfidence = 'high' | 'medium' | 'low'
-export type ApplicationBoundary = 'supported_planning' | 'needs_context' | 'not_supported'
+export type ApplicationBoundary = 'supported_planning' | 'supported_execution' | 'needs_context' | 'not_supported'
 
 export type SpecialistRoute = {
   classification: RouteClassification
@@ -116,7 +116,22 @@ const caspianTools = [
 const davidTools = [
   ...commonReadTools,
   'web_search',
+  'application.record_opportunity',
+  'application.create_case',
+  'application.record_contact',
+  'application.register_writer',
+  'application.select_writer',
+  'application.update_requirement',
+  'application.record_portal_checkpoint',
+  'application.record_evidence',
+  'application.record_communication',
+  'application.create_human_assignment',
+  'application.build_referee_support_pack',
+  'application.build_readiness_report',
   'application.generate_document',
+  'application.generate_cv',
+  'application.submit',
+  'application.request_roon',
   'browser.start_session',
   'browser.navigate',
   'browser.observe',
@@ -151,9 +166,11 @@ function requiredEffectsForCaspian(objective: string, taskContract: TaskContract
     : ['validated_itinerary']
 }
 
-function requiredEffectsForDavid(_objective: string, taskContract: TaskContract): RequiredEffect[] {
-  if (taskContract === 'applications.review_handoff') return ['application_plan']
-  return ['application_plan']
+function requiredEffectsForDavid(objective: string, taskContract: TaskContract): RequiredEffect[] {
+  if (taskContract === 'applications.review_handoff' && !/\b(?:submit|send in|final submission|finalize)\b/i.test(objective)) return ['application_plan']
+  return /\b(?:submit|send in|final submission|finalize)\b/i.test(objective)
+    ? ['application_submission']
+    : ['application_plan']
 }
 
 export const specialistRegistry: Readonly<Record<SpecialistId, SpecialistRegistryEntry>> = {
@@ -202,20 +219,24 @@ export const specialistRegistry: Readonly<Record<SpecialistId, SpecialistRegistr
     id: 'david',
     version: 'david@1',
     displayName: 'David',
-    roleDescription: 'Applications and document planning',
+    roleDescription: 'Applications, documents, and portal execution',
     iconReference: 'specialist:david',
     supportedTaskContracts: ['applications.planning', 'applications.review_handoff'],
     availableTools: davidTools,
     requiredEffectDerivation: requiredEffectsForDavid,
     approvalRules: {
+      'application.submit': 'require_approval',
       'browser.submit': 'deny',
       'application.generate_document': 'allow',
+      'application.generate_cv': 'allow',
+      'application.register_writer': 'allow',
+      'application.select_writer': 'allow',
     },
-    verifier: 'grounded checklist/document state; no submission without provider evidence',
-    retryRecoveryPolicy: 'same-run attachment refresh and evidence reconciliation',
-    handoffRules: ['may stop at needs-context when applicant evidence is missing', 'may not claim application submission'],
-    observabilityTags: ['specialist:david', 'domain:applications', 'boundary:no-submission-claim'],
-    testFixtures: ['application-checklist', 'missing-document', 'review-handoff'],
+    verifier: 'grounded checklist/document state; provider-confirmed submission evidence',
+    retryRecoveryPolicy: 'same-run attachment refresh, portal checkpoint replay, and evidence reconciliation',
+    handoffRules: ['may stop at needs-context when applicant evidence is missing', 'delegates Gmail, contacts, Calendar, and OTP retrieval to Roon', 'may submit only through the exact approved application contract'],
+    observabilityTags: ['specialist:david', 'domain:applications', 'boundary:approval-gated-submission'],
+    testFixtures: ['application-checklist', 'missing-document', 'review-handoff', 'mock-portal-submit', 'otp-handoff'],
   },
 }
 
@@ -253,8 +274,8 @@ const capabilityToolsByContract: Readonly<Record<TaskContract, readonly string[]
   'communication.scheduling': ['calendar.get_availability', 'calendar.create_event', 'gmail.create_draft'],
   'communication.calendar': ['calendar.get_availability', 'calendar.create_event'],
   'travel.flight_search': ['browser.search_flights'],
-  'applications.planning': ['application.generate_document', 'browser.navigate'],
-  'applications.review_handoff': ['application.generate_document', 'browser.navigate'],
+  'applications.planning': ['application.generate_document', 'application.generate_cv', 'application.register_writer', 'application.select_writer', 'browser.navigate'],
+  'applications.review_handoff': ['application.generate_document', 'application.generate_cv', 'application.register_writer', 'application.select_writer', 'browser.navigate'],
 }
 
 const capabilityTermsByContract: Readonly<Record<TaskContract, RegExp>> = {
@@ -390,7 +411,9 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
   const hasFlight = /\b(?:flight|flights|fly|airfare|airline|airlines|airport|airports|itinerary|itineraries|air travel|travel booking)\b/.test(text) ||
     /\b(?:book|find|compare)\b[\s\S]{0,60}\b(?:trip|journey)\b/.test(text) ||
     arrangedTrip
-  const hasApplication = /\b(?:apply|application|grad(?:uate)? school|admission|transcript|personal statement|statement of purpose|recommendation letter|application deadline|application documents?)\b/.test(text) ||
+  const hasApplication = /\b(?:apply|applications?|grad(?:uate)? school|admissions?|transcripts?|personal statements?|statement of purpose|recommendation letters?|application deadlines?|application documents?|job applications?|grant applications?|referees?)\b/.test(text) ||
+    /\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b[\s\S]{0,100}\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b/.test(text) ||
+    /\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b[\s\S]{0,100}\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b/.test(text) ||
     /\b(?:what documents|missing documents)\b[\s\S]{0,80}\b(?:application|programme|program|school|university)\b/.test(text)
   const hasEmail = hasEmailIntent(text)
   const calendarCoordination = calendarCoordinationIsAffirmed(text) || calendarInviteIsAffirmed(text)
@@ -422,16 +445,16 @@ export function routeTask(title: string, description = ''): SpecialistRoute {
   }
 
   if (hasApplication) {
-    const notSupported = /\b(?:submit|send in|pay|payment|application fee|finalize|final submission)\b/.test(text)
+    const requiresSubmission = /\b(?:submit|send in|finalize|final submission)\b/.test(text)
     return routeTo(
       'david',
-      notSupported ? 'applications.review_handoff' : 'applications.planning',
-      [stage('application-planning', 'david', notSupported ? 'applications.review_handoff' : 'applications.planning', notSupported ? 'Preparing a safe review handoff' : 'Preparing your application checklist')],
-      notSupported
-        ? 'David can prepare grounded application state but cannot claim or perform final submission.'
+      requiresSubmission ? 'applications.review_handoff' : 'applications.planning',
+      [stage('application-planning', 'david', requiresSubmission ? 'applications.review_handoff' : 'applications.planning', requiresSubmission ? 'Preparing the approved submission path' : 'Preparing your application checklist')],
+      requiresSubmission
+        ? 'David owns the application execution path; final submission is gated by a deterministic readiness report and exact user approval.'
         : 'The task is application-oriented and belongs to David’s planning/document contract.',
       'high',
-      { applicationBoundary: notSupported ? 'not_supported' : 'supported_planning' },
+      { applicationBoundary: requiresSubmission ? 'supported_execution' : 'supported_planning' },
     )
   }
 
