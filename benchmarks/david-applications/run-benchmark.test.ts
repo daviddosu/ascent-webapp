@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { runFrozenSuite, startPortalServer, type BenchmarkRun, type FrozenSpec } from './harness'
+import { failureArtifact } from './failure-report'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -68,7 +69,24 @@ function writeArtifacts(run: BenchmarkRun) {
   writeFileSync(resolve(resultDir, 'latest.csv'), `${headers.join(',')}\n${rows.map(row => headers.map(header => csvCell(row[header as keyof typeof row])).join(',')).join('\n')}\n`)
   for (const result of run.results) {
     writeFileSync(resolve(traceDir, `${result.caseId}.json`), `${JSON.stringify(result.trace, null, 2)}\n`)
-    if (!result.success) writeFileSync(resolve(failureDir, `${result.caseId}.json`), `${JSON.stringify(result.failureReport, null, 2)}\n`)
+    if (!result.success) writeFileSync(resolve(failureDir, `${result.caseId}.json`), `${JSON.stringify(failureArtifact(result), null, 2)}\n`)
+  }
+  // Older iterations are part of the permanent corpus. Rebuild their concise
+  // failure artifacts with the current schema so an early missing detail can
+  // never leave an invalid `undefined` file behind.
+  for (const filename of readdirSync(resultDir).filter(name => /^david-eval-.+\.json$/.test(name))) {
+    try {
+      const historical = JSON.parse(readFileSync(resolve(resultDir, filename), 'utf8')) as BenchmarkRun
+      if (historical.benchmarkVersion !== run.benchmarkVersion || !Array.isArray(historical.results)) continue
+      const historicalFailureDir = resolve(here, 'failures', historical.runId)
+      mkdirSync(historicalFailureDir, { recursive: true })
+      for (const result of historical.results.filter(item => !item.success)) {
+        writeFileSync(resolve(historicalFailureDir, `${result.caseId}.json`), `${JSON.stringify(failureArtifact(result), null, 2)}\n`)
+      }
+    } catch {
+      // Live-result files and interrupted external writes are not deterministic
+      // benchmark runs and are intentionally ignored here.
+    }
   }
   const regressionsPath = resolve(here, 'regressions.json')
   const existing = (() => {
