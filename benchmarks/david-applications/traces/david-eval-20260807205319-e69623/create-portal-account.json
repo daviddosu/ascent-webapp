@@ -1,0 +1,367 @@
+[
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "create-portal-account",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:25.069Z",
+    "component": "browser",
+    "event": "navigation_observed",
+    "caseId": "create-portal-account",
+    "data": {
+      "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account",
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:26.328Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "create-portal-account",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Email",
+        "value": "david-eval-20260807205319-e69623@benchmark.test"
+      },
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "david-eval-20260807205319-e69623@benchmark.test",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:27.555Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "create-portal-account",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Password",
+        "value": "benchmark-password-david-eval-20260807205319-e69623"
+      },
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "david-eval-20260807205319-e69623@benchmark.test",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:29.102Z",
+    "component": "browser",
+    "event": "section_save_observed",
+    "caseId": "create-portal-account",
+    "data": {
+      "step": "account",
+      "target": "role:button:Create account",
+      "confirmationObserved": true,
+      "observation": {
+        "title": "Section saved",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account",
+        "headings": [
+          "Section saved"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Section saved account section saved and checkpointed. Continue editing account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=review"
+          },
+          {
+            "text": "Continue editing account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=46&step=account"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:29.102Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "create-portal-account",
+    "data": {
+      "kind": "saved_section",
+      "verified": true,
+      "details": {
+        "step": "account",
+        "fields": []
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "create-portal-account",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:29.102Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "create-portal-account",
+    "data": {
+      "value": true
+    }
+  }
+]

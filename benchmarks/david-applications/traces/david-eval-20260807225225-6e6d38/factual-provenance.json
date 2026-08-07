@@ -1,0 +1,52 @@
+[
+  {
+    "at": "2026-08-07T22:52:28.375Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "factual-provenance",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.375Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "factual-provenance",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.375Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "factual-provenance",
+    "data": {
+      "value": true
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.375Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "factual-provenance",
+    "data": {
+      "value": true
+    }
+  }
+]

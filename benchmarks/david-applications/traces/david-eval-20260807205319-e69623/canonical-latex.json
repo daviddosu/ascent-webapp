@@ -1,0 +1,70 @@
+[
+  {
+    "at": "2026-08-07T20:53:19.840Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "canonical-latex",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:20.339Z",
+    "component": "documents",
+    "event": "artifact_compiled_and_verified",
+    "caseId": "canonical-latex",
+    "data": {
+      "templateId": "graduate_application_cv_v1",
+      "pageTarget": "one_page",
+      "pageCount": 1,
+      "checksum": "db4f21278dcd850a800efeb5b5b77ef84bb1c7086aa3d57f3bb0bc508832c763"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:20.339Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "canonical-latex",
+    "data": {
+      "kind": "artifact_checksum",
+      "verified": true,
+      "checksum": "db4f21278dcd850a800efeb5b5b77ef84bb1c7086aa3d57f3bb0bc508832c763",
+      "details": {
+        "pageCount": 1,
+        "atsIdentity": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:19.840Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "canonical-latex",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:20.339Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "canonical-latex",
+    "data": {
+      "value": true
+    }
+  }
+]

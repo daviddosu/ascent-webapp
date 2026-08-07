@@ -1,0 +1,79 @@
+[
+  {
+    "at": "2026-08-07T23:34:21.466Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "canonical-latex",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:21.961Z",
+    "component": "documents",
+    "event": "artifact_compiled_and_verified",
+    "caseId": "canonical-latex",
+    "data": {
+      "templateId": "graduate_application_cv_v1",
+      "pageTarget": "one_page",
+      "pageCount": 1,
+      "checksum": "c80d0b7fe66a9dfc889dd6de1ca2af9294462a0ac88c7e5e95533bfc0441ee8b"
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:21.961Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "canonical-latex",
+    "data": {
+      "kind": "artifact_checksum",
+      "verified": true,
+      "checksum": "c80d0b7fe66a9dfc889dd6de1ca2af9294462a0ac88c7e5e95533bfc0441ee8b",
+      "details": {
+        "pageCount": 1,
+        "atsIdentity": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:21.466Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "canonical-latex",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:21.961Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "canonical-latex",
+    "data": {
+      "value": true
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:21.961Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "canonical-latex",
+    "data": {
+      "value": true
+    }
+  }
+]

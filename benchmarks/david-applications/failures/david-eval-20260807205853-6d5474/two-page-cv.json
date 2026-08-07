@@ -1,0 +1,83 @@
+{
+  "caseId": "two-page-cv",
+  "caseName": "Produce a two-page CV when required",
+  "expectedResult": {
+    "pageTarget": "two_page",
+    "pageCount": 2
+  },
+  "actualResult": {
+    "template": "graduate_application_cv_v1",
+    "compiled": true,
+    "pageTarget": "two_page",
+    "pageCount": 3,
+    "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+    "artifact": "cv-controlled-phd.pdf",
+    "programmeId": "controlled-phd",
+    "state": "approved",
+    "approvalStatus": "approved",
+    "extraction": "complete",
+    "name": "David Dosu",
+    "email": "dosudavy@gmail.com",
+    "selectedBy": "checksum"
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [
+    {
+      "at": "2026-08-07T20:58:54.888Z",
+      "component": "primitive",
+      "event": "primitive_verified",
+      "caseId": "two-page-cv",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "escalationReason": null,
+  "harnessTrace": [],
+  "lastVerifiedState": {
+    "template": "graduate_application_cv_v1",
+    "compiled": true,
+    "pageTarget": "two_page",
+    "pageCount": 3,
+    "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+    "artifact": "cv-controlled-phd.pdf",
+    "programmeId": "controlled-phd",
+    "state": "approved",
+    "approvalStatus": "approved",
+    "extraction": "complete",
+    "name": "David Dosu",
+    "email": "dosudavy@gmail.com",
+    "selectedBy": "checksum"
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "template": "graduate_application_cv_v1",
+      "compiled": true,
+      "pageTarget": "two_page",
+      "pageCount": 3,
+      "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+      "artifact": "cv-controlled-phd.pdf",
+      "programmeId": "controlled-phd",
+      "state": "approved",
+      "approvalStatus": "approved",
+      "extraction": "complete",
+      "name": "David Dosu",
+      "email": "dosudavy@gmail.com",
+      "selectedBy": "checksum"
+    },
+    "evidence": [
+      {
+        "kind": "artifact_checksum",
+        "verified": true,
+        "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+        "details": {
+          "pageCount": 3,
+          "atsIdentity": true
+        }
+      }
+    ]
+  }
+}

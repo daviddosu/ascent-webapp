@@ -1,0 +1,55 @@
+[
+  {
+    "at": "2026-08-07T22:52:28.377Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-opt-out",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.377Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "professor-opt-out",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "professor-opt-out"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.377Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-opt-out",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.377Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "professor-opt-out",
+    "data": {
+      "value": true
+    }
+  }
+]

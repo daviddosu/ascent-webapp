@@ -1,0 +1,55 @@
+[
+  {
+    "at": "2026-08-07T23:34:24.044Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "stale-email",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:24.044Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "stale-email",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "stale-email"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:24.044Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "stale-email",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T23:34:24.044Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "stale-email",
+    "data": {
+      "value": true
+    }
+  }
+]

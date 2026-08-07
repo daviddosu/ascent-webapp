@@ -1,0 +1,47 @@
+{
+  "caseId": "funding-status",
+  "caseName": "Determine funding status",
+  "expectedResult": {
+    "status": "full",
+    "tuitionCoverage": "full",
+    "stipend": true
+  },
+  "actualResult": {
+    "status": "full",
+    "summary": "Full tuition waiver and stipend.",
+    "stipend": true,
+    "tuitionCoverage": "Full tuition waiver"
+  },
+  "executionMode": "primitive",
+  "primitiveTrace": [
+    {
+      "at": "2026-08-07T20:53:19.262Z",
+      "component": "primitive",
+      "event": "primitive_verified",
+      "caseId": "funding-status",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "escalationReason": null,
+  "harnessTrace": [],
+  "lastVerifiedState": {
+    "status": "full",
+    "summary": "Full tuition waiver and stipend.",
+    "stipend": true,
+    "tuitionCoverage": "Full tuition waiver"
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "status": "full",
+      "summary": "Full tuition waiver and stipend.",
+      "stipend": true,
+      "tuitionCoverage": "Full tuition waiver"
+    },
+    "evidence": []
+  }
+}

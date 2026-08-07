@@ -1,0 +1,110 @@
+[
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "writer-follow-up",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step crosses an external wait."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "writer-follow-up",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "writer-follow-up"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "writer-follow-up",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:writer-follow-up",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "gmail",
+    "event": "provider_send_confirmed",
+    "caseId": "writer-follow-up",
+    "data": {
+      "messageId": "benchmark-msg-david-eval-20260807210027-cf389f-2",
+      "threadId": "thread-writer-follow-up-writer_follow_up",
+      "purpose": "writer_follow_up",
+      "to": "daviddosuu@gmail.com"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "writer-follow-up",
+    "data": {
+      "kind": "provider_message",
+      "verified": true,
+      "providerId": "benchmark-msg-david-eval-20260807210027-cf389f-2",
+      "threadId": "thread-writer-follow-up-writer_follow_up",
+      "details": {
+        "purpose": "writer_follow_up",
+        "to": "daviddosuu@gmail.com"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "writer-follow-up",
+    "data": {
+      "kind": "provider_thread",
+      "verified": true,
+      "threadId": "thread-writer-follow-up-writer_follow_up",
+      "details": {
+        "caseId": "writer-follow-up"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "writer-follow-up",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step crosses an external wait."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "writer-follow-up",
+    "data": {
+      "value": true
+    }
+  }
+]

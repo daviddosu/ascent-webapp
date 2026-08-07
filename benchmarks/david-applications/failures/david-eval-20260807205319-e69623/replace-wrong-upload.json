@@ -1,0 +1,55 @@
+{
+  "caseId": "replace-wrong-upload",
+  "caseName": "Replace incorrect upload",
+  "expectedResult": {
+    "state": "saved",
+    "replaced": true,
+    "artifact": "cv-controlled-phd.pdf"
+  },
+  "actualResult": {
+    "state": "failed",
+    "error": {
+      "code": "browser_file_materialisation_missing",
+      "message": "The private file could not be materialised for upload.",
+      "retryable": false,
+      "details": null
+    }
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [],
+  "escalationReason": "The private file could not be materialised for upload.",
+  "harnessTrace": [],
+  "lastVerifiedState": {
+    "state": "failed",
+    "error": {
+      "code": "browser_file_materialisation_missing",
+      "message": "The private file could not be materialised for upload.",
+      "retryable": false,
+      "details": null
+    }
+  },
+  "failureClassification": "upload_failure",
+  "suspectedRootCause": "The private file could not be materialised for upload.",
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "state": "failed",
+      "error": {
+        "code": "browser_file_materialisation_missing",
+        "message": "The private file could not be materialised for upload.",
+        "retryable": false,
+        "details": null
+      }
+    },
+    "evidence": [
+      {
+        "kind": "checkpoint",
+        "verified": true,
+        "details": {
+          "replayedActions": 2,
+          "resumeFrom": "confirmedState"
+        }
+      }
+    ]
+  }
+}

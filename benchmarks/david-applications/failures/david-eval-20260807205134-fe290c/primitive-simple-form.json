@@ -1,0 +1,45 @@
+{
+  "caseId": "primitive-simple-form",
+  "caseName": "Complete a simple form with the primitive",
+  "expectedResult": {
+    "state": "saved",
+    "execution": "primitive"
+  },
+  "actualResult": {
+    "state": "failed",
+    "error": {
+      "code": "browser_target_missing",
+      "message": "The browser target is no longer available.",
+      "retryable": true,
+      "details": null
+    }
+  },
+  "executionMode": "primitive_then_harness",
+  "primitiveTrace": [],
+  "escalationReason": "The browser target is no longer available.",
+  "harnessTrace": [],
+  "lastVerifiedState": {
+    "state": "failed",
+    "error": {
+      "code": "browser_target_missing",
+      "message": "The browser target is no longer available.",
+      "retryable": true,
+      "details": null
+    }
+  },
+  "failureClassification": "wrong_element",
+  "suspectedRootCause": "The browser target is no longer available.",
+  "relevantSourceFile": "api/_public-browser.ts",
+  "evidence": {
+    "browser": {
+      "state": "failed",
+      "error": {
+        "code": "browser_target_missing",
+        "message": "The browser target is no longer available.",
+        "retryable": true,
+        "details": null
+      }
+    },
+    "evidence": []
+  }
+}

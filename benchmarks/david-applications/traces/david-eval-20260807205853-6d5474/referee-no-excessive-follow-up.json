@@ -1,0 +1,121 @@
+[
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step crosses an external wait."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "referee-no-excessive-follow-up"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:referee-no-excessive-follow-up",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "gmail",
+    "event": "provider_send_confirmed",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "messageId": "benchmark-msg-david-eval-20260807205853-6d5474-3",
+      "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+      "purpose": "referee_follow_up",
+      "to": "daviddosuu@gmail.com"
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "kind": "provider_message",
+      "verified": true,
+      "providerId": "benchmark-msg-david-eval-20260807205853-6d5474-3",
+      "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+      "details": {
+        "purpose": "referee_follow_up",
+        "to": "daviddosuu@gmail.com"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "kind": "provider_thread",
+      "verified": true,
+      "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+      "details": {
+        "caseId": "referee-no-excessive-follow-up"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "persistence",
+    "event": "duplicate_action_blocked",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:referee-no-excessive-follow-up",
+      "providerId": "benchmark-msg-david-eval-20260807205853-6d5474-3"
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step crosses an external wait."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:58:54.889Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "referee-no-excessive-follow-up",
+    "data": {
+      "value": true
+    }
+  }
+]

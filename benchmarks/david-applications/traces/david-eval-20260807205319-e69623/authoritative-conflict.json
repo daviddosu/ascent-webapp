@@ -1,0 +1,79 @@
+[
+  {
+    "at": "2026-08-07T20:53:19.264Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "authoritative-conflict",
+    "data": {
+      "mode": "primitive_then_harness",
+      "reasons": [
+        "Simple, reversible, stateless step with a safe primitive path.",
+        "No history exists; begin with a recoverable primitive attempt."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "not_applicable"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:19.264Z",
+    "component": "verification",
+    "event": "expected_outcome_mismatch",
+    "caseId": "authoritative-conflict",
+    "data": {
+      "expected": {
+        "chosenSource": "official admissions page",
+        "rejectedSource": "department mirror",
+        "state": "resolved"
+      },
+      "actual": {
+        "chosenSource": "official",
+        "rejectedSource": "department mirror",
+        "state": "resolved"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:19.264Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "authoritative-conflict",
+    "data": {
+      "mode": "primitive_then_harness",
+      "reasons": [
+        "Simple, reversible, stateless step with a safe primitive path.",
+        "No history exists; begin with a recoverable primitive attempt."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "not_applicable"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:19.264Z",
+    "component": "verification",
+    "event": "expected_outcome_mismatch",
+    "caseId": "authoritative-conflict",
+    "data": {
+      "expected": {
+        "chosenSource": "official admissions page",
+        "rejectedSource": "department mirror",
+        "state": "resolved"
+      },
+      "actual": {
+        "chosenSource": "official",
+        "rejectedSource": "department mirror",
+        "state": "resolved"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:19.264Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "authoritative-conflict",
+    "data": {
+      "value": true
+    }
+  }
+]

@@ -1,0 +1,925 @@
+[
+  {
+    "at": "2026-08-07T20:53:51.332Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "conditional-fields",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Recovery or restart handling is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:52.484Z",
+    "component": "browser",
+    "event": "navigation_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&step=account&failure=conditional_section",
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&step=account&failure=conditional_section",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:53.762Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "action": {
+        "action": "click",
+        "target": "text:Profile",
+        "value": null
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Study mode Coursework Research Funding source Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Study modeCourseworkResearch",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Funding source",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "study_mode",
+            "label": "Study modeCourseworkResearch",
+            "type": "select-one",
+            "value": "coursework",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "funding_source",
+            "label": "Funding source",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:55.202Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Legal name",
+        "value": "David Dosu"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Study mode Coursework Research Funding source Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Study modeCourseworkResearch",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Funding source",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "study_mode",
+            "label": "Study modeCourseworkResearch",
+            "type": "select-one",
+            "value": "coursework",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "funding_source",
+            "label": "Funding source",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:56.511Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "action": {
+        "action": "select",
+        "target": "css:select[name=\"nationality\"]",
+        "value": "Nigeria"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Study mode Coursework Research Funding source Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Study modeCourseworkResearch",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Funding source",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "study_mode",
+            "label": "Study modeCourseworkResearch",
+            "type": "select-one",
+            "value": "coursework",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "funding_source",
+            "label": "Funding source",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:57.938Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Research interests",
+        "value": "Computational physics"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Study mode Coursework Research Funding source Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Study modeCourseworkResearch",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Funding source",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "Computational physics",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "study_mode",
+            "label": "Study modeCourseworkResearch",
+            "type": "select-one",
+            "value": "coursework",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "funding_source",
+            "label": "Funding source",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:59.251Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "action": {
+        "action": "select",
+        "target": "css:select[name=\"study_mode\"]",
+        "value": "research"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Study mode Coursework Research Funding source Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Study modeCourseworkResearch",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Funding source",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "Computational physics",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "study_mode",
+            "label": "Study modeCourseworkResearch",
+            "type": "select-one",
+            "value": "research",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "funding_source",
+            "label": "Funding source",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:54:00.697Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Funding source",
+        "value": "Controlled University studentship"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Study mode Coursework Research Funding source Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Study modeCourseworkResearch",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Funding source",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "Computational physics",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "study_mode",
+            "label": "Study modeCourseworkResearch",
+            "type": "select-one",
+            "value": "research",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "funding_source",
+            "label": "Funding source",
+            "type": "text",
+            "value": "Controlled University studentship",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:54:02.479Z",
+    "component": "browser",
+    "event": "section_save_observed",
+    "caseId": "conditional-fields",
+    "data": {
+      "step": "profile",
+      "target": "role:button:Save section",
+      "confirmationObserved": true,
+      "observation": {
+        "title": "Section saved",
+        "url": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile",
+        "headings": [
+          "Section saved"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205319-e69623 Section saved profile section saved and checkpointed. Continue editing profile",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=review"
+          },
+          {
+            "text": "Continue editing profile",
+            "href": "https://benchmark.test:63016/api/application-portal-fixture?run=david-eval-20260807205319-e69623&seed=49&failure=conditional_section&step=profile"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:54:02.479Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "conditional-fields",
+    "data": {
+      "kind": "saved_section",
+      "verified": true,
+      "details": {
+        "step": "profile",
+        "fields": []
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:51.332Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "conditional-fields",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Recovery or restart handling is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:54:02.479Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "conditional-fields",
+    "data": {
+      "value": true
+    }
+  }
+]

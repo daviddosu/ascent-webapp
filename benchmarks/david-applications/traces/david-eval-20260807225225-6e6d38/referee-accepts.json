@@ -1,0 +1,82 @@
+[
+  {
+    "at": "2026-08-07T22:52:28.376Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-accepts",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.376Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "referee-accepts",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "referee-accepts"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.376Z",
+    "component": "gmail",
+    "event": "provider_reply_received",
+    "caseId": "referee-accepts",
+    "data": {
+      "messageId": "benchmark-reply-david-eval-20260807225225-6e6d38-7",
+      "threadId": "thread-referee-accepts-referee-accepts",
+      "purpose": "referee-accepts"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.376Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "referee-accepts",
+    "data": {
+      "kind": "provider_reply",
+      "verified": true,
+      "providerId": "benchmark-reply-david-eval-20260807225225-6e6d38-7",
+      "threadId": "thread-referee-accepts-referee-accepts",
+      "details": {
+        "from": "daviddosuu@gmail.com",
+        "purpose": "referee-accepts"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.376Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-accepts",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:28.376Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "referee-accepts",
+    "data": {
+      "value": true
+    }
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "reject-old-otp",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "reject-old-otp",
+    "data": {
+      "kind": "otp_match",
+      "verified": true,
+      "providerId": "current-otp",
+      "threadId": "current",
+      "details": {
+        "redactedCode": "4•••6"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "reject-old-otp",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "reject-old-otp",
+    "data": {
+      "value": true
+    }
+  }
+]

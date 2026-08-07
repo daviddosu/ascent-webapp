@@ -1,0 +1,1294 @@
+{
+  "benchmarkVersion": "david_application_eval_v1",
+  "schemaVersion": 1,
+  "runId": "david-eval-20260807205853-6d5474",
+  "codeCommit": "c3f5114ac19ef5f614b828cab0c9e3e9dc4c4d58",
+  "modelConfiguration": {
+    "model": "deterministic-fixture",
+    "reasoning": "none",
+    "provider": "local"
+  },
+  "harnessVersion": "application-harness-v1",
+  "primitiveVersion": "public-browser-primitive-v1",
+  "executionMode": "deterministic_fixture",
+  "generatedAt": "2026-08-07T20:58:54.890Z",
+  "atomicCases": 10,
+  "endToEndCases": 0,
+  "results": [
+    {
+      "caseId": "funding-status",
+      "title": "Determine funding status",
+      "level": "atomic",
+      "expectedResult": {
+        "status": "full",
+        "tuitionCoverage": "full",
+        "stipend": true
+      },
+      "actualResult": {
+        "status": "full",
+        "summary": "Full tuition waiver and stipend.",
+        "stipend": true,
+        "tuitionCoverage": "full"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "primitive",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": false,
+      "harnessSuccess": false,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 40,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:53.187Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "funding-status",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.187Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "funding-status",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.227Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "funding-status",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "authoritative-conflict",
+      "title": "Prefer authoritative requirements when pages conflict",
+      "level": "atomic",
+      "expectedResult": {
+        "chosenSource": "official admissions page",
+        "rejectedSource": "department mirror",
+        "state": "resolved"
+      },
+      "actualResult": {
+        "chosenSource": "official admissions page",
+        "rejectedSource": "department mirror",
+        "state": "resolved"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "primitive",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": false,
+      "harnessSuccess": false,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 1,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:53.227Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "authoritative-conflict",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.227Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "authoritative-conflict",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.227Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "authoritative-conflict",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "programme-cv",
+      "title": "Generate programme-specific CV",
+      "level": "atomic",
+      "expectedResult": {
+        "artifact": "cv-controlled-phd.pdf",
+        "approvalStatus": "approved",
+        "programmeId": "controlled-phd"
+      },
+      "actualResult": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "one_page",
+        "pageCount": 1,
+        "checksum": "f4b57cdac67f7b42da71f7cb1474a3184854e1e6ae330c951b4d1bdc68750bf7",
+        "artifact": "cv-controlled-phd.pdf",
+        "programmeId": "controlled-phd",
+        "state": "approved",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": true,
+      "harnessSuccess": false,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 574,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:53.228Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "programme-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.802Z",
+          "component": "documents",
+          "event": "artifact_compiled_and_verified",
+          "caseId": "programme-cv",
+          "data": {
+            "templateId": "graduate_application_cv_v1",
+            "pageTarget": "one_page",
+            "pageCount": 1,
+            "checksum": "f4b57cdac67f7b42da71f7cb1474a3184854e1e6ae330c951b4d1bdc68750bf7"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.802Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "programme-cv",
+          "data": {
+            "kind": "artifact_checksum",
+            "verified": true,
+            "checksum": "f4b57cdac67f7b42da71f7cb1474a3184854e1e6ae330c951b4d1bdc68750bf7",
+            "details": {
+              "pageCount": 1,
+              "atsIdentity": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.228Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "programme-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.802Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "programme-cv",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "exact-approved-artifact",
+      "title": "Select exact approved artifact",
+      "level": "atomic",
+      "expectedResult": {
+        "artifact": "cv-controlled-phd.pdf",
+        "selectedBy": "checksum",
+        "state": "approved"
+      },
+      "actualResult": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "one_page",
+        "pageCount": 1,
+        "checksum": "b949b8191449b32791e976c668d425b0405fe03b5b8da37e1b66df6d03d6d1f9",
+        "artifact": "cv-controlled-phd.pdf",
+        "programmeId": "controlled-phd",
+        "state": "approved",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": true,
+      "harnessSuccess": false,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 498,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:53.802Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.300Z",
+          "component": "documents",
+          "event": "artifact_compiled_and_verified",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "templateId": "graduate_application_cv_v1",
+            "pageTarget": "one_page",
+            "pageCount": 1,
+            "checksum": "b949b8191449b32791e976c668d425b0405fe03b5b8da37e1b66df6d03d6d1f9"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.300Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "kind": "artifact_checksum",
+            "verified": true,
+            "checksum": "b949b8191449b32791e976c668d425b0405fe03b5b8da37e1b66df6d03d6d1f9",
+            "details": {
+              "pageCount": 1,
+              "atsIdentity": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:53.802Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.300Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "two-page-cv",
+      "title": "Produce a two-page CV when required",
+      "level": "atomic",
+      "expectedResult": {
+        "pageTarget": "two_page",
+        "pageCount": 2
+      },
+      "actualResult": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "two_page",
+        "pageCount": 3,
+        "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+        "artifact": "cv-controlled-phd.pdf",
+        "programmeId": "controlled-phd",
+        "state": "approved",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      },
+      "success": false,
+      "verified": false,
+      "executionMode": "harness",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": true,
+      "harnessSuccess": false,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": true,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 588,
+      "rootCauseCategory": "false_success",
+      "failureReport": {
+        "primitiveTrace": [
+          {
+            "at": "2026-08-07T20:58:54.888Z",
+            "component": "primitive",
+            "event": "primitive_verified",
+            "caseId": "two-page-cv",
+            "data": {
+              "value": true
+            }
+          }
+        ],
+        "escalationReason": null,
+        "harnessTrace": [],
+        "lastVerifiedState": {
+          "template": "graduate_application_cv_v1",
+          "compiled": true,
+          "pageTarget": "two_page",
+          "pageCount": 3,
+          "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+          "artifact": "cv-controlled-phd.pdf",
+          "programmeId": "controlled-phd",
+          "state": "approved",
+          "approvalStatus": "approved",
+          "extraction": "complete",
+          "name": "David Dosu",
+          "email": "dosudavy@gmail.com",
+          "selectedBy": "checksum"
+        },
+        "failureClassification": "false_success",
+        "suspectedRootCause": null,
+        "relevantSourceFile": null,
+        "evidence": {
+          "browser": {
+            "template": "graduate_application_cv_v1",
+            "compiled": true,
+            "pageTarget": "two_page",
+            "pageCount": 3,
+            "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+            "artifact": "cv-controlled-phd.pdf",
+            "programmeId": "controlled-phd",
+            "state": "approved",
+            "approvalStatus": "approved",
+            "extraction": "complete",
+            "name": "David Dosu",
+            "email": "dosudavy@gmail.com",
+            "selectedBy": "checksum"
+          },
+          "evidence": [
+            {
+              "kind": "artifact_checksum",
+              "verified": true,
+              "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+              "details": {
+                "pageCount": 3,
+                "atsIdentity": true
+              }
+            }
+          ]
+        }
+      },
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:54.300Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "two-page-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "documents",
+          "event": "artifact_compiled_and_verified",
+          "caseId": "two-page-cv",
+          "data": {
+            "templateId": "graduate_application_cv_v1",
+            "pageTarget": "two_page",
+            "pageCount": 3,
+            "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "two-page-cv",
+          "data": {
+            "kind": "artifact_checksum",
+            "verified": true,
+            "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+            "details": {
+              "pageCount": 3,
+              "atsIdentity": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "verification",
+          "event": "expected_outcome_mismatch",
+          "caseId": "two-page-cv",
+          "data": {
+            "expected": {
+              "pageTarget": "two_page",
+              "pageCount": 2
+            },
+            "actual": {
+              "template": "graduate_application_cv_v1",
+              "compiled": true,
+              "pageTarget": "two_page",
+              "pageCount": 3,
+              "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+              "artifact": "cv-controlled-phd.pdf",
+              "programmeId": "controlled-phd",
+              "state": "approved",
+              "approvalStatus": "approved",
+              "extraction": "complete",
+              "name": "David Dosu",
+              "email": "dosudavy@gmail.com",
+              "selectedBy": "checksum"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.300Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "two-page-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "verification",
+          "event": "expected_outcome_mismatch",
+          "caseId": "two-page-cv",
+          "data": {
+            "expected": {
+              "pageTarget": "two_page",
+              "pageCount": 2
+            },
+            "actual": {
+              "template": "graduate_application_cv_v1",
+              "compiled": true,
+              "pageTarget": "two_page",
+              "pageCount": 3,
+              "checksum": "8c98b98ce1f6fd56d771edf49009b9fd3f093d0ab863b89aa91d300c9db041cf",
+              "artifact": "cv-controlled-phd.pdf",
+              "programmeId": "controlled-phd",
+              "state": "approved",
+              "approvalStatus": "approved",
+              "extraction": "complete",
+              "name": "David Dosu",
+              "email": "dosudavy@gmail.com",
+              "selectedBy": "checksum"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "two-page-cv",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "writer-assignment",
+      "title": "David asks Roon to send writer assignment",
+      "level": "atomic",
+      "expectedResult": {
+        "request": "send_email",
+        "to": "daviddosuu@gmail.com",
+        "applicationCaseId": "case-writer-01",
+        "status": "queued"
+      },
+      "actualResult": {
+        "request": "send_email",
+        "to": "daviddosuu@gmail.com",
+        "applicationCaseId": "case-writer-01",
+        "status": "queued"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 0,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "writer-assignment",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step coordinates more than one provider."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "persistence",
+          "event": "application_case_created",
+          "caseId": "writer-assignment",
+          "data": {
+            "status": "active",
+            "data": {
+              "applicationCaseId": "writer-assignment"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "writer-assignment",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step coordinates more than one provider."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "writer-assignment",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "attach-writer-reply",
+      "title": "Attach writer reply to correct HumanAssignment",
+      "level": "atomic",
+      "expectedResult": {
+        "assignment": "assignment-writer-01",
+        "threadOwner": "case-writer-01",
+        "state": "attached"
+      },
+      "actualResult": {
+        "assignment": "assignment-writer-01",
+        "threadOwner": "case-writer-01",
+        "state": "failed"
+      },
+      "success": false,
+      "verified": false,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": true,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 0,
+      "rootCauseCategory": "false_success",
+      "failureReport": {
+        "primitiveTrace": [],
+        "escalationReason": null,
+        "harnessTrace": [
+          {
+            "at": "2026-08-07T20:58:54.888Z",
+            "component": "harness",
+            "event": "harness_verified",
+            "caseId": "attach-writer-reply",
+            "data": {
+              "value": true
+            }
+          }
+        ],
+        "lastVerifiedState": {
+          "assignment": "assignment-writer-01",
+          "threadOwner": "case-writer-01",
+          "state": "failed"
+        },
+        "failureClassification": "false_success",
+        "suspectedRootCause": null,
+        "relevantSourceFile": null,
+        "evidence": {
+          "browser": {
+            "assignment": "assignment-writer-01",
+            "threadOwner": "case-writer-01",
+            "state": "failed"
+          },
+          "evidence": []
+        }
+      },
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "attach-writer-reply",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step coordinates more than one provider."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "persistence",
+          "event": "application_case_created",
+          "caseId": "attach-writer-reply",
+          "data": {
+            "status": "active",
+            "data": {
+              "applicationCaseId": "attach-writer-reply"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "verification",
+          "event": "expected_outcome_mismatch",
+          "caseId": "attach-writer-reply",
+          "data": {
+            "expected": {
+              "assignment": "assignment-writer-01",
+              "threadOwner": "case-writer-01",
+              "state": "attached"
+            },
+            "actual": {
+              "assignment": "assignment-writer-01",
+              "threadOwner": "case-writer-01",
+              "state": "failed"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "attach-writer-reply",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step coordinates more than one provider."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "verification",
+          "event": "expected_outcome_mismatch",
+          "caseId": "attach-writer-reply",
+          "data": {
+            "expected": {
+              "assignment": "assignment-writer-01",
+              "threadOwner": "case-writer-01",
+              "state": "attached"
+            },
+            "actual": {
+              "assignment": "assignment-writer-01",
+              "threadOwner": "case-writer-01",
+              "state": "failed"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "attach-writer-reply",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "gmail-thread-isolation",
+      "title": "Keep two simultaneous Gmail threads isolated",
+      "level": "atomic",
+      "expectedResult": {
+        "caseA": "thread-case-a",
+        "caseB": "thread-case-b",
+        "crossCaseContamination": false
+      },
+      "actualResult": {
+        "caseA": "thread-case-a",
+        "caseB": "thread-case-b",
+        "crossCaseContamination": false
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 2,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 0,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "gmail-thread-isolation",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "persistence",
+          "event": "application_case_created",
+          "caseId": "gmail-thread-isolation",
+          "data": {
+            "status": "active",
+            "data": {
+              "applicationCaseId": "gmail-thread-isolation"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "gmail-thread-isolation",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.888Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "gmail-thread-isolation",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "referee-no-excessive-follow-up",
+      "title": "Prevent excessive referee follow-up",
+      "level": "atomic",
+      "expectedResult": {
+        "followUpCount": 1,
+        "duplicateAction": false
+      },
+      "actualResult": {
+        "state": "sent",
+        "purpose": "referee_follow_up",
+        "followUpCount": 1,
+        "duplicateAction": false,
+        "approval": false
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": true,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 1,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 0,
+      "rootCauseCategory": "duplicate_action",
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step crosses an external wait."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "persistence",
+          "event": "application_case_created",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "status": "active",
+            "data": {
+              "applicationCaseId": "referee-no-excessive-follow-up"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "persistence",
+          "event": "action_claimed",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "action": "gmail.send_message",
+            "key": "send:referee-no-excessive-follow-up",
+            "providerId": null
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "gmail",
+          "event": "provider_send_confirmed",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "messageId": "benchmark-msg-david-eval-20260807205853-6d5474-3",
+            "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+            "purpose": "referee_follow_up",
+            "to": "daviddosuu@gmail.com"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "kind": "provider_message",
+            "verified": true,
+            "providerId": "benchmark-msg-david-eval-20260807205853-6d5474-3",
+            "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+            "details": {
+              "purpose": "referee_follow_up",
+              "to": "daviddosuu@gmail.com"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "kind": "provider_thread",
+            "verified": true,
+            "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+            "details": {
+              "caseId": "referee-no-excessive-follow-up"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "persistence",
+          "event": "duplicate_action_blocked",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "action": "gmail.send_message",
+            "key": "send:referee-no-excessive-follow-up",
+            "providerId": "benchmark-msg-david-eval-20260807205853-6d5474-3"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step crosses an external wait."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "replace-referee",
+      "title": "Replace a referee while preserving case state",
+      "level": "atomic",
+      "expectedResult": {
+        "oldContact": "declined",
+        "newContact": "assigned",
+        "applicationCaseId": "case-referee-01",
+        "preservedArtifacts": true
+      },
+      "actualResult": {
+        "oldContact": "declined",
+        "newContact": "assigned",
+        "applicationCaseId": "case-referee-01",
+        "preservedArtifacts": true
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 0,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "replace-referee",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "persistence",
+          "event": "application_case_created",
+          "caseId": "replace-referee",
+          "data": {
+            "status": "active",
+            "data": {
+              "applicationCaseId": "replace-referee"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "replace-referee",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T20:58:54.889Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "replace-referee",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "totalCases": 10,
+    "successfulCases": 8,
+    "failedCases": 2,
+    "primitiveSuccessRate": 1,
+    "harnessSuccessRate": 0.625,
+    "primitiveToHarnessRescueRate": null,
+    "adaptiveStepSuccessRate": 0.8,
+    "endToEndSuccessRate": null,
+    "verifiedCompletionRate": 0.8,
+    "falseCompletionRate": 0.2,
+    "falseSuccessCount": 2,
+    "duplicateActionRate": 0.1,
+    "duplicateActionCount": 1,
+    "manualInterventionRate": 0,
+    "recoverySuccessRate": 0,
+    "crossCaseContaminationRate": 0,
+    "averageCostPerCompletedApplicationUsd": 0,
+    "averageTimePerCompletedApplicationMs": 139.125,
+    "browserActions": 0,
+    "gmailActions": 3,
+    "modelCalls": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "estimatedModelCostUsd": 0,
+    "rootCauseCategories": "{\"false_success\":2,\"duplicate_action\":1}"
+  },
+  "routingStatistics": {
+    "modes": {
+      "primitive": 2,
+      "harness": 8
+    },
+    "failureTaxonomySize": 30
+  },
+  "liveEmail": {
+    "status": "deferred_to_connected_gmail_eval",
+    "approvedAccounts": [
+      "dosudavy@gmail.com",
+      "daviddosuu@gmail.com"
+    ],
+    "messagesInDeterministicFixture": 3
+  },
+  "liveReadOnlyWeb": {
+    "status": "separate_command_required",
+    "cases": 5
+  },
+  "blockers": []
+}

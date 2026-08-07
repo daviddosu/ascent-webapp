@@ -1,0 +1,385 @@
+{
+  "benchmarkVersion": "david_application_eval_v1",
+  "schemaVersion": 1,
+  "runId": "david-eval-20260807233244-02045e",
+  "codeCommit": "9740bd137b4f5ceb05359f5ab61823bc74df3313",
+  "modelConfiguration": {
+    "model": "deterministic-fixture",
+    "reasoning": "none",
+    "provider": "local"
+  },
+  "harnessVersion": "application-harness-v1",
+  "primitiveVersion": "public-browser-primitive-v1",
+  "executionMode": "deterministic_fixture",
+  "generatedAt": "2026-08-07T23:32:44.680Z",
+  "atomicCases": 1,
+  "endToEndCases": 0,
+  "results": [
+    {
+      "caseId": "research-programme-masters",
+      "title": "Find an eligible master's programme",
+      "level": "atomic",
+      "expectedResult": {
+        "state": "verified_eligible_masters"
+      },
+      "actualResult": {
+        "state": "verified_eligible_masters"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "primitive",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": false,
+      "harnessSuccess": false,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 35,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T23:32:44.646Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "research-programme-masters",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T23:32:44.646Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "research-programme-masters",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T23:32:44.680Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "research-programme-masters",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "totalCases": 1,
+    "successfulCases": 1,
+    "failedCases": 0,
+    "primitiveAttemptCount": 1,
+    "primitiveSuccessCount": 1,
+    "primitiveFailureCount": 0,
+    "harnessAttemptCount": 0,
+    "harnessSuccessCount": 0,
+    "harnessFailureCount": 0,
+    "escalationCount": 0,
+    "escalationSuccessCount": 0,
+    "endToEndSuccessCount": 0,
+    "primitiveSuccessRate": 1,
+    "harnessSuccessRate": null,
+    "primitiveToHarnessRescueRate": null,
+    "adaptiveStepSuccessRate": 1,
+    "endToEndSuccessRate": null,
+    "verifiedCompletionRate": 1,
+    "falseCompletionRate": 0,
+    "falseSuccessCount": 0,
+    "duplicateActionRate": 0,
+    "duplicateActionCount": 0,
+    "duplicatePreventionCount": 0,
+    "manualInterventionRate": 0,
+    "manualInterventionCount": 0,
+    "retryCount": 0,
+    "recoverySuccessRate": 0,
+    "crossCaseContaminationRate": 0,
+    "averageCostPerCompletedApplicationUsd": 0,
+    "averageTimePerCompletedApplicationMs": 35,
+    "browserActions": 0,
+    "gmailActions": 0,
+    "modelCalls": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "estimatedModelCostUsd": 0,
+    "rootCauseCategories": "{}"
+  },
+  "routingStatistics": {
+    "policyVersion": "application-execution-router-v1",
+    "modes": {
+      "primitive": 1
+    },
+    "primitivePromotionThreshold": 0.99,
+    "primitiveBenchmarkTarget": 0.95,
+    "harnessPromotionThreshold": 0.99,
+    "failureTaxonomySize": 30,
+    "pairedEvaluations": []
+  },
+  "liveEmail": {
+    "status": "deferred_to_connected_gmail_eval",
+    "approvedAccounts": [
+      "dosudavy@gmail.com",
+      "daviddosuu@gmail.com"
+    ],
+    "messagesInDeterministicFixture": 0,
+    "connectedEvaluation": {
+      "suite": "david_connected_gmail_eval_v1",
+      "runId": "david-gmail-live-20260807224946-eb98cb",
+      "generatedAt": "2026-08-07T22:51:33Z",
+      "connectedAccount": "dosudavy@gmail.com",
+      "approvedAccounts": [
+        "dosudavy@gmail.com",
+        "daviddosuu@gmail.com"
+      ],
+      "requestedCases": 9,
+      "executedCases": 6,
+      "verifiedCases": 6,
+      "verifiedProviderSendRate": 1,
+      "alternateSenderAvailable": false,
+      "crossCaseContamination": false,
+      "duplicateActions": 0,
+      "results": [
+        {
+          "caseId": "writer-assignment",
+          "purpose": "WRITER-ASSIGNMENT",
+          "sender": "dosudavy@gmail.com",
+          "recipient": "daviddosuu@gmail.com",
+          "messageId": "19fde6bbd17a242b",
+          "threadId": "19fde6bbd17a242b",
+          "internalDate": "1786143030000",
+          "providerMessageIdVerified": true,
+          "threadIdVerified": true,
+          "headersVerified": true,
+          "caseOwnershipVerified": true,
+          "threadOwnershipVerified": true
+        },
+        {
+          "caseId": "writer-revision",
+          "purpose": "WRITER-REVISION",
+          "sender": "dosudavy@gmail.com",
+          "recipient": "daviddosuu@gmail.com",
+          "messageId": "19fde6bb80e090b4",
+          "threadId": "19fde6bb80e090b4",
+          "internalDate": "1786143029000",
+          "providerMessageIdVerified": true,
+          "threadIdVerified": true,
+          "headersVerified": true,
+          "caseOwnershipVerified": true,
+          "threadOwnershipVerified": true
+        },
+        {
+          "caseId": "referee-request",
+          "purpose": "REFEREE-REQUEST",
+          "sender": "dosudavy@gmail.com",
+          "recipient": "daviddosuu@gmail.com",
+          "messageId": "19fde6bc13e3d81d",
+          "threadId": "19fde6bc13e3d81d",
+          "internalDate": "1786143031000",
+          "providerMessageIdVerified": true,
+          "threadIdVerified": true,
+          "headersVerified": true,
+          "caseOwnershipVerified": true,
+          "threadOwnershipVerified": true
+        },
+        {
+          "caseId": "professor-outreach",
+          "purpose": "PROFESSOR-OUTREACH",
+          "sender": "dosudavy@gmail.com",
+          "recipient": "daviddosuu@gmail.com",
+          "messageId": "19fde6bc281c40ba",
+          "threadId": "19fde6bc281c40ba",
+          "internalDate": "1786143032000",
+          "providerMessageIdVerified": true,
+          "threadIdVerified": true,
+          "headersVerified": true,
+          "caseOwnershipVerified": true,
+          "threadOwnershipVerified": true
+        },
+        {
+          "caseId": "otp-retrieval",
+          "purpose": "OTP",
+          "sender": "dosudavy@gmail.com",
+          "recipient": "dosudavy@gmail.com",
+          "messageId": "19fde6bc625de881",
+          "threadId": "19fde6bc625de881",
+          "internalDate": "1786143033000",
+          "providerMessageIdVerified": true,
+          "threadIdVerified": true,
+          "headersVerified": true,
+          "caseOwnershipVerified": true,
+          "threadOwnershipVerified": true,
+          "retrievedByExactRunMarker": true,
+          "threadMessageCount": 1
+        },
+        {
+          "caseId": "application-correspondence",
+          "purpose": "APPLICATION-CORRESPONDENCE",
+          "sender": "dosudavy@gmail.com",
+          "recipient": "daviddosuu@gmail.com",
+          "messageId": "19fde6bcbf766557",
+          "threadId": "19fde6bcbf766557",
+          "internalDate": "1786143034000",
+          "providerMessageIdVerified": true,
+          "threadIdVerified": true,
+          "headersVerified": true,
+          "caseOwnershipVerified": true,
+          "threadOwnershipVerified": true
+        }
+      ],
+      "blockedCases": [
+        {
+          "caseId": "writer-question",
+          "reason": "The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com."
+        },
+        {
+          "caseId": "referee-reply",
+          "reason": "The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com."
+        },
+        {
+          "caseId": "professor-reply",
+          "reason": "The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com."
+        }
+      ],
+      "senderCapabilityProbe": {
+        "requestedFrom": "daviddosuu@gmail.com",
+        "observedFrom": "dosudavy@gmail.com",
+        "messageId": "19fde6b30974e843",
+        "threadId": "19fde6b30974e843",
+        "result": "connector_rewrote_to_authenticated_identity"
+      },
+      "cleanup": {
+        "label": "SHOTCOUNT-EVAL",
+        "messagesMatched": 7,
+        "archived": true,
+        "deleted": false,
+        "note": "Messages remain recoverable under the benchmark label; the second mailbox was not exposed for cleanup."
+      }
+    }
+  },
+  "liveReadOnlyWeb": {
+    "status": "completed_separate_suite",
+    "suite": "david_live_read_only_web_v1",
+    "runId": "david-live-web-20260807224827",
+    "generatedAt": "2026-08-07T22:48:47.764Z",
+    "separateFromFrozenBenchmark": true,
+    "totalCases": 5,
+    "successfulCases": 5,
+    "verifiedCompletionRate": 1,
+    "writeActions": 0,
+    "results": [
+      {
+        "caseId": "live-web-discovery",
+        "purpose": "programme discovery and eligibility",
+        "success": true,
+        "verified": true,
+        "actual": {
+          "programme": "Computer Science MSc | Prospective Students Graduate - UCL – University College London",
+          "officialUrl": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+          "officialSourceVerified": true,
+          "eligibility": "2026 Applications close at 10am UK time Applications open Apply for this course Entry requirements A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other than computer science or information technology"
+        },
+        "browserActions": 1,
+        "writeActions": 0,
+        "elapsedMs": 6359,
+        "failureClass": null
+      },
+      {
+        "caseId": "live-web-deadline",
+        "purpose": "deadline and timezone extraction",
+        "success": true,
+        "verified": true,
+        "actual": {
+          "deadline": "fees (2026/27) £21,500 Duration 1 calendar year Programme starts September 2026 Applications accepted Applicants who require a visa: 20 Oct 2025 – 27 Mar 2026 Applications closed Applicants who do not require a visa: 20 Oct 2025 – 28 Aug 2026 Applications close at 10am UK time Ap",
+          "timezone": "who do not require a visa: 20 Oct 2025 – 28 Aug 2026 Applications close at 10am UK time Applications open Apply for this course Entry requirements A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other",
+          "officialCitation": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+          "officialSourceVerified": true
+        },
+        "browserActions": 1,
+        "writeActions": 0,
+        "elapsedMs": 3090,
+        "failureClass": null
+      },
+      {
+        "caseId": "live-web-funding",
+        "purpose": "funding extraction",
+        "success": true,
+        "verified": true,
+        "actual": {
+          "funding": "deposits - Frequently Asked Questions Fund your Master's with a Global Master's Scholarship Current page: Paying for your degree Breadcrumb trail Study at UCL ... (Additional navigation levels omitted.) Graduate degrees Funding your Master's Paying for your degree Paying for your",
+          "sourceExcerpt": "ies to get the financial support and security you need to get started. Graduate fees and funding There are a large number of funding schemes which support graduate students, including scholarships, studentships, awards, bursaries, grants and loans. Furthermore, some students are",
+          "officialCitation": "https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters/paying-your-degree",
+          "officialSourceVerified": true
+        },
+        "browserActions": 1,
+        "writeActions": 0,
+        "elapsedMs": 2743,
+        "failureClass": null
+      },
+      {
+        "caseId": "live-web-faculty",
+        "purpose": "faculty and institutional-email extraction",
+        "success": true,
+        "verified": true,
+        "actual": {
+          "faculty": "Combinatorial Structures and Algorithms",
+          "institutionalEmail": "johannes.lengler@inf.ethz.ch",
+          "researchAreas": "Department of Computer Science | Institute of Theoretical Computer Science Combinatorial Structures and Algorithms People Education Lectures Bachelor/Master theses Thesis Guidelines Research Neuro group Publications Grants Dissertations Buchboden Challenges Seminars Mittagssemina",
+          "officialCitation": "https://as.inf.ethz.ch/people/members/lenglerj/index.html",
+          "officialSourceVerified": true
+        },
+        "browserActions": 1,
+        "writeActions": 0,
+        "elapsedMs": 2032,
+        "failureClass": null
+      },
+      {
+        "caseId": "live-web-conflict",
+        "purpose": "authoritative-source conflict resolution",
+        "success": true,
+        "verified": true,
+        "actual": {
+          "departmentSource": "https://www.ucl.ac.uk/engineering/computer-science/study/postgraduate-taught",
+          "authoritativeSource": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+          "conflictResolution": "official course admissions page preferred for course requirements",
+          "sourcePairVerified": true
+        },
+        "browserActions": 2,
+        "writeActions": 0,
+        "elapsedMs": 5883,
+        "failureClass": null
+      }
+    ]
+  },
+  "blockers": [
+    "writer-question: The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com.",
+    "referee-reply: The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com.",
+    "professor-reply: The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com."
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "caseId": "two-page-cv",
+  "caseName": "Produce a two-page CV when required",
+  "expectedResult": {
+    "pageTarget": "two_page",
+    "pageCount": 2
+  },
+  "actualResult": {
+    "template": "graduate_application_cv_v1",
+    "compiled": true,
+    "pageTarget": "two_page",
+    "pageCount": 1,
+    "checksum": "f097ac35b6887ea96c32a374facee8168b38602e6d1a813c091fa5256d84b777",
+    "artifact": "cv-controlled-phd.pdf",
+    "approvalStatus": "approved",
+    "extraction": "complete",
+    "name": "David Dosu",
+    "email": "dosudavy@gmail.com",
+    "selectedBy": "checksum"
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [
+    {
+      "at": "2026-08-07T20:53:22.329Z",
+      "component": "primitive",
+      "event": "primitive_failed",
+      "caseId": "two-page-cv",
+      "data": {
+        "value": false
+      }
+    }
+  ],
+  "escalationReason": null,
+  "harnessTrace": [],
+  "lastVerifiedState": {
+    "template": "graduate_application_cv_v1",
+    "compiled": true,
+    "pageTarget": "two_page",
+    "pageCount": 1,
+    "checksum": "f097ac35b6887ea96c32a374facee8168b38602e6d1a813c091fa5256d84b777",
+    "artifact": "cv-controlled-phd.pdf",
+    "approvalStatus": "approved",
+    "extraction": "complete",
+    "name": "David Dosu",
+    "email": "dosudavy@gmail.com",
+    "selectedBy": "checksum"
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "template": "graduate_application_cv_v1",
+      "compiled": true,
+      "pageTarget": "two_page",
+      "pageCount": 1,
+      "checksum": "f097ac35b6887ea96c32a374facee8168b38602e6d1a813c091fa5256d84b777",
+      "artifact": "cv-controlled-phd.pdf",
+      "approvalStatus": "approved",
+      "extraction": "complete",
+      "name": "David Dosu",
+      "email": "dosudavy@gmail.com",
+      "selectedBy": "checksum"
+    },
+    "evidence": [
+      {
+        "kind": "artifact_checksum",
+        "verified": true,
+        "checksum": "f097ac35b6887ea96c32a374facee8168b38602e6d1a813c091fa5256d84b777",
+        "details": {
+          "pageCount": 1,
+          "atsIdentity": true
+        }
+      }
+    ]
+  }
+}

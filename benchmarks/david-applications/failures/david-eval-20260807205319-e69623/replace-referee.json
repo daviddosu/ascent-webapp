@@ -1,0 +1,48 @@
+{
+  "caseId": "replace-referee",
+  "caseName": "Replace a referee while preserving case state",
+  "expectedResult": {
+    "oldContact": "declined",
+    "newContact": "assigned",
+    "applicationCaseId": "case-referee-01",
+    "preservedArtifacts": true
+  },
+  "actualResult": {
+    "oldContact": "declined",
+    "newContact": "assigned",
+    "applicationCaseId": "replace-referee",
+    "preservedArtifacts": true
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [],
+  "escalationReason": null,
+  "harnessTrace": [
+    {
+      "at": "2026-08-07T20:53:22.331Z",
+      "component": "harness",
+      "event": "harness_verified",
+      "caseId": "replace-referee",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "lastVerifiedState": {
+    "oldContact": "declined",
+    "newContact": "assigned",
+    "applicationCaseId": "replace-referee",
+    "preservedArtifacts": true
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "oldContact": "declined",
+      "newContact": "assigned",
+      "applicationCaseId": "replace-referee",
+      "preservedArtifacts": true
+    },
+    "evidence": []
+  }
+}

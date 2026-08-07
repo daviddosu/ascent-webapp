@@ -1,0 +1,52 @@
+[
+  {
+    "at": "2026-08-07T22:52:27.296Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "reject-stale-cv",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:27.296Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "reject-stale-cv",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:27.296Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "reject-stale-cv",
+    "data": {
+      "value": true
+    }
+  },
+  {
+    "at": "2026-08-07T22:52:27.296Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "reject-stale-cv",
+    "data": {
+      "value": true
+    }
+  }
+]

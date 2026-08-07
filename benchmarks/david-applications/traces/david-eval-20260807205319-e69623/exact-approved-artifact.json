@@ -1,0 +1,122 @@
+[
+  {
+    "at": "2026-08-07T20:53:20.835Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:21.329Z",
+    "component": "documents",
+    "event": "artifact_compiled_and_verified",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "templateId": "graduate_application_cv_v1",
+      "pageTarget": "one_page",
+      "pageCount": 1,
+      "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:21.329Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "kind": "artifact_checksum",
+      "verified": true,
+      "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b",
+      "details": {
+        "pageCount": 1,
+        "atsIdentity": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:21.329Z",
+    "component": "verification",
+    "event": "expected_outcome_mismatch",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "expected": {
+        "artifact": "cv-controlled-phd.pdf",
+        "selectedBy": "checksum",
+        "state": "approved"
+      },
+      "actual": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "one_page",
+        "pageCount": 1,
+        "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b",
+        "artifact": "cv-controlled-phd.pdf",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:20.835Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:21.329Z",
+    "component": "verification",
+    "event": "expected_outcome_mismatch",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "expected": {
+        "artifact": "cv-controlled-phd.pdf",
+        "selectedBy": "checksum",
+        "state": "approved"
+      },
+      "actual": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "one_page",
+        "pageCount": 1,
+        "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b",
+        "artifact": "cv-controlled-phd.pdf",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:21.329Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "value": true
+    }
+  }
+]

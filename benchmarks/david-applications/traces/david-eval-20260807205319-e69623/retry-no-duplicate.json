@@ -1,0 +1,119 @@
+[
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "retry-no-duplicate"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:retry-no-duplicate",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "gmail",
+    "event": "provider_send_confirmed",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "messageId": "benchmark-msg-david-eval-20260807205319-e69623-3",
+      "threadId": "thread-retry-no-duplicate-writer_assignment",
+      "purpose": "writer_assignment",
+      "to": "daviddosuu@gmail.com"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "kind": "provider_message",
+      "verified": true,
+      "providerId": "benchmark-msg-david-eval-20260807205319-e69623-3",
+      "threadId": "thread-retry-no-duplicate-writer_assignment",
+      "details": {
+        "purpose": "writer_assignment",
+        "to": "daviddosuu@gmail.com"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "kind": "provider_thread",
+      "verified": true,
+      "threadId": "thread-retry-no-duplicate-writer_assignment",
+      "details": {
+        "caseId": "retry-no-duplicate"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "persistence",
+    "event": "duplicate_action_blocked",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:retry-no-duplicate",
+      "providerId": "benchmark-msg-david-eval-20260807205319-e69623-3"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "retry-no-duplicate",
+    "data": {
+      "value": true
+    }
+  }
+]

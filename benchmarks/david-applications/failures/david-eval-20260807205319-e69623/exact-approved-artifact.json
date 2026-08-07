@@ -1,0 +1,78 @@
+{
+  "caseId": "exact-approved-artifact",
+  "caseName": "Select exact approved artifact",
+  "expectedResult": {
+    "artifact": "cv-controlled-phd.pdf",
+    "selectedBy": "checksum",
+    "state": "approved"
+  },
+  "actualResult": {
+    "template": "graduate_application_cv_v1",
+    "compiled": true,
+    "pageTarget": "one_page",
+    "pageCount": 1,
+    "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b",
+    "artifact": "cv-controlled-phd.pdf",
+    "approvalStatus": "approved",
+    "extraction": "complete",
+    "name": "David Dosu",
+    "email": "dosudavy@gmail.com",
+    "selectedBy": "checksum"
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [
+    {
+      "at": "2026-08-07T20:53:21.329Z",
+      "component": "primitive",
+      "event": "primitive_verified",
+      "caseId": "exact-approved-artifact",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "escalationReason": null,
+  "harnessTrace": [],
+  "lastVerifiedState": {
+    "template": "graduate_application_cv_v1",
+    "compiled": true,
+    "pageTarget": "one_page",
+    "pageCount": 1,
+    "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b",
+    "artifact": "cv-controlled-phd.pdf",
+    "approvalStatus": "approved",
+    "extraction": "complete",
+    "name": "David Dosu",
+    "email": "dosudavy@gmail.com",
+    "selectedBy": "checksum"
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "template": "graduate_application_cv_v1",
+      "compiled": true,
+      "pageTarget": "one_page",
+      "pageCount": 1,
+      "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b",
+      "artifact": "cv-controlled-phd.pdf",
+      "approvalStatus": "approved",
+      "extraction": "complete",
+      "name": "David Dosu",
+      "email": "dosudavy@gmail.com",
+      "selectedBy": "checksum"
+    },
+    "evidence": [
+      {
+        "kind": "artifact_checksum",
+        "verified": true,
+        "checksum": "0ae3aee6a663a2d054dcdf1c0de196b30d597b5c6ccf3f69e64c2d36e75f193b",
+        "details": {
+          "pageCount": 1,
+          "atsIdentity": true
+        }
+      }
+    ]
+  }
+}

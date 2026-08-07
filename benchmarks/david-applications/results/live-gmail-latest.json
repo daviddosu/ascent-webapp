@@ -1,0 +1,133 @@
+{
+  "suite": "david_connected_gmail_eval_v1",
+  "runId": "david-gmail-live-20260807224946-eb98cb",
+  "generatedAt": "2026-08-07T22:51:33Z",
+  "connectedAccount": "dosudavy@gmail.com",
+  "approvedAccounts": [
+    "dosudavy@gmail.com",
+    "daviddosuu@gmail.com"
+  ],
+  "requestedCases": 9,
+  "executedCases": 6,
+  "verifiedCases": 6,
+  "verifiedProviderSendRate": 1,
+  "alternateSenderAvailable": false,
+  "crossCaseContamination": false,
+  "duplicateActions": 0,
+  "results": [
+    {
+      "caseId": "writer-assignment",
+      "purpose": "WRITER-ASSIGNMENT",
+      "sender": "dosudavy@gmail.com",
+      "recipient": "daviddosuu@gmail.com",
+      "messageId": "19fde6bbd17a242b",
+      "threadId": "19fde6bbd17a242b",
+      "internalDate": "1786143030000",
+      "providerMessageIdVerified": true,
+      "threadIdVerified": true,
+      "headersVerified": true,
+      "caseOwnershipVerified": true,
+      "threadOwnershipVerified": true
+    },
+    {
+      "caseId": "writer-revision",
+      "purpose": "WRITER-REVISION",
+      "sender": "dosudavy@gmail.com",
+      "recipient": "daviddosuu@gmail.com",
+      "messageId": "19fde6bb80e090b4",
+      "threadId": "19fde6bb80e090b4",
+      "internalDate": "1786143029000",
+      "providerMessageIdVerified": true,
+      "threadIdVerified": true,
+      "headersVerified": true,
+      "caseOwnershipVerified": true,
+      "threadOwnershipVerified": true
+    },
+    {
+      "caseId": "referee-request",
+      "purpose": "REFEREE-REQUEST",
+      "sender": "dosudavy@gmail.com",
+      "recipient": "daviddosuu@gmail.com",
+      "messageId": "19fde6bc13e3d81d",
+      "threadId": "19fde6bc13e3d81d",
+      "internalDate": "1786143031000",
+      "providerMessageIdVerified": true,
+      "threadIdVerified": true,
+      "headersVerified": true,
+      "caseOwnershipVerified": true,
+      "threadOwnershipVerified": true
+    },
+    {
+      "caseId": "professor-outreach",
+      "purpose": "PROFESSOR-OUTREACH",
+      "sender": "dosudavy@gmail.com",
+      "recipient": "daviddosuu@gmail.com",
+      "messageId": "19fde6bc281c40ba",
+      "threadId": "19fde6bc281c40ba",
+      "internalDate": "1786143032000",
+      "providerMessageIdVerified": true,
+      "threadIdVerified": true,
+      "headersVerified": true,
+      "caseOwnershipVerified": true,
+      "threadOwnershipVerified": true
+    },
+    {
+      "caseId": "otp-retrieval",
+      "purpose": "OTP",
+      "sender": "dosudavy@gmail.com",
+      "recipient": "dosudavy@gmail.com",
+      "messageId": "19fde6bc625de881",
+      "threadId": "19fde6bc625de881",
+      "internalDate": "1786143033000",
+      "providerMessageIdVerified": true,
+      "threadIdVerified": true,
+      "headersVerified": true,
+      "caseOwnershipVerified": true,
+      "threadOwnershipVerified": true,
+      "retrievedByExactRunMarker": true,
+      "threadMessageCount": 1
+    },
+    {
+      "caseId": "application-correspondence",
+      "purpose": "APPLICATION-CORRESPONDENCE",
+      "sender": "dosudavy@gmail.com",
+      "recipient": "daviddosuu@gmail.com",
+      "messageId": "19fde6bcbf766557",
+      "threadId": "19fde6bcbf766557",
+      "internalDate": "1786143034000",
+      "providerMessageIdVerified": true,
+      "threadIdVerified": true,
+      "headersVerified": true,
+      "caseOwnershipVerified": true,
+      "threadOwnershipVerified": true
+    }
+  ],
+  "blockedCases": [
+    {
+      "caseId": "writer-question",
+      "reason": "The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com."
+    },
+    {
+      "caseId": "referee-reply",
+      "reason": "The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com."
+    },
+    {
+      "caseId": "professor-reply",
+      "reason": "The connected Gmail tool exposes only dosudavy@gmail.com, so it cannot originate a genuine reply from daviddosuu@gmail.com."
+    }
+  ],
+  "senderCapabilityProbe": {
+    "requestedFrom": "daviddosuu@gmail.com",
+    "observedFrom": "dosudavy@gmail.com",
+    "messageId": "19fde6b30974e843",
+    "threadId": "19fde6b30974e843",
+    "result": "connector_rewrote_to_authenticated_identity"
+  },
+  "cleanup": {
+    "label": "SHOTCOUNT-EVAL",
+    "messagesMatched": 7,
+    "archived": true,
+    "deleted": false,
+    "note": "Messages remain recoverable under the benchmark label; the second mailbox was not exposed for cleanup."
+  }
+}

@@ -1,0 +1,681 @@
+{
+  "benchmarkVersion": "david_application_eval_v1",
+  "schemaVersion": 1,
+  "runId": "david-eval-20260807205255-28aa77",
+  "codeCommit": "c3f5114ac19ef5f614b828cab0c9e3e9dc4c4d58",
+  "modelConfiguration": {
+    "model": "deterministic-fixture",
+    "reasoning": "none",
+    "provider": "local"
+  },
+  "harnessVersion": "application-harness-v1",
+  "primitiveVersion": "public-browser-primitive-v1",
+  "executionMode": "deterministic_fixture",
+  "generatedAt": "2026-08-07T20:53:07.529Z",
+  "atomicCases": 1,
+  "endToEndCases": 0,
+  "results": [
+    {
+      "caseId": "primitive-simple-form",
+      "title": "Complete a simple form with the primitive",
+      "level": "atomic",
+      "expectedResult": {
+        "state": "saved",
+        "execution": "primitive"
+      },
+      "actualResult": {
+        "state": "saved",
+        "execution": "primitive"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "primitive",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": false,
+      "harnessSuccess": false,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 5,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 11662,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T20:52:55.867Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T20:52:59.662Z",
+          "component": "browser",
+          "event": "navigation_observed",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "url": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account",
+            "observation": {
+              "title": "Application portal · account",
+              "url": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account",
+              "headings": [
+                "Create account"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205255-28aa77 Create account Use the controlled university application portal. Email Password Create account",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=review"
+                }
+              ],
+              "controls": [
+                {
+                  "label": "Email",
+                  "kind": "input:email"
+                },
+                {
+                  "label": "Password",
+                  "kind": "input:password"
+                },
+                {
+                  "label": "Create account",
+                  "kind": "button:submit"
+                }
+              ],
+              "fields": [
+                {
+                  "name": "email",
+                  "label": "Email",
+                  "type": "email",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "password",
+                  "label": "Password",
+                  "type": "password",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                }
+              ],
+              "untrustedExternalContent": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:53:01.094Z",
+          "component": "browser",
+          "event": "action_observed",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "action": {
+              "action": "click",
+              "target": "text:Profile",
+              "value": null
+            },
+            "observation": {
+              "title": "Application portal · profile",
+              "url": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile",
+              "headings": [
+                "Applicant profile"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205255-28aa77 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=review"
+                }
+              ],
+              "controls": [
+                {
+                  "label": "Legal name",
+                  "kind": "input:text"
+                },
+                {
+                  "label": "NationalityChooseNigeriaGhana",
+                  "kind": "select:select-one"
+                },
+                {
+                  "label": "Research interests",
+                  "kind": "textarea:textarea"
+                },
+                {
+                  "label": "Save section",
+                  "kind": "button:submit"
+                }
+              ],
+              "fields": [
+                {
+                  "name": "legal_name",
+                  "label": "Legal name",
+                  "type": "text",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "nationality",
+                  "label": "NationalityChooseNigeriaGhana",
+                  "type": "select-one",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "research_interests",
+                  "label": "Research interests",
+                  "type": "textarea",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                }
+              ],
+              "untrustedExternalContent": true
+            },
+            "evidence": null
+          }
+        },
+        {
+          "at": "2026-08-07T20:53:02.675Z",
+          "component": "browser",
+          "event": "action_observed",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "action": {
+              "action": "type",
+              "target": "label:Legal name",
+              "value": "David Dosu"
+            },
+            "observation": {
+              "title": "Application portal · profile",
+              "url": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile",
+              "headings": [
+                "Applicant profile"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205255-28aa77 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=review"
+                }
+              ],
+              "controls": [
+                {
+                  "label": "Legal name",
+                  "kind": "input:text"
+                },
+                {
+                  "label": "NationalityChooseNigeriaGhana",
+                  "kind": "select:select-one"
+                },
+                {
+                  "label": "Research interests",
+                  "kind": "textarea:textarea"
+                },
+                {
+                  "label": "Save section",
+                  "kind": "button:submit"
+                }
+              ],
+              "fields": [
+                {
+                  "name": "legal_name",
+                  "label": "Legal name",
+                  "type": "text",
+                  "value": "David Dosu",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "nationality",
+                  "label": "NationalityChooseNigeriaGhana",
+                  "type": "select-one",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "research_interests",
+                  "label": "Research interests",
+                  "type": "textarea",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                }
+              ],
+              "untrustedExternalContent": true
+            },
+            "evidence": null
+          }
+        },
+        {
+          "at": "2026-08-07T20:53:04.029Z",
+          "component": "browser",
+          "event": "action_observed",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "action": {
+              "action": "select",
+              "target": "css:select[name=\"nationality\"]",
+              "value": "Nigeria"
+            },
+            "observation": {
+              "title": "Application portal · profile",
+              "url": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile",
+              "headings": [
+                "Applicant profile"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205255-28aa77 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=review"
+                }
+              ],
+              "controls": [
+                {
+                  "label": "Legal name",
+                  "kind": "input:text"
+                },
+                {
+                  "label": "NationalityChooseNigeriaGhana",
+                  "kind": "select:select-one"
+                },
+                {
+                  "label": "Research interests",
+                  "kind": "textarea:textarea"
+                },
+                {
+                  "label": "Save section",
+                  "kind": "button:submit"
+                }
+              ],
+              "fields": [
+                {
+                  "name": "legal_name",
+                  "label": "Legal name",
+                  "type": "text",
+                  "value": "David Dosu",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "nationality",
+                  "label": "NationalityChooseNigeriaGhana",
+                  "type": "select-one",
+                  "value": "Nigeria",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "research_interests",
+                  "label": "Research interests",
+                  "type": "textarea",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                }
+              ],
+              "untrustedExternalContent": true
+            },
+            "evidence": null
+          }
+        },
+        {
+          "at": "2026-08-07T20:53:05.884Z",
+          "component": "browser",
+          "event": "action_observed",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "action": {
+              "action": "type",
+              "target": "label:Research interests",
+              "value": "Computational physics"
+            },
+            "observation": {
+              "title": "Application portal · profile",
+              "url": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile",
+              "headings": [
+                "Applicant profile"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205255-28aa77 Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=review"
+                }
+              ],
+              "controls": [
+                {
+                  "label": "Legal name",
+                  "kind": "input:text"
+                },
+                {
+                  "label": "NationalityChooseNigeriaGhana",
+                  "kind": "select:select-one"
+                },
+                {
+                  "label": "Research interests",
+                  "kind": "textarea:textarea"
+                },
+                {
+                  "label": "Save section",
+                  "kind": "button:submit"
+                }
+              ],
+              "fields": [
+                {
+                  "name": "legal_name",
+                  "label": "Legal name",
+                  "type": "text",
+                  "value": "David Dosu",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "nationality",
+                  "label": "NationalityChooseNigeriaGhana",
+                  "type": "select-one",
+                  "value": "Nigeria",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "research_interests",
+                  "label": "Research interests",
+                  "type": "textarea",
+                  "value": "Computational physics",
+                  "checked": false,
+                  "fileName": null
+                }
+              ],
+              "untrustedExternalContent": true
+            },
+            "evidence": null
+          }
+        },
+        {
+          "at": "2026-08-07T20:53:07.529Z",
+          "component": "browser",
+          "event": "section_save_observed",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "step": "profile",
+            "target": "role:button:Save section",
+            "confirmationObserved": true,
+            "observation": {
+              "title": "Section saved",
+              "url": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile",
+              "headings": [
+                "Section saved"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807205255-28aa77 Section saved profile section saved and checkpointed. Continue editing profile",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=review"
+                },
+                {
+                  "text": "Continue editing profile",
+                  "href": "https://benchmark.test:62932/api/application-portal-fixture?run=david-eval-20260807205255-28aa77&seed=47&step=profile"
+                }
+              ],
+              "controls": [],
+              "fields": [],
+              "untrustedExternalContent": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:53:07.529Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "kind": "saved_section",
+            "verified": true,
+            "details": {
+              "step": "profile",
+              "fields": []
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T20:52:55.867Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "mode": "primitive_then_harness",
+            "reasons": [
+              "Simple, reversible, stateless step with a safe primitive path.",
+              "No history exists; begin with a recoverable primitive attempt."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "not_applicable"
+          }
+        },
+        {
+          "at": "2026-08-07T20:53:07.529Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "primitive-simple-form",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "totalCases": 1,
+    "successfulCases": 1,
+    "failedCases": 0,
+    "primitiveSuccessRate": 1,
+    "harnessSuccessRate": null,
+    "primitiveToHarnessRescueRate": null,
+    "adaptiveStepSuccessRate": 1,
+    "endToEndSuccessRate": null,
+    "verifiedCompletionRate": 1,
+    "falseCompletionRate": 0,
+    "falseSuccessCount": 0,
+    "duplicateActionRate": 0,
+    "duplicateActionCount": 0,
+    "manualInterventionRate": 0,
+    "recoverySuccessRate": 0,
+    "crossCaseContaminationRate": 0,
+    "averageCostPerCompletedApplicationUsd": 0,
+    "averageTimePerCompletedApplicationMs": 11662,
+    "browserActions": 5,
+    "gmailActions": 0,
+    "modelCalls": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "estimatedModelCostUsd": 0,
+    "rootCauseCategories": "{}"
+  },
+  "routingStatistics": {
+    "modes": {
+      "primitive": 1
+    },
+    "failureTaxonomySize": 30
+  },
+  "liveEmail": {
+    "status": "deferred_to_connected_gmail_eval",
+    "approvedAccounts": [
+      "dosudavy@gmail.com",
+      "daviddosuu@gmail.com"
+    ],
+    "messagesInDeterministicFixture": 0
+  },
+  "liveReadOnlyWeb": {
+    "status": "separate_command_required",
+    "cases": 5
+  },
+  "blockers": []
+}

@@ -1,0 +1,1144 @@
+{
+  "benchmarkVersion": "david_application_eval_v1",
+  "schemaVersion": 1,
+  "runId": "david-eval-20260807210402-d27de9",
+  "codeCommit": "c3f5114ac19ef5f614b828cab0c9e3e9dc4c4d58",
+  "modelConfiguration": {
+    "model": "deterministic-fixture",
+    "reasoning": "none",
+    "provider": "local"
+  },
+  "harnessVersion": "application-harness-v1",
+  "primitiveVersion": "public-browser-primitive-v1",
+  "executionMode": "deterministic_fixture",
+  "generatedAt": "2026-08-07T21:04:12.699Z",
+  "atomicCases": 6,
+  "endToEndCases": 0,
+  "results": [
+    {
+      "caseId": "programme-cv",
+      "title": "Generate programme-specific CV",
+      "level": "atomic",
+      "expectedResult": {
+        "artifact": "cv-controlled-phd.pdf",
+        "approvalStatus": "approved",
+        "programmeId": "controlled-phd"
+      },
+      "actualResult": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "one_page",
+        "pageCount": 1,
+        "checksum": "5b37383e5bf60402019e238feaeca1ffd8078971702f48c2e74a5a21681a3f48",
+        "artifact": "cv-controlled-phd.pdf",
+        "programmeId": "controlled-phd",
+        "state": "approved",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 622,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T21:04:02.543Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "programme-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.164Z",
+          "component": "documents",
+          "event": "artifact_compiled_and_verified",
+          "caseId": "programme-cv",
+          "data": {
+            "templateId": "graduate_application_cv_v1",
+            "pageTarget": "one_page",
+            "pageCount": 1,
+            "checksum": "5b37383e5bf60402019e238feaeca1ffd8078971702f48c2e74a5a21681a3f48"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.164Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "programme-cv",
+          "data": {
+            "kind": "artifact_checksum",
+            "verified": true,
+            "checksum": "5b37383e5bf60402019e238feaeca1ffd8078971702f48c2e74a5a21681a3f48",
+            "details": {
+              "pageCount": 1,
+              "atsIdentity": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:02.543Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "programme-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.164Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "programme-cv",
+          "data": {
+            "value": true
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.164Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "programme-cv",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "exact-approved-artifact",
+      "title": "Select exact approved artifact",
+      "level": "atomic",
+      "expectedResult": {
+        "artifact": "cv-controlled-phd.pdf",
+        "selectedBy": "checksum",
+        "state": "approved"
+      },
+      "actualResult": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "one_page",
+        "pageCount": 1,
+        "checksum": "ca53c5fd99c55d93e6a5da9fe8ec0be40f0665b85f8cae686c43e8f71094cb09",
+        "artifact": "cv-controlled-phd.pdf",
+        "programmeId": "controlled-phd",
+        "state": "approved",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 513,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T21:04:03.165Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.678Z",
+          "component": "documents",
+          "event": "artifact_compiled_and_verified",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "templateId": "graduate_application_cv_v1",
+            "pageTarget": "one_page",
+            "pageCount": 1,
+            "checksum": "ca53c5fd99c55d93e6a5da9fe8ec0be40f0665b85f8cae686c43e8f71094cb09"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.678Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "kind": "artifact_checksum",
+            "verified": true,
+            "checksum": "ca53c5fd99c55d93e6a5da9fe8ec0be40f0665b85f8cae686c43e8f71094cb09",
+            "details": {
+              "pageCount": 1,
+              "atsIdentity": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.165Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.678Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "value": true
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.678Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "exact-approved-artifact",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "two-page-cv",
+      "title": "Produce a two-page CV when required",
+      "level": "atomic",
+      "expectedResult": {
+        "pageTarget": "two_page",
+        "pageCount": 2
+      },
+      "actualResult": {
+        "template": "graduate_application_cv_v1",
+        "compiled": true,
+        "pageTarget": "two_page",
+        "pageCount": 2,
+        "checksum": "dc04585b2d6bcfdfa16c03c6f71956bb11f196296bc5fd3509154784ac5d025d",
+        "artifact": "cv-controlled-phd.pdf",
+        "programmeId": "controlled-phd",
+        "state": "approved",
+        "approvalStatus": "approved",
+        "extraction": "complete",
+        "name": "David Dosu",
+        "email": "dosudavy@gmail.com",
+        "selectedBy": "checksum"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": true,
+      "primitiveSuccess": true,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 584,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T21:04:03.678Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "two-page-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "documents",
+          "event": "artifact_compiled_and_verified",
+          "caseId": "two-page-cv",
+          "data": {
+            "templateId": "graduate_application_cv_v1",
+            "pageTarget": "two_page",
+            "pageCount": 2,
+            "checksum": "dc04585b2d6bcfdfa16c03c6f71956bb11f196296bc5fd3509154784ac5d025d"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "two-page-cv",
+          "data": {
+            "kind": "artifact_checksum",
+            "verified": true,
+            "checksum": "dc04585b2d6bcfdfa16c03c6f71956bb11f196296bc5fd3509154784ac5d025d",
+            "details": {
+              "pageCount": 2,
+              "atsIdentity": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:03.678Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "two-page-cv",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "primitive",
+          "event": "primitive_verified",
+          "caseId": "two-page-cv",
+          "data": {
+            "value": true
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "two-page-cv",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "retry-no-duplicate",
+      "title": "Retry does not duplicate send",
+      "level": "atomic",
+      "expectedResult": {
+        "sendCount": 1,
+        "duplicateAction": false
+      },
+      "actualResult": {
+        "sendCount": 1,
+        "duplicateAction": false
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 1,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 0,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "persistence",
+          "event": "application_case_created",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "status": "active",
+            "data": {
+              "applicationCaseId": "retry-no-duplicate"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "persistence",
+          "event": "action_claimed",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "action": "gmail.send_message",
+            "key": "send:retry-no-duplicate",
+            "providerId": null
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "gmail",
+          "event": "provider_send_confirmed",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "messageId": "benchmark-msg-david-eval-20260807210402-d27de9-1",
+            "threadId": "thread-retry-no-duplicate-writer_assignment",
+            "purpose": "writer_assignment",
+            "to": "daviddosuu@gmail.com"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "kind": "provider_message",
+            "verified": true,
+            "providerId": "benchmark-msg-david-eval-20260807210402-d27de9-1",
+            "threadId": "thread-retry-no-duplicate-writer_assignment",
+            "details": {
+              "purpose": "writer_assignment",
+              "to": "daviddosuu@gmail.com"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "kind": "provider_thread",
+            "verified": true,
+            "threadId": "thread-retry-no-duplicate-writer_assignment",
+            "details": {
+              "caseId": "retry-no-duplicate"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "persistence",
+          "event": "duplicate_action_blocked",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "action": "gmail.send_message",
+            "key": "send:retry-no-duplicate",
+            "providerId": "benchmark-msg-david-eval-20260807210402-d27de9-1"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "verification",
+          "event": "duplicate_send_prevented",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "originalMessageId": "benchmark-msg-david-eval-20260807210402-d27de9-1",
+            "retryMessageId": "benchmark-msg-david-eval-20260807210402-d27de9-1"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "retry-no-duplicate",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "referee-no-excessive-follow-up",
+      "title": "Prevent excessive referee follow-up",
+      "level": "atomic",
+      "expectedResult": {
+        "followUpCount": 1,
+        "duplicateAction": false
+      },
+      "actualResult": {
+        "state": "sent",
+        "purpose": "referee_follow_up",
+        "followUpCount": 1,
+        "duplicateAction": false,
+        "approval": false
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 0,
+      "gmailActions": 1,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 34,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step crosses an external wait."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "persistence",
+          "event": "application_case_created",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "status": "active",
+            "data": {
+              "applicationCaseId": "referee-no-excessive-follow-up"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "persistence",
+          "event": "action_claimed",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "action": "gmail.send_message",
+            "key": "send:referee-no-excessive-follow-up",
+            "providerId": null
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "gmail",
+          "event": "provider_send_confirmed",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "messageId": "benchmark-msg-david-eval-20260807210402-d27de9-2",
+            "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+            "purpose": "referee_follow_up",
+            "to": "daviddosuu@gmail.com"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "kind": "provider_message",
+            "verified": true,
+            "providerId": "benchmark-msg-david-eval-20260807210402-d27de9-2",
+            "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+            "details": {
+              "purpose": "referee_follow_up",
+              "to": "daviddosuu@gmail.com"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "kind": "provider_thread",
+            "verified": true,
+            "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+            "details": {
+              "caseId": "referee-no-excessive-follow-up"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "persistence",
+          "event": "duplicate_action_blocked",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "action": "gmail.send_message",
+            "key": "send:referee-no-excessive-follow-up",
+            "providerId": "benchmark-msg-david-eval-20260807210402-d27de9-2"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.262Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Durable persistence is required.",
+              "Read-after-write evidence is required.",
+              "The step crosses an external wait."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "verification",
+          "event": "duplicate_follow_up_prevented",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "originalMessageId": "benchmark-msg-david-eval-20260807210402-d27de9-2",
+            "retryMessageId": "benchmark-msg-david-eval-20260807210402-d27de9-2"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "referee-no-excessive-follow-up",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "duplicate-submission",
+      "title": "Reject duplicate submission attempt",
+      "level": "atomic",
+      "expectedResult": {
+        "first": "confirmed",
+        "second": "blocked",
+        "submissionCount": 1,
+        "failureClass": "duplicate_action"
+      },
+      "actualResult": {
+        "first": "confirmed",
+        "second": "blocked",
+        "submissionCount": 1,
+        "failureClass": "duplicate_action"
+      },
+      "success": true,
+      "verified": true,
+      "executionMode": "harness",
+      "primitiveAttempted": false,
+      "primitiveSuccess": false,
+      "harnessAttempted": true,
+      "harnessSuccess": true,
+      "escalated": false,
+      "escalationReason": null,
+      "recoverySuccess": false,
+      "falseSuccess": false,
+      "duplicateAction": false,
+      "manualIntervention": false,
+      "retries": 0,
+      "browserActions": 3,
+      "gmailActions": 0,
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "estimatedCostUsd": 0,
+      "elapsedMs": 8403,
+      "rootCauseCategory": null,
+      "trace": [
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "duplicate-submission",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Known portal workflow is stateful.",
+              "The step spans multiple pages.",
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:07.860Z",
+          "component": "browser",
+          "event": "navigation_observed",
+          "caseId": "duplicate-submission",
+          "data": {
+            "url": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=account",
+            "observation": {
+              "title": "Application portal · account",
+              "url": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=account",
+              "headings": [
+                "Create account"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807210402-d27de9 Create account Use the controlled university application portal. Email Password Create account",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=review"
+                }
+              ],
+              "controls": [
+                {
+                  "label": "Email",
+                  "kind": "input:email"
+                },
+                {
+                  "label": "Password",
+                  "kind": "input:password"
+                },
+                {
+                  "label": "Create account",
+                  "kind": "button:submit"
+                }
+              ],
+              "fields": [
+                {
+                  "name": "email",
+                  "label": "Email",
+                  "type": "email",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                },
+                {
+                  "name": "password",
+                  "label": "Password",
+                  "type": "password",
+                  "value": "",
+                  "checked": false,
+                  "fileName": null
+                }
+              ],
+              "untrustedExternalContent": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:09.202Z",
+          "component": "browser",
+          "event": "action_observed",
+          "caseId": "duplicate-submission",
+          "data": {
+            "action": {
+              "action": "click",
+              "target": "text:Review",
+              "value": null
+            },
+            "observation": {
+              "title": "Application portal · review",
+              "url": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=review",
+              "headings": [
+                "Final review"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807210402-d27de9 Final review Programme Controlled University PhD in Computational Physics Funding Full tuition waiver and stipend All required sections are saved. Submission remains a separate approved action. Submit application",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=review"
+                }
+              ],
+              "controls": [
+                {
+                  "label": "Submit application",
+                  "kind": "button:submit"
+                }
+              ],
+              "fields": [],
+              "untrustedExternalContent": true
+            },
+            "evidence": null
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:09.202Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "duplicate-submission",
+          "data": {
+            "kind": "page_observation",
+            "verified": true,
+            "details": {
+              "step": "review",
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807210402-d27de9 Final review Programme Controlled University PhD in Computational Physics Funding Full tuition waiver and stipend All required sections are saved. Submission remains a separate approved action. Submit application"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:11.089Z",
+          "component": "browser",
+          "event": "submission_confirmation_observed",
+          "caseId": "duplicate-submission",
+          "data": {
+            "confirmationObserved": true,
+            "observation": {
+              "title": "Application submitted",
+              "url": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=review",
+              "headings": [
+                "Application submitted"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807210402-d27de9 Application submitted Application ID: SC-TEST-2027-001 A confirmation email was sent by the controlled admissions system. Submission confirmed once. This controlled fixture stores no applicant values.",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=review"
+                }
+              ],
+              "controls": [],
+              "fields": [],
+              "untrustedExternalContent": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:11.089Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "duplicate-submission",
+          "data": {
+            "kind": "submission_confirmation",
+            "verified": true,
+            "id": "SC-TEST-2027-001",
+            "details": {
+              "applicationId": "SC-TEST-2027-001"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:12.699Z",
+          "component": "browser",
+          "event": "submission_confirmation_observed",
+          "caseId": "duplicate-submission",
+          "data": {
+            "confirmationObserved": true,
+            "observation": {
+              "title": "Application submitted",
+              "url": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=review",
+              "headings": [
+                "Application submitted"
+              ],
+              "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260807210402-d27de9 Application submitted Application ID: SC-TEST-2027-001 A confirmation email was sent by the controlled admissions system. Submission confirmed once. This controlled fixture stores no applicant values.",
+              "links": [
+                {
+                  "text": "Account",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=account"
+                },
+                {
+                  "text": "Verification",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=verification"
+                },
+                {
+                  "text": "Profile",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=profile"
+                },
+                {
+                  "text": "Education",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=education"
+                },
+                {
+                  "text": "Research",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=research"
+                },
+                {
+                  "text": "Documents",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=documents"
+                },
+                {
+                  "text": "Review",
+                  "href": "https://benchmark.test:49805/api/application-portal-fixture?run=david-eval-20260807210402-d27de9&seed=57&step=review"
+                }
+              ],
+              "controls": [],
+              "fields": [],
+              "untrustedExternalContent": true
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:12.699Z",
+          "component": "verification",
+          "event": "evidence_verified",
+          "caseId": "duplicate-submission",
+          "data": {
+            "kind": "submission_confirmation",
+            "verified": true,
+            "id": "SC-TEST-2027-001",
+            "details": {
+              "applicationId": "SC-TEST-2027-001"
+            }
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:04.296Z",
+          "component": "router",
+          "event": "execution_mode_selected",
+          "caseId": "duplicate-submission",
+          "data": {
+            "mode": "harness",
+            "reasons": [
+              "Known portal workflow is stateful.",
+              "The step spans multiple pages.",
+              "Durable persistence is required.",
+              "Read-after-write evidence is required."
+            ],
+            "primitiveSuccessRate": null,
+            "harnessSuccessRate": null,
+            "promotion": "harness_preferred"
+          }
+        },
+        {
+          "at": "2026-08-07T21:04:12.699Z",
+          "component": "harness",
+          "event": "harness_verified",
+          "caseId": "duplicate-submission",
+          "data": {
+            "value": true
+          }
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "totalCases": 6,
+    "successfulCases": 6,
+    "failedCases": 0,
+    "primitiveSuccessRate": 1,
+    "harnessSuccessRate": 1,
+    "primitiveToHarnessRescueRate": null,
+    "adaptiveStepSuccessRate": 1,
+    "endToEndSuccessRate": null,
+    "verifiedCompletionRate": 1,
+    "falseCompletionRate": 0,
+    "falseSuccessCount": 0,
+    "duplicateActionRate": 0,
+    "duplicateActionCount": 0,
+    "duplicatePreventionCount": 2,
+    "manualInterventionRate": 0,
+    "recoverySuccessRate": 0,
+    "crossCaseContaminationRate": 0,
+    "averageCostPerCompletedApplicationUsd": 0,
+    "averageTimePerCompletedApplicationMs": 1692.6666666666667,
+    "browserActions": 3,
+    "gmailActions": 2,
+    "modelCalls": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "estimatedModelCostUsd": 0,
+    "rootCauseCategories": "{}"
+  },
+  "routingStatistics": {
+    "modes": {
+      "harness": 6
+    },
+    "failureTaxonomySize": 30
+  },
+  "liveEmail": {
+    "status": "deferred_to_connected_gmail_eval",
+    "approvedAccounts": [
+      "dosudavy@gmail.com",
+      "daviddosuu@gmail.com"
+    ],
+    "messagesInDeterministicFixture": 2
+  },
+  "liveReadOnlyWeb": {
+    "status": "separate_command_required",
+    "cases": 5
+  },
+  "blockers": []
+}

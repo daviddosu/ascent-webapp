@@ -1,0 +1,37 @@
+{
+  "benchmarkVersion": "david_application_eval_v1",
+  "runId": "david-eval-20260807233420-37904d",
+  "codeCommit": "9ce85c61530dda2858b40fbfef5101eb54165830",
+  "generatedAt": "2026-08-07T23:44:59.151Z",
+  "policyVersion": "application-execution-router-v1",
+  "modes": {
+    "primitive": 13,
+    "harness": 54,
+    "primitive_then_harness": 1
+  },
+  "primitivePromotionThreshold": 0.99,
+  "primitiveBenchmarkTarget": 0.95,
+  "harnessPromotionThreshold": 0.99,
+  "failureTaxonomySize": 30,
+  "pairedEvaluations": [
+    {
+      "caseId": "primitive-simple-form",
+      "taskClass": "simple_reversible_form",
+      "primitive": {
+        "success": true,
+        "latencyMs": 7830,
+        "browserActions": 5,
+        "retries": 0,
+        "estimatedCostUsd": 0
+      },
+      "harness": {
+        "success": true,
+        "latencyMs": 8144,
+        "browserActions": 5,
+        "retries": 0,
+        "estimatedCostUsd": 0
+      },
+      "adaptiveSelected": "primitive"
+    }
+  ]
+}

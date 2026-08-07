@@ -1,0 +1,82 @@
+[
+  {
+    "at": "2026-08-07T23:21:42.264Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-declines",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T23:21:42.264Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "referee-declines",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "referee-declines"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T23:21:42.264Z",
+    "component": "gmail",
+    "event": "provider_reply_received",
+    "caseId": "referee-declines",
+    "data": {
+      "messageId": "benchmark-reply-david-eval-20260807232138-9f3a95-7",
+      "threadId": "thread-referee-declines-referee-declines",
+      "purpose": "referee-declines"
+    }
+  },
+  {
+    "at": "2026-08-07T23:21:42.264Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "referee-declines",
+    "data": {
+      "kind": "provider_reply",
+      "verified": true,
+      "providerId": "benchmark-reply-david-eval-20260807232138-9f3a95-7",
+      "threadId": "thread-referee-declines-referee-declines",
+      "details": {
+        "from": "daviddosuu@gmail.com",
+        "purpose": "referee-declines"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T23:21:42.264Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-declines",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T23:21:42.264Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "referee-declines",
+    "data": {
+      "value": true
+    }
+  }
+]

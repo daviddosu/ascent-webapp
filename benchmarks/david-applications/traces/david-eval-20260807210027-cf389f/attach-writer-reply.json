@@ -1,0 +1,57 @@
+[
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "attach-writer-reply",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step coordinates more than one provider."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "attach-writer-reply",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "attach-writer-reply"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "attach-writer-reply",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step coordinates more than one provider."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.004Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "attach-writer-reply",
+    "data": {
+      "value": true
+    }
+  }
+]

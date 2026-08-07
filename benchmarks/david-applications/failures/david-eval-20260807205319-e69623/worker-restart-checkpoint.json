@@ -1,0 +1,69 @@
+{
+  "caseId": "worker-restart-checkpoint",
+  "caseName": "Preserve checkpoint after worker restart",
+  "expectedResult": {
+    "state": "saved",
+    "checkpointPreserved": true
+  },
+  "actualResult": {
+    "state": "resumed",
+    "sameCase": true,
+    "checkpointPreserved": true,
+    "completedSections": [
+      "profile"
+    ]
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [],
+  "escalationReason": null,
+  "harnessTrace": [
+    {
+      "at": "2026-08-07T20:55:56.746Z",
+      "component": "harness",
+      "event": "harness_verified",
+      "caseId": "worker-restart-checkpoint",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "lastVerifiedState": {
+    "state": "resumed",
+    "sameCase": true,
+    "checkpointPreserved": true,
+    "completedSections": [
+      "profile"
+    ]
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "state": "resumed",
+      "sameCase": true,
+      "checkpointPreserved": true,
+      "completedSections": [
+        "profile"
+      ]
+    },
+    "evidence": [
+      {
+        "kind": "checkpoint",
+        "verified": true,
+        "details": {
+          "replayedActions": 4,
+          "resumeFrom": "confirmedState"
+        }
+      },
+      {
+        "kind": "saved_section",
+        "verified": true,
+        "details": {
+          "step": "profile",
+          "fields": []
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "caseId": "writer-assignment",
+  "caseName": "David asks Roon to send writer assignment",
+  "expectedResult": {
+    "request": "send_email",
+    "to": "daviddosuu@gmail.com",
+    "applicationCaseId": "case-writer-01",
+    "status": "queued"
+  },
+  "actualResult": {
+    "request": "send_email",
+    "to": "daviddosuu@gmail.com",
+    "applicationCaseId": "writer-assignment",
+    "status": "queued"
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [],
+  "escalationReason": null,
+  "harnessTrace": [
+    {
+      "at": "2026-08-07T20:53:22.329Z",
+      "component": "harness",
+      "event": "harness_verified",
+      "caseId": "writer-assignment",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "lastVerifiedState": {
+    "request": "send_email",
+    "to": "daviddosuu@gmail.com",
+    "applicationCaseId": "writer-assignment",
+    "status": "queued"
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "request": "send_email",
+      "to": "daviddosuu@gmail.com",
+      "applicationCaseId": "writer-assignment",
+      "status": "queued"
+    },
+    "evidence": []
+  }
+}

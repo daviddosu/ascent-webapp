@@ -1,0 +1,55 @@
+{
+  "caseId": "attach-writer-reply",
+  "caseName": "Attach writer reply to correct HumanAssignment",
+  "expectedResult": {
+    "assignment": "assignment-writer-01",
+    "threadOwner": "case-writer-01",
+    "state": "attached"
+  },
+  "actualResult": {
+    "assignment": "assignment-writer-01",
+    "threadOwner": "attach-writer-reply",
+    "state": "attached"
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [],
+  "escalationReason": null,
+  "harnessTrace": [
+    {
+      "at": "2026-08-07T20:53:22.329Z",
+      "component": "harness",
+      "event": "harness_verified",
+      "caseId": "attach-writer-reply",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "lastVerifiedState": {
+    "assignment": "assignment-writer-01",
+    "threadOwner": "attach-writer-reply",
+    "state": "attached"
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "assignment": "assignment-writer-01",
+      "threadOwner": "attach-writer-reply",
+      "state": "attached"
+    },
+    "evidence": [
+      {
+        "kind": "provider_reply",
+        "verified": true,
+        "providerId": "benchmark-reply-david-eval-20260807205319-e69623-1",
+        "threadId": "thread-attach-writer-reply-writer_reply",
+        "details": {
+          "from": "daviddosuu@gmail.com",
+          "purpose": "writer_reply"
+        }
+      }
+    ]
+  }
+}

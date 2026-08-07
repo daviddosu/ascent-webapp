@@ -1,0 +1,91 @@
+[
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "gmail-thread-isolation"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "verification",
+    "event": "expected_outcome_mismatch",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "expected": {
+        "caseA": "thread-case-a",
+        "caseB": "thread-case-b",
+        "crossCaseContamination": false
+      },
+      "actual": {
+        "caseA": "thread-case-a-isolated",
+        "caseB": "thread-case-b-isolated",
+        "crossCaseContamination": false
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "verification",
+    "event": "expected_outcome_mismatch",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "expected": {
+        "caseA": "thread-case-a",
+        "caseB": "thread-case-b",
+        "crossCaseContamination": false
+      },
+      "actual": {
+        "caseA": "thread-case-a-isolated",
+        "caseB": "thread-case-b-isolated",
+        "crossCaseContamination": false
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.330Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "value": true
+    }
+  }
+]

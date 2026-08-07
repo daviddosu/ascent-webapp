@@ -1,0 +1,65 @@
+{
+  "caseId": "referee-no-excessive-follow-up",
+  "caseName": "Prevent excessive referee follow-up",
+  "expectedResult": {
+    "followUpCount": 1,
+    "duplicateAction": false
+  },
+  "actualResult": {
+    "state": "sent",
+    "purpose": "referee_follow_up",
+    "followUpCount": 1,
+    "approval": false
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [],
+  "escalationReason": null,
+  "harnessTrace": [
+    {
+      "at": "2026-08-07T20:53:22.331Z",
+      "component": "harness",
+      "event": "harness_verified",
+      "caseId": "referee-no-excessive-follow-up",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "lastVerifiedState": {
+    "state": "sent",
+    "purpose": "referee_follow_up",
+    "followUpCount": 1,
+    "approval": false
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "state": "sent",
+      "purpose": "referee_follow_up",
+      "followUpCount": 1,
+      "approval": false
+    },
+    "evidence": [
+      {
+        "kind": "provider_message",
+        "verified": true,
+        "providerId": "benchmark-msg-david-eval-20260807205319-e69623-8",
+        "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+        "details": {
+          "purpose": "referee_follow_up",
+          "to": "daviddosuu@gmail.com"
+        }
+      },
+      {
+        "kind": "provider_thread",
+        "verified": true,
+        "threadId": "thread-referee-no-excessive-follow-up-referee_follow_up",
+        "details": {
+          "caseId": "referee-no-excessive-follow-up"
+        }
+      }
+    ]
+  }
+}

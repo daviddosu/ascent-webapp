@@ -1,0 +1,44 @@
+{
+  "caseId": "authoritative-conflict",
+  "caseName": "Prefer authoritative requirements when pages conflict",
+  "expectedResult": {
+    "chosenSource": "official admissions page",
+    "rejectedSource": "department mirror",
+    "state": "resolved"
+  },
+  "actualResult": {
+    "chosenSource": "official",
+    "rejectedSource": "department mirror",
+    "state": "resolved"
+  },
+  "executionMode": "primitive",
+  "primitiveTrace": [
+    {
+      "at": "2026-08-07T20:53:19.264Z",
+      "component": "primitive",
+      "event": "primitive_verified",
+      "caseId": "authoritative-conflict",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "escalationReason": null,
+  "harnessTrace": [],
+  "lastVerifiedState": {
+    "chosenSource": "official",
+    "rejectedSource": "department mirror",
+    "state": "resolved"
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "chosenSource": "official",
+      "rejectedSource": "department mirror",
+      "state": "resolved"
+    },
+    "evidence": []
+  }
+}

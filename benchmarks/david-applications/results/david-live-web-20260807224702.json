@@ -1,0 +1,93 @@
+{
+  "suite": "david_live_read_only_web_v1",
+  "runId": "david-live-web-20260807224702",
+  "generatedAt": "2026-08-07T22:47:21.190Z",
+  "separateFromFrozenBenchmark": true,
+  "totalCases": 5,
+  "successfulCases": 2,
+  "verifiedCompletionRate": 0.4,
+  "writeActions": 0,
+  "results": [
+    {
+      "caseId": "live-web-discovery",
+      "purpose": "programme discovery and eligibility",
+      "success": false,
+      "verified": false,
+      "actual": {
+        "programme": "Just a moment...",
+        "officialUrl": "https://www.ox.ac.uk/admissions/graduate/courses/msc-advanced-computer-science?__cf_chl_rt_tk=LZgsJxcx_FlciMWgF6ELcgGaKQa2C3d0WNNitZnuBFE-1786142827-1.0.1.1-qV1T2Vqcu6YxEIo8FwjW3dW.8aYWa68Hl3bTJtQag1o",
+        "officialSourceVerified": true,
+        "eligibility": null
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 5351,
+      "failureClass": "extraction_failure"
+    },
+    {
+      "caseId": "live-web-deadline",
+      "purpose": "deadline and timezone extraction",
+      "success": true,
+      "verified": true,
+      "actual": {
+        "deadline": "fees (2026/27) £21,500 Duration 1 calendar year Programme starts September 2026 Applications accepted Applicants who require a visa: 20 Oct 2025 – 27 Mar 2026 Applications closed Applicants who do not require a visa: 20 Oct 2025 – 28 Aug 2026 Applications close at 10am UK time Ap",
+        "timezone": "who do not require a visa: 20 Oct 2025 – 28 Aug 2026 Applications close at 10am UK time Applications open Apply for this course Entry requirements A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other",
+        "officialCitation": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+        "officialSourceVerified": true
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 3919,
+      "failureClass": null
+    },
+    {
+      "caseId": "live-web-funding",
+      "purpose": "funding extraction",
+      "success": false,
+      "verified": false,
+      "actual": {
+        "funding": null,
+        "sourceExcerpt": null,
+        "officialCitation": "https://www.ox.ac.uk/admissions/graduate/fees-and-funding?__cf_chl_rt_tk=DakfIkNfTSoWtMuHS3S4gKhOjn3l0nCorq5trhR9YcA-1786142833-1.0.1.1-Q7PrYEvYwPeBoHOrZ9s5HBC6cNcswOZ5e5_nudPecIA",
+        "officialSourceVerified": true
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 1767,
+      "failureClass": "extraction_failure"
+    },
+    {
+      "caseId": "live-web-faculty",
+      "purpose": "faculty and institutional-email extraction",
+      "success": true,
+      "verified": true,
+      "actual": {
+        "faculty": "Combinatorial Structures and Algorithms",
+        "institutionalEmail": "johannes.lengler@inf.ethz.ch",
+        "researchAreas": "Department of Computer Science | Institute of Theoretical Computer Science Combinatorial Structures and Algorithms People Education Lectures Bachelor/Master theses Thesis Guidelines Research Neuro group Publications Grants Dissertations Buchboden Challenges Seminars Mittagssemina",
+        "officialCitation": "https://as.inf.ethz.ch/people/members/lenglerj/index.html",
+        "officialSourceVerified": true
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 2554,
+      "failureClass": null
+    },
+    {
+      "caseId": "live-web-conflict",
+      "purpose": "authoritative-source conflict resolution",
+      "success": false,
+      "verified": false,
+      "actual": {
+        "departmentSource": "https://www.cs.ox.ac.uk/admissions/graduate/index.html",
+        "authoritativeSource": "https://www.ox.ac.uk/admissions/graduate/courses/msc-advanced-computer-science?__cf_chl_rt_tk=51mo5P_xBeAm5fCRag7glMyMgb3wNVIy5RyL6ABaBZE-1786142840-1.0.1.1-ELVQKbusCvq0DXWTQ05U_lZ5ReMMLaZmEx8eImD4TOU",
+        "conflictResolution": "official course admissions page preferred for course requirements",
+        "sourcePairVerified": false
+      },
+      "browserActions": 2,
+      "writeActions": 0,
+      "elapsedMs": 5126,
+      "failureClass": "extraction_failure"
+    }
+  ]
+}

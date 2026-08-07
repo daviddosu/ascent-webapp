@@ -1,0 +1,93 @@
+{
+  "suite": "david_live_read_only_web_v1",
+  "runId": "david-live-web-20260807224827",
+  "generatedAt": "2026-08-07T22:48:47.764Z",
+  "separateFromFrozenBenchmark": true,
+  "totalCases": 5,
+  "successfulCases": 5,
+  "verifiedCompletionRate": 1,
+  "writeActions": 0,
+  "results": [
+    {
+      "caseId": "live-web-discovery",
+      "purpose": "programme discovery and eligibility",
+      "success": true,
+      "verified": true,
+      "actual": {
+        "programme": "Computer Science MSc | Prospective Students Graduate - UCL – University College London",
+        "officialUrl": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+        "officialSourceVerified": true,
+        "eligibility": "2026 Applications close at 10am UK time Applications open Apply for this course Entry requirements A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other than computer science or information technology"
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 6359,
+      "failureClass": null
+    },
+    {
+      "caseId": "live-web-deadline",
+      "purpose": "deadline and timezone extraction",
+      "success": true,
+      "verified": true,
+      "actual": {
+        "deadline": "fees (2026/27) £21,500 Duration 1 calendar year Programme starts September 2026 Applications accepted Applicants who require a visa: 20 Oct 2025 – 27 Mar 2026 Applications closed Applicants who do not require a visa: 20 Oct 2025 – 28 Aug 2026 Applications close at 10am UK time Ap",
+        "timezone": "who do not require a visa: 20 Oct 2025 – 28 Aug 2026 Applications close at 10am UK time Applications open Apply for this course Entry requirements A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other",
+        "officialCitation": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+        "officialSourceVerified": true
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 3090,
+      "failureClass": null
+    },
+    {
+      "caseId": "live-web-funding",
+      "purpose": "funding extraction",
+      "success": true,
+      "verified": true,
+      "actual": {
+        "funding": "deposits - Frequently Asked Questions Fund your Master's with a Global Master's Scholarship Current page: Paying for your degree Breadcrumb trail Study at UCL ... (Additional navigation levels omitted.) Graduate degrees Funding your Master's Paying for your degree Paying for your",
+        "sourceExcerpt": "ies to get the financial support and security you need to get started. Graduate fees and funding There are a large number of funding schemes which support graduate students, including scholarships, studentships, awards, bursaries, grants and loans. Furthermore, some students are",
+        "officialCitation": "https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters/paying-your-degree",
+        "officialSourceVerified": true
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 2743,
+      "failureClass": null
+    },
+    {
+      "caseId": "live-web-faculty",
+      "purpose": "faculty and institutional-email extraction",
+      "success": true,
+      "verified": true,
+      "actual": {
+        "faculty": "Combinatorial Structures and Algorithms",
+        "institutionalEmail": "johannes.lengler@inf.ethz.ch",
+        "researchAreas": "Department of Computer Science | Institute of Theoretical Computer Science Combinatorial Structures and Algorithms People Education Lectures Bachelor/Master theses Thesis Guidelines Research Neuro group Publications Grants Dissertations Buchboden Challenges Seminars Mittagssemina",
+        "officialCitation": "https://as.inf.ethz.ch/people/members/lenglerj/index.html",
+        "officialSourceVerified": true
+      },
+      "browserActions": 1,
+      "writeActions": 0,
+      "elapsedMs": 2032,
+      "failureClass": null
+    },
+    {
+      "caseId": "live-web-conflict",
+      "purpose": "authoritative-source conflict resolution",
+      "success": true,
+      "verified": true,
+      "actual": {
+        "departmentSource": "https://www.ucl.ac.uk/engineering/computer-science/study/postgraduate-taught",
+        "authoritativeSource": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+        "conflictResolution": "official course admissions page preferred for course requirements",
+        "sourcePairVerified": true
+      },
+      "browserActions": 2,
+      "writeActions": 0,
+      "elapsedMs": 5883,
+      "failureClass": null
+    }
+  ]
+}

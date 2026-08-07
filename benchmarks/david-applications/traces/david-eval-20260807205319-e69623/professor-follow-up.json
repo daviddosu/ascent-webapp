@@ -1,0 +1,110 @@
+[
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-follow-up",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step crosses an external wait."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "professor-follow-up",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "professor-follow-up"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "professor-follow-up",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:professor-follow-up",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "gmail",
+    "event": "provider_send_confirmed",
+    "caseId": "professor-follow-up",
+    "data": {
+      "messageId": "benchmark-msg-david-eval-20260807205319-e69623-10",
+      "threadId": "thread-professor-follow-up-professor_follow_up",
+      "purpose": "professor_follow_up",
+      "to": "a.okafor@controlled.example.edu"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "professor-follow-up",
+    "data": {
+      "kind": "provider_message",
+      "verified": true,
+      "providerId": "benchmark-msg-david-eval-20260807205319-e69623-10",
+      "threadId": "thread-professor-follow-up-professor_follow_up",
+      "details": {
+        "purpose": "professor_follow_up",
+        "to": "a.okafor@controlled.example.edu"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "professor-follow-up",
+    "data": {
+      "kind": "provider_thread",
+      "verified": true,
+      "threadId": "thread-professor-follow-up-professor_follow_up",
+      "details": {
+        "caseId": "professor-follow-up"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-follow-up",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step crosses an external wait."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T20:53:22.331Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "professor-follow-up",
+    "data": {
+      "value": true
+    }
+  }
+]

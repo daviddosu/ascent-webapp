@@ -1,0 +1,68 @@
+[
+  {
+    "at": "2026-08-07T21:00:31.005Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "otp-resume-session",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.005Z",
+    "component": "persistence",
+    "event": "checkpoint_saved",
+    "caseId": "otp-resume-session",
+    "data": {
+      "sessionId": "session-otp-1",
+      "stage": "verification"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.005Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "otp-resume-session",
+    "data": {
+      "kind": "otp_match",
+      "verified": true,
+      "providerId": "current-otp",
+      "threadId": "current",
+      "details": {
+        "redactedCode": "4•••6"
+      }
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.005Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "otp-resume-session",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-07T21:00:31.005Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "otp-resume-session",
+    "data": {
+      "value": true
+    }
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "caseId": "gmail-thread-isolation",
+  "caseName": "Keep two simultaneous Gmail threads isolated",
+  "expectedResult": {
+    "caseA": "thread-case-a",
+    "caseB": "thread-case-b",
+    "crossCaseContamination": false
+  },
+  "actualResult": {
+    "caseA": "thread-case-a-isolated",
+    "caseB": "thread-case-b-isolated",
+    "crossCaseContamination": false
+  },
+  "executionMode": "harness",
+  "primitiveTrace": [],
+  "escalationReason": null,
+  "harnessTrace": [
+    {
+      "at": "2026-08-07T20:53:22.330Z",
+      "component": "harness",
+      "event": "harness_verified",
+      "caseId": "gmail-thread-isolation",
+      "data": {
+        "value": true
+      }
+    }
+  ],
+  "lastVerifiedState": {
+    "caseA": "thread-case-a-isolated",
+    "caseB": "thread-case-b-isolated",
+    "crossCaseContamination": false
+  },
+  "failureClassification": "false_success",
+  "suspectedRootCause": null,
+  "relevantSourceFile": null,
+  "evidence": {
+    "browser": {
+      "caseA": "thread-case-a-isolated",
+      "caseB": "thread-case-b-isolated",
+      "crossCaseContamination": false
+    },
+    "evidence": []
+  }
+}
