@@ -13,6 +13,9 @@
     "test:flight:live": "SHOTCOUNT_LIVE_FLIGHT_TEST=true vitest run api/_flight-browser.live.test.ts",
     "benchmark:agent": "vitest run benchmarks/agent-execution/run-benchmark.test.ts && node benchmarks/agent-execution/generate-report.mjs",
     "benchmark:agent:live": "node benchmarks/agent-execution-live/run-live.mjs",
+    "benchmark:david": "node benchmarks/david-applications/cli.mjs",
+    "benchmark:david:loop": "node benchmarks/david-applications/cli.mjs --loop",
+    "benchmark:david:live-web": "node benchmarks/david-applications/live-web.mjs",
     "check": "pnpm test && pnpm build",
     "check:cloud": "node scripts/verify-cloud.mjs",
     "check:cloud:auth": "node scripts/verify-cloud-auth.mjs"

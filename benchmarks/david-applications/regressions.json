@@ -1,0 +1,264 @@
+[
+  {
+    "key": "david_application_eval_v1:primitive-simple-form:wrong_element",
+    "caseId": "primitive-simple-form",
+    "title": "Complete a simple form with the primitive",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205134-fe290c",
+    "failureClass": "wrong_element",
+    "expected": {
+      "state": "saved",
+      "execution": "primitive"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case primitive-simple-form"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:funding-status:false_success",
+    "caseId": "funding-status",
+    "title": "Determine funding status",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "status": "full",
+      "tuitionCoverage": "full",
+      "stipend": true
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case funding-status"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:authoritative-conflict:false_success",
+    "caseId": "authoritative-conflict",
+    "title": "Prefer authoritative requirements when pages conflict",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "chosenSource": "official admissions page",
+      "rejectedSource": "department mirror",
+      "state": "resolved"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case authoritative-conflict"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:programme-cv:false_success",
+    "caseId": "programme-cv",
+    "title": "Generate programme-specific CV",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "artifact": "cv-controlled-phd.pdf",
+      "approvalStatus": "approved",
+      "programmeId": "controlled-phd"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case programme-cv"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:exact-approved-artifact:false_success",
+    "caseId": "exact-approved-artifact",
+    "title": "Select exact approved artifact",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "artifact": "cv-controlled-phd.pdf",
+      "selectedBy": "checksum",
+      "state": "approved"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case exact-approved-artifact"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:two-page-cv:false_success",
+    "caseId": "two-page-cv",
+    "title": "Produce a two-page CV when required",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "pageTarget": "two_page",
+      "pageCount": 2
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case two-page-cv"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:writer-assignment:false_success",
+    "caseId": "writer-assignment",
+    "title": "David asks Roon to send writer assignment",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "request": "send_email",
+      "to": "daviddosuu@gmail.com",
+      "applicationCaseId": "case-writer-01",
+      "status": "queued"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case writer-assignment"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:attach-writer-reply:false_success",
+    "caseId": "attach-writer-reply",
+    "title": "Attach writer reply to correct HumanAssignment",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "assignment": "assignment-writer-01",
+      "threadOwner": "case-writer-01",
+      "state": "attached"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case attach-writer-reply"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:gmail-thread-isolation:false_success",
+    "caseId": "gmail-thread-isolation",
+    "title": "Keep two simultaneous Gmail threads isolated",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "caseA": "thread-case-a",
+      "caseB": "thread-case-b",
+      "crossCaseContamination": false
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case gmail-thread-isolation"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:referee-no-excessive-follow-up:false_success",
+    "caseId": "referee-no-excessive-follow-up",
+    "title": "Prevent excessive referee follow-up",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "followUpCount": 1,
+      "duplicateAction": false
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case referee-no-excessive-follow-up"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:replace-referee:false_success",
+    "caseId": "replace-referee",
+    "title": "Replace a referee while preserving case state",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "oldContact": "declined",
+      "newContact": "assigned",
+      "applicationCaseId": "case-referee-01",
+      "preservedArtifacts": true
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case replace-referee"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:upload-approved-cv:upload_failure",
+    "caseId": "upload-approved-cv",
+    "title": "Upload approved CV",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "upload_failure",
+    "expected": {
+      "state": "saved",
+      "artifact": "cv-controlled-phd.pdf"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case upload-approved-cv"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:replace-wrong-upload:upload_failure",
+    "caseId": "replace-wrong-upload",
+    "title": "Replace incorrect upload",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "upload_failure",
+    "expected": {
+      "state": "saved",
+      "replaced": true,
+      "artifact": "cv-controlled-phd.pdf"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case replace-wrong-upload"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:worker-restart-checkpoint:false_success",
+    "caseId": "worker-restart-checkpoint",
+    "title": "Preserve checkpoint after worker restart",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807205319-e69623",
+    "failureClass": "false_success",
+    "expected": {
+      "state": "saved",
+      "checkpointPreserved": true
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case worker-restart-checkpoint"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:e2e-simple-masters:false_success",
+    "caseId": "e2e-simple-masters",
+    "title": "Simple master's application",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260807210420-95afa2",
+    "failureClass": "false_success",
+    "expected": {
+      "state": "ready_for_final_review",
+      "submitted": false,
+      "verified": true
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case e2e-simple-masters"
+    }
+  },
+  {
+    "key": "david_application_eval_v1:duplicate-submission:duplicate_action",
+    "caseId": "duplicate-submission",
+    "title": "Reject duplicate submission attempt",
+    "source": "benchmark evidence audit",
+    "firstSeenRun": "david-eval-20260807225225-6e6d38",
+    "failureClass": "duplicate_action",
+    "contributingClasses": [
+      "false_success"
+    ],
+    "observed": {
+      "first": "confirmed",
+      "second": "confirmed",
+      "submissionCount": 2
+    },
+    "expected": {
+      "first": "confirmed",
+      "second": "blocked",
+      "submissionCount": 1,
+      "failureClass": "duplicate_action"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case duplicate-submission"
+    }
+  }
+]

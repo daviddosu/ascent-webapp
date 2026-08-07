@@ -1,0 +1,24 @@
+{
+  "benchmarkVersion": "david_application_eval_v1",
+  "fixture": "application-portal-fixture-v1",
+  "seedContract": "The run ID, numeric seed, failure name, HTTP method, and requested section uniquely determine the injected state.",
+  "seeds": [
+    { "seed": 101, "failure": "delayed_page_load", "scope": "generic" },
+    { "seed": 102, "failure": "missing_element", "scope": "generic" },
+    { "seed": 103, "failure": "renamed_label", "scope": "generic" },
+    { "seed": 104, "failure": "moved_button", "scope": "generic" },
+    { "seed": 105, "failure": "changed_section_order", "scope": "portal-family-specific" },
+    { "seed": 106, "failure": "expired_session", "scope": "generic" },
+    { "seed": 107, "failure": "stale_session", "scope": "generic" },
+    { "seed": 108, "failure": "intermittent_500", "scope": "generic" },
+    { "seed": 109, "failure": "upload_timeout", "scope": "generic" },
+    { "seed": 110, "failure": "rejected_file", "scope": "generic" },
+    { "seed": 111, "failure": "validation_warning", "scope": "generic" },
+    { "seed": 112, "failure": "duplicate_field_labels", "scope": "generic" },
+    { "seed": 113, "failure": "conditional_section", "scope": "portal-family-specific" },
+    { "seed": 114, "failure": "otp_screen", "scope": "application-type-specific" },
+    { "seed": 115, "failure": "browser_restart", "scope": "generic" },
+    { "seed": 116, "failure": "changed_dom_structure", "scope": "generic" },
+    { "seed": 117, "failure": "save_failure", "scope": "generic" }
+  ]
+}

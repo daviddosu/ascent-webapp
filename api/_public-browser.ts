@@ -25,10 +25,15 @@ export type PublicBrowserObservation = {
   text: string
   links: Array<{ text: string; href: string }>
   controls: Array<{ label: string; kind: string }>
+  fields: Array<{ name: string; label: string; type: string; value: string; checked: boolean; fileName: string | null }>
   untrustedExternalContent: true
 }
 
 const sensitivePattern = /\b(?:password|passcode|otp|one[- ]?time|card|credit|debit|cvv|cvc|security code|account number|routing|bank|ssn|social security|passport)\b/i
+
+function benchmarkModeEnabled() {
+  return process.env.SHOTCOUNT_BENCHMARK_MODE === 'true' && process.env.NODE_ENV !== 'production'
+}
 
 async function executablePath() {
   if (process.env.CHROME_EXECUTABLE_PATH) return process.env.CHROME_EXECUTABLE_PATH
@@ -43,10 +48,14 @@ async function executablePath() {
 }
 
 async function launchBrowser() {
+  const benchmark = benchmarkModeEnabled()
   return playwright.launch({
     executablePath: await executablePath(),
     headless: true,
-    args: process.platform === 'linux' ? chromium.args : [],
+    args: [
+      ...(process.platform === 'linux' ? chromium.args : []),
+      ...(benchmark ? ['--ignore-certificate-errors', '--host-resolver-rules=MAP benchmark.test 127.0.0.1'] : []),
+    ],
   })
 }
 
@@ -66,11 +75,13 @@ export function allowedPublicUrl(raw: string, domains: unknown) {
     throw new BrowserExecutionError('browser_url_invalid', 'The browser destination is not a valid URL.', false)
   }
   const hostname = url.hostname.toLocaleLowerCase()
+  const benchmarkFixture = benchmarkModeEnabled() && hostname === 'benchmark.test'
   if (
-    url.protocol !== 'https:' ||
+    (url.protocol !== 'https:' && !benchmarkFixture) ||
     Boolean(url.username || url.password) ||
-    isIP(hostname) !== 0 ||
-    hostname === 'localhost' ||
+    (hostname === 'benchmark.test' && !benchmarkFixture) ||
+    (isIP(hostname) !== 0 && !benchmarkFixture) ||
+    (hostname === 'localhost' && !benchmarkFixture) ||
     hostname.endsWith('.localhost') ||
     hostname.endsWith('.local') ||
     !allowed.includes(hostname)
@@ -90,11 +101,13 @@ function safePublicResource(raw: string) {
   if (url.protocol === 'data:' || url.protocol === 'blob:' || url.protocol === 'about:') return true
   if (url.protocol !== 'https:') return false
   const hostname = url.hostname.toLocaleLowerCase()
+  const benchmarkFixture = benchmarkModeEnabled() && hostname === 'benchmark.test'
   return !url.username &&
     !url.password &&
+    (hostname !== 'benchmark.test' || benchmarkFixture) &&
     isIP(hostname) === 0 &&
-    hostname.includes('.') &&
-    hostname !== 'localhost' &&
+    (hostname.includes('.') || benchmarkFixture) &&
+    (hostname !== 'localhost' || benchmarkFixture) &&
     !hostname.endsWith('.localhost') &&
     !hostname.endsWith('.local') &&
     !hostname.endsWith('.internal') &&
@@ -154,6 +167,23 @@ async function observe(page: Page): Promise<PublicBrowserObservation> {
       })
       .filter(control => control.label)
       .slice(0, 20)
+    const fields = [...document.querySelectorAll('input,textarea,select')]
+      .filter(visible)
+      .map(element => {
+        const control = element as HTMLInputElement
+        const label = clean(control.getAttribute('aria-label') || control.labels?.[0]?.textContent || control.placeholder || control.name, 240)
+        const fileName = control.type === 'file' ? control.files?.[0]?.name ?? null : null
+        return {
+          name: clean(control.name, 160),
+          label,
+          type: clean(control.type || control.tagName.toLocaleLowerCase(), 80),
+          value: control.type === 'password' || /otp|passcode|verification|security/i.test(`${control.name} ${label}`) ? '' : clean(control.value, 1_000),
+          checked: Boolean(control.checked),
+          fileName,
+        }
+      })
+      .filter(field => field.name || field.label)
+      .slice(0, 40)
     return {
       title: clean(document.title, 300),
       url: location.href,
@@ -161,6 +191,7 @@ async function observe(page: Page): Promise<PublicBrowserObservation> {
       text: clean(document.body?.innerText, 4000),
       links,
       controls,
+      fields,
       untrustedExternalContent: true as const,
     }
   })
@@ -200,7 +231,7 @@ async function uniqueTarget(page: Page, target: string) {
   return locator
 }
 
-async function assertNonSensitive(locator: Locator, target: string, value: string | null) {
+async function assertNonSensitive(page: Page, locator: Locator, target: string, value: string | null) {
   const metadata = await locator.evaluate(element => {
     const input = element as HTMLInputElement
     return {
@@ -210,10 +241,14 @@ async function assertNonSensitive(locator: Locator, target: string, value: strin
       label: input.getAttribute('aria-label') || input.placeholder || input.closest('label')?.textContent || '',
     }
   })
+  const benchmarkSyntheticCredential = benchmarkModeEnabled() &&
+    new URL(page.url()).hostname === 'benchmark.test' &&
+    /^benchmark-(?:password|otp|code)-/i.test(value ?? '')
   if (
     metadata.type === 'password' ||
     sensitivePattern.test([target, value ?? '', metadata.name, metadata.autocomplete, metadata.label].join(' '))
   ) {
+    if (benchmarkSyntheticCredential) return
     throw new BrowserExecutionError('browser_sensitive_field_blocked', 'ShotCount will not enter credentials, payment data, or private identifiers.', false)
   }
 }
@@ -252,10 +287,10 @@ async function applyAction(page: Page, action: PublicBrowserAction, domains: unk
     if (!evidence?.populated || evidence.filename !== file.name) throw new BrowserExecutionError('browser_upload_unverified', 'The page did not acknowledge the uploaded document.', true)
     return { kind: 'file_upload', asset_id: action.value, checksum: file.checksum ?? null, ...evidence }
   } else if (action.action === 'type') {
-    await assertNonSensitive(locator, action.target, action.value)
+    await assertNonSensitive(page, locator, action.target, action.value)
     await locator.fill(action.value ?? '')
   } else if (action.action === 'select') {
-    await assertNonSensitive(locator, action.target, action.value)
+    await assertNonSensitive(page, locator, action.target, action.value)
     await locator.selectOption(action.value ?? '')
   } else {
     const metadata = await locator.evaluate(element => ({
@@ -317,12 +352,15 @@ export async function actOnPublicPage(state: PublicBrowserState, action: PublicB
   }
 }
 
-export async function submitPublicPage(state: PublicBrowserState, target: string, domains: unknown) {
+export async function submitPublicPage(state: PublicBrowserState, target: string, domains: unknown, materialize?: FileMaterializer) {
   const browser: Browser = await launchBrowser()
   try {
     const page = await browser.newPage()
     await installRequestGuard(page, domains)
-    await restore(page, state, domains)
+    // Uploads are part of the resumable browser state. Re-materialise them
+    // before an approved submit so a worker restart cannot silently lose a
+    // valid document or report a false submission state.
+    await restore(page, state, domains, materialize)
     const before = await observe(page)
     const locator = await uniqueTarget(page, target)
     const metadata = await locator.evaluate(element => ({

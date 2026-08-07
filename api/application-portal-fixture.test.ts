@@ -45,4 +45,12 @@ describe('controlled application portal fixture', () => {
     expect(result.body).toContain('Submission confirmed once')
     expect(result.body).not.toContain('password=')
   })
+
+  it('supports a seeded DOM-structure change without changing field semantics', () => {
+    const result = run('GET', '/api/application-portal-fixture?run=fixture-test&seed=42&failure=changed_dom_structure&step=profile')
+    expect(result.statusCode).toBe(200)
+    expect(result.body).toContain('data-layout-version="2"')
+    expect(result.body).toContain('name="legal_name"')
+    expect(result.body).toContain('data-seed="42"')
+  })
 })

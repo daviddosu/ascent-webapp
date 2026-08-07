@@ -9,13 +9,49 @@ type FixtureResponse = {
   send(body: string): void
 }
 
+type FixtureFailure =
+  | 'delayed_page_load'
+  | 'missing_element'
+  | 'renamed_label'
+  | 'moved_button'
+  | 'changed_section_order'
+  | 'expired_session'
+  | 'stale_session'
+  | 'intermittent_500'
+  | 'upload_timeout'
+  | 'rejected_file'
+  | 'validation_warning'
+  | 'duplicate_field_labels'
+  | 'conditional_section'
+  | 'otp_screen'
+  | 'browser_restart'
+  | 'changed_dom_structure'
+  | 'save_failure'
+
 const page = (title: string, body: string) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title>
-<style>body{font:16px/1.5 system-ui,sans-serif;margin:0;padding:32px 20px;color:#172020;background:#f5f7f7}main{max-width:620px;margin:auto;padding:28px;border:1px solid #d9e0e0;border-radius:18px;background:#fff}label{display:grid;gap:6px;margin:16px 0;font-weight:600}input,textarea,select,button{font:inherit}input,textarea,select{padding:10px;border:1px solid #aebbbb;border-radius:9px}button{padding:11px 16px;border:0;border-radius:999px;color:#fff;background:#172020}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}nav a{color:#176b69}.notice{padding:12px;border-radius:10px;background:#edf8f4}</style></head><body><main>${body}</main></body></html>`
+<style>body{font:16px/1.5 system-ui,sans-serif;margin:0;padding:32px 20px;color:#172020;background:#f5f7f7}main{max-width:620px;margin:auto;padding:28px;border:1px solid #d9e0e0;border-radius:18px;background:#fff}label{display:grid;gap:6px;margin:16px 0;font-weight:600}input,textarea,select,button{font:inherit}input,textarea,select{padding:10px;border:1px solid #aebbbb;border-radius:9px}button{padding:11px 16px;border:0;border-radius:999px;color:#fff;background:#172020}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}nav a{color:#176b69}.notice{padding:12px;border-radius:10px;background:#edf8f4}.warning{padding:12px;border-radius:10px;background:#fff4d6}.fixture-meta{font-size:12px;color:#5a6767}</style></head><body><main>${body}</main></body></html>`
+
+const attempts = new Map<string, number>()
+const methodAttempts = new Map<string, number>()
+
+function boundedAttempt(store: Map<string, number>, key: string) {
+  if (!store.has(key) && store.size >= 2_048) {
+    const oldest = store.keys().next().value
+    if (oldest) store.delete(oldest)
+  }
+  const value = (store.get(key) ?? 0) + 1
+  store.set(key, value)
+  return value
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
+}
 
 function stepFromUrl(url = '') {
   try {
-    return new URL(url, 'https://shotcount.test').searchParams.get('step') ?? 'account'
+    return new URL(url, 'https://benchmark.test').searchParams.get('step') ?? 'account'
   } catch {
     return 'account'
   }
@@ -23,14 +59,56 @@ function stepFromUrl(url = '') {
 
 function parameters(url = '') {
   try {
-    return new URL(url, 'https://shotcount.test').searchParams
+    return new URL(url, 'https://benchmark.test').searchParams
   } catch {
     return new URLSearchParams()
   }
 }
 
-function navigation() {
-  return '<nav aria-label="Application sections"><a href="/api/application-portal-fixture?step=account">Account</a><a href="/api/application-portal-fixture?step=verification">Verification</a><a href="/api/application-portal-fixture?step=profile">Profile</a><a href="/api/application-portal-fixture?step=education">Education</a><a href="/api/application-portal-fixture?step=research">Research</a><a href="/api/application-portal-fixture?step=documents">Documents</a><a href="/api/application-portal-fixture?step=review">Review</a></nav>'
+function hashSeed(value: string) {
+  let hash = 2166136261
+  for (const character of value) {
+    hash ^= character.charCodeAt(0)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+function fixtureUrl(step: string, query: URLSearchParams) {
+  const next = new URLSearchParams()
+  for (const name of ['run', 'seed', 'failure']) {
+    const value = query.get(name)
+    if (value) next.set(name, value)
+  }
+  next.set('step', step)
+  return `/api/application-portal-fixture?${next.toString()}`
+}
+
+function navigation(query: URLSearchParams) {
+  const steps = ['account', 'verification', 'profile', 'education', 'research', 'documents', 'review']
+  if (query.get('failure') === 'changed_section_order') steps.reverse()
+  return `<nav aria-label="Application sections">${steps.map(step => `<a href="${fixtureUrl(step, query)}">${step[0]!.toUpperCase()}${step.slice(1)}</a>`).join('')}</nav>`
+}
+
+function failureFromQuery(query: URLSearchParams): FixtureFailure | null {
+  const value = query.get('failure')
+  const known: FixtureFailure[] = [
+    'delayed_page_load', 'missing_element', 'renamed_label', 'moved_button', 'changed_section_order',
+    'expired_session', 'stale_session', 'intermittent_500', 'upload_timeout', 'rejected_file',
+    'validation_warning', 'duplicate_field_labels', 'conditional_section', 'otp_screen', 'browser_restart',
+    'changed_dom_structure', 'save_failure',
+  ]
+  return value && known.includes(value as FixtureFailure) ? value as FixtureFailure : null
+}
+
+function fixtureMeta(query: URLSearchParams, failure: FixtureFailure | null) {
+  const seed = escapeHtml(query.get('seed') ?? '')
+  const run = escapeHtml(query.get('run') ?? 'unscoped')
+  return `<p class="fixture-meta" data-fixture="application-portal" data-seed="${seed}" data-failure="${failure ?? ''}">Controlled benchmark fixture · run ${run}</p>`
+}
+
+function savedBody(query: URLSearchParams, step: string, failure: FixtureFailure | null) {
+  return `${navigation(query)}${fixtureMeta(query, failure)}<h1>Section saved</h1><p id="section-saved" class="notice" data-section="${step}">${step} section saved and checkpointed.</p><a href="${fixtureUrl(step, query)}">Continue editing ${step}</a>`
 }
 
 export default function handler(request: FixtureRequest, response: FixtureResponse) {
@@ -38,33 +116,77 @@ export default function handler(request: FixtureRequest, response: FixtureRespon
   response.setHeader('Content-Type', 'text/html; charset=utf-8')
   const step = stepFromUrl(request.url)
   const query = parameters(request.url)
-  const sessionExpired = query.get('session') === 'expired'
-  const injectedError = query.get('error') === 'validation'
+  const failure = failureFromQuery(query)
+  const runKey = `${query.get('run') ?? 'unscoped'}:${query.get('seed') ?? '0'}:${failure ?? 'none'}`
+  const attempt = boundedAttempt(attempts, runKey)
+  const methodKey = `${runKey}:${request.method ?? 'GET'}`
+  const methodAttempt = boundedAttempt(methodAttempts, methodKey)
+  const sessionExpired = query.get('session') === 'expired' || failure === 'expired_session' || failure === 'stale_session'
+  const injectedError = query.get('error') === 'validation' || (failure === 'validation_warning' && attempt === 1)
+
+  if (failure === 'intermittent_500' && attempt === 1) {
+    response.status(500).send(page('Temporary portal error', `${fixtureMeta(query, failure)}<h1>Temporary portal error</h1><p role="alert">The controlled portal returned a seeded 500 response. Retry the same URL.</p>`))
+    return
+  }
+
   if (request.method === 'POST') {
     if (sessionExpired) {
-      response.status(409).send(page('Session expired', `${navigation()}<h1>Session expired</h1><p role="alert">Your portal session expired before this action could be saved.</p><a href="/api/application-portal-fixture?step=account&recovery=1">Resume sign in</a>`))
+      response.status(409).send(page('Session expired', `${navigation(query)}${fixtureMeta(query, failure)}<h1>Session expired</h1><p role="alert">Your portal session expired before this action could be saved.</p><a href="${fixtureUrl('account', query)}&recovery=1">Resume sign in</a>`))
+      return
+    }
+    if (failure === 'save_failure' && methodAttempt === 1) {
+      response.status(500).send(page('Save failed', `${navigation(query)}${fixtureMeta(query, failure)}<h1>Save failed</h1><p role="alert">The controlled portal could not persist this section. Retry from the checkpoint.</p>`))
       return
     }
     if (step !== 'review') {
-      response.status(422).send(page('Validation error', `${navigation()}<h1>Section needs attention</h1><p role="alert">Save the current section before continuing to final review.</p>`))
+      if (injectedError) {
+        response.status(422).send(page('Validation error', `${navigation(query)}${fixtureMeta(query, failure)}<h1>Section needs attention</h1><p role="alert">Choose a nationality before saving this section.</p>`))
+        return
+      }
+      response.status(200).send(page('Section saved', savedBody(query, step, failure)))
       return
     }
-    response.status(200).send(page('Application submitted', `${navigation()}<h1>Application submitted</h1><p id="application-id">Application ID: SC-TEST-2027-001</p><p id="confirmation-email" class="notice">A confirmation email was sent by the controlled admissions system.</p><p class="notice">Submission confirmed once. This controlled fixture stores no applicant values.</p>`))
+    response.status(200).send(page('Application submitted', `${navigation(query)}${fixtureMeta(query, failure)}<h1>Application submitted</h1><p id="application-id">Application ID: SC-TEST-2027-001</p><p id="confirmation-email" class="notice">A confirmation email was sent by the controlled admissions system.</p><p class="notice">Submission confirmed once. This controlled fixture stores no applicant values.</p>`))
     return
   }
   if (request.method !== 'GET') {
     response.status(405).send(page('Method not allowed', '<h1>Method not allowed</h1>'))
     return
   }
+
+  const renamedNationality = failure === 'renamed_label' ? 'Country' : 'Nationality'
+  const researchField = failure === 'missing_element' ? '' : '<label>Research interests<textarea name="research_interests" required></textarea></label>'
+  const saveButton = failure === 'moved_button' ? 'Continue to save' : 'Save section'
+  const duplicateInstitution = failure === 'duplicate_field_labels' ? '<label>Institution<input name="institution_alias" required></label>' : ''
+  const conditionalFields = failure === 'conditional_section'
+    ? '<label>Study mode<select name="study_mode"><option value="coursework">Coursework</option><option value="research">Research</option></select></label><label>Funding source<input name="funding_source" required></label>'
+    : ''
+  const uploadNotice = failure === 'upload_timeout'
+    ? '<p role="status" data-upload-state="timeout">Upload is delayed; wait and verify the file before saving.</p>'
+    : failure === 'rejected_file'
+      ? '<p role="alert" data-upload-state="rejected">This fixture rejects the first artifact; use the approved PDF.</p>'
+      : ''
+  const warning = injectedError ? '<p role="alert">Choose a nationality before saving this section.</p>' : failure === 'validation_warning' ? '<p role="status" class="warning">Review the dates before continuing; the warning is non-blocking.</p>' : ''
+  const form = (content: string, button: string) => failure === 'changed_dom_structure'
+    ? `<section class="portal-card" data-layout-version="2"><form method="post" action="${fixtureUrl(step, query)}"><fieldset><legend>${step} details</legend><div class="field-grid">${content}</div><div class="portal-actions"><button type="submit"><span>${button}</span></button></div></fieldset></form></section>`
+    : `<form method="post" action="${fixtureUrl(step, query)}">${content}<button type="submit">${button}</button></form>`
   const bodies: Record<string, string> = {
-    account: `${navigation()}<h1>${query.get('recovery') ? 'Resume sign in' : 'Create account'}</h1><p>Use the controlled university application portal.</p><form><label>Email<input name="email" type="email" required></label><label>Password<input name="password" type="password" required></label><button type="submit">${query.get('recovery') ? 'Resume sign in' : 'Create account'}</button></form>`,
-    verification: `${navigation()}<h1>Verify email</h1><p id="verification-status" class="notice">A verification code was sent to the applicant email.</p><label>Verification code<input name="verification_code" inputmode="numeric" autocomplete="one-time-code" required></label><button type="button">Verify email</button>`,
-    profile: `${navigation()}<h1>Applicant profile</h1>${injectedError ? '<p role="alert">Choose a nationality before saving this section.</p>' : ''}<form><label>Legal name<input name="legal_name" required></label><label>Nationality<select name="nationality" required><option value="">Choose</option><option>Nigeria</option><option>Ghana</option></select></label><label>Research interests<textarea name="research_interests" required></textarea></label><button type="button">Save section</button></form>`,
-    education: `${navigation()}<h1>Education history</h1><form><label>Degree<input name="degree" required></label><label>Institution<input name="institution" required></label><label>Dates<input name="dates" required></label><button type="button">Save section</button></form>`,
-    research: `${navigation()}<h1>Research experience</h1><form><label>Research title<input name="research_title" required></label><label>Methods<textarea name="methods" required></textarea></label><label>Outcomes<textarea name="outcomes" required></textarea></label><button type="button">Save section</button></form>`,
-    documents: `${navigation()}<h1>Documents</h1><form><label>Academic CV<input name="cv" type="file" accept=".pdf,.docx" required></label><label>Statement of purpose<input name="statement" type="file" accept=".pdf,.docx" required></label><label>Transcript<input name="transcript" type="file" accept=".pdf" required></label><button type="button">Save section</button></form>`,
-    review: `${navigation()}<h1>Final review</h1><dl><dt>Programme</dt><dd>Controlled University PhD in Computational Physics</dd><dt>Funding</dt><dd>Full tuition waiver and stipend</dd></dl><p class="notice">All required sections are saved. Submission remains a separate approved action.</p><form method="post" action="/api/application-portal-fixture?step=review"><button type="submit">Submit application</button></form>`,
-    expired: `${navigation()}<h1>Session expired</h1><p role="alert">The controlled session expired. Resume sign in to recover the saved sections.</p><a href="/api/application-portal-fixture?step=account&recovery=1">Resume sign in</a>`,
+    account: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${query.get('recovery') ? 'Resume sign in' : 'Create account'}</h1><p>Use the controlled university application portal.</p>${form(`<label>Email<input name="email" type="email" required></label><label>Password<input name="password" type="password" required></label>`, query.get('recovery') ? 'Resume sign in' : 'Create account')}`,
+    verification: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Verify email</h1><p id="verification-status" class="notice">A verification code was sent to the applicant email.</p>${form('<label>Verification code<input name="verification_code" inputmode="numeric" autocomplete="one-time-code" required></label>', 'Verify email')}`,
+    profile: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Applicant profile</h1>${warning}${form(`<label>Legal name<input name="legal_name" required></label><label>${renamedNationality}<select name="nationality" required><option value="">Choose</option><option>Nigeria</option><option>Ghana</option></select></label>${researchField}${conditionalFields}`, saveButton)}`,
+    education: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Education history</h1>${warning}${form(`<label>Degree<input name="degree" required></label><label>Institution<input name="institution" required></label>${duplicateInstitution}<label>Dates<input name="dates" required></label>`, saveButton)}`,
+    research: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Research experience</h1>${warning}${form('<label>Research title<input name="research_title" required></label><label>Methods<textarea name="methods" required></textarea></label><label>Outcomes<textarea name="outcomes" required></textarea></label>', saveButton)}`,
+    documents: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Documents</h1>${uploadNotice}${form('<label>Academic CV<input name="cv" type="file" accept=".pdf,.docx" required></label><label>Statement of purpose<input name="statement" type="file" accept=".pdf,.docx" required></label><label>Transcript<input name="transcript" type="file" accept=".pdf" required></label>', saveButton)}`,
+    review: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Final review</h1><dl><dt>Programme</dt><dd>Controlled University PhD in Computational Physics</dd><dt>Funding</dt><dd>Full tuition waiver and stipend</dd></dl><p class="notice">All required sections are saved. Submission remains a separate approved action.</p>${form('', 'Submit application')}`,
+    expired: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Session expired</h1><p role="alert">The controlled session expired. Resume sign in to recover the saved sections.</p><a href="${fixtureUrl('account', query)}&recovery=1">Resume sign in</a>`,
   }
-  response.status(200).send(page(`Application portal · ${sessionExpired ? 'expired' : step}`, sessionExpired ? bodies.expired : bodies[step] ?? bodies.account))
+  const title = failure === 'delayed_page_load' ? 'Application portal · delayed page' : `Application portal · ${sessionExpired ? 'expired' : step}`
+  const body = page(title, sessionExpired ? bodies.expired : bodies[step] ?? bodies.account)
+  if (failure === 'delayed_page_load') {
+    const delayMs = 200 + hashSeed(`${runKey}:${step}`) % 301
+    response.setHeader('X-Benchmark-Delay-Ms', String(delayMs))
+    setTimeout(() => response.status(200).send(body), delayMs)
+    return
+  }
+  response.status(200).send(body)
 }
