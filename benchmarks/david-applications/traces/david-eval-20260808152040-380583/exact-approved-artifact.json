@@ -1,0 +1,79 @@
+[
+  {
+    "at": "2026-08-08T15:20:41.980Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:42.452Z",
+    "component": "documents",
+    "event": "artifact_compiled_and_verified",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "templateId": "graduate_application_cv_v1",
+      "pageTarget": "one_page",
+      "pageCount": 1,
+      "checksum": "e8d3722559968ac5413b02a2042542e06ee3e679ccf550c8c0d472cffdb10cd9"
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:42.452Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "kind": "artifact_checksum",
+      "verified": true,
+      "checksum": "e8d3722559968ac5413b02a2042542e06ee3e679ccf550c8c0d472cffdb10cd9",
+      "details": {
+        "pageCount": 1,
+        "atsIdentity": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:41.980Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:42.452Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "value": true
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:42.452Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "exact-approved-artifact",
+    "data": {
+      "value": true
+    }
+  }
+]

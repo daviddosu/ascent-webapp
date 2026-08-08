@@ -1,0 +1,2988 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+  "caseId": "form-degree-requirements-versus-ceremony",
+  "level": "atomic",
+  "category": "form",
+  "repetition": 2,
+  "seed": 3379831060,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 7,
+  "primitiveSuccesses": 7,
+  "harnessAttempts": 1,
+  "harnessSuccesses": 1,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 8,
+  "interventions": 0,
+  "browserActions": 7,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.975,
+    "requirement_extraction": 1,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 1,
+    "harness_escalation": 0.95,
+    "browser_execution": 1,
+    "email_interpretation": 0.5,
+    "document_correctness": 0.5,
+    "recovery": 1,
+    "evidence_quality": 1,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "applicant_fact_correctness",
+    "tool_selection",
+    "primitive_routing",
+    "harness_escalation",
+    "browser_execution",
+    "recovery",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 18,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 262326,
+    "cachedInputTokens": 231256,
+    "cacheWriteTokens": 31013,
+    "outputTokens": 3641,
+    "reasoningTokens": 892,
+    "totalTokens": 265967,
+    "inferenceCostUsd": 0.01675897
+  },
+  "elapsedMs": 141252,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Education section completed and verified in the controlled portal.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:33:59.329Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c6298c881a1b0d03b323e416f36",
+        "object": "response",
+        "created_at": 1786203234,
+        "completed_at": 1786203238,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0fdbb8770bb3e50b016a774c6378ec81a194858de5334c2174",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c6452cc81a1b74737ff7df4329d",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"objective\":\"Inspect the official programme page and the controlled portal education section labels and fields. Do not save or submit anything.\",\"allowed_domains\":[\"www.ucl.ac.uk\",\"benchmark.test\"]}",
+            "call_id": "call_vg38NYXx3JDRyS9YuaGWXTMD",
+            "name": "browser__start_session"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5908,
+          "input_tokens_details": {
+            "cache_write_tokens": 898,
+            "cached_tokens": 5007
+          },
+          "output_tokens": 124,
+          "output_tokens_details": {
+            "reasoning_tokens": 69
+          },
+          "total_tokens": 6032
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5147,
+      "usage": {
+        "inputTokens": 5908,
+        "cachedInputTokens": 5007,
+        "cacheWriteTokens": 898,
+        "outputTokens": 124,
+        "reasoningTokens": 69,
+        "totalTokens": 6032,
+        "inferenceCostUsd": 0.00047403999999999995
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:59.332Z",
+      "kind": "tool",
+      "name": "browser.start_session",
+      "input": {
+        "objective": "Inspect the official programme page and the controlled portal education section labels and fields. Do not save or submit anything.",
+        "allowed_domains": [
+          "www.ucl.ac.uk",
+          "benchmark.test"
+        ]
+      },
+      "output": {
+        "ok": true,
+        "session_id": "browser-898e77b01daa",
+        "task_owned": true,
+        "allowed_domains": [
+          "www.ucl.ac.uk",
+          "benchmark.test"
+        ]
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:01.295Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 4,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c67c62481a1bdb7d4b7de222071",
+        "object": "response",
+        "created_at": 1786203239,
+        "completed_at": 1786203240,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c68b11881a183de8084e3e06313",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-898e77b01daa\",\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd\"}",
+            "call_id": "call_qHgVhNK86lvo9afTyKDCz9kC",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6080,
+          "input_tokens_details": {
+            "cache_write_tokens": 172,
+            "cached_tokens": 5905
+          },
+          "output_tokens": 58,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6138
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 1964,
+      "usage": {
+        "inputTokens": 6080,
+        "cachedInputTokens": 5905,
+        "cacheWriteTokens": 172,
+        "outputTokens": 58,
+        "reasoningTokens": 0,
+        "totalTokens": 6138,
+        "inferenceCostUsd": 0.00023129999999999998
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:04.695Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-898e77b01daa",
+        "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+          "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd",
+          "headings": [
+            "Physics and Astronomy MPhil/PhD",
+            "Entry requirements",
+            "Equivalent qualifications",
+            "About this degree",
+            "The foundation of your career",
+            "Employability",
+            "Networking",
+            "Teaching and learning",
+            "Research areas and structure",
+            "Fees and funding",
+            "Fees for this course",
+            "Funding your studies",
+            "Next steps",
+            "Choose your programme",
+            "Got questions? Get in touch",
+            "Stay in touch",
+            "Visit us",
+            "Find a course",
+            "Contact information",
+            "On this page"
+          ],
+          "text": "Skip to main content Search Menu Home Physics and Astronomy MPhil/PhD London, Bloomsbury The Department of Physics and Astronomy at UCL is one of the top departments in the UK for graduate study and has a broad range of bases for research in Physics of any UK university. A UCL Physics PhD provides evidence of the type of problem-solving skills which are an ideal qualification for a further career in research or the wider job market. UK students International students Study mode Full-time Part-time UK tuition fees (2026/27) £6,400 Duration 3 academic years Programme starts October 2026 February 2027 May 2027 Applications accepted Applications are accepted on a rolling basis but should be submitted at least three months prior to your preferred start date. Apply for this course Entry requirements A minimum of an upper second-class UK integrated Master’s (MSci or MPhys) degree in a relevant discipline, or an undergraduate degree followed by an MSc in a relevant discipline, or an overseas qualification of an equivalent standard. An upper second- or first-class UK Bachelor’s or equivalent may be considered in special circumstances. English language requirements The English language level for this course is: Level 1 UCL Pre-Master's and Pre-sessional English courses are for international students who are aiming to study for a postgraduate degree at UCL. The courses will develop your academic English and academic skills required to succeed at postgraduate level. Further information can be found on our English language requirements page. ATAS statement If you are intending to apply for a time-limited visa to complete your UCL studies (e.g. Student visa, Skilled worker visa, PBS dependant visa etc.) you may be required to obtain ATAS clearance. This will be confirmed to you if you obtain an offer of a place. Please note that ATAS processing times can take up to six months, so we recommend you consider these timelines when submitting your application to UCL. Equivalent qualifications Country-specific information, including details of when UCL representatives are visiting your part of the world, can be obtained from the International Students website. International applicants can find out the equivalent qualification for their country by selecting from the list below. Please note that the equivalency will correspond to the broad UK degree classification stated on this page (e.g. upper second-class). Where a specific overall percentage is required in the UK qualification, the international equivalency will be higher than that stated below. Please contact Graduate Admissions should you require further advice. Select your country Select a country Afghanistan Albania Algeria Argentina Armenia Australia Austria Azerbaijan Bahrain Bangladesh Barbados Belarus Belgium Belize Bolivia Bosnia and Herzegovina Botswana Brazil Brunei Bulgaria Cambodia Cameroon Canada Caribbean / West Indies Chile China Colombia Congo (DR) Costa Rica Croatia Cuba Cyprus (Greek Cypriot and Turkish Cypriot communities) Czech Republic Denmark Dominican Republic Ecuador Egypt El Salvador Eritrea Estonia Ethiopia Fiji Finland France Gambia Georgia Germany Ghana Greece Guatemala Guyana Honduras Hong Kong (SAR) Hungary Iceland India Indonesia Iran Iraq Ireland Israel Italy Ivory Coast Jamaica Japan Jordan Kazakhstan Kenya Kuwait Kyrgyzstan Latvia Lebanon Lesotho Liberia Libya Liechtenstein Lithuania Luxembourg Macau (SAR) Madagascar Malawi Malaysia Malta Mauritius Mexico Moldova Mongolia Montenegro Morocco Myanmar (Burma) Namibia Nepal Netherlands New Zealand Nicaragua Nigeria North Macedonia Norway Oman Pakistan Palestine Panama Papua New Guinea Paraguay Peru Philippines Poland Portugal Qatar Romania Russia Rwanda Saudi Arabia Senegal Serbia Sierra Leone Singapore Slovakia Slovenia South Africa South Korea Spain Sri Lanka Sudan Swaziland/Eswatini Sweden Switzerland Syria Taiwan Tajikistan Tanzania Thailand Trinidad and Tobago Tunisia Turkey (including Turkish sector of Cyprus",
+          "links": [
+            {
+              "text": "Skip to main content",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd#main-content"
+            },
+            {
+              "text": "Home",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/"
+            },
+            {
+              "text": "Apply for this course",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd#programme-choice"
+            },
+            {
+              "text": "UCL Pre-Master's and Pre-sessional English courses",
+              "href": "https://www.ucl.ac.uk/languages-international-education/preparation-courses"
+            },
+            {
+              "text": "English language requirements",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/learning-and-living-ucl/international-students/english-language-requirements"
+            },
+            {
+              "text": "ATAS clearance",
+              "href": "https://www.ucl.ac.uk/students/immigration-and-visas/academic-technology-approval-scheme-atas"
+            },
+            {
+              "text": "International Students website",
+              "href": "https://www.ucl.ac.uk/prospective-students/international"
+            },
+            {
+              "text": "Read about what it takes to become a UCL graduate research student",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/why-choose-ucl"
+            },
+            {
+              "text": "QS World University Rankings 2025 for Physics and Astronomy",
+              "href": "https://www.topuniversities.com/university-subject-rankings/physics-astronomy?countries=gb"
+            },
+            {
+              "text": "5th highest in “Research Power” of all Physics submissions nationally in the latest Research Excellence Framework",
+              "href": "https://www.ucl.ac.uk/mathematical-physical-sciences/news/2022/may/ucl-physics-ref-2021-submission-ranking-5th-highest-research-power"
+            },
+            {
+              "text": "Find out how your research could have an impact",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/learning-and-living-ucl/ucl-advantage/ucl-impact"
+            },
+            {
+              "text": "Graduate Outcomes Survey",
+              "href": "https://public.tableau.com/app/profile/katy.coyte4085/viz/WhatDoUCLGraduatesDo/WhatdoUCLgraduatesdo"
+            },
+            {
+              "text": "Physics and Astronomy MPhil/PhD.",
+              "href": "https://www.ucl.ac.uk/physics-astronomy/study/phd"
+            },
+            {
+              "text": "5th highest nationally for research power",
+              "href": "https://www.ucl.ac.uk/mathematical-physical-sciences/news/2022/may/ucl-physics-ref-2021-submission-ranking-5th-highest-research-power"
+            },
+            {
+              "text": "reasonable adjustments",
+              "href": "https://www.ucl.ac.uk/students/support-and-wellbeing-services/disability-support/reasonable-adjustments-your-assessments"
+            },
+            {
+              "text": "Student Support and Wellbeing Services",
+              "href": "https://www.ucl.ac.uk/students/support-and-wellbeing-services/support-disabled-and-neurodivergent-students"
+            },
+            {
+              "text": "UCL Student Support and Wellbeing Services",
+              "href": "https://www.ucl.ac.uk/students/support-and-wellbeing-services/disability-and-neurodiversity/accessing-and-registering-support"
+            },
+            {
+              "text": "AccessAble",
+              "href": "https://www.accessable.co.uk/"
+            },
+            {
+              "text": "UCL Student Support and Wellbeing Services.",
+              "href": "https://www.ucl.ac.uk/students/support-and-wellbeing-services/disability-and-neurodiversity/accessing-and-registering-support"
+            },
+            {
+              "text": "UCL Students website: ucl.ac.uk/students/fees",
+              "href": "https://www.ucl.ac.uk/students/fees"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Search UCL websites, degrees, short courses",
+              "kind": "input:search"
+            },
+            {
+              "label": "Full-timePart-time",
+              "kind": "select:select-one"
+            },
+            {
+              "label": "English language requirements",
+              "kind": "button:submit"
+            },
+            {
+              "label": "ATAS statement",
+              "kind": "button:submit"
+            },
+            {
+              "label": "Select your country",
+              "kind": "select:select-one"
+            },
+            {
+              "label": "Full-time",
+              "kind": "button:submit"
+            },
+            {
+              "label": "Part-time",
+              "kind": "button:submit"
+            },
+            {
+              "label": "Scholarships relevant to this department are displayed below.",
+              "kind": "button:submit"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: High Energy Physics, Full-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: High Energy Physics, Part-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Astrophysics and Atmospheric Physics, Full-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Astrophysics and Atmospheric Physics, Part-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Atomic, Molecular, Optical and Positron Physics, Full-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Atomic, Molecular, Optical and Positron Physics, Part-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Biological Physics, Full-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Biological Physics, Part-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Condensed Matter and Materials Physics, Full-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Research Degree: Physics and Astronomy: Condensed Matter and Materials Physics, Part-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Accept all cookies",
+              "kind": "button:button"
+            },
+            {
+              "label": "Accept necessary cookies",
+              "kind": "button:button"
+            }
+          ],
+          "fields": [
+            {
+              "name": "query",
+              "label": "Search UCL websites, degrees, short courses",
+              "type": "search",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "global-search-submit",
+              "label": "global-search-submit",
+              "type": "submit",
+              "value": "Go",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "mode-selector",
+              "label": "mode-selector",
+              "type": "select-one",
+              "value": "fulltime",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ucl_international_equivalencies",
+              "label": "Select your country",
+              "type": "select-one",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: High Energy Physics, Full-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: High Energy Physics, Full-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: High Energy Physics, Part-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: High Energy Physics, Part-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Astrophysics and Atmospheric Physics, Full-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Astrophysics and Atmospheric Physics, Full-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Astrophysics and Atmospheric Physics, Part-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Astrophysics and Atmospheric Physics, Part-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Atomic, Molecular, Optical and Positron Physics, Full-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Atomic, Molecular, Optical and Positron Physics, Full-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Atomic, Molecular, Optical and Positron Physics, Part-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Atomic, Molecular, Optical and Positron Physics, Part-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Biological Physics, Full-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Biological Physics, Full-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Biological Physics, Part-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Biological Physics, Part-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Condensed Matter and Materials Physics, Full-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Condensed Matter and Materials Physics, Full-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "Research Degree: Physics and Astronomy: Condensed Matter and Materials Physics, Part-time",
+              "type": "radio",
+              "value": "Research Degree: Physics and Astronomy: Condensed Matter and Materials Physics, Part-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "windows_aad",
+              "label": "windows_aad",
+              "type": "submit",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 3399,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:06.976Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 6,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c6d221481a1bbf73005947c7d4b",
+        "object": "response",
+        "created_at": 1786203245,
+        "completed_at": 1786203246,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c6dfe8c81a1a2825cdc3bf2274a",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-898e77b01daa\",\"url\":\"https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education\"}",
+            "call_id": "call_ZxetIneAGC8lOSYzSAuAl78j",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8858,
+          "input_tokens_details": {
+            "cache_write_tokens": 2778,
+            "cached_tokens": 6077
+          },
+          "output_tokens": 79,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 8937
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2283,
+      "usage": {
+        "inputTokens": 8858,
+        "cachedInputTokens": 6077,
+        "cacheWriteTokens": 2778,
+        "outputTokens": 79,
+        "reasoningTokens": 0,
+        "totalTokens": 8937,
+        "inferenceCostUsd": 0.0009114399999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:08.393Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-898e77b01daa",
+        "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · education",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+          "headings": [
+            "Degree record"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run form-degree-requirements-versus-ceremony-2 Degree record Degree title Awarding institution Academic completion date Degree conferral ceremony Cumulative grade average GPA in your principal subject Store this section",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Degree title",
+              "kind": "input:text"
+            },
+            {
+              "label": "Awarding institution",
+              "kind": "input:text"
+            },
+            {
+              "label": "Academic completion date",
+              "kind": "input:text"
+            },
+            {
+              "label": "Degree conferral ceremony",
+              "kind": "input:text"
+            },
+            {
+              "label": "Cumulative grade average",
+              "kind": "input:text"
+            },
+            {
+              "label": "GPA in your principal subject",
+              "kind": "input:text"
+            },
+            {
+              "label": "Store this section",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "degree_title",
+              "label": "Degree title",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "institution",
+              "label": "Awarding institution",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "requirements_completed_date",
+              "label": "Academic completion date",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ceremony_date",
+              "label": "Degree conferral ceremony",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "cumulative_gpa",
+              "label": "Cumulative grade average",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "major_gpa",
+              "label": "GPA in your principal subject",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 1415,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:12.253Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 8,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c70d88c81a18d168d666c7736cc",
+        "object": "response",
+        "created_at": 1786203248,
+        "completed_at": 1786203252,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0fdbb8770bb3e50b016a774c71b8c481a18f6890bf873a1eef",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c727efc81a1b2b99638d82cda9f",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-240d4f1c4b3d\",\"opportunity\":{\"id\":\"ucl-particle-physics-phd\",\"name\":\"UCL Physics and Astronomy MPhil/PhD — particle physics pathway\",\"institution\":\"University College London\",\"official_url\":\"https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd\",\"fit_evidence\":[\"BSc Physics, University of Lagos, 2020–2024\",\"Particle-detector research experience at CERN OpenLab\",\"Relevant coursework includes Nuclear and Particle Physics and Computational Physics\"],\"verification_status\":\"verified\"},\"citations\":[{\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd\",\"title\":\"Physics and Astronomy MPhil/PhD — UCL\",\"excerpt\":\"Entry requirements include an undergraduate degree followed by an MSc in a relevant discipline, or an overseas qualification of an equivalent standard; an upper second- or first-class UK Bachelor’s or equivalent may be considered in special circumstances.\",\"retrieved_at\":\"2026-02-01T00:00:00Z\"}],\"idempotency_key\":\"ucl-particle-physics-phd|official|2026-02-01\"}",
+            "call_id": "call_oteL1pQpOqCnC3xiPq97T56J",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 9849,
+          "input_tokens_details": {
+            "cache_write_tokens": 991,
+            "cached_tokens": 8855
+          },
+          "output_tokens": 342,
+          "output_tokens_details": {
+            "reasoning_tokens": 57
+          },
+          "total_tokens": 10191
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3861,
+      "usage": {
+        "inputTokens": 9849,
+        "cachedInputTokens": 8855,
+        "cacheWriteTokens": 991,
+        "outputTokens": 342,
+        "reasoningTokens": 57,
+        "totalTokens": 10191,
+        "inferenceCostUsd": 0.00083585
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:12.254Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-240d4f1c4b3d",
+        "opportunity": {
+          "id": "ucl-particle-physics-phd",
+          "name": "UCL Physics and Astronomy MPhil/PhD — particle physics pathway",
+          "institution": "University College London",
+          "official_url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd",
+          "fit_evidence": [
+            "BSc Physics, University of Lagos, 2020–2024",
+            "Particle-detector research experience at CERN OpenLab",
+            "Relevant coursework includes Nuclear and Particle Physics and Computational Physics"
+          ],
+          "verification_status": "verified"
+        },
+        "citations": [
+          {
+            "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd",
+            "title": "Physics and Astronomy MPhil/PhD — UCL",
+            "excerpt": "Entry requirements include an undergraduate degree followed by an MSc in a relevant discipline, or an overseas qualification of an equivalent standard; an upper second- or first-class UK Bachelor’s or equivalent may be considered in special circumstances.",
+            "retrieved_at": "2026-02-01T00:00:00Z"
+          }
+        ],
+        "idempotency_key": "ucl-particle-physics-phd|official|2026-02-01"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-2101a44b8d10",
+        "programme_id": "ucl-particle-physics-phd",
+        "citation_count": 1
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:18.375Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 11,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c74eb6881a1a47b1ae4875418b3",
+        "object": "response",
+        "created_at": 1786203253,
+        "completed_at": 1786203258,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c77af0881a1b957e9b195e7c951",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-240d4f1c4b3d\",\"opportunity_id\":\"opportunity-2101a44b8d10\",\"portal_account\":{\"provider\":\"controlled_portal\",\"url\":\"https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education\",\"session_id\":\"browser-898e77b01daa\"},\"requirements\":[{\"key\":\"education.degree_title\",\"label\":\"Degree title\",\"status\":\"verified\",\"source_asset_id\":\"physics-transcript\",\"value\":\"Bachelor of Science in Physics\"},{\"key\":\"education.institution\",\"label\":\"Awarding institution\",\"status\":\"verified\",\"source_asset_id\":\"physics-transcript\",\"value\":\"University of Lagos\"},{\"key\":\"education.requirements_completed_date\",\"label\":\"Academic completion date\",\"status\":\"verified\",\"source_asset_id\":\"physics-transcript\",\"value\":\"14 June 2024\"},{\"key\":\"education.ceremony_date\",\"label\":\"Degree conferral ceremony\",\"status\":\"verified\",\"source_asset_id\":\"physics-transcript\",\"value\":\"20 September 2024\"},{\"key\":\"education.cumulative_gpa\",\"label\":\"Cumulative grade average\",\"status\":\"verified\",\"source_asset_id\":\"physics-transcript\",\"value\":\"4.62/5.00\"},{\"key\":\"education.major_gpa\",\"label\":\"GPA in your principal subject\",\"status\":\"missing\",\"source_asset_id\":\"physics-transcript\",\"value\":null,\"blocker_reason\":\"Transcript does not report a major-only GPA; do not infer one.\"}],\"deadlines\":[],\"next_action\":\"Populate and reversibly save the verified education section, leaving the principal-subject GPA blank or marked unavailable if the portal permits.\",\"idempotency_key\":\"case|ucl-particle-physics-phd|education|form-degree-requirements-versus-ceremony-2\"}",
+            "call_id": "call_be29Dvhhd6OetjokfAmlg1SZ",
+            "name": "application__create_case"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 10242,
+          "input_tokens_details": {
+            "cache_write_tokens": 393,
+            "cached_tokens": 9846
+          },
+          "output_tokens": 406,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 10648
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 6122,
+      "usage": {
+        "inputTokens": 10242,
+        "cachedInputTokens": 9846,
+        "cacheWriteTokens": 393,
+        "outputTokens": 406,
+        "reasoningTokens": 0,
+        "totalTokens": 10648,
+        "inferenceCostUsd": 0.00078297
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:18.376Z",
+      "kind": "tool",
+      "name": "application.create_case",
+      "input": {
+        "campaign_id": "campaign-240d4f1c4b3d",
+        "opportunity_id": "opportunity-2101a44b8d10",
+        "portal_account": {
+          "provider": "controlled_portal",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+          "session_id": "browser-898e77b01daa"
+        },
+        "requirements": [
+          {
+            "key": "education.degree_title",
+            "label": "Degree title",
+            "status": "verified",
+            "source_asset_id": "physics-transcript",
+            "value": "Bachelor of Science in Physics"
+          },
+          {
+            "key": "education.institution",
+            "label": "Awarding institution",
+            "status": "verified",
+            "source_asset_id": "physics-transcript",
+            "value": "University of Lagos"
+          },
+          {
+            "key": "education.requirements_completed_date",
+            "label": "Academic completion date",
+            "status": "verified",
+            "source_asset_id": "physics-transcript",
+            "value": "14 June 2024"
+          },
+          {
+            "key": "education.ceremony_date",
+            "label": "Degree conferral ceremony",
+            "status": "verified",
+            "source_asset_id": "physics-transcript",
+            "value": "20 September 2024"
+          },
+          {
+            "key": "education.cumulative_gpa",
+            "label": "Cumulative grade average",
+            "status": "verified",
+            "source_asset_id": "physics-transcript",
+            "value": "4.62/5.00"
+          },
+          {
+            "key": "education.major_gpa",
+            "label": "GPA in your principal subject",
+            "status": "missing",
+            "source_asset_id": "physics-transcript",
+            "value": null,
+            "blocker_reason": "Transcript does not report a major-only GPA; do not infer one."
+          }
+        ],
+        "deadlines": [],
+        "next_action": "Populate and reversibly save the verified education section, leaving the principal-subject GPA blank or marked unavailable if the portal permits.",
+        "idempotency_key": "case|ucl-particle-physics-phd|education|form-degree-requirements-versus-ceremony-2"
+      },
+      "output": {
+        "ok": true,
+        "application_case_id": "case-2101a44b8d10",
+        "programme_id": "ucl-particle-physics-phd",
+        "state": "preparing"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:24.824Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 13,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c7bfe7481a1b058031555d32e17",
+        "object": "response",
+        "created_at": 1786203260,
+        "completed_at": 1786203264,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0fdbb8770bb3e50b016a774c7db37881a1b7c3903ff3fc578e",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c8027ac81a1a3b16cb4ffd45286",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-898e77b01daa\",\"action\":\"type\",\"target\":\"Degree title\",\"value\":\"Bachelor of Science in Physics\"}",
+            "call_id": "call_XnGuyasu2qQknTUd41nsVMAN",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 10697,
+          "input_tokens_details": {
+            "cache_write_tokens": 455,
+            "cached_tokens": 10239
+          },
+          "output_tokens": 295,
+          "output_tokens_details": {
+            "reasoning_tokens": 249
+          },
+          "total_tokens": 10992
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 6449,
+      "usage": {
+        "inputTokens": 10697,
+        "cachedInputTokens": 10239,
+        "cacheWriteTokens": 455,
+        "outputTokens": 295,
+        "reasoningTokens": 249,
+        "totalTokens": 10992,
+        "inferenceCostUsd": 0.00067313
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:26.121Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-898e77b01daa",
+        "action": "type",
+        "target": "Degree title",
+        "value": "Bachelor of Science in Physics"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · education",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+          "headings": [
+            "Degree record"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run form-degree-requirements-versus-ceremony-2 Degree record Degree title Awarding institution Academic completion date Degree conferral ceremony Cumulative grade average GPA in your principal subject Store this section",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Degree title",
+              "kind": "input:text"
+            },
+            {
+              "label": "Awarding institution",
+              "kind": "input:text"
+            },
+            {
+              "label": "Academic completion date",
+              "kind": "input:text"
+            },
+            {
+              "label": "Degree conferral ceremony",
+              "kind": "input:text"
+            },
+            {
+              "label": "Cumulative grade average",
+              "kind": "input:text"
+            },
+            {
+              "label": "GPA in your principal subject",
+              "kind": "input:text"
+            },
+            {
+              "label": "Store this section",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "degree_title",
+              "label": "Degree title",
+              "type": "text",
+              "value": "Bachelor of Science in Physics",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "institution",
+              "label": "Awarding institution",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "requirements_completed_date",
+              "label": "Academic completion date",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ceremony_date",
+              "label": "Degree conferral ceremony",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "cumulative_gpa",
+              "label": "Cumulative grade average",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "major_gpa",
+              "label": "GPA in your principal subject",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": null
+      },
+      "elapsedMs": 1295,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:29.349Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 16,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c82953481a1bfd6fb0bd29ccaa1",
+        "object": "response",
+        "created_at": 1786203266,
+        "completed_at": 1786203269,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c8370f881a1b11c3d3d8021d426",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-898e77b01daa\",\"action\":\"type\",\"target\":\"Awarding institution\",\"value\":\"University of Lagos\"}",
+            "call_id": "call_EeSp7lUOrxXoHHW7KQdWf0bh",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 11915,
+          "input_tokens_details": {
+            "cache_write_tokens": 1218,
+            "cached_tokens": 10694
+          },
+          "output_tokens": 43,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 11958
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3228,
+      "usage": {
+        "inputTokens": 11915,
+        "cachedInputTokens": 10694,
+        "cacheWriteTokens": 1218,
+        "outputTokens": 43,
+        "reasoningTokens": 0,
+        "totalTokens": 11958,
+        "inferenceCostUsd": 0.00057058
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:30.072Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-898e77b01daa",
+        "action": "type",
+        "target": "Awarding institution",
+        "value": "University of Lagos"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · education",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+          "headings": [
+            "Degree record"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run form-degree-requirements-versus-ceremony-2 Degree record Degree title Awarding institution Academic completion date Degree conferral ceremony Cumulative grade average GPA in your principal subject Store this section",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Degree title",
+              "kind": "input:text"
+            },
+            {
+              "label": "Awarding institution",
+              "kind": "input:text"
+            },
+            {
+              "label": "Academic completion date",
+              "kind": "input:text"
+            },
+            {
+              "label": "Degree conferral ceremony",
+              "kind": "input:text"
+            },
+            {
+              "label": "Cumulative grade average",
+              "kind": "input:text"
+            },
+            {
+              "label": "GPA in your principal subject",
+              "kind": "input:text"
+            },
+            {
+              "label": "Store this section",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "degree_title",
+              "label": "Degree title",
+              "type": "text",
+              "value": "Bachelor of Science in Physics",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "institution",
+              "label": "Awarding institution",
+              "type": "text",
+              "value": "University of Lagos",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "requirements_completed_date",
+              "label": "Academic completion date",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ceremony_date",
+              "label": "Degree conferral ceremony",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "cumulative_gpa",
+              "label": "Cumulative grade average",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "major_gpa",
+              "label": "GPA in your principal subject",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": null
+      },
+      "elapsedMs": 723,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:32.123Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 18,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c8681d481a18bf2356f1ba3c1df",
+        "object": "response",
+        "created_at": 1786203270,
+        "completed_at": 1786203271,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c87659c81a19979510242de639d",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-898e77b01daa\",\"action\":\"type\",\"target\":\"Academic completion date\",\"value\":\"14 June 2024\"}",
+            "call_id": "call_B88ndR6fMpvnXDqzkAHw5cGA",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 12885,
+          "input_tokens_details": {
+            "cache_write_tokens": 970,
+            "cached_tokens": 11912
+          },
+          "output_tokens": 45,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 12930
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2052,
+      "usage": {
+        "inputTokens": 12885,
+        "cachedInputTokens": 11912,
+        "cacheWriteTokens": 970,
+        "outputTokens": 45,
+        "reasoningTokens": 0,
+        "totalTokens": 12930,
+        "inferenceCostUsd": 0.00053534
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:33.208Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-898e77b01daa",
+        "action": "type",
+        "target": "Academic completion date",
+        "value": "14 June 2024"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · education",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+          "headings": [
+            "Degree record"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run form-degree-requirements-versus-ceremony-2 Degree record Degree title Awarding institution Academic completion date Degree conferral ceremony Cumulative grade average GPA in your principal subject Store this section",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Degree title",
+              "kind": "input:text"
+            },
+            {
+              "label": "Awarding institution",
+              "kind": "input:text"
+            },
+            {
+              "label": "Academic completion date",
+              "kind": "input:text"
+            },
+            {
+              "label": "Degree conferral ceremony",
+              "kind": "input:text"
+            },
+            {
+              "label": "Cumulative grade average",
+              "kind": "input:text"
+            },
+            {
+              "label": "GPA in your principal subject",
+              "kind": "input:text"
+            },
+            {
+              "label": "Store this section",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "degree_title",
+              "label": "Degree title",
+              "type": "text",
+              "value": "Bachelor of Science in Physics",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "institution",
+              "label": "Awarding institution",
+              "type": "text",
+              "value": "University of Lagos",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "requirements_completed_date",
+              "label": "Academic completion date",
+              "type": "text",
+              "value": "14 June 2024",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ceremony_date",
+              "label": "Degree conferral ceremony",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "cumulative_gpa",
+              "label": "Cumulative grade average",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "major_gpa",
+              "label": "GPA in your principal subject",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": null
+      },
+      "elapsedMs": 1084,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:35.452Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 20,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c89a8d481a19076a41e8271b0ae",
+        "object": "response",
+        "created_at": 1786203273,
+        "completed_at": 1786203275,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c8aa6e481a1827f7ce221ff9b6a",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-898e77b01daa\",\"action\":\"type\",\"target\":\"Degree conferral ceremony\",\"value\":\"20 September 2024\"}",
+            "call_id": "call_pXmnnwAKQ8j1CriaSaonCcTG",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 13863,
+          "input_tokens_details": {
+            "cache_write_tokens": 978,
+            "cached_tokens": 12882
+          },
+          "output_tokens": 46,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 13909
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2245,
+      "usage": {
+        "inputTokens": 13863,
+        "cachedInputTokens": 12882,
+        "cacheWriteTokens": 978,
+        "outputTokens": 46,
+        "reasoningTokens": 0,
+        "totalTokens": 13909,
+        "inferenceCostUsd": 0.00055794
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:36.524Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-898e77b01daa",
+        "action": "type",
+        "target": "Degree conferral ceremony",
+        "value": "20 September 2024"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · education",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+          "headings": [
+            "Degree record"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run form-degree-requirements-versus-ceremony-2 Degree record Degree title Awarding institution Academic completion date Degree conferral ceremony Cumulative grade average GPA in your principal subject Store this section",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Degree title",
+              "kind": "input:text"
+            },
+            {
+              "label": "Awarding institution",
+              "kind": "input:text"
+            },
+            {
+              "label": "Academic completion date",
+              "kind": "input:text"
+            },
+            {
+              "label": "Degree conferral ceremony",
+              "kind": "input:text"
+            },
+            {
+              "label": "Cumulative grade average",
+              "kind": "input:text"
+            },
+            {
+              "label": "GPA in your principal subject",
+              "kind": "input:text"
+            },
+            {
+              "label": "Store this section",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "degree_title",
+              "label": "Degree title",
+              "type": "text",
+              "value": "Bachelor of Science in Physics",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "institution",
+              "label": "Awarding institution",
+              "type": "text",
+              "value": "University of Lagos",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "requirements_completed_date",
+              "label": "Academic completion date",
+              "type": "text",
+              "value": "14 June 2024",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ceremony_date",
+              "label": "Degree conferral ceremony",
+              "type": "text",
+              "value": "20 September 2024",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "cumulative_gpa",
+              "label": "Cumulative grade average",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "major_gpa",
+              "label": "GPA in your principal subject",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": null
+      },
+      "elapsedMs": 1071,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:38.500Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 22,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c8cfee881a18978270dd05f4480",
+        "object": "response",
+        "created_at": 1786203277,
+        "completed_at": 1786203278,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c8dede081a1913d60353af7151b",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-898e77b01daa\",\"action\":\"type\",\"target\":\"Cumulative grade average\",\"value\":\"4.62/5.00\"}",
+            "call_id": "call_xp1VeR31UvNjGTvmEnsjQYuE",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 14848,
+          "input_tokens_details": {
+            "cache_write_tokens": 985,
+            "cached_tokens": 13860
+          },
+          "output_tokens": 48,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 14896
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 1977,
+      "usage": {
+        "inputTokens": 14848,
+        "cachedInputTokens": 13860,
+        "cacheWriteTokens": 985,
+        "outputTokens": 48,
+        "reasoningTokens": 0,
+        "totalTokens": 14896,
+        "inferenceCostUsd": 0.00058165
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:39.583Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-898e77b01daa",
+        "action": "type",
+        "target": "Cumulative grade average",
+        "value": "4.62/5.00"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · education",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+          "headings": [
+            "Degree record"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run form-degree-requirements-versus-ceremony-2 Degree record Degree title Awarding institution Academic completion date Degree conferral ceremony Cumulative grade average GPA in your principal subject Store this section",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Degree title",
+              "kind": "input:text"
+            },
+            {
+              "label": "Awarding institution",
+              "kind": "input:text"
+            },
+            {
+              "label": "Academic completion date",
+              "kind": "input:text"
+            },
+            {
+              "label": "Degree conferral ceremony",
+              "kind": "input:text"
+            },
+            {
+              "label": "Cumulative grade average",
+              "kind": "input:text"
+            },
+            {
+              "label": "GPA in your principal subject",
+              "kind": "input:text"
+            },
+            {
+              "label": "Store this section",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "degree_title",
+              "label": "Degree title",
+              "type": "text",
+              "value": "Bachelor of Science in Physics",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "institution",
+              "label": "Awarding institution",
+              "type": "text",
+              "value": "University of Lagos",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "requirements_completed_date",
+              "label": "Academic completion date",
+              "type": "text",
+              "value": "14 June 2024",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ceremony_date",
+              "label": "Degree conferral ceremony",
+              "type": "text",
+              "value": "20 September 2024",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "cumulative_gpa",
+              "label": "Cumulative grade average",
+              "type": "text",
+              "value": "4.62/5.00",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "major_gpa",
+              "label": "GPA in your principal subject",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": null
+      },
+      "elapsedMs": 1082,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:45.098Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 24,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c9011e081a1967ee42bb0f86c5f",
+        "object": "response",
+        "created_at": 1786203280,
+        "completed_at": 1786203284,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0fdbb8770bb3e50b016a774c91251081a1816b39c9195f6d79",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c9183b481a194414271f41cbff9",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2101a44b8d10\",\"session_id\":\"browser-898e77b01daa\",\"checkpoint\":{\"section\":\"education\",\"section_contract\":{\"fields\":{\"degree_title\":{\"value\":\"Bachelor of Science in Physics\",\"provenance\":\"physics-transcript\"},\"institution\":{\"value\":\"University of Lagos\",\"provenance\":\"physics-transcript\"},\"requirements_completed_date\":{\"value\":\"14 June 2024\",\"provenance\":\"physics-transcript\",\"interpretation\":\"requirements completed date, not ceremony or conferral date\"},\"ceremony_date\":{\"value\":\"20 September 2024\",\"provenance\":\"physics-transcript\",\"interpretation\":\"graduation ceremony date; degree was conferred 31 July 2024\"},\"cumulative_gpa\":{\"value\":\"4.62/5.00\",\"provenance\":\"physics-transcript\"},\"major_gpa\":{\"value\":\"\",\"provenance\":\"physics-transcript\",\"status\":\"unreported\"}}},\"observed_before_save\":{\"url\":\"https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education\",\"fields\":{\"degree_title\":\"Bachelor of Science in Physics\",\"institution\":\"University of Lagos\",\"requirements_completed_date\":\"14 June 2024\",\"ceremony_date\":\"20 September 2024\",\"cumulative_gpa\":\"4.62/5.00\",\"major_gpa\":\"\"}},\"save_control\":\"Store this section\",\"save_authorized\":true,\"read_after_write_required\":true},\"idempotency_key\":\"case-2101a44b8d10|education|checkpoint|v1\"}",
+            "call_id": "call_uzdHPCp9yEQzNVgZ79PEcCfi",
+            "name": "application__record_portal_checkpoint"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 15843,
+          "input_tokens_details": {
+            "cache_write_tokens": 995,
+            "cached_tokens": 14845
+          },
+          "output_tokens": 401,
+          "output_tokens_details": {
+            "reasoning_tokens": 30
+          },
+          "total_tokens": 16244
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5516,
+      "usage": {
+        "inputTokens": 15843,
+        "cachedInputTokens": 14845,
+        "cacheWriteTokens": 995,
+        "outputTokens": 401,
+        "reasoningTokens": 30,
+        "totalTokens": 16244,
+        "inferenceCostUsd": 0.00102745
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:46.390Z",
+      "kind": "tool",
+      "name": "application.record_portal_checkpoint",
+      "input": {
+        "application_case_id": "case-2101a44b8d10",
+        "session_id": "browser-898e77b01daa",
+        "checkpoint": {
+          "section": "education",
+          "section_contract": {
+            "fields": {
+              "degree_title": {
+                "value": "Bachelor of Science in Physics",
+                "provenance": "physics-transcript"
+              },
+              "institution": {
+                "value": "University of Lagos",
+                "provenance": "physics-transcript"
+              },
+              "requirements_completed_date": {
+                "value": "14 June 2024",
+                "provenance": "physics-transcript",
+                "interpretation": "requirements completed date, not ceremony or conferral date"
+              },
+              "ceremony_date": {
+                "value": "20 September 2024",
+                "provenance": "physics-transcript",
+                "interpretation": "graduation ceremony date; degree was conferred 31 July 2024"
+              },
+              "cumulative_gpa": {
+                "value": "4.62/5.00",
+                "provenance": "physics-transcript"
+              },
+              "major_gpa": {
+                "value": "",
+                "provenance": "physics-transcript",
+                "status": "unreported"
+              }
+            }
+          },
+          "observed_before_save": {
+            "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=education",
+            "fields": {
+              "degree_title": "Bachelor of Science in Physics",
+              "institution": "University of Lagos",
+              "requirements_completed_date": "14 June 2024",
+              "ceremony_date": "20 September 2024",
+              "cumulative_gpa": "4.62/5.00",
+              "major_gpa": ""
+            }
+          },
+          "save_control": "Store this section",
+          "save_authorized": true,
+          "read_after_write_required": true
+        },
+        "idempotency_key": "case-2101a44b8d10|education|checkpoint|v1"
+      },
+      "output": {
+        "ok": true,
+        "checkpoint_id": "checkpoint-35e0a6782179",
+        "section": "education",
+        "verified": true,
+        "controlled_fixture": true,
+        "reversible_section_save": true,
+        "external_write": false,
+        "save_confirmation_observed": true,
+        "read_after_write_verified": true,
+        "saved_field_values": {
+          "degree_title": "Bachelor of Science in Physics",
+          "institution": "University of Lagos",
+          "requirements_completed_date": "14 June 2024",
+          "ceremony_date": "20 September 2024",
+          "cumulative_gpa": "4.62/5.00"
+        },
+        "saved_field_hash": "a6e4963ada81",
+        "observation": {
+          "title": "Section saved",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education",
+          "headings": [
+            "Section saved"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run form-degree-requirements-versus-ceremony-2 Section saved education section saved and checkpointed. Continue editing education",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=review"
+            },
+            {
+              "text": "Continue editing education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=form-degree-requirements-versus-ceremony-2&seed=3379831060&version=v2&profile=applicant-physics&step=education"
+            }
+          ],
+          "controls": [],
+          "fields": [],
+          "untrustedExternalContent": true
+        },
+        "next_section": "employment",
+        "next_url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=form-degree-requirements-versus-ceremony-2&seed=3379831060&profile=applicant-physics&step=employment"
+      },
+      "elapsedMs": 1291,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:49.402Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 1462
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 183558, Requested 17278. Please try again in 250ms. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:34:54.007Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 27,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774c9b60c481a1b7afd70a8180658f",
+        "object": "response",
+        "created_at": 1786203291,
+        "completed_at": 1786203293,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0fdbb8770bb3e50b016a774c9c209c81a1a824a9f9e2f49a4f",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774c9cb9a081a1b53c8428bd5941b6",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2101a44b8d10\",\"kind\":\"official_requirement_source\",\"source_url\":\"https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd\",\"provider\":\"UCL\",\"excerpt\":\"Applications are accepted on a rolling basis but should be submitted at least three months prior to the preferred start date; entry requirements refer to an overseas qualification of an equivalent standard.\",\"metadata\":{\"retrieved_at\":\"2026-02-01T00:00:00Z\",\"programme\":\"Physics and Astronomy MPhil/PhD\"},\"idempotency_key\":\"case-2101a44b8d10|evidence|ucl-official\"}",
+            "call_id": "call_8ihhq9JK9zad0KTH8VQK4uv3",
+            "name": "application__record_evidence"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 17128,
+          "input_tokens_details": {
+            "cache_write_tokens": 1285,
+            "cached_tokens": 15840
+          },
+          "output_tokens": 203,
+          "output_tokens_details": {
+            "reasoning_tokens": 35
+          },
+          "total_tokens": 17331
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 7618,
+      "usage": {
+        "inputTokens": 17128,
+        "cachedInputTokens": 15840,
+        "cacheWriteTokens": 1285,
+        "outputTokens": 203,
+        "reasoningTokens": 35,
+        "totalTokens": 17331,
+        "inferenceCostUsd": 0.0008822500000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:54.008Z",
+      "kind": "tool",
+      "name": "application.record_evidence",
+      "input": {
+        "application_case_id": "case-2101a44b8d10",
+        "kind": "official_requirement_source",
+        "source_url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd",
+        "provider": "UCL",
+        "excerpt": "Applications are accepted on a rolling basis but should be submitted at least three months prior to the preferred start date; entry requirements refer to an overseas qualification of an equivalent standard.",
+        "metadata": {
+          "retrieved_at": "2026-02-01T00:00:00Z",
+          "programme": "Physics and Astronomy MPhil/PhD"
+        },
+        "idempotency_key": "case-2101a44b8d10|evidence|ucl-official"
+      },
+      "output": {
+        "ok": true,
+        "evidence_id": "evidence-8ac1ef5ea7bd",
+        "immutable": true
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:34:56.866Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 5968
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 17520. Please try again in 5.256s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:35:04.894Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 30,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774ca7518c81a1a37d7a952c9ef98b",
+        "object": "response",
+        "created_at": 1786203303,
+        "completed_at": 1786203304,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774ca8207081a1a3e9238d5a1a4d64",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2101a44b8d10\",\"requirement_id\":\"education.requirements_completed_date\",\"status\":\"verified\",\"linked_artifact_id\":null,\"verification_evidence_ids\":[\"checkpoint-35e0a6782179\"],\"blocker_reason\":null,\"idempotency_key\":\"case-2101a44b8d10|req|education.requirements_completed_date|verified\"}",
+            "call_id": "call_v9fOlc5Kzjd76eiYRVjuWudU",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 17370,
+          "input_tokens_details": {
+            "cache_write_tokens": 242,
+            "cached_tokens": 17125
+          },
+          "output_tokens": 100,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 17470
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 10887,
+      "usage": {
+        "inputTokens": 17370,
+        "cachedInputTokens": 17125,
+        "cacheWriteTokens": 242,
+        "outputTokens": 100,
+        "reasoningTokens": 0,
+        "totalTokens": 17470,
+        "inferenceCostUsd": 0.0005236
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:04.895Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2101a44b8d10",
+        "requirement_id": "education.requirements_completed_date",
+        "status": "verified",
+        "linked_artifact_id": null,
+        "verification_evidence_ids": [
+          "checkpoint-35e0a6782179"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "case-2101a44b8d10|req|education.requirements_completed_date|verified"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-99796f3282f1",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:07.962Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 6008
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 17656. Please try again in 5.296s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:35:16.900Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 32,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774cb3292081a198e869a7f6f28a54",
+        "object": "response",
+        "created_at": 1786203315,
+        "completed_at": 1786203316,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774cb42a3081a1a62044cb7112db0b",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2101a44b8d10\",\"requirement_id\":\"education.degree_title\",\"status\":\"verified\",\"linked_artifact_id\":null,\"verification_evidence_ids\":[\"checkpoint-35e0a6782179\"],\"blocker_reason\":null,\"idempotency_key\":\"case-2101a44b8d10|req|education.degree_title|verified\"}",
+            "call_id": "call_JCL8Phf2qE57jTksDfYnKiIF",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 17506,
+          "input_tokens_details": {
+            "cache_write_tokens": 136,
+            "cached_tokens": 17367
+          },
+          "output_tokens": 96,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 17602
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 12006,
+      "usage": {
+        "inputTokens": 17506,
+        "cachedInputTokens": 17367,
+        "cacheWriteTokens": 136,
+        "outputTokens": 96,
+        "reasoningTokens": 0,
+        "totalTokens": 17602,
+        "inferenceCostUsd": 0.0004971400000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:16.901Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2101a44b8d10",
+        "requirement_id": "education.degree_title",
+        "status": "verified",
+        "linked_artifact_id": null,
+        "verification_evidence_ids": [
+          "checkpoint-35e0a6782179"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "case-2101a44b8d10|req|education.degree_title|verified"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-237ef360df80",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:20.090Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 6047
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 17786. Please try again in 5.335s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:35:29.646Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 34,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774cbfaf4881a1a4c43283bb410840",
+        "object": "response",
+        "created_at": 1786203327,
+        "completed_at": 1786203329,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774cc0b51c81a18962be60eff3fcb7",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2101a44b8d10\",\"requirement_id\":\"education.institution\",\"status\":\"verified\",\"linked_artifact_id\":null,\"verification_evidence_ids\":[\"checkpoint-35e0a6782179\"],\"blocker_reason\":null,\"idempotency_key\":\"case-2101a44b8d10|req|education.institution|verified\"}",
+            "call_id": "call_Y5Wt5OlcB1o1DRnIqqyyp7on",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 17636,
+          "input_tokens_details": {
+            "cache_write_tokens": 130,
+            "cached_tokens": 17503
+          },
+          "output_tokens": 96,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 17732
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 12746,
+      "usage": {
+        "inputTokens": 17636,
+        "cachedInputTokens": 17503,
+        "cacheWriteTokens": 130,
+        "outputTokens": 96,
+        "reasoningTokens": 0,
+        "totalTokens": 17732,
+        "inferenceCostUsd": 0.00049836
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:29.647Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2101a44b8d10",
+        "requirement_id": "education.institution",
+        "status": "verified",
+        "linked_artifact_id": null,
+        "verification_evidence_ids": [
+          "checkpoint-35e0a6782179"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "case-2101a44b8d10|req|education.institution|verified"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-11b1802aa278",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:32.240Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 36,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774cc2432481a19b8c7b217961d762",
+        "object": "response",
+        "created_at": 1786203330,
+        "completed_at": 1786203331,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774cc347a881a1b2ff06bf0d8d05f6",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2101a44b8d10\",\"requirement_id\":\"education.ceremony_date\",\"status\":\"verified\",\"linked_artifact_id\":null,\"verification_evidence_ids\":[\"checkpoint-35e0a6782179\"],\"blocker_reason\":null,\"idempotency_key\":\"case-2101a44b8d10|req|education.ceremony_date|verified\"}",
+            "call_id": "call_xrEWMvsVul3BCGJs2mj2T5XB",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 17767,
+          "input_tokens_details": {
+            "cache_write_tokens": 131,
+            "cached_tokens": 17633
+          },
+          "output_tokens": 100,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 17867
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2594,
+      "usage": {
+        "inputTokens": 17767,
+        "cachedInputTokens": 17633,
+        "cacheWriteTokens": 131,
+        "outputTokens": 100,
+        "reasoningTokens": 0,
+        "totalTokens": 17867,
+        "inferenceCostUsd": 0.0005060100000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:32.241Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2101a44b8d10",
+        "requirement_id": "education.ceremony_date",
+        "status": "verified",
+        "linked_artifact_id": null,
+        "verification_evidence_ids": [
+          "checkpoint-35e0a6782179"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "case-2101a44b8d10|req|education.ceremony_date|verified"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-13a3f04a1d43",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:35.312Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 6128
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 18055. Please try again in 5.416s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:35:45.058Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 38,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774ccf489881a1aa5a0b24be3607a0",
+        "object": "response",
+        "created_at": 1786203343,
+        "completed_at": 1786203344,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774cd062a081a18f3d642c35842ee9",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2101a44b8d10\",\"requirement_id\":\"education.cumulative_gpa\",\"status\":\"verified\",\"linked_artifact_id\":null,\"verification_evidence_ids\":[\"checkpoint-35e0a6782179\"],\"blocker_reason\":null,\"idempotency_key\":\"case-2101a44b8d10|req|education.cumulative_gpa|verified\"}",
+            "call_id": "call_mopPXFx68vkVeSKRX2iKN3x3",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 17905,
+          "input_tokens_details": {
+            "cache_write_tokens": 138,
+            "cached_tokens": 17764
+          },
+          "output_tokens": 100,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 18005
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 12817,
+      "usage": {
+        "inputTokens": 17905,
+        "cachedInputTokens": 17764,
+        "cacheWriteTokens": 138,
+        "outputTokens": 100,
+        "reasoningTokens": 0,
+        "totalTokens": 18005,
+        "inferenceCostUsd": 0.0005103800000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:45.059Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2101a44b8d10",
+        "requirement_id": "education.cumulative_gpa",
+        "status": "verified",
+        "linked_artifact_id": null,
+        "verification_evidence_ids": [
+          "checkpoint-35e0a6782179"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "case-2101a44b8d10|req|education.cumulative_gpa|verified"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-843431be669d",
+        "status": "recorded"
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:50.106Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 40,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0fdbb8770bb3e50b016a774cd182e881a1bcb307f94b867ec4",
+        "object": "response",
+        "created_at": 1786203345,
+        "completed_at": 1786203349,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0fdbb8770bb3e50b016a774cd399a881a1bb1a38c5ec563c37",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0fdbb8770bb3e50b016a774cd3e3f881a181a654eb99771695",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Education section completed and verified in the controlled portal.\",\"sections\":[{\"title\":\"Verified portal section\",\"body\":\"The education section was reversibly saved and read-after-write verified (checkpoint-35e0a6782179). Entered: Bachelor of Science in Physics; University of Lagos; Academic completion date: 14 June 2024; ceremony field: 20 September 2024; cumulative GPA: 4.62/5.00.\"},{\"title\":\"Date interpretation\",\"body\":\"The academic completion date uses the transcript’s “Requirements completed” date (14 June 2024), not the degree conferral date (31 July 2024) or graduation ceremony date (20 September 2024). The principal-subject GPA was left blank because the transcript does not report one.\"},{\"title\":\"Scope and status\",\"body\":\"No final submission or real external write was performed. The controlled fixture confirmed the section save and read-after-write state.\"}],\"drafts\":[],\"follow_ups\":[\"Review the next portal section if further application preparation is authorized.\"],\"sources\":[{\"title\":\"UCL Physics and Astronomy MPhil/PhD official programme page\",\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd\"}],\"prepared_result\":false,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_tXXGhqGtA4odubZWaydJlFkE",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 18039,
+          "input_tokens_details": {
+            "cache_write_tokens": 134,
+            "cached_tokens": 17902
+          },
+          "output_tokens": 325,
+          "output_tokens_details": {
+            "reasoning_tokens": 17
+          },
+          "total_tokens": 18364
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5048,
+      "usage": {
+        "inputTokens": 18039,
+        "cachedInputTokens": 17902,
+        "cacheWriteTokens": 134,
+        "outputTokens": 325,
+        "reasoningTokens": 17,
+        "totalTokens": 18364,
+        "inferenceCostUsd": 0.0007821400000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:50.108Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Education section completed and verified in the controlled portal.",
+        "sections": [
+          {
+            "title": "Verified portal section",
+            "body": "The education section was reversibly saved and read-after-write verified (checkpoint-35e0a6782179). Entered: Bachelor of Science in Physics; University of Lagos; Academic completion date: 14 June 2024; ceremony field: 20 September 2024; cumulative GPA: 4.62/5.00."
+          },
+          {
+            "title": "Date interpretation",
+            "body": "The academic completion date uses the transcript’s “Requirements completed” date (14 June 2024), not the degree conferral date (31 July 2024) or graduation ceremony date (20 September 2024). The principal-subject GPA was left blank because the transcript does not report one."
+          },
+          {
+            "title": "Scope and status",
+            "body": "No final submission or real external write was performed. The controlled fixture confirmed the section save and read-after-write state."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "Review the next portal section if further application preparation is authorized."
+        ],
+        "sources": [
+          {
+            "title": "UCL Physics and Astronomy MPhil/PhD official programme page",
+            "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+          }
+        ],
+        "prepared_result": false,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:35:51.098Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "grader",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 2430
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 187598, Requested 18130. Please try again in 1.718s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:35:54.543Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "grader",
+        "attempt": 2,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 6248
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 18130. Please try again in 5.439s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:36:01.735Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "grader",
+        "attempt": 3,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 6345
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 18130. Please try again in 5.439s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:36:15.433Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 4
+      },
+      "output": {
+        "id": "resp_05d77e588f033def016a774ce8add8819fb3eb1ff312af1320",
+        "object": "response",
+        "created_at": 1786203368,
+        "completed_at": 1786203375,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_05d77e588f033def016a774ce9313c819f9f43054d6e6bb15c",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_05d77e588f033def016a774ced6f3c819fa0ce268fb9b4ef4b",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.95,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":0.9,\"browser_execution\":1,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[\"The official programme research was not necessary for the atomic education-section task, but the retrieved and recorded facts were accurate.\",\"The principal-subject GPA was correctly left blank because the source transcript explicitly does not report one.\"] ,\"rationale\":\"The agent correctly distinguished the transcript’s requirements-completed date (14 June 2024) from the degree conferral date (31 July 2024) and graduation ceremony date (20 September 2024). It populated the education fields with source-supported values, left the unsupported major GPA blank, and used application.record_portal_checkpoint, which returned verified=true, reversible_section_save=true, save_confirmation_observed=true, and read_after_write_verified=true. This directly satisfies the verified_section terminal policy. No applicant facts were fabricated, no final submission was claimed, and the completion summary accurately described the saved state.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 17987,
+          "input_tokens_details": {
+            "cache_write_tokens": 17984,
+            "cached_tokens": 0
+          },
+          "output_tokens": 734,
+          "output_tokens_details": {
+            "reasoning_tokens": 435
+          },
+          "total_tokens": 18721
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-form-degree-requirements-versus-ceremony-2-1af34bd7",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 25325,
+      "usage": {
+        "inputTokens": 17987,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 17984,
+        "outputTokens": 734,
+        "reasoningTokens": 435,
+        "totalTokens": 18721,
+        "inferenceCostUsd": 0.005377400000000001
+      },
+      "error": null
+    }
+  ]
+}

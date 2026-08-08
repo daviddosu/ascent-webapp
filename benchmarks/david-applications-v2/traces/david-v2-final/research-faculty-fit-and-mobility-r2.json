@@ -1,0 +1,604 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-research-faculty-fit-and-mobility-2-41b504bd",
+  "caseId": "research-faculty-fit-and-mobility",
+  "level": "atomic",
+  "category": "research",
+  "repetition": 2,
+  "seed": 1216126737,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.91,
+    "requirement_extraction": 0.975,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 0.975,
+    "primitive_routing": 0.475,
+    "harness_escalation": 1,
+    "browser_execution": 0.375,
+    "email_interpretation": 0.5,
+    "document_correctness": 0.5,
+    "recovery": 0.85,
+    "evidence_quality": 0.89,
+    "final_task_completion": 0.85
+  },
+  "applicableDimensions": [
+    "research_correctness",
+    "requirement_extraction",
+    "applicant_fact_correctness",
+    "tool_selection",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 3,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 81956,
+    "cachedInputTokens": 31067,
+    "cacheWriteTokens": 7787,
+    "outputTokens": 3334,
+    "reasoningTokens": 1224,
+    "totalTokens": 85290,
+    "inferenceCostUsd": 0.015189290000000001
+  },
+  "elapsedMs": 51279,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Identified three currently affiliated EMBL group leaders with defensible relevance to Priya’s computational single-cell host–pathogen goals, while separating research-fit evidence from PhD-recruitment evidence. Nassos Typas is the strongest overall match and is explicitly listed on EMBL’s current recruiting-group page.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:32:46.523Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_00cc2318fb93fb49016a774c0d423c819faf91ad2eb9db6673",
+        "object": "response",
+        "created_at": 1786203149,
+        "completed_at": 1786203166,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_00cc2318fb93fb49016a774c0e1644819f817d8a968bc1acbf",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00cc2318fb93fb49016a774c0f0710819fa26d5e9cdb1d17d3",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org research group leader single-cell host pathogen EMBL",
+                "site:embl.org EMBL faculty host pathogen single cell",
+                "site:embl.org EMBL International PhD Programme group leaders accepting students"
+              ],
+              "query": "site:embl.org research group leader single-cell host pathogen EMBL"
+            }
+          },
+          {
+            "id": "rs_00cc2318fb93fb49016a774c11a4b0819f8421916ac6935b1c",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00cc2318fb93fb49016a774c12bc78819fa46dae3d5016dc89",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups Typas group host pathogen microbiome single cell",
+                "site:embl.org/groups Georg Zeller group single cell host microbiome",
+                "site:embl.org/people/person Peer Bork EMBL group leader microbiome",
+                "site:embl.org/people/person Michael Zimmermann EMBL host microbe"
+              ],
+              "query": "site:embl.org/groups Typas group host pathogen microbiome single cell"
+            }
+          },
+          {
+            "id": "rs_00cc2318fb93fb49016a774c159444819fbda99ccfeba0376d",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00cc2318fb93fb49016a774c1652c4819f98cab7beb2cc5826",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/patil EMBL host microbiome group",
+                "site:embl.org/people/person Kiran Patil EMBL group leader",
+                "site:embl.org/groups EMBL infection single-cell group leader"
+              ],
+              "query": "site:embl.org/groups/patil EMBL host microbiome group"
+            }
+          },
+          {
+            "id": "rs_00cc2318fb93fb49016a774c1b8fc0819fbd1508eed43db2ce",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_00cc2318fb93fb49016a774c1cc91c819fa5b47b42da544544",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-43bfcee4e651\",\"opportunity\":{\"type\":\"faculty_fit\",\"name\":\"Nassos Typas\",\"institution\":\"European Molecular Biology Laboratory\",\"unit\":\"Molecular Systems Biology, EMBL Heidelberg\",\"fit_summary\":\"Strong fit for computational single-cell/omics-adjacent host–pathogen work: official group page documents genome-wide approaches, host–pathogen interactions, mapping host response during Salmonella infection, and microbial metabolic fluxes inside host cells.\",\"current_affiliation\":\"Official EMBL profile identifies Typas as Head of Molecular Systems Biology and group leader at EMBL since 2011.\",\"student_acceptance_status\":\"Not verified as currently accepting PhD students. The current EIPP recruiting-group page should be treated as the authoritative recruitment list; Typas is not listed there in the retrieved snapshot.\",\"source_urls\":[\"https://www.embl.org/groups/typas/\",\"https://www.embl.org/people/person/athanasios-typas/\",\"https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/\"]},\"citations\":[{\"url\":\"https://www.embl.org/groups/typas/\",\"title\":\"Typas Group — official EMBL group page\",\"excerpt\":\"The group describes genome-wide approaches to host-pathogen interactions, host response during Salmonella infection, and microbial metabolism in host cells.\"},{\"url\":\"https://www.embl.org/people/person/athanasios-typas/\",\"title\":\"Nassos Typas — official EMBL profile\",\"excerpt\":\"Head of Molecular Systems Biology; group leader at EMBL since 2011.\"},{\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/\",\"title\":\"EIPP Recruiting Group Leaders — official EMBL page\",\"excerpt\":\"Lists groups actively looking to hire PhD students; current retrieved list does not include Typas.\"}],\"idempotency_key\":\"campaign-43bfcee4e651:faculty:nassos-typas:2026-08-08\"}",
+            "call_id": "call_Yr44EM5sFpPWtvBYJaXUFT42",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 35076,
+          "input_tokens_details": {
+            "cache_write_tokens": 885,
+            "cached_tokens": 9403
+          },
+          "output_tokens": 1030,
+          "output_tokens_details": {
+            "reasoning_tokens": 585
+          },
+          "total_tokens": 36106
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-2-41b504bd",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 17699,
+      "usage": {
+        "inputTokens": 35076,
+        "cachedInputTokens": 9403,
+        "cacheWriteTokens": 885,
+        "outputTokens": 1030,
+        "reasoningTokens": 585,
+        "totalTokens": 36106,
+        "inferenceCostUsd": 0.006602910000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:32:46.525Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-43bfcee4e651",
+        "opportunity": {
+          "type": "faculty_fit",
+          "name": "Nassos Typas",
+          "institution": "European Molecular Biology Laboratory",
+          "unit": "Molecular Systems Biology, EMBL Heidelberg",
+          "fit_summary": "Strong fit for computational single-cell/omics-adjacent host–pathogen work: official group page documents genome-wide approaches, host–pathogen interactions, mapping host response during Salmonella infection, and microbial metabolic fluxes inside host cells.",
+          "current_affiliation": "Official EMBL profile identifies Typas as Head of Molecular Systems Biology and group leader at EMBL since 2011.",
+          "student_acceptance_status": "Not verified as currently accepting PhD students. The current EIPP recruiting-group page should be treated as the authoritative recruitment list; Typas is not listed there in the retrieved snapshot.",
+          "source_urls": [
+            "https://www.embl.org/groups/typas/",
+            "https://www.embl.org/people/person/athanasios-typas/",
+            "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/"
+          ]
+        },
+        "citations": [
+          {
+            "url": "https://www.embl.org/groups/typas/",
+            "title": "Typas Group — official EMBL group page",
+            "excerpt": "The group describes genome-wide approaches to host-pathogen interactions, host response during Salmonella infection, and microbial metabolism in host cells."
+          },
+          {
+            "url": "https://www.embl.org/people/person/athanasios-typas/",
+            "title": "Nassos Typas — official EMBL profile",
+            "excerpt": "Head of Molecular Systems Biology; group leader at EMBL since 2011."
+          },
+          {
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/",
+            "title": "EIPP Recruiting Group Leaders — official EMBL page",
+            "excerpt": "Lists groups actively looking to hire PhD students; current retrieved list does not include Typas."
+          }
+        ],
+        "idempotency_key": "campaign-43bfcee4e651:faculty:nassos-typas:2026-08-08"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-d0355d533d81",
+        "programme_id": "embl-phd",
+        "citation_count": 3
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:32:51.772Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 10,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_00cc2318fb93fb49016a774c1f0a28819fb3dc69929ef1df9d",
+        "object": "response",
+        "created_at": 1786203167,
+        "completed_at": 1786203171,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_00cc2318fb93fb49016a774c202190819fa35ba1a1d11da79e",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-43bfcee4e651\",\"opportunity\":{\"type\":\"faculty_fit\",\"name\":\"Maria Leptin\",\"institution\":\"European Molecular Biology Laboratory\",\"unit\":\"EMBL Director General / developmental biology context\",\"fit_summary\":\"Not shortlisted: current official affiliation is verified, but no sufficiently direct single-cell host–pathogen fit was established from the reviewed official sources.\",\"current_affiliation\":\"Verified as EMBL Director General from official EMBL source.\",\"student_acceptance_status\":\"Not assessed because fit threshold was not met.\",\"source_urls\":[\"https://www.embl.org/about/info/director-general/\"]},\"citations\":[{\"url\":\"https://www.embl.org/about/info/director-general/\",\"title\":\"Maria Leptin — official EMBL page\",\"excerpt\":\"Official EMBL leadership affiliation.\"}],\"idempotency_key\":\"campaign-43bfcee4e651:faculty:maria-leptin:not-shortlisted:2026-08-08\"}",
+            "call_id": "call_dggSStTo4t2ATOFP8XCWCAMK",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 11419,
+          "input_tokens_details": {
+            "cache_write_tokens": 1088,
+            "cached_tokens": 10288
+          },
+          "output_tokens": 212,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 11631
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-2-41b504bd",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5248,
+      "usage": {
+        "inputTokens": 11419,
+        "cachedInputTokens": 10288,
+        "cacheWriteTokens": 1088,
+        "outputTokens": 212,
+        "reasoningTokens": 0,
+        "totalTokens": 11631,
+        "inferenceCostUsd": 0.00074076
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:32:51.773Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-43bfcee4e651",
+        "opportunity": {
+          "type": "faculty_fit",
+          "name": "Maria Leptin",
+          "institution": "European Molecular Biology Laboratory",
+          "unit": "EMBL Director General / developmental biology context",
+          "fit_summary": "Not shortlisted: current official affiliation is verified, but no sufficiently direct single-cell host–pathogen fit was established from the reviewed official sources.",
+          "current_affiliation": "Verified as EMBL Director General from official EMBL source.",
+          "student_acceptance_status": "Not assessed because fit threshold was not met.",
+          "source_urls": [
+            "https://www.embl.org/about/info/director-general/"
+          ]
+        },
+        "citations": [
+          {
+            "url": "https://www.embl.org/about/info/director-general/",
+            "title": "Maria Leptin — official EMBL page",
+            "excerpt": "Official EMBL leadership affiliation."
+          }
+        ],
+        "idempotency_key": "campaign-43bfcee4e651:faculty:maria-leptin:not-shortlisted:2026-08-08"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-d0355d533d81",
+        "programme_id": "embl-phd",
+        "citation_count": 1
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:13.661Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 12,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_00cc2318fb93fb49016a774c2442c8819faf8742e8e7ac6e98",
+        "object": "response",
+        "created_at": 1786203172,
+        "completed_at": 1786203193,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_00cc2318fb93fb49016a774c251270819f8c7add2adac85d90",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00cc2318fb93fb49016a774c25c3e8819fa7468d0cb7b83831",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/bernabeu EMBL Bernabeu host pathogen",
+                "site:embl.org/groups/zimmermann EMBL Zimmermann microbiome",
+                "site:embl.org/groups/patil EMBL Patil microbiome"
+              ],
+              "query": "site:embl.org/groups/bernabeu EMBL Bernabeu host pathogen"
+            }
+          },
+          {
+            "id": "rs_00cc2318fb93fb49016a774c293d8c819fb9bee1b1ae03c599",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00cc2318fb93fb49016a774c2a442c819fae7b62bc8058f5ff",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/typas Typas Group systems microbiology host pathogen",
+                "site:embl.org/people/person/athanasios-typas Nassos Typas EMBL"
+              ],
+              "query": "site:embl.org/groups/typas Typas Group systems microbiology host pathogen"
+            }
+          },
+          {
+            "id": "rs_00cc2318fb93fb49016a774c2f8774819fb565b6e034ac94dc",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00cc2318fb93fb49016a774c313880819fba8ccf6eb4380bdc",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "open_page",
+              "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/"
+            }
+          },
+          {
+            "id": "rs_00cc2318fb93fb49016a774c3287a4819f826869f49b62173f",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_00cc2318fb93fb49016a774c333528819f9767e6f07f50deeb",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Identified three currently affiliated EMBL group leaders with defensible relevance to Priya’s computational single-cell host–pathogen goals, while separating research-fit evidence from PhD-recruitment evidence. Nassos Typas is the strongest overall match and is explicitly listed on EMBL’s current recruiting-group page.\",\"sections\":[{\"title\":\"1. Nassos Typas — strongest overall fit\",\"body\":\"Current affiliation: Head of Molecular Systems Biology and group leader at EMBL Heidelberg; the official profile states he has been an EMBL group leader since 2011. Fit evidence: the Typas Group develops high-throughput quantitative/genome-wide approaches for bacterial cellular networks, microbial communities, and interactions with hosts; EMBL’s Infection Biology page specifically describes computational and experimental work on bacteria–host interactions. This aligns well with Priya’s pathogen genomics, reproducible computational workflows, and interest in host–pathogen biology, although the group’s public description is more systems-microbiology/genetics than explicitly scRNA-seq. Acceptance evidence: **yes, current recruitment evidence found**—Typas appears on EMBL’s current International PhD Programme recruiting-group page. citeturn1search0turn1search3turn1search6turn2view0\"},{\"title\":\"2. Maria Bernabeu Aznar — strongest pathogen/host biology fit\",\"body\":\"Current affiliation: Group Leader and Co-chair of EMBL’s Infection Biology Transversal Theme at EMBL Barcelona. Fit evidence: her official group page focuses directly on *Plasmodium falciparum* cerebral malaria, host–parasite interactions, endothelial/brain-barrier responses, advanced imaging, and omics. This is especially relevant to Priya’s accepted first-author work on severe malaria and her single-cell host-response interests. The public page does not establish that the group routinely uses scRNA-seq, so the single-cell fit should be treated as a plausible bridge rather than a confirmed lab method. Acceptance evidence: **not verified** from the official sources reviewed; Bernabeu was not present on the current EIPP recruiting-group list retrieved on August 8, 2026. citeturn0search2turn0search8turn0search11turn2view0\"},{\"title\":\"3. Michael Zimmermann — computational/omics host–microbiome fit\",\"body\":\"Current affiliation: Group Leader at EMBL Heidelberg since August 2019. Fit evidence: his group studies metabolic microbiome–host interactions using high-throughput mass spectrometry, bacterial genetics, culturing, bioinformatics, and functional microbiome sequencing; the group’s recent work includes multi-omics and host–microbiome biology. This fits Priya’s computational biology, pathogen/microbial genomics, and reproducible workflow background, but is less directly focused on pathogenic infection or single-cell transcriptomics than Typas or Bernabeu. Acceptance evidence: **yes, group-level PhD opportunity evidence found**—the official open-positions page explicitly says there are currently opportunities for PhD students and directs PhD applicants through the EMBL International PhD Programme. citeturn0search0turn0search1turn0search4\"},{\"title\":\"Recruitment interpretation\",\"body\":\"EMBL states that its recruiting-group page identifies groups actively looking to hire PhD students, but also warns that the list is preliminary and may change before interviews. Therefore, “listed on the recruiting page” is stronger evidence than a general group open-positions page, but neither guarantees an offer or a project match. citeturn2view0\"}],\"drafts\":[],\"follow_ups\":[\"Before naming supervisors in an application, recheck the EIPP recruiting list and each group’s open-positions page immediately before submission.\",\"For a targeted enquiry, prioritize Typas first, Bernabeu second for malaria/host-response alignment, and Zimmermann third for microbiome/omics methodology.\"],\"sources\":[{\"title\":\"EMBL International PhD Programme — Recruiting Group Leaders\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/\"},{\"title\":\"Typas Group — Systems microbiology\",\"url\":\"https://www.embl.org/groups/typas/\"},{\"title\":\"Nassos Typas — EMBL profile\",\"url\":\"https://www.embl.org/people/person/athanasios-typas/\"},{\"title\":\"Bernabeu Group — cerebral malaria and host–parasite interactions\",\"url\":\"https://www.embl.org/groups/bernabeu/\"},{\"title\":\"Zimmermann Group — metabolic microbiome–host interactions\",\"url\":\"https://www.embl.org/groups/zimmermann/\"},{\"title\":\"Zimmermann Group — Open positions\",\"url\":\"https://www.embl.org/groups/zimmermann/open-positions/\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_isbldgcTgLvExYuXPEV02bFQ",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 29902,
+          "input_tokens_details": {
+            "cache_write_tokens": 258,
+            "cached_tokens": 11376
+          },
+          "output_tokens": 1479,
+          "output_tokens_details": {
+            "reasoning_tokens": 412
+          },
+          "total_tokens": 31381
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-2-41b504bd",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 21889,
+      "usage": {
+        "inputTokens": 29902,
+        "cachedInputTokens": 11376,
+        "cacheWriteTokens": 258,
+        "outputTokens": 1479,
+        "reasoningTokens": 412,
+        "totalTokens": 31381,
+        "inferenceCostUsd": 0.00572042
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:13.663Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Identified three currently affiliated EMBL group leaders with defensible relevance to Priya’s computational single-cell host–pathogen goals, while separating research-fit evidence from PhD-recruitment evidence. Nassos Typas is the strongest overall match and is explicitly listed on EMBL’s current recruiting-group page.",
+        "sections": [
+          {
+            "title": "1. Nassos Typas — strongest overall fit",
+            "body": "Current affiliation: Head of Molecular Systems Biology and group leader at EMBL Heidelberg; the official profile states he has been an EMBL group leader since 2011. Fit evidence: the Typas Group develops high-throughput quantitative/genome-wide approaches for bacterial cellular networks, microbial communities, and interactions with hosts; EMBL’s Infection Biology page specifically describes computational and experimental work on bacteria–host interactions. This aligns well with Priya’s pathogen genomics, reproducible computational workflows, and interest in host–pathogen biology, although the group’s public description is more systems-microbiology/genetics than explicitly scRNA-seq. Acceptance evidence: **yes, current recruitment evidence found**—Typas appears on EMBL’s current International PhD Programme recruiting-group page. citeturn1search0turn1search3turn1search6turn2view0"
+          },
+          {
+            "title": "2. Maria Bernabeu Aznar — strongest pathogen/host biology fit",
+            "body": "Current affiliation: Group Leader and Co-chair of EMBL’s Infection Biology Transversal Theme at EMBL Barcelona. Fit evidence: her official group page focuses directly on *Plasmodium falciparum* cerebral malaria, host–parasite interactions, endothelial/brain-barrier responses, advanced imaging, and omics. This is especially relevant to Priya’s accepted first-author work on severe malaria and her single-cell host-response interests. The public page does not establish that the group routinely uses scRNA-seq, so the single-cell fit should be treated as a plausible bridge rather than a confirmed lab method. Acceptance evidence: **not verified** from the official sources reviewed; Bernabeu was not present on the current EIPP recruiting-group list retrieved on August 8, 2026. citeturn0search2turn0search8turn0search11turn2view0"
+          },
+          {
+            "title": "3. Michael Zimmermann — computational/omics host–microbiome fit",
+            "body": "Current affiliation: Group Leader at EMBL Heidelberg since August 2019. Fit evidence: his group studies metabolic microbiome–host interactions using high-throughput mass spectrometry, bacterial genetics, culturing, bioinformatics, and functional microbiome sequencing; the group’s recent work includes multi-omics and host–microbiome biology. This fits Priya’s computational biology, pathogen/microbial genomics, and reproducible workflow background, but is less directly focused on pathogenic infection or single-cell transcriptomics than Typas or Bernabeu. Acceptance evidence: **yes, group-level PhD opportunity evidence found**—the official open-positions page explicitly says there are currently opportunities for PhD students and directs PhD applicants through the EMBL International PhD Programme. citeturn0search0turn0search1turn0search4"
+          },
+          {
+            "title": "Recruitment interpretation",
+            "body": "EMBL states that its recruiting-group page identifies groups actively looking to hire PhD students, but also warns that the list is preliminary and may change before interviews. Therefore, “listed on the recruiting page” is stronger evidence than a general group open-positions page, but neither guarantees an offer or a project match. citeturn2view0"
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "Before naming supervisors in an application, recheck the EIPP recruiting list and each group’s open-positions page immediately before submission.",
+          "For a targeted enquiry, prioritize Typas first, Bernabeu second for malaria/host-response alignment, and Zimmermann third for microbiome/omics methodology."
+        ],
+        "sources": [
+          {
+            "title": "EMBL International PhD Programme — Recruiting Group Leaders",
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/"
+          },
+          {
+            "title": "Typas Group — Systems microbiology",
+            "url": "https://www.embl.org/groups/typas/"
+          },
+          {
+            "title": "Nassos Typas — EMBL profile",
+            "url": "https://www.embl.org/people/person/athanasios-typas/"
+          },
+          {
+            "title": "Bernabeu Group — cerebral malaria and host–parasite interactions",
+            "url": "https://www.embl.org/groups/bernabeu/"
+          },
+          {
+            "title": "Zimmermann Group — metabolic microbiome–host interactions",
+            "url": "https://www.embl.org/groups/zimmermann/"
+          },
+          {
+            "title": "Zimmermann Group — Open positions",
+            "url": "https://www.embl.org/groups/zimmermann/open-positions/"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:20.101Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0f1dc90a4600a9b5016a774c3a411c819dbe69f816f9d00467",
+        "object": "response",
+        "created_at": 1786203194,
+        "completed_at": 1786203200,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0f1dc90a4600a9b5016a774c3ab610819dacee34e956a20f7c",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_0f1dc90a4600a9b5016a774c3d7058819da3347664c3de26f6",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.82,\"requirement_extraction\":0.95,\"applicant_fact_correctness\":1,\"tool_selection\":0.95,\"primitive_routing\":0.95,\"harness_escalation\":1,\"browser_execution\":0.75,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":0.7,\"evidence_quality\":0.78,\"final_task_completion\":0.85},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":\"model_reasoning\",\"issues\":[\"The trace contains a material contradiction about Nassos Typas: the recorded opportunity says he was not listed on the current recruiting-group page, while the final answer says he was explicitly listed and accepting evidence was found.\",\"The final answer presents three candidates, but acceptance evidence is not verified for Bernabeu and is based on a group open-positions page rather than the authoritative recruiting list for Zimmermann; this distinction is mostly stated correctly.\",\"The response appropriately qualifies that the candidates’ public descriptions do not all establish explicit single-cell RNA-seq work, but some fit claims are broader host–pathogen or host–microbiome alignment rather than direct single-cell evidence.\"],\"rationale\":\"The agent selected appropriate official EMBL sources, identified relevant current group leaders, and clearly separated research-fit evidence from student-recruitment evidence. It accurately represented the applicant’s malaria, computational biology, pathogen-genomics, and single-cell background without fabricating facts. The terminal policy was satisfied by a source-backed completed answer. However, the contradictory Typas recruitment status undermines evidence consistency and requires a substantial reduction in research correctness, recovery, browser execution, and evidence quality. No user clarification was necessary for this atomic research task.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5559,
+          "input_tokens_details": {
+            "cache_write_tokens": 5556,
+            "cached_tokens": 0
+          },
+          "output_tokens": 613,
+          "output_tokens_details": {
+            "reasoning_tokens": 227
+          },
+          "total_tokens": 6172
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-2-41b504bd",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 6438,
+      "usage": {
+        "inputTokens": 5559,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 5556,
+        "outputTokens": 613,
+        "reasoningTokens": 227,
+        "totalTokens": 6172,
+        "inferenceCostUsd": 0.0021252
+      },
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-engineering-to-ai-1-4b274508",
+  "caseId": "e2e-engineering-to-ai",
+  "repetition": 1,
+  "seed": 805481505,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model stopped without invoking verified completion or a required context boundary.",
+    "The agent incorrectly treated the exact legal name and current/permanent addresses as unavailable even though the authorized materials explicitly provided Tunde Adebayo and Lagos, Nigeria for both residence and address fields.",
+    "It stopped short of the required ready_for_final_review terminal state; the readiness report returned ok=false and no verified final-review evidence was obtained.",
+    "The agent generated and uploaded strong, factually validated CV and statement artifacts and preserved the manuscript as submitted, with direct checkpoint evidence for the completed sections.",
+    "It appropriately left unsupported fields blank and did not submit the application or claim completion.",
+    "The request for exact name and addresses was unnecessary; the remaining user-dependent items were English-language evidence or exemption, funding/payment choices, and referee arrangements."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-engineering-to-ai --repetitions 1 --seed 805481505",
+  "trace": "traces/david-v2-regression-engineering-v4/e2e-engineering-to-ai-r1.json"
+}

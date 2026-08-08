@@ -1,0 +1,108 @@
+[
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-request",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "referee-request",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "referee-request"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "referee-request",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:referee-request",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "gmail",
+    "event": "provider_send_confirmed",
+    "caseId": "referee-request",
+    "data": {
+      "messageId": "benchmark-msg-david-eval-20260808152040-380583-6",
+      "threadId": "thread-referee-request-referee_request",
+      "purpose": "referee_request",
+      "to": "daviddosuu@gmail.com"
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "referee-request",
+    "data": {
+      "kind": "provider_message",
+      "verified": true,
+      "providerId": "benchmark-msg-david-eval-20260808152040-380583-6",
+      "threadId": "thread-referee-request-referee_request",
+      "details": {
+        "purpose": "referee_request",
+        "to": "daviddosuu@gmail.com"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "referee-request",
+    "data": {
+      "kind": "provider_thread",
+      "verified": true,
+      "threadId": "thread-referee-request-referee_request",
+      "details": {
+        "caseId": "referee-request"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "referee-request",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T15:20:43.485Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "referee-request",
+    "data": {
+      "value": true
+    }
+  }
+]

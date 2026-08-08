@@ -1,0 +1,514 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-research-faculty-fit-and-mobility-3-76ae75ce",
+  "caseId": "research-faculty-fit-and-mobility",
+  "level": "atomic",
+  "category": "research",
+  "repetition": 3,
+  "seed": 855143715,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.975,
+    "requirement_extraction": 0.49,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 0.99,
+    "primitive_routing": 0.49,
+    "harness_escalation": 1,
+    "browser_execution": 0.475,
+    "email_interpretation": 0.5,
+    "document_correctness": 0.5,
+    "recovery": 0.99,
+    "evidence_quality": 0.97,
+    "final_task_completion": 0.98
+  },
+  "applicableDimensions": [
+    "research_correctness",
+    "requirement_extraction",
+    "applicant_fact_correctness",
+    "tool_selection",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 2,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 69086,
+    "cachedInputTokens": 19692,
+    "cacheWriteTokens": 8090,
+    "outputTokens": 3422,
+    "reasoningTokens": 1058,
+    "totalTokens": 72508,
+    "inferenceCostUsd": 0.014783540000000001
+  },
+  "elapsedMs": 44649,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Verified an updated shortlist of three current EMBL group leaders, with separate evidence for research fit and PhD-recruitment status. Corrected the prior Bork entry: Peer Bork died on January 16, 2026 and must not be treated as a current group leader.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:33:34.835Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_01a609cf08879739016a774c3617bc819d9b3ae3726a003bfe",
+        "object": "response",
+        "created_at": 1786203190,
+        "completed_at": 1786203214,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_01a609cf08879739016a774c36f584819d9da8b1715a6ccf05",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_01a609cf08879739016a774c3818c4819d8e9ab207b8798b60",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org researchers single-cell host pathogen EMBL group leader",
+                "site:embl.org EMBL faculty host pathogen single cell genomics",
+                "site:embl.org EMBL International PhD Programme group leaders accepting students"
+              ],
+              "query": "site:embl.org researchers single-cell host pathogen EMBL group leader"
+            }
+          },
+          {
+            "id": "rs_01a609cf08879739016a774c3b6e30819db054a75c41d83dbc",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_01a609cf08879739016a774c3c498c819d8b60e86f06a9dc71",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/ste​​gle Stegle group single cell official",
+                "site:embl.org/groups/typas Typas group host pathogen official",
+                "site:embl.org/groups Zaugg group infection single cell official EMBL"
+              ],
+              "query": "site:embl.org/groups/ste​​gle Stegle group single cell official"
+            }
+          },
+          {
+            "id": "rs_01a609cf08879739016a774c425308819db908fdaef9b0430e",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_01a609cf08879739016a774c435910819d9c6dcd52eb48a959",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/patil EMBL Kiran Patil group microbiome host pathogen",
+                "site:embl.org/groups/bork EMBL group host pathogen single cell",
+                "site:embl.org/groups/mall EMBL single cell infection group leader"
+              ],
+              "query": "site:embl.org/groups/patil EMBL Kiran Patil group microbiome host pathogen"
+            }
+          },
+          {
+            "id": "rs_01a609cf08879739016a774c484368819db2b2998f0dd8af4e",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_01a609cf08879739016a774c49efd4819daf5dc0ead59f568b",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [
+                  {
+                    "type": "url_citation",
+                    "end_index": 1006,
+                    "start_index": 940,
+                    "title": "Typas Group – Systems microbiology",
+                    "url": "https://www.embl.org/groups/typas/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 1338,
+                    "start_index": 1216,
+                    "title": "Recruiting Group Leaders – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 1857,
+                    "start_index": 1790,
+                    "title": "Stegle Group – Statistical genomics and systems genetics",
+                    "url": "https://www.embl.org/groups/stegle/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 2168,
+                    "start_index": 2046,
+                    "title": "Recruiting Group Leaders – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 2758,
+                    "start_index": 2693,
+                    "title": "Bork Group – Deciphering function and evolution of biological systems",
+                    "url": "https://www.embl.org/groups/bork/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 3209,
+                    "start_index": 3087,
+                    "title": "Recruiting Group Leaders – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 4713,
+                    "start_index": 4604,
+                    "title": "Application – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/application/?utm_source=openai"
+                  }
+                ],
+                "logprobs": [],
+                "text": "## Best current EMBL group-leader fits\n\nI found **three current EMBL group leaders** whose research is relevant to Priya’s stated interests in computational biology, single-cell analysis, host–pathogen interactions, and reproducible genomics. The strongest overall fit is **Nassos Typas**, followed by **Oliver Stegle** and **Peer Bork**.\n\n| Group leader | Current affiliation | Evidence of scientific fit | Evidence of accepting PhD students |\n|---|---|---|---|\n| **Nassos Typas** | Head of Molecular Systems Biology, EMBL Heidelberg | His group studies systems microbiology, bacterial cellular networks, microbiomes, and explicitly investigates the **host–pathogen interface**, including Salmonella infection, host responses, pathogen metabolism, and bacterial–phage interactions. This is the closest match to Priya’s host–pathogen goals, although the group’s work is more bacterial systems biology than single-cell host transcriptomics. ([embl.org](https://www.embl.org/groups/typas/?utm_source=openai)) | **Strong evidence.** Typas is listed on EMBL’s current “Recruiting Group Leaders” page for the EMBL International PhD Programme. The page states that listed groups are actively looking to hire PhD students. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai)) |\n| **Oliver Stegle** | EMBL Heidelberg / DKFZ, Heidelberg | The Stegle group develops statistical and machine-learning methods for high-dimensional molecular data, including **single-cell**, spatial, and multi-omics data. This aligns very well with Priya’s scRNA-seq, Bayesian-modelling, R/Python, and reproducible computational-workflow background. The biological focus is broad rather than specifically infectious disease or host–pathogen biology. ([embl.org](https://www.embl.org/groups/stegle/?utm_source=openai)) | **Strong evidence.** Stegle is listed among the current recruiting EMBL groups, and the group’s Join Us page specifically directs PhD applicants to the EMBL International PhD Programme. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai)) |\n| **Peer Bork** | Group Leader and Director of Scientific Activities, EMBL Heidelberg | The Bork group performs computational analysis of microbiome data across genes, proteins, cells, and microbial communities, using large-scale metagenomic and multi-omics datasets. Its work on microbial communities, disease biomarkers, drug–microbe interactions, and microbial ecology could support a host–microbiome or pathogen-genomics direction. The fit to single-cell host–pathogen work is indirect compared with Typas and Stegle. ([embl.org](https://www.embl.org/groups/bork/?utm_source=openai)) | **No verified current PhD-recruitment evidence found.** The current EMBL recruiting-group list does not list Bork, and the group’s open-positions page describes Bachelor’s/Master’s opportunities but does not establish an active PhD opening. Do not present Bork as currently accepting PhD students without direct confirmation. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai)) |\n\n### Recommended prioritisation\n\n1. **Nassos Typas — highest thematic fit and current recruitment evidence.**  \n   Best choice if Priya wants to connect computational genomics and single-cell expertise to bacterial infection, pathogen physiology, and host–pathogen systems.\n\n2. **Oliver Stegle — strongest methods fit and current recruitment evidence.**  \n   Best choice for a quantitatively focused PhD centred on single-cell/spatial analysis, statistical genetics, machine learning, and scalable workflows. A host–pathogen application would likely need to be developed through collaboration or a suitable project rather than assumed from the group’s core biological programme.\n\n3. **Peer Bork — relevant computational microbiome alternative, but recruitment unverified.**  \n   Worth considering for microbial community, microbiome, pathogen surveillance, and multi-omics work, but there is currently no official evidence that he is accepting PhD students in the relevant recruitment round.\n\n### Programme and timing note\n\nThe EMBL International PhD Programme’s **2026 Summer Recruitment closed on March 9, 2026**. EMBL states that the next round, **2027 Winter Recruitment, opens in September 2026**. EMBL’s recruitment page also explains that applicants indicate research-group preferences, while recruiting Group Leaders review eligible applications and select candidates for interviews. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/application/?utm_source=openai))\n\n**Bottom line:** Priya should prioritise **Typas and Stegle** in the next EMBL application round. Bork is a scientifically plausible third option, but his student-acceptance status should be treated as **unknown**, not inferred from his affiliation or research profile."
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 34958,
+          "input_tokens_details": {
+            "cache_write_tokens": 886,
+            "cached_tokens": 9403
+          },
+          "output_tokens": 1505,
+          "output_tokens_details": {
+            "reasoning_tokens": 507
+          },
+          "total_tokens": 36463
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-3-76ae75ce",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 25300,
+      "usage": {
+        "inputTokens": 34958,
+        "cachedInputTokens": 9403,
+        "cacheWriteTokens": 886,
+        "outputTokens": 1505,
+        "reasoningTokens": 507,
+        "totalTokens": 36463,
+        "inferenceCostUsd": 0.0071493600000000004
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:48.881Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 10,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_01a609cf08879739016a774c4f4808819d818474049fed54d6",
+        "object": "response",
+        "created_at": 1786203215,
+        "completed_at": 1786203228,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_01a609cf08879739016a774c500394819d933747e9e07cec7f",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_01a609cf08879739016a774c508120819d9e43c66667f3bff4",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/typas Nassos Typas EMBL group",
+                "site:embl.org/groups/stegle Oliver Stegle EMBL group",
+                "site:embl.org/groups/bork Peer Bork EMBL group",
+                "site:embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders EMBL recruiting group leaders"
+              ],
+              "query": "site:embl.org/groups/typas Nassos Typas EMBL group"
+            }
+          },
+          {
+            "id": "rs_01a609cf08879739016a774c5385e8819daffee00bb4a3db53",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_01a609cf08879739016a774c546b90819d825d97e60be75c75",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/krebs EMBL single-cell genomics group",
+                "site:embl.org/groups/van-gestel EMBL microbial interactions group",
+                "site:embl.org/groups/vincent EMBL microbial interactions group"
+              ],
+              "query": "site:embl.org/groups/krebs EMBL single-cell genomics group"
+            }
+          },
+          {
+            "id": "rs_01a609cf08879739016a774c571b4c819da1c876573f776dac",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_01a609cf08879739016a774c57c510819dbe956290d79a546d",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Verified an updated shortlist of three current EMBL group leaders, with separate evidence for research fit and PhD-recruitment status. Corrected the prior Bork entry: Peer Bork died on January 16, 2026 and must not be treated as a current group leader.\",\"sections\":[{\"title\":\"Updated shortlist\",\"body\":\"1. Nassos Typas — strongest host–pathogen and microbial-systems fit. The official Typas Group page describes bacterial cellular networks, pathogens, antibiotic resistance, microbiome interactions, and host–pathogen work including Salmonella infection. Typas is also listed on EMBL’s current Recruiting Group Leaders page, which identifies groups actively looking to hire PhD students. citeturn0search7turn0search6\\n\\n2. Oliver Stegle — strongest single-cell/computational fit. The official Stegle page describes statistical and machine-learning methods for molecular variation, spatial and multi-omics data, and single-cell readouts. His Join Us page explicitly directs PhD applicants to the EMBL International PhD Programme and says the group is always looking for new talent. Stegle is listed among current recruiting group leaders. citeturn0search0turn0search4turn0search6\\n\\n3. Jordi van Gestel — best additional microbial-interaction fit. His group combines quantitative single-cell microscopy, functional genomics, CRISPR libraries, experimental evolution, and modelling to study predator–prey microbial interactions, with explicit interest in the emergence of host–pathogen and host–symbiont interactions. His official Open Positions page welcomes PhD applicants, although the current EMBL central recruiting list does not list him; therefore, direct group-level openness is evidenced, but participation in the current central PhD recruitment round is not verified. citeturn1search1turn1search5turn0search6\"},{\"title\":\"Important correction\",\"body\":\"The previous answer named Peer Bork as a current third option. That is no longer valid: EMBL announced that Peer Bork died on January 16, 2026. His historic research was relevant, but he should be removed from any current-faculty or current-student-recruitment shortlist. citeturn0search11\"},{\"title\":\"Recruitment interpretation\",\"body\":\"Research fit and student acceptance are separate claims. For Typas and Stegle, there is current official evidence both of scientific fit and listing on EMBL’s recruiting-group page. For van Gestel, the group’s own Open Positions page welcomes PhD-level applicants, but the central EMBL recruiting list is preliminary and does not currently list him; this should be reported as group-level openness rather than confirmed participation in the current round. EMBL states that the recruiting-group list may change before interviews. citeturn0search6turn1search5\"},{\"title\":\"Programme timing\",\"body\":\"As of August 8, 2026, EMBL states that 2026 PhD Summer Recruitment is closed and that the next application round opens in September 2026. citeturn0search10\"}],\"drafts\":[],\"follow_ups\":[\"Prioritise Typas and Stegle for the next EMBL application round.\",\"Treat van Gestel as a promising third contact but verify his participation in the September 2026 round before relying on it.\",\"Do not include Peer Bork in the current-faculty shortlist.\"],\"sources\":[{\"title\":\"EMBL Typas Group\",\"url\":\"https://www.embl.org/groups/typas/\"},{\"title\":\"EMBL Stegle Group\",\"url\":\"https://www.embl.org/groups/stegle/\"},{\"title\":\"Stegle Group — Join Us\",\"url\":\"https://www.embl.org/groups/stegle/fellow-opportunities/\"},{\"title\":\"EMBL van Gestel Group\",\"url\":\"https://www.embl.org/groups/van-gestel/\"},{\"title\":\"van Gestel Group — Open Positions\",\"url\":\"https://www.embl.org/groups/van-gestel/open-positions/\"},{\"title\":\"EMBL International PhD Programme — Recruiting Group Leaders\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/\"},{\"title\":\"EMBL announcement on Peer Bork\",\"url\":\"https://www.embl.org/news/embl-announcements/in-remembrance-of-peer-bork/\"},{\"title\":\"EMBL International PhD Programme\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_WfTb8Q1Z33xm3mk1A5fmu7nR",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 28569,
+          "input_tokens_details": {
+            "cache_write_tokens": 1648,
+            "cached_tokens": 10289
+          },
+          "output_tokens": 1384,
+          "output_tokens_details": {
+            "reasoning_tokens": 358
+          },
+          "total_tokens": 29953
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-3-76ae75ce",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 14046,
+      "usage": {
+        "inputTokens": 28569,
+        "cachedInputTokens": 10289,
+        "cacheWriteTokens": 1648,
+        "outputTokens": 1384,
+        "reasoningTokens": 358,
+        "totalTokens": 29953,
+        "inferenceCostUsd": 0.005604980000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:48.883Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Verified an updated shortlist of three current EMBL group leaders, with separate evidence for research fit and PhD-recruitment status. Corrected the prior Bork entry: Peer Bork died on January 16, 2026 and must not be treated as a current group leader.",
+        "sections": [
+          {
+            "title": "Updated shortlist",
+            "body": "1. Nassos Typas — strongest host–pathogen and microbial-systems fit. The official Typas Group page describes bacterial cellular networks, pathogens, antibiotic resistance, microbiome interactions, and host–pathogen work including Salmonella infection. Typas is also listed on EMBL’s current Recruiting Group Leaders page, which identifies groups actively looking to hire PhD students. citeturn0search7turn0search6\n\n2. Oliver Stegle — strongest single-cell/computational fit. The official Stegle page describes statistical and machine-learning methods for molecular variation, spatial and multi-omics data, and single-cell readouts. His Join Us page explicitly directs PhD applicants to the EMBL International PhD Programme and says the group is always looking for new talent. Stegle is listed among current recruiting group leaders. citeturn0search0turn0search4turn0search6\n\n3. Jordi van Gestel — best additional microbial-interaction fit. His group combines quantitative single-cell microscopy, functional genomics, CRISPR libraries, experimental evolution, and modelling to study predator–prey microbial interactions, with explicit interest in the emergence of host–pathogen and host–symbiont interactions. His official Open Positions page welcomes PhD applicants, although the current EMBL central recruiting list does not list him; therefore, direct group-level openness is evidenced, but participation in the current central PhD recruitment round is not verified. citeturn1search1turn1search5turn0search6"
+          },
+          {
+            "title": "Important correction",
+            "body": "The previous answer named Peer Bork as a current third option. That is no longer valid: EMBL announced that Peer Bork died on January 16, 2026. His historic research was relevant, but he should be removed from any current-faculty or current-student-recruitment shortlist. citeturn0search11"
+          },
+          {
+            "title": "Recruitment interpretation",
+            "body": "Research fit and student acceptance are separate claims. For Typas and Stegle, there is current official evidence both of scientific fit and listing on EMBL’s recruiting-group page. For van Gestel, the group’s own Open Positions page welcomes PhD-level applicants, but the central EMBL recruiting list is preliminary and does not currently list him; this should be reported as group-level openness rather than confirmed participation in the current round. EMBL states that the recruiting-group list may change before interviews. citeturn0search6turn1search5"
+          },
+          {
+            "title": "Programme timing",
+            "body": "As of August 8, 2026, EMBL states that 2026 PhD Summer Recruitment is closed and that the next application round opens in September 2026. citeturn0search10"
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "Prioritise Typas and Stegle for the next EMBL application round.",
+          "Treat van Gestel as a promising third contact but verify his participation in the September 2026 round before relying on it.",
+          "Do not include Peer Bork in the current-faculty shortlist."
+        ],
+        "sources": [
+          {
+            "title": "EMBL Typas Group",
+            "url": "https://www.embl.org/groups/typas/"
+          },
+          {
+            "title": "EMBL Stegle Group",
+            "url": "https://www.embl.org/groups/stegle/"
+          },
+          {
+            "title": "Stegle Group — Join Us",
+            "url": "https://www.embl.org/groups/stegle/fellow-opportunities/"
+          },
+          {
+            "title": "EMBL van Gestel Group",
+            "url": "https://www.embl.org/groups/van-gestel/"
+          },
+          {
+            "title": "van Gestel Group — Open Positions",
+            "url": "https://www.embl.org/groups/van-gestel/open-positions/"
+          },
+          {
+            "title": "EMBL International PhD Programme — Recruiting Group Leaders",
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/"
+          },
+          {
+            "title": "EMBL announcement on Peer Bork",
+            "url": "https://www.embl.org/news/embl-announcements/in-remembrance-of-peer-bork/"
+          },
+          {
+            "title": "EMBL International PhD Programme",
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:54.183Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_04318ba7f2a26de8016a774c5d6d048191b1dd36cfde988e12",
+        "object": "response",
+        "created_at": 1786203229,
+        "completed_at": 1786203234,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_04318ba7f2a26de8016a774c5ddd1c8191bf091b0f70cf26da",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_04318ba7f2a26de8016a774c5fc2e481918c5143f53602537f",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.95,\"requirement_extraction\":0.98,\"applicant_fact_correctness\":1,\"tool_selection\":0.98,\"primitive_routing\":0.98,\"harness_escalation\":1,\"browser_execution\":0.95,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":0.98,\"evidence_quality\":0.94,\"final_task_completion\":0.98},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[\"The final answer gives strong direct evidence for Typas and Stegle's current affiliation, fit, and recruitment status, but Jordi van Gestel's current EMBL affiliation is somewhat implicit rather than explicitly stated.\",\"The answer includes programme timing information that is useful context but not necessary for the atomic research task.\",\"The first answer temporarily included Peer Bork as a current group leader, but the agent recovered correctly before completion and explicitly removed him based on current official evidence.\"],\"rationale\":\"The agent identified up to three plausible current EMBL group leaders, separated scientific fit from evidence of accepting PhD students, and used official EMBL sources. It correctly distinguished confirmed central recruitment evidence for Typas and Stegle from group-level openness for van Gestel, and corrected the initial erroneous inclusion of Peer Bork before completing. The successful completion tool output provides direct evidence of a verified source-backed result. Applicant facts were not fabricated or materially misrepresented, and no user clarification was needed for this atomic task.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5559,
+          "input_tokens_details": {
+            "cache_write_tokens": 5556,
+            "cached_tokens": 0
+          },
+          "output_tokens": 533,
+          "output_tokens_details": {
+            "reasoning_tokens": 193
+          },
+          "total_tokens": 6092
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-3-76ae75ce",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5299,
+      "usage": {
+        "inputTokens": 5559,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 5556,
+        "outputTokens": 533,
+        "reasoningTokens": 193,
+        "totalTokens": 6092,
+        "inferenceCostUsd": 0.0020291999999999997
+      },
+      "error": null
+    }
+  ]
+}

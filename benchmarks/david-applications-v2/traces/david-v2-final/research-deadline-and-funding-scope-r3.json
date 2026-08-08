@@ -1,0 +1,486 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-research-deadline-and-funding-scope-3-1e5cb5d8",
+  "caseId": "research-deadline-and-funding-scope",
+  "level": "atomic",
+  "category": "research",
+  "repetition": 3,
+  "seed": 387428041,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.975,
+    "requirement_extraction": 1,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 0.5,
+    "harness_escalation": 1,
+    "browser_execution": 0.45,
+    "email_interpretation": 0.5,
+    "document_correctness": 0.5,
+    "recovery": 1,
+    "evidence_quality": 1,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "research_correctness",
+    "requirement_extraction",
+    "applicant_fact_correctness",
+    "tool_selection",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 2,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 45411,
+    "cachedInputTokens": 19702,
+    "cacheWriteTokens": 7837,
+    "outputTokens": 2622,
+    "reasoningTokens": 499,
+    "totalTokens": 48033,
+    "inferenceCostUsd": 0.00907409
+  },
+  "elapsedMs": 24556,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Verified the UCL Computer Science MSc admissions deadlines and separated programme-listed funding from central UCL funding. All identified 2026 deadlines are past as of August 8, 2026.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:32:17.971Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_06c3461debcf1b20016a774bf4b4b88191ae2266b2c6134775",
+        "object": "response",
+        "created_at": 1786203124,
+        "completed_at": 1786203137,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_06c3461debcf1b20016a774bf561e08191ab72a82b145c765f",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_06c3461debcf1b20016a774bf5ec988191baf2c61683037efa",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "open_page",
+              "url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc"
+            }
+          },
+          {
+            "id": "rs_06c3461debcf1b20016a774bf6de908191af14f93ed5ff8732",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_06c3461debcf1b20016a774bf737948191b9b34a6177da77cd",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:ucl.ac.uk scholarships 2026 overseas postgraduate taught deadline UCL Nigeria",
+                "site:ucl.ac.uk UCL Global Masters Scholarship 2026 deadline",
+                "site:ucl.ac.uk UCL scholarships funding 2026 graduate taught international deadline"
+              ],
+              "query": "site:ucl.ac.uk scholarships 2026 overseas postgraduate taught deadline UCL Nigeria"
+            }
+          },
+          {
+            "id": "rs_06c3461debcf1b20016a774bfc042c8191af6c26caeb1e1bb1",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_06c3461debcf1b20016a774bfc17fc8191a2842a858176e116",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-cf431e092256\",\"opportunity\":{\"id\":\"ucl-computer-science-msc\",\"name\":\"UCL Computer Science MSc\",\"institution\":\"University College London\",\"study_level\":\"graduate_taught\",\"entry_year\":\"2026/27\",\"application_deadlines\":[{\"category\":\"programme_admission\",\"deadline\":\"2026-08-28T10:00:00+01:00\",\"timezone\":\"Europe/London\",\"published_label\":\"28 August 2026 at 10am UK time\",\"status\":\"verified\",\"applies_to\":\"applicants who do not require a visa\"},{\"category\":\"programme_admission\",\"deadline\":\"2026-03-27\",\"timezone\":\"Europe/London\",\"published_label\":\"27 March 2026; exact time not published on page\",\"status\":\"verified\",\"applies_to\":\"applicants who require a visa\"}],\"funding_deadlines\":[{\"name\":\"UCL International Masters Awards\",\"deadline\":\"2026-05-07T17:00:00+01:00\",\"timezone\":\"Europe/London\",\"status\":\"verified\",\"eligibility_scope\":\"international postgraduate taught applicants; complete admission application including submitted references required\"},{\"name\":\"UCL Global Masters Scholarship\",\"deadline\":\"2026-05-07T17:00:00+01:00\",\"timezone\":\"Europe/London\",\"status\":\"verified\",\"value\":\"£15,000 for one year\",\"eligibility_scope\":\"overseas, full-time postgraduate taught; lower-income background\"},{\"name\":\"UCL-GREAT Scholarship 2026 (Nigeria)\",\"deadline\":\"2026-05-07T17:00:00+01:00\",\"timezone\":\"Europe/London\",\"status\":\"verified\",\"value\":\"£10,000 for one year\",\"eligibility_scope\":\"Nigerian passport holder and resident; overseas, full-time postgraduate taught; offer required by closing date\"},{\"name\":\"UCL Master’s Bursary\",\"deadline\":\"2026-06-25T17:00:00+01:00\",\"timezone\":\"Europe/London\",\"status\":\"verified\",\"eligibility_scope\":\"Home fee status only; not applicable on current applicant facts\"}],\"programme_funding_separate_from_general_ucl_funding\":true,\"programme_page_listed_funding\":\"UCL East London Scholarship deadline 25 June 2026; page states UK eligibility and listed programme scope, so not applicable to this overseas Computer Science MSc applicant based on available facts\",\"unverified_or_not_published\":[\"No separate Computer Science MSc-specific overseas funding deadline was identified on the official programme page; it directs applicants to department and central UCL funding pages.\",\"The programme page does not publish a timezone for the 27 March 2026 visa-required admissions deadline.\",\"Eligibility for any award requiring household-income evidence, fee-status determination, or an offer remains subject to UCL assessment.\"],\"fit_evidence\":[\"Applicant materials state Nigerian citizenship and residence in Lagos, supporting potential nationality/residence fit for UCL-GREAT, but the award also requires an offer by the deadline.\",\"Applicant materials state self-funding capacity up to £18,000; official overseas tuition for 2026/27 is £42,700, leaving a stated gap before any award or other funding.\"],\"source_retrieved_at\":\"2026-08-08\"},\"citations\":[{\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\",\"title\":\"Official UCL Computer Science MSc page\",\"excerpt\":\"Applications accepted: applicants requiring a visa 20 Oct 2025–27 Mar 2026; applicants not requiring a visa 20 Oct 2025–28 Aug 2026; applications close at 10am UK time. The page lists UCL East London Scholarship deadline 25 June 2026 and directs applicants to department and central funding pages.\"},{\"url\":\"https://www.ucl.ac.uk/scholarships/international-masters-awards\",\"title\":\"Official UCL International Masters Awards page\",\"excerpt\":\"For 2026/27 international postgraduate taught applicants, the deadline is 5pm BST on Thursday 7 May 2026; a complete admission application including submitted references is required.\"},{\"url\":\"https://www.ucl.ac.uk/scholarships/great-scholarship\",\"title\":\"Official UCL-GREAT Scholarship page\",\"excerpt\":\"The 2026 scholarship supports citizens of Nigeria and Pakistan; value £10,000; postgraduate taught and overseas eligibility; deadline 5pm BST Thursday 7 May 2026; Nigerian applicants must hold an offer by the closing date.\"},{\"url\":\"https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters/fund-your-masters-global-masters-scholarship\",\"title\":\"Official UCL Global Master's Scholarship page\",\"excerpt\":\"For overseas prospective students on eligible full-time postgraduate taught programmes, value £15,000 for one year; deadline 5pm BST Thursday 7 May 2026.\"},{\"url\":\"https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters\",\"title\":\"Official UCL Master's Bursary page\",\"excerpt\":\"The UCL Master's Bursary is for Home fee status applicants; deadline 5pm BST Thursday 25 June 2026.\"}],\"idempotency_key\":\"ucl-computer-science-msc|2026-08-08|deadline-funding-scope|official-v1\"}",
+            "call_id": "call_2hwMDvwq6jsQWQ77sIbP5b8P",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 28125,
+          "input_tokens_details": {
+            "cache_write_tokens": 896,
+            "cached_tokens": 9403
+          },
+          "output_tokens": 1369,
+          "output_tokens_details": {
+            "reasoning_tokens": 241
+          },
+          "total_tokens": 29494
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-deadline-and-funding-scope-3-1e5cb5d8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 13704,
+      "usage": {
+        "inputTokens": 28125,
+        "cachedInputTokens": 9403,
+        "cacheWriteTokens": 896,
+        "outputTokens": 1369,
+        "reasoningTokens": 241,
+        "totalTokens": 29494,
+        "inferenceCostUsd": 0.0056200600000000005
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:32:17.975Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-cf431e092256",
+        "opportunity": {
+          "id": "ucl-computer-science-msc",
+          "name": "UCL Computer Science MSc",
+          "institution": "University College London",
+          "study_level": "graduate_taught",
+          "entry_year": "2026/27",
+          "application_deadlines": [
+            {
+              "category": "programme_admission",
+              "deadline": "2026-08-28T10:00:00+01:00",
+              "timezone": "Europe/London",
+              "published_label": "28 August 2026 at 10am UK time",
+              "status": "verified",
+              "applies_to": "applicants who do not require a visa"
+            },
+            {
+              "category": "programme_admission",
+              "deadline": "2026-03-27",
+              "timezone": "Europe/London",
+              "published_label": "27 March 2026; exact time not published on page",
+              "status": "verified",
+              "applies_to": "applicants who require a visa"
+            }
+          ],
+          "funding_deadlines": [
+            {
+              "name": "UCL International Masters Awards",
+              "deadline": "2026-05-07T17:00:00+01:00",
+              "timezone": "Europe/London",
+              "status": "verified",
+              "eligibility_scope": "international postgraduate taught applicants; complete admission application including submitted references required"
+            },
+            {
+              "name": "UCL Global Masters Scholarship",
+              "deadline": "2026-05-07T17:00:00+01:00",
+              "timezone": "Europe/London",
+              "status": "verified",
+              "value": "£15,000 for one year",
+              "eligibility_scope": "overseas, full-time postgraduate taught; lower-income background"
+            },
+            {
+              "name": "UCL-GREAT Scholarship 2026 (Nigeria)",
+              "deadline": "2026-05-07T17:00:00+01:00",
+              "timezone": "Europe/London",
+              "status": "verified",
+              "value": "£10,000 for one year",
+              "eligibility_scope": "Nigerian passport holder and resident; overseas, full-time postgraduate taught; offer required by closing date"
+            },
+            {
+              "name": "UCL Master’s Bursary",
+              "deadline": "2026-06-25T17:00:00+01:00",
+              "timezone": "Europe/London",
+              "status": "verified",
+              "eligibility_scope": "Home fee status only; not applicable on current applicant facts"
+            }
+          ],
+          "programme_funding_separate_from_general_ucl_funding": true,
+          "programme_page_listed_funding": "UCL East London Scholarship deadline 25 June 2026; page states UK eligibility and listed programme scope, so not applicable to this overseas Computer Science MSc applicant based on available facts",
+          "unverified_or_not_published": [
+            "No separate Computer Science MSc-specific overseas funding deadline was identified on the official programme page; it directs applicants to department and central UCL funding pages.",
+            "The programme page does not publish a timezone for the 27 March 2026 visa-required admissions deadline.",
+            "Eligibility for any award requiring household-income evidence, fee-status determination, or an offer remains subject to UCL assessment."
+          ],
+          "fit_evidence": [
+            "Applicant materials state Nigerian citizenship and residence in Lagos, supporting potential nationality/residence fit for UCL-GREAT, but the award also requires an offer by the deadline.",
+            "Applicant materials state self-funding capacity up to £18,000; official overseas tuition for 2026/27 is £42,700, leaving a stated gap before any award or other funding."
+          ],
+          "source_retrieved_at": "2026-08-08"
+        },
+        "citations": [
+          {
+            "url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+            "title": "Official UCL Computer Science MSc page",
+            "excerpt": "Applications accepted: applicants requiring a visa 20 Oct 2025–27 Mar 2026; applicants not requiring a visa 20 Oct 2025–28 Aug 2026; applications close at 10am UK time. The page lists UCL East London Scholarship deadline 25 June 2026 and directs applicants to department and central funding pages."
+          },
+          {
+            "url": "https://www.ucl.ac.uk/scholarships/international-masters-awards",
+            "title": "Official UCL International Masters Awards page",
+            "excerpt": "For 2026/27 international postgraduate taught applicants, the deadline is 5pm BST on Thursday 7 May 2026; a complete admission application including submitted references is required."
+          },
+          {
+            "url": "https://www.ucl.ac.uk/scholarships/great-scholarship",
+            "title": "Official UCL-GREAT Scholarship page",
+            "excerpt": "The 2026 scholarship supports citizens of Nigeria and Pakistan; value £10,000; postgraduate taught and overseas eligibility; deadline 5pm BST Thursday 7 May 2026; Nigerian applicants must hold an offer by the closing date."
+          },
+          {
+            "url": "https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters/fund-your-masters-global-masters-scholarship",
+            "title": "Official UCL Global Master's Scholarship page",
+            "excerpt": "For overseas prospective students on eligible full-time postgraduate taught programmes, value £15,000 for one year; deadline 5pm BST Thursday 7 May 2026."
+          },
+          {
+            "url": "https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters",
+            "title": "Official UCL Master's Bursary page",
+            "excerpt": "The UCL Master's Bursary is for Home fee status applicants; deadline 5pm BST Thursday 25 June 2026."
+          }
+        ],
+        "idempotency_key": "ucl-computer-science-msc|2026-08-08|deadline-funding-scope|official-v1"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-9d0dd1c03792",
+        "programme_id": "ucl-computer-science-msc",
+        "citation_count": 5
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:32:24.172Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 8,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_06c3461debcf1b20016a774c02687081919a5633f59c436315",
+        "object": "response",
+        "created_at": 1786203138,
+        "completed_at": 1786203143,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_06c3461debcf1b20016a774c0317848191a2d3d7d5ffb7ace6",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_06c3461debcf1b20016a774c0411288191a7bdc92f3afe55c4",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Verified the UCL Computer Science MSc admissions deadlines and separated programme-listed funding from central UCL funding. All identified 2026 deadlines are past as of August 8, 2026.\",\"sections\":[{\"title\":\"Programme application deadline\",\"body\":\"For 2026/27 entry, the official UCL Computer Science MSc page lists March 27, 2026 for applicants requiring a UK visa, and August 28, 2026 at 10:00 UK time for applicants who do not require a visa. The applicant is a Nigerian resident, so the visa-required route is the relevant one unless they have another basis for not requiring a visa. The March 27 deadline has passed. The page does not publish a timezone for the March 27 deadline; the August 28 deadline is explicitly UK time.\"},{\"title\":\"Distinct UCL-wide funding deadlines\",\"body\":\"Separately from the programme page: UCL International Masters Awards — May 7, 2026 at 17:00 BST; UCL Global Masters Scholarship — May 7, 2026 at 17:00 BST, up to £15,000; UCL-GREAT Scholarship 2026 for Nigeria — May 7, 2026 at 17:00 BST, £10,000; UCL Master’s Bursary — June 25, 2026 at 17:00 BST, Home-fee applicants only and therefore not supported by the current applicant facts. These deadlines have passed.\"},{\"title\":\"Programme-specific funding and verification limits\",\"body\":\"The Computer Science MSc page lists the UCL East London Scholarship with a June 25, 2026 deadline, but its published eligibility/programme scope does not establish applicability to this overseas Computer Science MSc applicant. No separate overseas Computer Science MSc-specific funding deadline was verified on the programme page; UCL directs applicants to central and department funding pages. Award eligibility involving household income, fee status, or an offer remains subject to UCL assessment.\"}],\"drafts\":[],\"follow_ups\":[\"If this is intended for a later intake, verify the next cycle’s official Computer Science MSc and UCL funding pages when published.\"],\"sources\":[{\"title\":\"UCL Computer Science MSc — official programme page\",\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\"},{\"title\":\"UCL International Masters Awards — official funding page\",\"url\":\"https://www.ucl.ac.uk/scholarships/international-masters-awards\"},{\"title\":\"UCL Global Master's Scholarship — official funding page\",\"url\":\"https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters/fund-your-masters-global-masters-scholarship\"},{\"title\":\"UCL-GREAT Scholarship — official funding page\",\"url\":\"https://www.ucl.ac.uk/scholarships/great-scholarship\"},{\"title\":\"UCL funding overview / Master’s Bursary — official pages\",\"url\":\"https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_0euRkuEQ9PrkAqhSxaaezymy",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 11741,
+          "input_tokens_details": {
+            "cache_write_tokens": 1399,
+            "cached_tokens": 10299
+          },
+          "output_tokens": 766,
+          "output_tokens_details": {
+            "reasoning_tokens": 91
+          },
+          "total_tokens": 12507
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-deadline-and-funding-scope-3-1e5cb5d8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 6201,
+      "usage": {
+        "inputTokens": 11741,
+        "cachedInputTokens": 10299,
+        "cacheWriteTokens": 1399,
+        "outputTokens": 766,
+        "reasoningTokens": 91,
+        "totalTokens": 12507,
+        "inferenceCostUsd": 0.00148353
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:32:24.176Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Verified the UCL Computer Science MSc admissions deadlines and separated programme-listed funding from central UCL funding. All identified 2026 deadlines are past as of August 8, 2026.",
+        "sections": [
+          {
+            "title": "Programme application deadline",
+            "body": "For 2026/27 entry, the official UCL Computer Science MSc page lists March 27, 2026 for applicants requiring a UK visa, and August 28, 2026 at 10:00 UK time for applicants who do not require a visa. The applicant is a Nigerian resident, so the visa-required route is the relevant one unless they have another basis for not requiring a visa. The March 27 deadline has passed. The page does not publish a timezone for the March 27 deadline; the August 28 deadline is explicitly UK time."
+          },
+          {
+            "title": "Distinct UCL-wide funding deadlines",
+            "body": "Separately from the programme page: UCL International Masters Awards — May 7, 2026 at 17:00 BST; UCL Global Masters Scholarship — May 7, 2026 at 17:00 BST, up to £15,000; UCL-GREAT Scholarship 2026 for Nigeria — May 7, 2026 at 17:00 BST, £10,000; UCL Master’s Bursary — June 25, 2026 at 17:00 BST, Home-fee applicants only and therefore not supported by the current applicant facts. These deadlines have passed."
+          },
+          {
+            "title": "Programme-specific funding and verification limits",
+            "body": "The Computer Science MSc page lists the UCL East London Scholarship with a June 25, 2026 deadline, but its published eligibility/programme scope does not establish applicability to this overseas Computer Science MSc applicant. No separate overseas Computer Science MSc-specific funding deadline was verified on the programme page; UCL directs applicants to central and department funding pages. Award eligibility involving household income, fee status, or an offer remains subject to UCL assessment."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "If this is intended for a later intake, verify the next cycle’s official Computer Science MSc and UCL funding pages when published."
+        ],
+        "sources": [
+          {
+            "title": "UCL Computer Science MSc — official programme page",
+            "url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc"
+          },
+          {
+            "title": "UCL International Masters Awards — official funding page",
+            "url": "https://www.ucl.ac.uk/scholarships/international-masters-awards"
+          },
+          {
+            "title": "UCL Global Master's Scholarship — official funding page",
+            "url": "https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters/fund-your-masters-global-masters-scholarship"
+          },
+          {
+            "title": "UCL-GREAT Scholarship — official funding page",
+            "url": "https://www.ucl.ac.uk/scholarships/great-scholarship"
+          },
+          {
+            "title": "UCL funding overview / Master’s Bursary — official pages",
+            "url": "https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:32:28.820Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0e0e71cd4e286f2f016a774c08a01881a1992a91ab507b2e0b",
+        "object": "response",
+        "created_at": 1786203144,
+        "completed_at": 1786203148,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0e0e71cd4e286f2f016a774c090ca481a1af555d9e1d48435b",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_0e0e71cd4e286f2f016a774c0a8d4c81a1a1be601d6fb30a9d",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.95,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":0.9,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[\"The statement that the applicant is on the visa-required route is reasonable from Nigerian citizenship/residence but is not definitively established; the response appropriately qualifies it with an exception for another basis of visa exemption.\",\"The trace records web-search calls without visible search-result outputs, but the successful opportunity-record tool output contains direct citations and verified source-backed deadline data.\"],\"rationale\":\"The agent identified both programme admission deadlines, distinguished visa-required and non-visa routes, reported the published UK-time information and explicitly flagged that no timezone was published for the visa-required date. It separately listed central UCL funding deadlines, kept programme-listed funding distinct from university-wide funding, and clearly stated eligibility and verification limits. Applicant-specific statements were supported by the supplied materials and no forbidden claims were made. The opportunity record returned successfully with five citations, and agent.complete returned verified=true, satisfying the source_backed_answer terminal policy. No user questions were necessary for this atomic research task.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5545,
+          "input_tokens_details": {
+            "cache_write_tokens": 5542,
+            "cached_tokens": 0
+          },
+          "output_tokens": 487,
+          "output_tokens_details": {
+            "reasoning_tokens": 167
+          },
+          "total_tokens": 6032
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-deadline-and-funding-scope-3-1e5cb5d8",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 4644,
+      "usage": {
+        "inputTokens": 5545,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 5542,
+        "outputTokens": 487,
+        "reasoningTokens": 167,
+        "totalTokens": 6032,
+        "inferenceCostUsd": 0.0019705
+      },
+      "error": null
+    }
+  ]
+}

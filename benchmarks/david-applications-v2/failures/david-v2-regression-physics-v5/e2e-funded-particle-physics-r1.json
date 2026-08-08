@@ -1,0 +1,14 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-funded-particle-physics-1-aca1935a",
+  "caseId": "e2e-funded-particle-physics",
+  "repetition": 1,
+  "seed": 980363706,
+  "rootCause": "external_service",
+  "failureReasons": [
+    "fetch failed",
+    "Independent evaluator failed: fetch failed"
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-funded-particle-physics --repetitions 1 --seed 980363706",
+  "trace": "traces/david-v2-regression-physics-v5/e2e-funded-particle-physics-r1.json"
+}

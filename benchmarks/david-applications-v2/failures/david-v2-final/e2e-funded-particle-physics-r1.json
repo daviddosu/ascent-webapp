@@ -1,0 +1,19 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-funded-particle-physics-1-aca1935a",
+  "caseId": "e2e-funded-particle-physics",
+  "repetition": 1,
+  "seed": 980363706,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model entered unresolved applicant information for major_gpa.",
+    "fetch failed",
+    "The agent attempted to enter “Not reported on transcript” for the major-GPA field; the controlled fixture marked this as ungrounded, and the readiness report retained it as a factual error despite leaving the field blank.",
+    "The agent requested unnecessary user context twice; both requests were rejected as unnecessary, and the available materials already supported leaving the fields blank and flagging them.",
+    "The application was not brought to verified ready_for_final_review: the final readiness report returned ok=false because of the factual error.",
+    "The trace ended with a browser/model interruption while reloading education, after which no final verified readiness evidence was obtained.",
+    "The agent correctly avoided inventing a supervisor, funding award, publication acceptance, or referee contact, and correctly stopped without submitting."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-funded-particle-physics --repetitions 1 --seed 980363706",
+  "trace": "traces/david-v2-final/e2e-funded-particle-physics-r1.json"
+}

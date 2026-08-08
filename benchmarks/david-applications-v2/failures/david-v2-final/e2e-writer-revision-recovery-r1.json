@@ -1,0 +1,19 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-writer-revision-recovery-1-a55e6151",
+  "caseId": "e2e-writer-revision-recovery",
+  "repetition": 1,
+  "seed": 1789499548,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model entered an applicant value unsupported by source materials: ceremony_date.",
+    "The application did not reach the required ready_for_final_review terminal state.",
+    "The writer revision artifact was never received or accepted, leaving the statement-of-purpose document unresolved.",
+    "The publications section could not be completed because exact title and venue were absent from the supplied materials; the agent correctly avoided inventing them.",
+    "The agent made two context requests that the context primitive rejected as unnecessary.",
+    "Repeated provider rate limiting substantially interrupted execution and led to inefficient repeated revalidation.",
+    "The readiness report continued to flag the fixture’s ceremony-date inconsistency even though the agent correctly entered the grounded ceremony date and did not save the rejected July 30 value."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-writer-revision-recovery --repetitions 1 --seed 1789499548",
+  "trace": "traces/david-v2-final/e2e-writer-revision-recovery-r1.json"
+}

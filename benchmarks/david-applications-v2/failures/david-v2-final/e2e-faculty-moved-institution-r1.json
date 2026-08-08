@@ -1,0 +1,19 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-faculty-moved-institution-1-a5cb8fa6",
+  "caseId": "e2e-faculty-moved-institution",
+  "repetition": 1,
+  "seed": 55273294,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model entered an applicant value unsupported by source materials: potential_supervisor.",
+    "The model stopped without invoking verified completion or a required context boundary.",
+    "The agent attempted to enter Wolfgang Huber as the potential supervisor despite the name not being grounded in the supplied applicant materials; the portal rejected it, but validation still recorded the unsupported name as a factual error.",
+    "The agent never achieved the required ready_for_final_review state: readiness reports returned ok=false and no verified final-review evidence was produced.",
+    "The agent repeatedly requested context that the request_context primitive marked as already available or unrelated, although asking for the missing old-page URL or supervisor identity was substantively reasonable.",
+    "The trace successfully verified most sections, uploaded the three supplied documents, and correctly avoided submission.",
+    "Official EMBL evidence for Wolfgang Huber was recorded, but it did not establish that he was the person named on the unspecified indexed old page, so it could not safely resolve the faculty-fit requirement."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-faculty-moved-institution --repetitions 1 --seed 55273294",
+  "trace": "traces/david-v2-final/e2e-faculty-moved-institution-r1.json"
+}

@@ -1,0 +1,20 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-five-application-campaign-1-35840eb7",
+  "caseId": "e2e-five-application-campaign",
+  "repetition": 1,
+  "seed": 3919778432,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model entered an applicant value unsupported by source materials: overlap_explanation.",
+    "The model entered an applicant value unsupported by source materials: publication_title.",
+    "The model stopped without invoking verified completion or a required context boundary.",
+    "The agent incorrectly treated the legal name as unavailable even though “Samuel Adeyemi” was directly present in the applicant materials and hidden profile.",
+    "It attempted to enter unsupported employment-overlap wording and unsupported publication titles; the browser rejected these attempts, so no fabricated value was successfully saved.",
+    "The agent created all five cases and opportunities but performed meaningful portal work only for the UCL Computer Science MSc case, leaving the other four cases largely unprepared.",
+    "The research and funding sections were inspected and partially prepared, but no final-review readiness was achieved, appropriately preventing submission.",
+    "The readiness validator continued to report stale factual warnings after the employment correction, and the agent did not resolve the publication-related stale warnings."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-five-application-campaign --repetitions 1 --seed 3919778432",
+  "trace": "traces/david-v2-final/e2e-five-application-campaign-r1.json"
+}

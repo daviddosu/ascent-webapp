@@ -1,0 +1,17 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-computational-biology-phd-1-14709918",
+  "caseId": "e2e-computational-biology-phd",
+  "repetition": 1,
+  "seed": 590722971,
+  "rootCause": "external_service",
+  "failureReasons": [
+    "fetch failed",
+    "The application was not brought to verified ready_for_final_review: documents were not uploaded or checkpointed, and no final Review page evidence was obtained.",
+    "The agent made an unnecessary context request about whether to enter the MSc or BSc first; the available materials and portal structure supported entering the MSc as the primary record without asking the user.",
+    "The Education checkpoint saved only the MSc record and left the BSc representation unresolved, although the CV artifact preserved both degrees.",
+    "The trace ended after repeated provider rate-limit backoffs with no further model output, preventing completion."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-computational-biology-phd --repetitions 1 --seed 590722971",
+  "trace": "traces/david-v2-final/e2e-computational-biology-phd-r1.json"
+}

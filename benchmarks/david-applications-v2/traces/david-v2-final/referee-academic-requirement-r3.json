@@ -1,0 +1,935 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-referee-academic-requirement-3-cb954ac8",
+  "caseId": "referee-academic-requirement",
+  "level": "atomic",
+  "category": "referee",
+  "repetition": 3,
+  "seed": 1032918743,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 1,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 3,
+  "primitiveSuccesses": 1,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 1,
+  "browserActions": 1,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 1,
+    "requirement_extraction": 1,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 0.6667,
+    "harness_escalation": 1,
+    "browser_execution": 1,
+    "email_interpretation": 1,
+    "document_correctness": 0.5,
+    "recovery": 1,
+    "evidence_quality": 1,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "applicant_fact_correctness",
+    "tool_selection",
+    "email_interpretation",
+    "recovery",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 7,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 53649,
+    "cachedInputTokens": 44205,
+    "cacheWriteTokens": 9420,
+    "outputTokens": 1356,
+    "reasoningTokens": 445,
+    "totalTokens": 55005,
+    "inferenceCostUsd": 0.0048711
+  },
+  "elapsedMs": 31299,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Which academic lecturer or tutor should be approached as the referee, and what are their name, institution/department, email address, and your academic relationship with them?",
+  "trace": [
+    {
+      "at": "2026-08-08T15:46:38.726Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0741b0b7a2d11f41016a774f5c9ef081a2b36dc3991fef0560",
+        "object": "response",
+        "created_at": 1786203996,
+        "completed_at": 1786203998,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0741b0b7a2d11f41016a774f5d69fc81a2a2b2f080d3e7429f",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0741b0b7a2d11f41016a774f5e2d4c81a29315217a153c586a",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"objective\":\"Verify the official UCL Computer Science MSc admissions reference requirement and capture the relevant source wording.\",\"allowed_domains\":[\"ucl.ac.uk\"]}",
+            "call_id": "call_suVkBFeLqnZHhAMyvIY7u4UC",
+            "name": "browser__start_session"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5914,
+          "input_tokens_details": {
+            "cache_write_tokens": 904,
+            "cached_tokens": 5007
+          },
+          "output_tokens": 110,
+          "output_tokens_details": {
+            "reasoning_tokens": 64
+          },
+          "total_tokens": 6024
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2505,
+      "usage": {
+        "inputTokens": 5914,
+        "cachedInputTokens": 5007,
+        "cacheWriteTokens": 904,
+        "outputTokens": 110,
+        "reasoningTokens": 64,
+        "totalTokens": 6024,
+        "inferenceCostUsd": 0.00045874
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:46:38.727Z",
+      "kind": "tool",
+      "name": "browser.start_session",
+      "input": {
+        "objective": "Verify the official UCL Computer Science MSc admissions reference requirement and capture the relevant source wording.",
+        "allowed_domains": [
+          "ucl.ac.uk"
+        ]
+      },
+      "output": {
+        "ok": true,
+        "session_id": "browser-54bdc3f8a285",
+        "task_owned": true,
+        "allowed_domains": [
+          "ucl.ac.uk"
+        ]
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:46:40.437Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 4,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0741b0b7a2d11f41016a774f5f2be481a295c798e859a430e2",
+        "object": "response",
+        "created_at": 1786203999,
+        "completed_at": 1786204000,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0741b0b7a2d11f41016a774f60051481a2a60fb2ecf9451e62",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-54bdc3f8a285\",\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\"}",
+            "call_id": "call_c7jDkuwCI1IYKkk9ORpxF2aX",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6069,
+          "input_tokens_details": {
+            "cache_write_tokens": 155,
+            "cached_tokens": 5911
+          },
+          "output_tokens": 56,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6125
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 1711,
+      "usage": {
+        "inputTokens": 6069,
+        "cachedInputTokens": 5911,
+        "cacheWriteTokens": 155,
+        "outputTokens": 56,
+        "reasoningTokens": 0,
+        "totalTokens": 6125,
+        "inferenceCostUsd": 0.00022476999999999998
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:46:41.278Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-54bdc3f8a285",
+        "url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc"
+      },
+      "output": {
+        "ok": false,
+        "error": "The browser destination is outside this task’s HTTPS domain allowlist.",
+        "failure_class": "false_success",
+        "retryable": true
+      },
+      "elapsedMs": 840,
+      "error": "The browser destination is outside this task’s HTTPS domain allowlist."
+    },
+    {
+      "at": "2026-08-08T15:46:43.464Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 6,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0741b0b7a2d11f41016a774f61b4d481a2b3b7c23d3b5efeca",
+        "object": "response",
+        "created_at": 1786204001,
+        "completed_at": 1786204003,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0741b0b7a2d11f41016a774f62622481a28242648ccd9e73ad",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0741b0b7a2d11f41016a774f62f0f881a294d5c8528cc8b96f",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-54bdc3f8a285\",\"url\":\"https://ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\"}",
+            "call_id": "call_iJgSiuW76QahqXgRLR6IpVJz",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6168,
+          "input_tokens_details": {
+            "cache_write_tokens": 99,
+            "cached_tokens": 6066
+          },
+          "output_tokens": 99,
+          "output_tokens_details": {
+            "reasoning_tokens": 43
+          },
+          "total_tokens": 6267
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2188,
+      "usage": {
+        "inputTokens": 6168,
+        "cachedInputTokens": 6066,
+        "cacheWriteTokens": 99,
+        "outputTokens": 99,
+        "reasoningTokens": 43,
+        "totalTokens": 6267,
+        "inferenceCostUsd": 0.00026547
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:46:47.415Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-54bdc3f8a285",
+        "url": "https://ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc"
+      },
+      "output": {
+        "ok": false,
+        "error": "The browser destination is outside this task’s HTTPS domain allowlist.",
+        "failure_class": "false_success",
+        "retryable": true
+      },
+      "elapsedMs": 3949,
+      "error": "The browser destination is outside this task’s HTTPS domain allowlist."
+    },
+    {
+      "at": "2026-08-08T15:46:49.868Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 9,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0741b0b7a2d11f41016a774f67ddf881a2a62ba7f4c607af09",
+        "object": "response",
+        "created_at": 1786204007,
+        "completed_at": 1786204009,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0741b0b7a2d11f41016a774f68ce3c81a2af7e309eeacc8c56",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0741b0b7a2d11f41016a774f691d7881a2ba8f747dd6e81702",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"objective\":\"Verify the official UCL Computer Science MSc admissions reference requirement.\",\"allowed_domains\":[\"www.ucl.ac.uk\"]}",
+            "call_id": "call_1dSPRmecr1NhPQEOLlIwTAbr",
+            "name": "browser__start_session"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6310,
+          "input_tokens_details": {
+            "cache_write_tokens": 142,
+            "cached_tokens": 6165
+          },
+          "output_tokens": 61,
+          "output_tokens_details": {
+            "reasoning_tokens": 19
+          },
+          "total_tokens": 6371
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2454,
+      "usage": {
+        "inputTokens": 6310,
+        "cachedInputTokens": 6165,
+        "cacheWriteTokens": 142,
+        "outputTokens": 61,
+        "reasoningTokens": 19,
+        "totalTokens": 6371,
+        "inferenceCostUsd": 0.00023259999999999996
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:46:49.869Z",
+      "kind": "tool",
+      "name": "browser.start_session",
+      "input": {
+        "objective": "Verify the official UCL Computer Science MSc admissions reference requirement.",
+        "allowed_domains": [
+          "www.ucl.ac.uk"
+        ]
+      },
+      "output": {
+        "ok": true,
+        "session_id": "browser-7b9c979036fa",
+        "task_owned": true,
+        "allowed_domains": [
+          "www.ucl.ac.uk"
+        ]
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:46:52.025Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 12,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0741b0b7a2d11f41016a774f6a517881a2a3caaa3b6b845994",
+        "object": "response",
+        "created_at": 1786204010,
+        "completed_at": 1786204011,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0741b0b7a2d11f41016a774f6b4f5881a2a908f180e0ddca44",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-7b9c979036fa\",\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\"}",
+            "call_id": "call_lZzLtGccqYjcCmccu1Ce9ACn",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6417,
+          "input_tokens_details": {
+            "cache_write_tokens": 107,
+            "cached_tokens": 6307
+          },
+          "output_tokens": 55,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6472
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2157,
+      "usage": {
+        "inputTokens": 6417,
+        "cachedInputTokens": 6307,
+        "cacheWriteTokens": 107,
+        "outputTokens": 55,
+        "reasoningTokens": 0,
+        "totalTokens": 6472,
+        "inferenceCostUsd": 0.00021949
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:46:54.938Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-7b9c979036fa",
+        "url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Computer Science MSc | Prospective Students Graduate - UCL – University College London",
+          "url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+          "headings": [
+            "Computer Science MSc",
+            "Entry requirements",
+            "Equivalent qualifications",
+            "About this degree",
+            "Third-party hosted content",
+            "The foundation of your career",
+            "Employability",
+            "Networking",
+            "Teaching and learning",
+            "Modules",
+            "Visit us",
+            "Fees and funding",
+            "Fees for this course",
+            "Funding your studies",
+            "Next steps",
+            "Choose your programme",
+            "Got questions? Get in touch",
+            "Stay in touch",
+            "Visit us",
+            "Find a course"
+          ],
+          "text": "Skip to main content Search Menu Home Computer Science MSc London, Bloomsbury Become a computer scientist in just one year through this conversion programme and enhance your career prospects in a growing and innovative field. The Computer Science MSc teaches everything from programming to app engineering while providing opportunities to create solutions for industrial or research clients. Taught at UCL, world-renowned for computer science research, this is an exceptional place to build your foundations as a computer scientist. UK students International students Study mode Full-time UK tuition fees (2026/27) £21,500 Duration 1 calendar year Programme starts September 2026 Applications accepted Applicants who require a visa: 20 Oct 2025 – 27 Mar 2026 Applications closed Applicants who do not require a visa: 20 Oct 2025 – 28 Aug 2026 Applications close at 10am UK time Applications open Apply for this course Entry requirements A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other than computer science or information technology. This includes subfields of Computer Science such as Artificial Intelligence, Machine Learning and Software Engineering, among others. Evidence should be included within the application to demonstrate suitable mathematical skills (to at least Mathematics A-level standard), and analytical skills. Although the programme is intended for those who are new to Computer Science, applicants must ensure they have standard computational thinking skills, as programming is a core part of the programme. English language requirements The English language level for this course is: Level 2 UCL Pre-Master's and Pre-sessional English courses are for international students who are aiming to study for a postgraduate degree at UCL. The courses will develop your academic English and academic skills required to succeed at postgraduate level. Further information can be found on our English language requirements page. Equivalent qualifications Country-specific information, including details of when UCL representatives are visiting your part of the world, can be obtained from the International Students website. International applicants can find out the equivalent qualification for their country by selecting from the list below. Please note that the equivalency will correspond to the broad UK degree classification stated on this page (e.g. upper second-class). Where a specific overall percentage is required in the UK qualification, the international equivalency will be higher than that stated below. Please contact Graduate Admissions should you require further advice. Select your country Select a country Afghanistan Albania Algeria Argentina Armenia Australia Austria Azerbaijan Bahrain Bangladesh Barbados Belarus Belgium Belize Bolivia Bosnia and Herzegovina Botswana Brazil Brunei Bulgaria Cambodia Cameroon Canada Caribbean / West Indies Chile China Colombia Congo (DR) Costa Rica Croatia Cuba Cyprus (Greek Cypriot and Turkish Cypriot communities) Czech Republic Denmark Dominican Republic Ecuador Egypt El Salvador Eritrea Estonia Ethiopia Fiji Finland France Gambia Georgia Germany Ghana Greece Guatemala Guyana Honduras Hong Kong (SAR) Hungary Iceland India Indonesia Iran Iraq Ireland Israel Italy Ivory Coast Jamaica Japan Jordan Kazakhstan Kenya Kuwait Kyrgyzstan Latvia Lebanon Lesotho Liberia Libya Liechtenstein Lithuania Luxembourg Macau (SAR) Madagascar Malawi Malaysia Malta Mauritius Mexico Moldova Mongolia Montenegro Morocco Myanmar (Burma) Namibia Nepal Netherlands New Zealand Nicaragua Nigeria North Macedonia Norway Oman Pakistan Palestine Panama Papua New Guinea Paraguay Peru Philippines Poland Portugal Qatar Romania Russia Rwanda Saudi Arabia Senegal Serbia Sierra Leone Singapore Slovakia Slovenia South Africa South Korea Spain Sri Lanka Sudan Swaziland/Eswatini Sweden Switzerland Syria Taiwan Tajikistan Tanzania Thailand Trinidad and Tobago Tunisi",
+          "links": [
+            {
+              "text": "Skip to main content",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc#main-content"
+            },
+            {
+              "text": "Home",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/"
+            },
+            {
+              "text": "Apply for this course",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc#programme-choice"
+            },
+            {
+              "text": "UCL Pre-Master's and Pre-sessional English courses",
+              "href": "https://www.ucl.ac.uk/languages-international-education/preparation-courses"
+            },
+            {
+              "text": "English language requirements",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/learning-and-living-ucl/international-students/english-language-requirements"
+            },
+            {
+              "text": "International Students website",
+              "href": "https://www.ucl.ac.uk/prospective-students/international"
+            },
+            {
+              "text": "https://www.youtube.com/embed/GAvRdZxHuRs?si=XyReyv12OKI2ISUS",
+              "href": "https://www.youtube.com/embed/GAvRdZxHuRs?si=XyReyv12OKI2ISUS"
+            },
+            {
+              "text": "PwC report",
+              "href": "https://www.pwc.com/gx/en/issues/artificial-intelligence/job-barometer/2025/report.pdf"
+            },
+            {
+              "text": "Read about what it takes to study for a Master's at UCL",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/why-choose-ucl"
+            },
+            {
+              "text": "ranked 9th in the QS World University Rankings 2026",
+              "href": "https://www.ucl.ac.uk/news/2025/jun/ucl-ranked-among-top-10-universities-two-major-global-rankings"
+            },
+            {
+              "text": "REF 2021",
+              "href": "https://www.ucl.ac.uk/research/research-excellence-framework/ref-2021"
+            },
+            {
+              "text": "Many of these projects are conducted in collaboration with industry partners via the IXN Industry Exchange Network",
+              "href": "https://www.ucl.ac.uk/computer-science/study/experience-industry"
+            },
+            {
+              "text": "Graduate Outcomes survey data",
+              "href": "https://public.tableau.com/app/profile/katy.coyte4085/viz/WhatDoUCLGraduatesDo/WhatdoUCLgraduatesdo"
+            },
+            {
+              "text": "Read about what you'll get out of a graduate programme",
+              "href": "https://www.ucl.ac.uk/prospective-students/graduate/why-choose-ucl/careers-and-employability"
+            },
+            {
+              "text": "Graduate Outcomes survey data",
+              "href": "https://public.tableau.com/app/profile/katy.coyte4085/viz/WhatDoUCLGraduatesDo/WhatdoUCLgraduatesdo"
+            },
+            {
+              "text": "Student Experiences",
+              "href": "https://www.ucl.ac.uk/engineering/computer-science/study/postgraduate-taught/postgraduate-student-experiences"
+            },
+            {
+              "text": "Introductory Programming",
+              "href": "https://www.ucl.ac.uk/module-catalogue/modules/introductory-programming-COMP0066"
+            },
+            {
+              "text": "App Engineering",
+              "href": "https://www.ucl.ac.uk/module-catalogue/modules/app-engineering-COMP0067"
+            },
+            {
+              "text": "Computer Architecture and Operating Systems",
+              "href": "https://www.ucl.ac.uk/module-catalogue/modules/computer-architecture-and-operating-systems-COMP0068"
+            },
+            {
+              "text": "Algorithmics",
+              "href": "https://www.ucl.ac.uk/module-catalogue/modules/algorithmics-COMP0070"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Search UCL websites, degrees, short courses",
+              "kind": "input:search"
+            },
+            {
+              "label": "English language requirements",
+              "kind": "button:submit"
+            },
+            {
+              "label": "Select your country",
+              "kind": "select:select-one"
+            },
+            {
+              "label": "Accept embedded content cookies to load YouTube content",
+              "kind": "button:button"
+            },
+            {
+              "label": "Full-time",
+              "kind": "button:submit"
+            },
+            {
+              "label": "Scholarships relevant to this department are displayed below.",
+              "kind": "button:submit"
+            },
+            {
+              "label": "MSc Computer Science, Full-time",
+              "kind": "input:radio"
+            },
+            {
+              "label": "Accept all cookies",
+              "kind": "button:button"
+            },
+            {
+              "label": "Accept necessary cookies",
+              "kind": "button:button"
+            },
+            {
+              "label": "Settings",
+              "kind": "button:button"
+            }
+          ],
+          "fields": [
+            {
+              "name": "query",
+              "label": "Search UCL websites, degrees, short courses",
+              "type": "search",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "global-search-submit",
+              "label": "global-search-submit",
+              "type": "submit",
+              "value": "Go",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "ucl_international_equivalencies",
+              "label": "Select your country",
+              "type": "select-one",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "application_option",
+              "label": "MSc Computer Science, Full-time",
+              "type": "radio",
+              "value": "MSc Computer Science, Full-time",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "windows_aad",
+              "label": "windows_aad",
+              "type": "submit",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 2912,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:00.194Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 14,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0741b0b7a2d11f41016a774f6f73b881a28aa4d5cf7370a494",
+        "object": "response",
+        "created_at": 1786204015,
+        "completed_at": 1786204019,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0741b0b7a2d11f41016a774f70f03c81a29fe9fc7400d77f1d",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0741b0b7a2d11f41016a774f71b97c81a2a881c09eef0cb683",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-532d1c366831\",\"opportunity\":{\"programme_id\":\"ucl-computer-science-msc\",\"name\":\"Computer Science MSc\",\"institution\":\"University College London\",\"official_url\":\"https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\",\"status\":\"source_verified\",\"fit_notes\":[\"Applicant materials state a BSc in Geography and Environmental Science, which is a subject other than computer science or information technology.\",\"The official page requires evidence of suitable mathematical and analytical skills; applicant materials list Statistics, GIS, Remote Sensing, Qualitative Methods, and related project work.\",\"Academic record and final degree status remain unverified; do not treat the reported CGPA as final.\"],\"referee_plan\":{\"status\":\"blocked\",\"reason\":\"Only professional referees are confirmed in applicant materials; an academic referee has not been identified or asked.\"}},\"citations\":[{\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\",\"title\":\"UCL Computer Science MSc — Entry requirements\",\"excerpt\":\"A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other than computer science or information technology; evidence should be included to demonstrate suitable mathematical and analytical skills.\",\"retrieved_at\":\"2026-06-01T00:00:00Z\",\"official\":true}],\"idempotency_key\":\"campaign-532d1c366831:https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc\"}",
+            "call_id": "call_Q6azm54PogDxSwVXtsY3RTcL",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8338,
+          "input_tokens_details": {
+            "cache_write_tokens": 1921,
+            "cached_tokens": 6414
+          },
+          "output_tokens": 422,
+          "output_tokens_details": {
+            "reasoning_tokens": 73
+          },
+          "total_tokens": 8760
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5257,
+      "usage": {
+        "inputTokens": 8338,
+        "cachedInputTokens": 6414,
+        "cacheWriteTokens": 1921,
+        "outputTokens": 422,
+        "reasoningTokens": 73,
+        "totalTokens": 8760,
+        "inferenceCostUsd": 0.00111553
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:00.195Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-532d1c366831",
+        "opportunity": {
+          "programme_id": "ucl-computer-science-msc",
+          "name": "Computer Science MSc",
+          "institution": "University College London",
+          "official_url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+          "status": "source_verified",
+          "fit_notes": [
+            "Applicant materials state a BSc in Geography and Environmental Science, which is a subject other than computer science or information technology.",
+            "The official page requires evidence of suitable mathematical and analytical skills; applicant materials list Statistics, GIS, Remote Sensing, Qualitative Methods, and related project work.",
+            "Academic record and final degree status remain unverified; do not treat the reported CGPA as final."
+          ],
+          "referee_plan": {
+            "status": "blocked",
+            "reason": "Only professional referees are confirmed in applicant materials; an academic referee has not been identified or asked."
+          }
+        },
+        "citations": [
+          {
+            "url": "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+            "title": "UCL Computer Science MSc — Entry requirements",
+            "excerpt": "A minimum of an upper second-class UK Bachelor's degree (or international qualification of an equivalent standard) in a subject other than computer science or information technology; evidence should be included to demonstrate suitable mathematical and analytical skills.",
+            "retrieved_at": "2026-06-01T00:00:00Z",
+            "official": true
+          }
+        ],
+        "idempotency_key": "campaign-532d1c366831:https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-243bddc683a3",
+        "programme_id": "ucl-computer-science-msc",
+        "citation_count": 1
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:03.708Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 17,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0741b0b7a2d11f41016a774f74b97881a284fba806e8194a77",
+        "object": "response",
+        "created_at": 1786204020,
+        "completed_at": 1786204023,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0741b0b7a2d11f41016a774f75762081a2b22207502a94d3e5",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0741b0b7a2d11f41016a774f76a14c81a28f16c7bb34e75b34",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"question\":\"Which academic lecturer or tutor should be approached as the referee, and what are their name, institution/department, email address, and your academic relationship with them?\",\"missing_fields\":[\"academic_referee_name\",\"academic_referee_institution_department\",\"academic_referee_email\",\"academic_referee_relationship\"],\"suggested_options\":[]}",
+            "call_id": "call_TUoGsNMdymBeslJlnEiqIpfN",
+            "name": "agent__request_context"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8809,
+          "input_tokens_details": {
+            "cache_write_tokens": 471,
+            "cached_tokens": 8335
+          },
+          "output_tokens": 192,
+          "output_tokens_details": {
+            "reasoning_tokens": 108
+          },
+          "total_tokens": 9001
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3514,
+      "usage": {
+        "inputTokens": 8809,
+        "cachedInputTokens": 8335,
+        "cacheWriteTokens": 471,
+        "outputTokens": 192,
+        "reasoningTokens": 108,
+        "totalTokens": 9001,
+        "inferenceCostUsd": 0.0005154500000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:03.709Z",
+      "kind": "tool",
+      "name": "agent.request_context",
+      "input": {
+        "question": "Which academic lecturer or tutor should be approached as the referee, and what are their name, institution/department, email address, and your academic relationship with them?",
+        "missing_fields": [
+          "academic_referee_name",
+          "academic_referee_institution_department",
+          "academic_referee_email",
+          "academic_referee_relationship"
+        ],
+        "suggested_options": []
+      },
+      "output": {
+        "ok": true,
+        "status": "waiting_for_user",
+        "necessary": true,
+        "missing_field": "academic_referee_name"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:07.518Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_03902059dd2bdc48016a774f781df081919f0231022ec778ad",
+        "object": "response",
+        "created_at": 1786204024,
+        "completed_at": 1786204027,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_03902059dd2bdc48016a774f7886848191b83b7f8fefe92dfa",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_03902059dd2bdc48016a774f79f4308191bf2c05b15085ec65",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":1,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":1,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[],\"rationale\":\"The agent recovered from the initial domain-allowlist failures by starting a correctly scoped browser session, obtained direct official UCL page evidence, and recorded the opportunity with an accurate citation and appropriately cautious treatment of the unverified academic record. It correctly identified that only professional referees are confirmed, did not promote unsupported GPA or degree-completion claims, and asked for the genuinely missing academic-referee details. The necessary_user_question terminal state was reached with direct tool evidence.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5624,
+          "input_tokens_details": {
+            "cache_write_tokens": 5621,
+            "cached_tokens": 0
+          },
+          "output_tokens": 361,
+          "output_tokens_details": {
+            "reasoning_tokens": 138
+          },
+          "total_tokens": 5985
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-referee-academic-requirement-3-cb954ac8",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3809,
+      "usage": {
+        "inputTokens": 5624,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 5621,
+        "outputTokens": 361,
+        "reasoningTokens": 138,
+        "totalTokens": 5985,
+        "inferenceCostUsd": 0.00183905
+      },
+      "error": null
+    }
+  ]
+}

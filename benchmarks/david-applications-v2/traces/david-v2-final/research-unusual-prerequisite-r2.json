@@ -1,0 +1,591 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-research-unusual-prerequisite-2-96e0fad0",
+  "caseId": "research-unusual-prerequisite",
+  "level": "atomic",
+  "category": "research",
+  "repetition": 2,
+  "seed": 3167138102,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.97,
+    "requirement_extraction": 0.985,
+    "applicant_fact_correctness": 0.99,
+    "tool_selection": 0.95,
+    "primitive_routing": 0.475,
+    "harness_escalation": 0.975,
+    "browser_execution": 0.425,
+    "email_interpretation": 0.5,
+    "document_correctness": 0.49,
+    "recovery": 1,
+    "evidence_quality": 0.98,
+    "final_task_completion": 0.97
+  },
+  "applicableDimensions": [
+    "research_correctness",
+    "requirement_extraction",
+    "applicant_fact_correctness",
+    "tool_selection",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 3,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 74373,
+    "cachedInputTokens": 30786,
+    "cacheWriteTokens": 8947,
+    "outputTokens": 3561,
+    "reasoningTokens": 916,
+    "totalTokens": 77934,
+    "inferenceCostUsd": 0.01405367
+  },
+  "elapsedMs": 53090,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Verified current official UCL sources. Amara meets the published Nigerian undergraduate grade equivalency and has strong Physics subject preparation, but the UCL Physics and Astronomy MPhil/PhD page says the programme generally requires Master’s-level preparation and will not accept candidates qualified only to Bachelor’s level. A special-circumstances exception is possible but not established. English evidence and supervisor contact also remain unverified.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:30:20.513Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0e075b9313587afd016a774b769ffc8192891df4637b864bae",
+        "object": "response",
+        "created_at": 1786202998,
+        "completed_at": 1786203019,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0e075b9313587afd016a774b77e5b481928a4684e14f23ac9e",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_0e075b9313587afd016a774b7893fc8192aa07780de79a4c19",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:ucl.ac.uk prospective students graduate research degrees physics astronomy MPhil PhD entry requirements 2026"
+              ],
+              "query": "site:ucl.ac.uk prospective students graduate research degrees physics astronomy MPhil PhD entry requirements 2026"
+            }
+          },
+          {
+            "id": "rs_0e075b9313587afd016a774b7f49ec8192bb19a1012712b66e",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_0e075b9313587afd016a774b80141081928a19f213864dce24",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:ucl.ac.uk graduate entry requirements Nigeria bachelor's degree UCL equivalent standard",
+                "site:ucl.ac.uk Physics Astronomy MPhil PhD English language requirements UCL 2026"
+              ],
+              "query": "site:ucl.ac.uk graduate entry requirements Nigeria bachelor's degree UCL equivalent standard"
+            }
+          },
+          {
+            "id": "rs_0e075b9313587afd016a774b85d80881928709fc3272db8a10",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0e075b9313587afd016a774b8798e08192b0f9eb006519b3d0",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-f7dccdeee327\",\"opportunity\":{\"id\":\"ucl-particle-physics-phd\",\"name\":\"UCL Physics and Astronomy MPhil/PhD — High Energy Physics pathway\",\"institution\":\"University College London\",\"year_of_entry\":\"2026-2027\",\"status\":\"official_requirements_verified\",\"fit_summary\":\"Applicant has a four-year BSc Physics from the University of Lagos with CGPA 4.62/5.00, above UCL's Nigeria 2:1 benchmark of 3.75/5.0. However, the programme normally expects an integrated Master's or undergraduate degree followed by an MSc; a bachelor's-equivalent may be considered only in special circumstances. Subject alignment is strongly evidenced by Physics degree, particle/nuclear coursework, detector project, and CERN OpenLab research.\",\"requirements_summary\":[\"Relevant upper-second equivalent qualification, with programme-specific normal expectation of integrated Master's or bachelor's plus MSc.\",\"English language Level 1 unless an exemption applies.\",\"Two references.\",\"Usually identify and contact potential supervisors before applying.\",\"Applications rolling; submit at least three months before preferred start date.\"],\"funding_note\":\"The 2026/27 China Scholarship Council–UCL Joint Research Scholarship is listed as closed; other funding must be checked separately and is not established by the supplied materials.\",\"verification_notes\":[\"No major-only GPA is reported; overall CGPA is available.\",\"No English test, exemption basis, MSc, or supervisor-contact evidence is supplied.\",\"Equivalence assumes the University of Lagos qualification is from a recognised institution; this was not independently verified from the supplied materials.\"]},\"citations\":[{\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd\",\"title\":\"UCL Physics and Astronomy MPhil/PhD official programme page\",\"retrieved_at\":\"2026-08-08\"},{\"url\":\"https://www.ucl.ac.uk/prospective-students/international/nigeria\",\"title\":\"UCL official Nigeria graduate equivalency page\",\"retrieved_at\":\"2026-08-08\"},{\"url\":\"https://www.ucl.ac.uk/study/prospective-students/graduate/how-apply/english-language-requirements\",\"title\":\"UCL official English language requirements\",\"retrieved_at\":\"2026-08-08\"}],\"idempotency_key\":\"ucl-particle-physics-phd|2026-08-08|official-requirements\"}",
+            "call_id": "call_Exrf2hot7OUkIsnifiLvL0GK",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 26805,
+          "input_tokens_details": {
+            "cache_write_tokens": 895,
+            "cached_tokens": 9403
+          },
+          "output_tokens": 726,
+          "output_tokens_details": {
+            "reasoning_tokens": 210
+          },
+          "total_tokens": 27531
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-unusual-prerequisite-2-96e0fad0",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 23417,
+      "usage": {
+        "inputTokens": 26805,
+        "cachedInputTokens": 9403,
+        "cacheWriteTokens": 895,
+        "outputTokens": 726,
+        "reasoningTokens": 210,
+        "totalTokens": 27531,
+        "inferenceCostUsd": 0.00458441
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:30:20.515Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-f7dccdeee327",
+        "opportunity": {
+          "id": "ucl-particle-physics-phd",
+          "name": "UCL Physics and Astronomy MPhil/PhD — High Energy Physics pathway",
+          "institution": "University College London",
+          "year_of_entry": "2026-2027",
+          "status": "official_requirements_verified",
+          "fit_summary": "Applicant has a four-year BSc Physics from the University of Lagos with CGPA 4.62/5.00, above UCL's Nigeria 2:1 benchmark of 3.75/5.0. However, the programme normally expects an integrated Master's or undergraduate degree followed by an MSc; a bachelor's-equivalent may be considered only in special circumstances. Subject alignment is strongly evidenced by Physics degree, particle/nuclear coursework, detector project, and CERN OpenLab research.",
+          "requirements_summary": [
+            "Relevant upper-second equivalent qualification, with programme-specific normal expectation of integrated Master's or bachelor's plus MSc.",
+            "English language Level 1 unless an exemption applies.",
+            "Two references.",
+            "Usually identify and contact potential supervisors before applying.",
+            "Applications rolling; submit at least three months before preferred start date."
+          ],
+          "funding_note": "The 2026/27 China Scholarship Council–UCL Joint Research Scholarship is listed as closed; other funding must be checked separately and is not established by the supplied materials.",
+          "verification_notes": [
+            "No major-only GPA is reported; overall CGPA is available.",
+            "No English test, exemption basis, MSc, or supervisor-contact evidence is supplied.",
+            "Equivalence assumes the University of Lagos qualification is from a recognised institution; this was not independently verified from the supplied materials."
+          ]
+        },
+        "citations": [
+          {
+            "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd",
+            "title": "UCL Physics and Astronomy MPhil/PhD official programme page",
+            "retrieved_at": "2026-08-08"
+          },
+          {
+            "url": "https://www.ucl.ac.uk/prospective-students/international/nigeria",
+            "title": "UCL official Nigeria graduate equivalency page",
+            "retrieved_at": "2026-08-08"
+          },
+          {
+            "url": "https://www.ucl.ac.uk/study/prospective-students/graduate/how-apply/english-language-requirements",
+            "title": "UCL official English language requirements",
+            "retrieved_at": "2026-08-08"
+          }
+        ],
+        "idempotency_key": "ucl-particle-physics-phd|2026-08-08|official-requirements"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-2f376e9e0b7c",
+        "programme_id": "ucl-particle-physics-phd",
+        "citation_count": 3
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:30:31.669Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 8,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0e075b9313587afd016a774b8cfc448192aa219c633f5a8363",
+        "object": "response",
+        "created_at": 1786203021,
+        "completed_at": 1786203031,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0e075b9313587afd016a774b8dcd848192aad53473eafd998c",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_0e075b9313587afd016a774b8e6210819293f4e16adf45140b",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "open_page",
+              "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+            }
+          },
+          {
+            "id": "rs_0e075b9313587afd016a774b8fae6c81929e0316305dc80e48",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_0e075b9313587afd016a774b90794481929cc6cdf450412836",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [
+                  {
+                    "type": "url_citation",
+                    "end_index": 1215,
+                    "start_index": 1100,
+                    "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 1697,
+                    "start_index": 1582,
+                    "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 2205,
+                    "start_index": 2090,
+                    "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 2499,
+                    "start_index": 2384,
+                    "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 2922,
+                    "start_index": 2807,
+                    "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 3996,
+                    "start_index": 3881,
+                    "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 4379,
+                    "start_index": 4300,
+                    "title": "Nigeria | International Students - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/international/nigeria"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 5125,
+                    "start_index": 5010,
+                    "title": "Physics and Astronomy MPhil/PhD | Prospective Students Graduate - UCL – University College London",
+                    "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+                  }
+                ],
+                "logprobs": [],
+                "text": "## Assessment: not currently verifiable as satisfying the prerequisite\n\n**Conclusion:** Amara has a strong subject fit and relevant academic record, but the supplied materials do **not** establish that she satisfies UCL Physics and Astronomy’s current academic prerequisite. The main issue is that the programme expects preparation at approximately **Master’s level**, while the transcript shows only a BSc.\n\n### Requirement reconciliation\n\n| Requirement | Official current position | Applicant evidence | Result |\n|---|---|---|---|\n| Relevant discipline | UCL seeks a strong technical background such as Physics, with interest in Physics or Astronomy. | BSc Physics; Quantum Mechanics, Electrodynamics, Nuclear and Particle Physics, Computational Physics; detector research at CERN OpenLab. | **Satisfied on the available evidence** |\n| Academic level | The formal entry requirement is normally an upper-second integrated UK Master’s, or an undergraduate degree followed by a relevant MSc, or equivalent overseas preparation. A Bachelor’s-equivalent may be considered only in special circumstances. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd)) | Four-year BSc Physics, CGPA 4.62/5.00. No MSc or integrated Master’s is documented. | **Not established** |\n| Department-level qualification expectation | UCL’s “Who this course is for” section says applicants are generally expected to have a good UK Master’s equivalent and states that the programme will not accept candidates qualified only to Bachelor’s level. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd)) | The applicant is currently documented as Bachelor’s-qualified only. | **Likely unmet unless UCL confirms an exception** |\n| English | This course requires UCL English Level 1. Nigerian nationality does not itself qualify for UCL’s listed majority-English-speaking-country exemption; evidence of English education or an accepted test is therefore needed unless UCL grants another exemption. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd)) | No English test, qualifying exemption, or UCL-confirmed medium-of-instruction evidence is supplied. | **Cannot verify** |\n| References | The programme requires two references. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd)) | Professor Eze and Dr Marin appear potentially suitable; Mr Aina is less suitable because he did not see the applicant’s academic work. | **Potentially satisfiable; not yet verified** |\n| Supervisor contact | UCL says applicants should generally identify and contact potential supervisors before applying. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd)) | No supervisor identified or contact evidence supplied. | **Cannot verify** |\n\n### Academic and subject fit\n\nThe subject preparation is persuasive for the **High Energy Particle Physics** pathway: the applicant has a Physics degree, relevant nuclear/particle and computational coursework, a detector-focused undergraduate project, programming experience in Python and C++, ROOT and Geant4, and current CERN OpenLab research on charged-particle track reconstruction.\n\nHowever, those strengths do not by themselves overcome the programme’s stated level requirement. UCL’s current page contains a general clause allowing a Bachelor’s-equivalent in “special circumstances,” but the same page separately states that it will not accept applicants qualified only to Bachelor’s level. The safer reconciliation is that a BSc-only applicant should be treated as **not meeting the normal prerequisite unless the department confirms an exceptional review in writing**. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd))\n\n### What cannot be verified\n\n1. **Whether the University of Lagos BSc and 4.62/5.00 CGPA are accepted as the required overseas equivalent.** UCL’s Nigeria page currently exposes only a country-information placeholder, so no usable official Nigerian equivalency value could be confirmed from that page. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/international/nigeria))  \n2. **Whether the applicant qualifies for an English-language exemption** or must provide a Level 1 test result.  \n3. **Whether UCL would treat the CERN research experience and submitted publication as a “special circumstance”** allowing consideration without an MSc. The official page does not define that exception.  \n4. **Whether a suitable supervisor has agreed to consider the application.**  \n5. **Funding:** UCL lists departmental/project studentships but does not establish that this applicant would receive full tuition and living support. The displayed China Scholarship Council–UCL award is marked closed for 2026/27. ([ucl.ac.uk](https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd))\n\n### Final determination\n\n**Subject prerequisite:** likely satisfied.  \n**Academic-level prerequisite:** **not satisfied on the current record / requires official exception confirmation**.  \n**English prerequisite:** unverified.  \n**Overall:** **Do not describe the applicant as currently eligible.** The appropriate status is **“strong subject fit, but academic prerequisite unresolved and potentially disqualifying.”**\n\nThe decisive next step would be to obtain written confirmation from UCL Physics and Astronomy or Graduate Admissions that this BSc-only profile may be considered under the programme’s special-circumstances provision."
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 20793,
+          "input_tokens_details": {
+            "cache_write_tokens": 787,
+            "cached_tokens": 10298
+          },
+          "output_tokens": 1280,
+          "output_tokens_details": {
+            "reasoning_tokens": 232
+          },
+          "total_tokens": 22073
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-unusual-prerequisite-2-96e0fad0",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 11159,
+      "usage": {
+        "inputTokens": 20793,
+        "cachedInputTokens": 10298,
+        "cacheWriteTokens": 787,
+        "outputTokens": 1280,
+        "reasoningTokens": 232,
+        "totalTokens": 22073,
+        "inferenceCostUsd": 0.00388031
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:30:43.523Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 13,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0e075b9313587afd016a774b981e748192999bc75da77cfd73",
+        "object": "response",
+        "created_at": 1786203032,
+        "completed_at": 1786203043,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0e075b9313587afd016a774b98b2608192ad01eb89fd8263ab",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_0e075b9313587afd016a774b99e9e08192b4f7ab129eabde59",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd \"Bachelor's\" \"Master's\"",
+                "site:ucl.ac.uk/prospective-students/international/nigeria UCL graduate entry requirements 3.75",
+                "site:ucl.ac.uk/study/prospective-students/graduate/how-apply/english-language-requirements Level 1"
+              ],
+              "query": "site:ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd \"Bachelor's\" \"Master's\""
+            }
+          },
+          {
+            "id": "rs_0e075b9313587afd016a774b9e8a1081928715404ee3db5643",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0e075b9313587afd016a774b9f1eb081929e2870a00dafd3b3",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Verified current official UCL sources. Amara meets the published Nigerian undergraduate grade equivalency and has strong Physics subject preparation, but the UCL Physics and Astronomy MPhil/PhD page says the programme generally requires Master’s-level preparation and will not accept candidates qualified only to Bachelor’s level. A special-circumstances exception is possible but not established. English evidence and supervisor contact also remain unverified.\",\"sections\":[{\"title\":\"Verified prerequisite outcome\",\"body\":\"Academic grade equivalency: provisionally met. UCL’s Nigeria country page lists a Bachelor’s degree with 63% or 3.75/5.0 as an upper-second equivalent; Amara’s transcript reports 4.62/5.00. However, the Physics and Astronomy programme requires an upper-second integrated Master’s, an undergraduate degree followed by a relevant MSc, or equivalent overseas preparation. Its course-specific guidance says it generally seeks a good UK Master’s equivalent and will not accept applicants qualified only to Bachelor’s level. Amara’s materials document a BSc only, so the decisive academic-level prerequisite is unresolved and likely unmet absent an official exception.\"},{\"title\":\"Subject preparation\",\"body\":\"The subject prerequisite is strongly supported: BSc Physics; Quantum Mechanics, Electrodynamics, Statistical Mechanics, Mathematical Methods, Nuclear and Particle Physics, and Computational Physics; a detector-focused Monte Carlo project; and current CERN OpenLab research involving charged-particle track reconstruction and uncertainty calibration.\"},{\"title\":\"Other current requirements\",\"body\":\"The course requires UCL English Level 1. Nigerian citizenship is not on UCL’s listed majority-English-speaking-country exemption list, and the materials contain no accepted recent test result or qualifying exemption evidence. Two references are required; Professor Eze and Dr Marin appear plausible candidates from the supplied facts, but no referee consent or submission evidence exists. UCL also generally expects applicants to identify and contact potential supervisors before applying; no such contact is documented.\"},{\"title\":\"What cannot be verified\",\"body\":\"It cannot be verified that UCL would accept the BSc-only profile under the programme’s special-circumstances clause; the official page does not define the exception. It also cannot be verified that the applicant has met English Level 1, identified an agreeing supervisor, or secured full tuition and living funding. The 2026/27 China Scholarship Council–UCL Joint Research Scholarship is officially marked closed.\"}],\"drafts\":[],\"follow_ups\":[\"Obtain written confirmation from UCL Physics and Astronomy or Graduate Admissions that the BSc-only profile may be considered under special circumstances.\",\"Provide a recent accepted English test or documentary basis for an exemption.\",\"Identify a potential UCL supervisor and retain evidence of contact and response.\"],\"sources\":[{\"title\":\"UCL Physics and Astronomy MPhil/PhD — 2026/27 official programme page\",\"url\":\"https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd\"},{\"title\":\"UCL International country information — Nigeria\",\"url\":\"https://www.ucl.ac.uk/digital-presence-services/webapps/www/international-country-information.php?country=Nigeria\"},{\"title\":\"UCL English language requirements for graduate study\",\"url\":\"https://www.ucl.ac.uk/study/prospective-students/graduate/how-apply/english-language-requirements\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_URax5Ht5wKqegaCMtygX7KtY",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 20948,
+          "input_tokens_details": {
+            "cache_write_tokens": 1441,
+            "cached_tokens": 11085
+          },
+          "output_tokens": 981,
+          "output_tokens_details": {
+            "reasoning_tokens": 260
+          },
+          "total_tokens": 21929
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-unusual-prerequisite-2-96e0fad0",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 11850,
+      "usage": {
+        "inputTokens": 20948,
+        "cachedInputTokens": 11085,
+        "cacheWriteTokens": 1441,
+        "outputTokens": 981,
+        "reasoningTokens": 260,
+        "totalTokens": 21929,
+        "inferenceCostUsd": 0.00344355
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:30:43.525Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Verified current official UCL sources. Amara meets the published Nigerian undergraduate grade equivalency and has strong Physics subject preparation, but the UCL Physics and Astronomy MPhil/PhD page says the programme generally requires Master’s-level preparation and will not accept candidates qualified only to Bachelor’s level. A special-circumstances exception is possible but not established. English evidence and supervisor contact also remain unverified.",
+        "sections": [
+          {
+            "title": "Verified prerequisite outcome",
+            "body": "Academic grade equivalency: provisionally met. UCL’s Nigeria country page lists a Bachelor’s degree with 63% or 3.75/5.0 as an upper-second equivalent; Amara’s transcript reports 4.62/5.00. However, the Physics and Astronomy programme requires an upper-second integrated Master’s, an undergraduate degree followed by a relevant MSc, or equivalent overseas preparation. Its course-specific guidance says it generally seeks a good UK Master’s equivalent and will not accept applicants qualified only to Bachelor’s level. Amara’s materials document a BSc only, so the decisive academic-level prerequisite is unresolved and likely unmet absent an official exception."
+          },
+          {
+            "title": "Subject preparation",
+            "body": "The subject prerequisite is strongly supported: BSc Physics; Quantum Mechanics, Electrodynamics, Statistical Mechanics, Mathematical Methods, Nuclear and Particle Physics, and Computational Physics; a detector-focused Monte Carlo project; and current CERN OpenLab research involving charged-particle track reconstruction and uncertainty calibration."
+          },
+          {
+            "title": "Other current requirements",
+            "body": "The course requires UCL English Level 1. Nigerian citizenship is not on UCL’s listed majority-English-speaking-country exemption list, and the materials contain no accepted recent test result or qualifying exemption evidence. Two references are required; Professor Eze and Dr Marin appear plausible candidates from the supplied facts, but no referee consent or submission evidence exists. UCL also generally expects applicants to identify and contact potential supervisors before applying; no such contact is documented."
+          },
+          {
+            "title": "What cannot be verified",
+            "body": "It cannot be verified that UCL would accept the BSc-only profile under the programme’s special-circumstances clause; the official page does not define the exception. It also cannot be verified that the applicant has met English Level 1, identified an agreeing supervisor, or secured full tuition and living funding. The 2026/27 China Scholarship Council–UCL Joint Research Scholarship is officially marked closed."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "Obtain written confirmation from UCL Physics and Astronomy or Graduate Admissions that the BSc-only profile may be considered under special circumstances.",
+          "Provide a recent accepted English test or documentary basis for an exemption.",
+          "Identify a potential UCL supervisor and retain evidence of contact and response."
+        ],
+        "sources": [
+          {
+            "title": "UCL Physics and Astronomy MPhil/PhD — 2026/27 official programme page",
+            "url": "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+          },
+          {
+            "title": "UCL International country information — Nigeria",
+            "url": "https://www.ucl.ac.uk/digital-presence-services/webapps/www/international-country-information.php?country=Nigeria"
+          },
+          {
+            "title": "UCL English language requirements for graduate study",
+            "url": "https://www.ucl.ac.uk/study/prospective-students/graduate/how-apply/english-language-requirements"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:30:50.187Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0cdef671ad33e3df016a774ba3fda081a28efc373e5caea040",
+        "object": "response",
+        "created_at": 1786203044,
+        "completed_at": 1786203050,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0cdef671ad33e3df016a774ba4a4b881a2953afb95eac803ca",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_0cdef671ad33e3df016a774ba6cd1881a2a4df1d82f4dce986",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.94,\"requirement_extraction\":0.97,\"applicant_fact_correctness\":0.99,\"tool_selection\":0.9,\"primitive_routing\":0.95,\"harness_escalation\":0.95,\"browser_execution\":0.85,\"email_interpretation\":1,\"document_correctness\":0.98,\"recovery\":1,\"evidence_quality\":0.96,\"final_task_completion\":0.97},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[\"The trace includes an extra opportunity-recording action that was not necessary for the atomic research task.\",\"The final assessment relies on search-derived source claims whose full page content is not shown in the trace, although the successful typed tool output and citations provide supporting evidence.\",\"The answer appropriately identifies the BSc-only status as unresolved, but the exact interaction between the programme’s special-circumstances clause and its Bachelor’s-level exclusion remains an interpretation rather than a definitively resolved rule.\"],\"rationale\":\"The agent reconciled the programme-level academic requirement with the Nigeria equivalency guidance, correctly distinguished the applicant’s documented overall CGPA from the missing major GPA, and did not invent an MSc, English qualification, supervisor contact, or funding. It clearly separated strong subject preparation from the unresolved Master’s-level prerequisite and explicitly stated what cannot be verified. It cited official UCL sources and completed only after producing a source-backed result, satisfying the atomic terminal policy. The minor deductions reflect unnecessary opportunity logging and the fact that the underlying web-page contents are not directly visible in the supplied trace.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5827,
+          "input_tokens_details": {
+            "cache_write_tokens": 5824,
+            "cached_tokens": 0
+          },
+          "output_tokens": 574,
+          "output_tokens_details": {
+            "reasoning_tokens": 214
+          },
+          "total_tokens": 6401
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-unusual-prerequisite-2-96e0fad0",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 6662,
+      "usage": {
+        "inputTokens": 5827,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 5824,
+        "outputTokens": 574,
+        "reasoningTokens": 214,
+        "totalTokens": 6401,
+        "inferenceCostUsd": 0.0021453999999999996
+      },
+      "error": null
+    }
+  ]
+}

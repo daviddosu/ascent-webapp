@@ -1,0 +1,19 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-incomplete-records-recovery-1-08b4892d",
+  "caseId": "e2e-incomplete-records-recovery",
+  "repetition": 1,
+  "seed": 1933303737,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model stopped without invoking verified completion or a required context boundary.",
+    "The application was not completed to the required ready_for_final_review terminal state.",
+    "The agent correctly refused to guess the conflicting GPA and missing completion date, but its focused user question did not also obtain or request the required academic-referee next step.",
+    "The same GPA/completion-date clarification was requested twice; the second request was redundant after the first request_context call had already placed the case in waiting_for_user status.",
+    "The agent did not successfully recover from the controlled portal save failure; no verified portal checkpoints were produced.",
+    "The Roon contact-resolution request was only queued, with no result or verified academic-referee evidence in the trace.",
+    "The readiness report correctly returned not ready, and the agent did not falsely claim completion."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-incomplete-records-recovery --repetitions 1 --seed 1933303737",
+  "trace": "traces/david-v2-final/e2e-incomplete-records-recovery-r1.json"
+}

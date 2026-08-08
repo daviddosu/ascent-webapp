@@ -1,0 +1,1115 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+  "caseId": "document-cross-programme-factual-invariance",
+  "level": "atomic",
+  "category": "document",
+  "repetition": 3,
+  "seed": 2053835099,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 1,
+  "primitiveSuccesses": 1,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 1,
+  "interventions": 0,
+  "browserActions": 1,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 1,
+    "requirement_extraction": 1,
+    "applicant_fact_correctness": 0.95,
+    "tool_selection": 1,
+    "primitive_routing": 1,
+    "harness_escalation": 1,
+    "browser_execution": 1,
+    "email_interpretation": 0.5,
+    "document_correctness": 1,
+    "recovery": 1,
+    "evidence_quality": 1,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "applicant_fact_correctness",
+    "tool_selection",
+    "document_correctness",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 8,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 69724,
+    "cachedInputTokens": 57815,
+    "cacheWriteTokens": 11882,
+    "outputTokens": 2254,
+    "reasoningTokens": 316,
+    "totalTokens": 71978,
+    "inferenceCostUsd": 0.006836999999999999
+  },
+  "elapsedMs": 45672,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Prepared and verified the programme-specific academic CV PDF for the EMBL International PhD Programme.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:45:12.669Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f0635448192b695dcc04b127fe8",
+        "object": "response",
+        "created_at": 1786203910,
+        "completed_at": 1786203912,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0628704631c40fbe016a774f06faf08192a54110f9a2033125",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0628704631c40fbe016a774f07e7e88192b5f5679ba796369a",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"objective\":\"Verify the official EMBL International PhD Programme page for programme context relevant to the academic CV.\",\"allowed_domains\":[\"www.embl.org\"]}",
+            "call_id": "call_eSrNeodHzuTPYLRU8s88nvAQ",
+            "name": "browser__start_session"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5883,
+          "input_tokens_details": {
+            "cache_write_tokens": 873,
+            "cached_tokens": 5007
+          },
+          "output_tokens": 120,
+          "output_tokens_details": {
+            "reasoning_tokens": 72
+          },
+          "total_tokens": 6003
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2880,
+      "usage": {
+        "inputTokens": 5883,
+        "cachedInputTokens": 5007,
+        "cacheWriteTokens": 873,
+        "outputTokens": 120,
+        "reasoningTokens": 72,
+        "totalTokens": 6003,
+        "inferenceCostUsd": 0.00046299
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:12.671Z",
+      "kind": "tool",
+      "name": "browser.start_session",
+      "input": {
+        "objective": "Verify the official EMBL International PhD Programme page for programme context relevant to the academic CV.",
+        "allowed_domains": [
+          "www.embl.org"
+        ]
+      },
+      "output": {
+        "ok": true,
+        "session_id": "browser-3597fd614062",
+        "task_owned": true,
+        "allowed_domains": [
+          "www.embl.org"
+        ]
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:15.793Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 4,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f0961a081928659d6c9e60e5778",
+        "object": "response",
+        "created_at": 1786203913,
+        "completed_at": 1786203915,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0628704631c40fbe016a774f0aab7c81928e39f777f14005ff",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-3597fd614062\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\"}",
+            "call_id": "call_HOLPYhwY4OdYDKH7oTKJUr3p",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6046,
+          "input_tokens_details": {
+            "cache_write_tokens": 163,
+            "cached_tokens": 5880
+          },
+          "output_tokens": 46,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6092
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3123,
+      "usage": {
+        "inputTokens": 6046,
+        "cachedInputTokens": 5880,
+        "cacheWriteTokens": 163,
+        "outputTokens": 46,
+        "reasoningTokens": 0,
+        "totalTokens": 6092,
+        "inferenceCostUsd": 0.00021414999999999997
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:19.456Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-3597fd614062",
+        "url": "https://www.embl.org/about/info/embl-international-phd-programme/"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "EMBL International PhD Programme – Unique in the world and waiting for you!",
+          "url": "https://www.embl.org/about/info/embl-international-phd-programme/",
+          "headings": [
+            "EMBL International PhD Programme",
+            "Established in 1983, the EMBL International PhD Programme (EIPP) provides PhD students with an excellent starting platform for a successful career in science by fostering early independence and interdisciplinary research.",
+            "Application",
+            "Registration for the 2026 PhD Summer Recruitment is closed",
+            "Programme Overview",
+            "Research at EMBL",
+            "PHD Symposium",
+            "Upcoming symposium",
+            "Contact",
+            "Monika Lachner",
+            "Brenda Stride",
+            "Anna Alasalmi",
+            "Vera Beck",
+            "Fulvio Grigolato",
+            "Martina Alice Candela"
+          ],
+          "text": "European Molecular Biology Laboratory Home Directory Search EMBL International PhD Programme Unique in the world and waiting for you! Home Application Programme overview Why EMBL? Contact us Established in 1983, the EMBL International PhD Programme (EIPP) provides PhD students with an excellent starting platform for a successful career in science by fostering early independence and interdisciplinary research. EMBL is dedicated to promoting excellence in the molecular life sciences throughout Europe. To achieve this goal, we inspire and train talented young scientists to become skilled and creative future leaders in academia, industry and other sectors. The EIPP provides comprehensive interdisciplinary training, maintaining a careful balance between theory and practice, close mentoring and creative freedom, collaborative teamwork and independence. These key characteristics make the EIPP a role model, which has inspired similar programmes at research institutions throughout Europe and the world. The enriching encounter of different nationalities, the friendly and collaborative atmosphere, and the passion for science is what unites EMBL’s diverse staff and provides the ideal setting to forge long-lasting connections and make studying at EMBL a unique formative experience. Application Two recruitment rounds are organised each year across all EMBL sites. The application deadlines and all relevant information are published well in advance. Registration for the 2026 PhD Summer Recruitment is closed The next application round will open in September 2026. Programme Overview Explore the structure and content of the EMBL International PhD Programme. **Longer duration due to COVID-19 related delays. Research at EMBL Find out more about the cutting-edge Research Topics investigated across our different Research Units. The complexity of current biological research questions increasingly calls for interdisciplinary approaches. To prepare our students for this challenge, the EIPP puts great emphasis on bringing together different fields of expertise: we actively encourage candidates with backgrounds in chemistry, physics, mathematics, molecular medicine, computer science or engineering to apply and work closely with biologists to answer fundamental questions in life sciences. PHD Symposium Since its first edition in 2000, the annual EMBL International PhD Symposium in Heidelberg developed into a well-recognized and highly appreciated scientific event. It is always EMBL’s first year PhD students who take on the responsibility for the conceptual development and organization of the meeting. The symposia provide a great platform for networking and scientific exchange, featuring lectures by top-level scientists as well as plenty of opportunities for young researchers to present their work. See the full list of past symposia Upcoming symposium Shifting Gears — Automation, AI, and High-Throughput Methodologies 2 – 4 December 2026 EMBL Heidelberg Contact Monika Lachner Head of EICAT Brenda Stride Fellowship Programmes Lead and Deputy Head of Internal Scientific Training Anna Alasalmi Programme Officer / Training & Events Vera Beck Senior Programme Officer – Graduate Talent Acquisition Fulvio Grigolato Project and Programme Manager Martina Alice Candela Administrative Trainee EMBL Graduate Office EMBL Heidelberg Meyerhofstraße 1 69117 Heidelberg Germany Tel: +49 6221 387-8612/8896 Fax: +49 6221 387-8400 Email: graduate-office@embl.org EMBL is Europe’s life sciences laboratory – an intergovernmental organisation with more than 80 independent research groups covering the spectrum of molecular biology. View the EMBL.org directory MISSIONS Research Scientific services Training Innovation and Translation Integration of Life Sciences ABOUT Contact us Events Jobs News People directory Social media Privacy policy Open science Research Assessment © EMBL 2026 Intranet for staff",
+          "links": [
+            {
+              "text": "European Molecular Biology Laboratory Home",
+              "href": "https://www.embl.org/"
+            },
+            {
+              "text": "Directory",
+              "href": "https://www.embl.org/directory"
+            },
+            {
+              "text": "Search",
+              "href": "https://www.embl.org/search"
+            },
+            {
+              "text": "EMBL International PhD Programme",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme"
+            },
+            {
+              "text": "Home",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/"
+            },
+            {
+              "text": "Application",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/application/"
+            },
+            {
+              "text": "Programme overview",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/"
+            },
+            {
+              "text": "Why EMBL?",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/#why-embl"
+            },
+            {
+              "text": "Contact us",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/#contact"
+            },
+            {
+              "text": "Application",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/application/"
+            },
+            {
+              "text": "Programme Overview",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/"
+            },
+            {
+              "text": "structure and content",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/"
+            },
+            {
+              "text": "Research at EMBL",
+              "href": "https://www.embl.org/research/"
+            },
+            {
+              "text": "Research Topics",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/research-topics/"
+            },
+            {
+              "text": "Research Units",
+              "href": "https://www.embl.org/research/units/"
+            },
+            {
+              "text": "PHD Symposium",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/phd-symposium/"
+            },
+            {
+              "text": "See the full list of past symposia",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/phd-symposium/"
+            },
+            {
+              "text": "Upcoming symposium",
+              "href": "https://phdsymposium.embl-community.io/main/#about"
+            },
+            {
+              "text": "Monika Lachner",
+              "href": "https://www.embl.org/people/person/monika-lachner"
+            },
+            {
+              "text": "Brenda Stride",
+              "href": "https://www.embl.org/people/person/stride"
+            }
+          ],
+          "controls": [],
+          "fields": [],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 3662,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:22.586Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 6,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f0fe8508192901dfb77aa051909",
+        "object": "response",
+        "created_at": 1786203919,
+        "completed_at": 1786203922,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0628704631c40fbe016a774f10b0f48192b4cb211533eef90d",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0628704631c40fbe016a774f1110d4819281d7ffebd48e6653",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-e3b7b78376e0\",\"opportunity\":{\"name\":\"EMBL International PhD Programme\",\"institution\":\"European Molecular Biology Laboratory\",\"programme_type\":\"PhD\",\"fit_summary\":\"Strong fit with computational biology, single-cell analysis, pathogen genomics, and interdisciplinary molecular life sciences; CV should foreground these confirmed areas without adding impact claims.\",\"official_url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\",\"status\":\"verified\"},\"citations\":[{\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\",\"title\":\"EMBL International PhD Programme\",\"excerpt\":\"The programme emphasizes interdisciplinary research in the molecular life sciences and encourages candidates from computer science, mathematics, engineering and related backgrounds to work with biologists.\"}],\"idempotency_key\":\"embl-phd-https://www.embl.org/about/info/embl-international-phd-programme/\"}",
+            "call_id": "call_hkcJqbup6X1SeHq38ORWimIy",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 7481,
+          "input_tokens_details": {
+            "cache_write_tokens": 1435,
+            "cached_tokens": 6043
+          },
+          "output_tokens": 238,
+          "output_tokens_details": {
+            "reasoning_tokens": 26
+          },
+          "total_tokens": 7719
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3132,
+      "usage": {
+        "inputTokens": 7481,
+        "cachedInputTokens": 6043,
+        "cacheWriteTokens": 1435,
+        "outputTokens": 238,
+        "reasoningTokens": 26,
+        "totalTokens": 7719,
+        "inferenceCostUsd": 0.0007658099999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:22.588Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-e3b7b78376e0",
+        "opportunity": {
+          "name": "EMBL International PhD Programme",
+          "institution": "European Molecular Biology Laboratory",
+          "programme_type": "PhD",
+          "fit_summary": "Strong fit with computational biology, single-cell analysis, pathogen genomics, and interdisciplinary molecular life sciences; CV should foreground these confirmed areas without adding impact claims.",
+          "official_url": "https://www.embl.org/about/info/embl-international-phd-programme/",
+          "status": "verified"
+        },
+        "citations": [
+          {
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/",
+            "title": "EMBL International PhD Programme",
+            "excerpt": "The programme emphasizes interdisciplinary research in the molecular life sciences and encourages candidates from computer science, mathematics, engineering and related backgrounds to work with biologists."
+          }
+        ],
+        "idempotency_key": "embl-phd-https://www.embl.org/about/info/embl-international-phd-programme/"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-06f021104bb6",
+        "programme_id": "embl-phd",
+        "citation_count": 1
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:26.014Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 9,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f133404819281713af30390cf76",
+        "object": "response",
+        "created_at": 1786203923,
+        "completed_at": 1786203925,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0628704631c40fbe016a774f14860c8192b1e92a11b0f94fe8",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-e3b7b78376e0\",\"opportunity_id\":\"opportunity-06f021104bb6\",\"portal_account\":{\"status\":\"not_required_for_document_objective\"},\"requirements\":[{\"name\":\"Academic CV\",\"status\":\"in_progress\",\"source_asset_ids\":[\"biology-cv\",\"biology-transcript\",\"biology-employment\"],\"constraints\":[\"Emphasize computational biology and single-cell research\",\"Keep publication status, dates, and metrics identical to source materials\",\"Do not fabricate impact claims\"]}],\"deadlines\":[],\"next_action\":\"Generate a programme-specific academic CV PDF from confirmed source facts, then verify its provenance and invariance.\",\"idempotency_key\":\"case-embl-phd-document-cross-programme-factual-invariance\"}",
+            "call_id": "call_qyPi69rN8ZQ0EaYwTYvW59lc",
+            "name": "application__create_case"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 7765,
+          "input_tokens_details": {
+            "cache_write_tokens": 284,
+            "cached_tokens": 7478
+          },
+          "output_tokens": 166,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 7931
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3427,
+      "usage": {
+        "inputTokens": 7765,
+        "cachedInputTokens": 7478,
+        "cacheWriteTokens": 284,
+        "outputTokens": 166,
+        "reasoningTokens": 0,
+        "totalTokens": 7931,
+        "inferenceCostUsd": 0.00042036
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:26.016Z",
+      "kind": "tool",
+      "name": "application.create_case",
+      "input": {
+        "campaign_id": "campaign-e3b7b78376e0",
+        "opportunity_id": "opportunity-06f021104bb6",
+        "portal_account": {
+          "status": "not_required_for_document_objective"
+        },
+        "requirements": [
+          {
+            "name": "Academic CV",
+            "status": "in_progress",
+            "source_asset_ids": [
+              "biology-cv",
+              "biology-transcript",
+              "biology-employment"
+            ],
+            "constraints": [
+              "Emphasize computational biology and single-cell research",
+              "Keep publication status, dates, and metrics identical to source materials",
+              "Do not fabricate impact claims"
+            ]
+          }
+        ],
+        "deadlines": [],
+        "next_action": "Generate a programme-specific academic CV PDF from confirmed source facts, then verify its provenance and invariance.",
+        "idempotency_key": "case-embl-phd-document-cross-programme-factual-invariance"
+      },
+      "output": {
+        "ok": true,
+        "application_case_id": "case-06f021104bb6",
+        "programme_id": "embl-phd",
+        "state": "preparing"
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:30.988Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 11,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f16756c8192a4f3697210381240",
+        "object": "response",
+        "created_at": 1786203926,
+        "completed_at": 1786203930,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0628704631c40fbe016a774f174cd88192ad0eaff2e577a686",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0628704631c40fbe016a774f17c1348192bfe44f5cc10ead17",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-06f021104bb6\",\"filename\":\"Priya_Nwosu_EMBL_Computational_Biology_CV.pdf\",\"page_target\":\"academic\",\"section_order\":[\"profile\",\"education\",\"research experience\",\"publications\",\"technical skills\",\"additional information\"],\"cv_data\":{\"profile\":{\"items\":[{\"text\":\"Computational biology researcher focused on single-cell RNA sequencing, host–pathogen research, pathogen genomics, reproducible workflows, and Bayesian modelling.\",\"provenance\":[\"biology-cv\",\"biology-goals\"]}]},\"education\":{\"items\":[{\"institution\":\"African Institute for Mathematical Sciences\",\"degree\":\"MSc Bioinformatics\",\"dates\":\"2022–2024\",\"details\":[\"Final average: 82/100.\",\"Requirements completed 18 June 2024; degree conferred 30 August 2024.\",\"Graduate courses: Statistical Genetics; Algorithms for Bioinformatics; Machine Learning; Genomics; Research Methods.\"],\"provenance\":[\"biology-cv\",\"biology-transcript\"]},{\"institution\":\"University of Ibadan\",\"degree\":\"BSc Molecular Biology\",\"dates\":\"2017–2021\",\"details\":[\"CGPA: 4.41/5.00.\",\"Requirements completed 9 July 2021; degree conferred 31 August 2021.\"],\"provenance\":[\"biology-cv\",\"biology-transcript\"]}]},\"research experience\":{\"items\":[{\"role\":\"Research Associate\",\"institution\":\"West African Centre for Cell Biology of Infectious Pathogens\",\"dates\":\"12 August 2024–present\",\"details\":[\"Research uses single-cell RNA sequencing and pathogen genomics.\"],\"provenance\":[\"biology-cv\",\"biology-employment\"]},{\"role\":\"MSc Research Fellow\",\"institution\":\"West African Centre for Cell Biology of Infectious Pathogens\",\"dates\":\"1 September 2023–18 June 2024\",\"details\":[\"Fellowship overlapped with full-time study and was explicitly part of the degree.\"],\"provenance\":[\"biology-employment\"]}]},\"publications\":{\"items\":[{\"citation\":\"Nwosu, Priya Chidinma. “Cell-state signatures of severe malaria.” PLOS Computational Biology.\",\"status\":\"Accepted 12 June 2026; in press. DOI not yet assigned.\",\"provenance\":[\"biology-cv\"]},{\"citation\":\"Co-author of two published genomic-surveillance papers.\",\"status\":\"Published; source materials provide no titles, dates, venues, or metrics.\",\"provenance\":[\"biology-cv\"]}]},\"technical skills\":{\"items\":[{\"text\":\"R; Python; Nextflow; scRNA-seq; Bayesian modelling.\",\"provenance\":[\"biology-cv\"]}]},\"additional information\":{\"items\":[{\"text\":\"Citizenship: Nigerian. Permanent residence: Ghanaian.\",\"provenance\":[\"biology-employment\"]}]}},\"meta_prompt_version\":\"graduate_application_cv_v1-embl-computational-biology-v1\",\"idempotency_key\":\"cv-case-06f021104bb6-priya-nwosu-v1\"}",
+            "call_id": "call_hyk9wflfv4xrpCgmIe6iVFoT",
+            "name": "application__generate_cv"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 7975,
+          "input_tokens_details": {
+            "cache_write_tokens": 210,
+            "cached_tokens": 7762
+          },
+          "output_tokens": 656,
+          "output_tokens_details": {
+            "reasoning_tokens": 34
+          },
+          "total_tokens": 8631
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 4973,
+      "usage": {
+        "inputTokens": 7975,
+        "cachedInputTokens": 7762,
+        "cacheWriteTokens": 210,
+        "outputTokens": 656,
+        "reasoningTokens": 34,
+        "totalTokens": 8631,
+        "inferenceCostUsd": 0.00099554
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:30.991Z",
+      "kind": "tool",
+      "name": "application.generate_cv",
+      "input": {
+        "application_case_id": "case-06f021104bb6",
+        "filename": "Priya_Nwosu_EMBL_Computational_Biology_CV.pdf",
+        "page_target": "academic",
+        "section_order": [
+          "profile",
+          "education",
+          "research experience",
+          "publications",
+          "technical skills",
+          "additional information"
+        ],
+        "cv_data": {
+          "profile": {
+            "items": [
+              {
+                "text": "Computational biology researcher focused on single-cell RNA sequencing, host–pathogen research, pathogen genomics, reproducible workflows, and Bayesian modelling.",
+                "provenance": [
+                  "biology-cv",
+                  "biology-goals"
+                ]
+              }
+            ]
+          },
+          "education": {
+            "items": [
+              {
+                "institution": "African Institute for Mathematical Sciences",
+                "degree": "MSc Bioinformatics",
+                "dates": "2022–2024",
+                "details": [
+                  "Final average: 82/100.",
+                  "Requirements completed 18 June 2024; degree conferred 30 August 2024.",
+                  "Graduate courses: Statistical Genetics; Algorithms for Bioinformatics; Machine Learning; Genomics; Research Methods."
+                ],
+                "provenance": [
+                  "biology-cv",
+                  "biology-transcript"
+                ]
+              },
+              {
+                "institution": "University of Ibadan",
+                "degree": "BSc Molecular Biology",
+                "dates": "2017–2021",
+                "details": [
+                  "CGPA: 4.41/5.00.",
+                  "Requirements completed 9 July 2021; degree conferred 31 August 2021."
+                ],
+                "provenance": [
+                  "biology-cv",
+                  "biology-transcript"
+                ]
+              }
+            ]
+          },
+          "research experience": {
+            "items": [
+              {
+                "role": "Research Associate",
+                "institution": "West African Centre for Cell Biology of Infectious Pathogens",
+                "dates": "12 August 2024–present",
+                "details": [
+                  "Research uses single-cell RNA sequencing and pathogen genomics."
+                ],
+                "provenance": [
+                  "biology-cv",
+                  "biology-employment"
+                ]
+              },
+              {
+                "role": "MSc Research Fellow",
+                "institution": "West African Centre for Cell Biology of Infectious Pathogens",
+                "dates": "1 September 2023–18 June 2024",
+                "details": [
+                  "Fellowship overlapped with full-time study and was explicitly part of the degree."
+                ],
+                "provenance": [
+                  "biology-employment"
+                ]
+              }
+            ]
+          },
+          "publications": {
+            "items": [
+              {
+                "citation": "Nwosu, Priya Chidinma. “Cell-state signatures of severe malaria.” PLOS Computational Biology.",
+                "status": "Accepted 12 June 2026; in press. DOI not yet assigned.",
+                "provenance": [
+                  "biology-cv"
+                ]
+              },
+              {
+                "citation": "Co-author of two published genomic-surveillance papers.",
+                "status": "Published; source materials provide no titles, dates, venues, or metrics.",
+                "provenance": [
+                  "biology-cv"
+                ]
+              }
+            ]
+          },
+          "technical skills": {
+            "items": [
+              {
+                "text": "R; Python; Nextflow; scRNA-seq; Bayesian modelling.",
+                "provenance": [
+                  "biology-cv"
+                ]
+              }
+            ]
+          },
+          "additional information": {
+            "items": [
+              {
+                "text": "Citizenship: Nigerian. Permanent residence: Ghanaian.",
+                "provenance": [
+                  "biology-employment"
+                ]
+              }
+            ]
+          }
+        },
+        "meta_prompt_version": "graduate_application_cv_v1-embl-computational-biology-v1",
+        "idempotency_key": "cv-case-06f021104bb6-priya-nwosu-v1"
+      },
+      "output": {
+        "ok": true,
+        "artifact_id": "artifact-90db4cae45da",
+        "filename": "Priya_Nwosu_EMBL_Computational_Biology_CV.pdf",
+        "checksum": "d0a6356246bf",
+        "approval_status": "approved",
+        "factual_validation": true,
+        "relevance_signal": true
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:34.213Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 14,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f1b7cbc819292595e363440b4f1",
+        "object": "response",
+        "created_at": 1786203931,
+        "completed_at": 1786203933,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0628704631c40fbe016a774f1c41c48192bb615312d1f28eaf",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0628704631c40fbe016a774f1c7e748192b97ceedd1c520be2",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-06f021104bb6\",\"kind\":\"uploaded_file_verification\",\"source_url\":null,\"provider\":\"ShotCount document renderer\",\"provider_message_id\":null,\"provider_thread_id\":null,\"asset_id\":\"artifact-90db4cae45da\",\"excerpt\":\"Rendered academic CV emphasizes computational biology and single-cell research; publication status, date, DOI status, education dates, and source-provided metrics were preserved.\",\"metadata\":{\"filename\":\"Priya_Nwosu_EMBL_Computational_Biology_CV.pdf\",\"checksum\":\"d0a6356246bf\",\"factual_validation\":true,\"relevance_signal\":true,\"source_assets\":[\"biology-cv\",\"biology-transcript\",\"biology-employment\",\"biology-goals\"],\"template_version\":\"graduate_application_cv_v1\",\"prompt_version\":\"graduate_application_cv_v1-embl-computational-biology-v1\"},\"idempotency_key\":\"evidence-artifact-90db4cae45da\"}",
+            "call_id": "call_YxPE57DyFr3zqdpO0rYMAwDS",
+            "name": "application__record_evidence"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8707,
+          "input_tokens_details": {
+            "cache_write_tokens": 732,
+            "cached_tokens": 7972
+          },
+          "output_tokens": 228,
+          "output_tokens_details": {
+            "reasoning_tokens": 12
+          },
+          "total_tokens": 8935
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3223,
+      "usage": {
+        "inputTokens": 8707,
+        "cachedInputTokens": 7972,
+        "cacheWriteTokens": 732,
+        "outputTokens": 228,
+        "reasoningTokens": 12,
+        "totalTokens": 8935,
+        "inferenceCostUsd": 0.0006166399999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:34.215Z",
+      "kind": "tool",
+      "name": "application.record_evidence",
+      "input": {
+        "application_case_id": "case-06f021104bb6",
+        "kind": "uploaded_file_verification",
+        "source_url": null,
+        "provider": "ShotCount document renderer",
+        "provider_message_id": null,
+        "provider_thread_id": null,
+        "asset_id": "artifact-90db4cae45da",
+        "excerpt": "Rendered academic CV emphasizes computational biology and single-cell research; publication status, date, DOI status, education dates, and source-provided metrics were preserved.",
+        "metadata": {
+          "filename": "Priya_Nwosu_EMBL_Computational_Biology_CV.pdf",
+          "checksum": "d0a6356246bf",
+          "factual_validation": true,
+          "relevance_signal": true,
+          "source_assets": [
+            "biology-cv",
+            "biology-transcript",
+            "biology-employment",
+            "biology-goals"
+          ],
+          "template_version": "graduate_application_cv_v1",
+          "prompt_version": "graduate_application_cv_v1-embl-computational-biology-v1"
+        },
+        "idempotency_key": "evidence-artifact-90db4cae45da"
+      },
+      "output": {
+        "ok": true,
+        "evidence_id": "evidence-a31eccf5fb74",
+        "immutable": true
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:36.990Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 17,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f1eb5bc81929eb3e9dbb3f9eb2d",
+        "object": "response",
+        "created_at": 1786203934,
+        "completed_at": 1786203936,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_0628704631c40fbe016a774f1fa6c48192a2ee503c38fb5619",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-06f021104bb6\",\"requirement_id\":\"requirement-1\",\"status\":\"verified\",\"linked_artifact_id\":\"artifact-90db4cae45da\",\"verification_evidence_ids\":[\"evidence-a31eccf5fb74\"],\"blocker_reason\":null,\"idempotency_key\":\"req-cv-verified-artifact-90db4cae45da\"}",
+            "call_id": "call_z1hc3XcU2VGyJZvxMpxuDp92",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8972,
+          "input_tokens_details": {
+            "cache_write_tokens": 265,
+            "cached_tokens": 8704
+          },
+          "output_tokens": 100,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 9072
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2777,
+      "usage": {
+        "inputTokens": 8972,
+        "cachedInputTokens": 8704,
+        "cacheWriteTokens": 265,
+        "outputTokens": 100,
+        "reasoningTokens": 0,
+        "totalTokens": 9072,
+        "inferenceCostUsd": 0.00036093000000000003
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:36.992Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-06f021104bb6",
+        "requirement_id": "requirement-1",
+        "status": "verified",
+        "linked_artifact_id": "artifact-90db4cae45da",
+        "verification_evidence_ids": [
+          "evidence-a31eccf5fb74"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "req-cv-verified-artifact-90db4cae45da"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-ca519ede69de",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:40.639Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 1821
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 193729, Requested 9255. Please try again in 895ms. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:45:50.812Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 19,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_0628704631c40fbe016a774f27581c81928cd81ab299ae567f",
+        "object": "response",
+        "created_at": 1786203943,
+        "completed_at": 1786203949,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0628704631c40fbe016a774f288bb0819285b7c55228b439ea",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0628704631c40fbe016a774f28c4488192bb7af5e5c1b97769",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Prepared and verified the programme-specific academic CV PDF for the EMBL International PhD Programme.\",\"sections\":[{\"title\":\"Document\",\"body\":\"Created Priya_Nwosu_EMBL_Computational_Biology_CV.pdf (checksum d0a6356246bf). The CV foregrounds computational biology, single-cell RNA sequencing, pathogen genomics, reproducible workflows, and Bayesian modelling.\"},{\"title\":\"Factual invariance\",\"body\":\"Source-provided publication status and date were preserved: accepted 12 June 2026, in press, DOI not yet assigned. Education dates, CGPA/final average, employment dates, and the stated publication information were retained without fabricated impact claims.\"},{\"title\":\"Verification\",\"body\":\"Renderer validation confirmed factual_validation=true and relevance_signal=true. Evidence and the verified CV requirement were persisted to the EMBL application case.\"}],\"drafts\":[],\"follow_ups\":[\"Review the generated PDF for presentation preferences before using it in any application.\"],\"sources\":[{\"title\":\"EMBL International PhD Programme — official programme page\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_tT6zLD9gV79KfhapJdATRWLE",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 9105,
+          "input_tokens_details": {
+            "cache_write_tokens": 133,
+            "cached_tokens": 8969
+          },
+          "output_tokens": 285,
+          "output_tokens_details": {
+            "reasoning_tokens": 9
+          },
+          "total_tokens": 9390
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 13822,
+      "usage": {
+        "inputTokens": 9105,
+        "cachedInputTokens": 8969,
+        "cacheWriteTokens": 133,
+        "outputTokens": 285,
+        "reasoningTokens": 9,
+        "totalTokens": 9390,
+        "inferenceCostUsd": 0.00055523
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:50.814Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Prepared and verified the programme-specific academic CV PDF for the EMBL International PhD Programme.",
+        "sections": [
+          {
+            "title": "Document",
+            "body": "Created Priya_Nwosu_EMBL_Computational_Biology_CV.pdf (checksum d0a6356246bf). The CV foregrounds computational biology, single-cell RNA sequencing, pathogen genomics, reproducible workflows, and Bayesian modelling."
+          },
+          {
+            "title": "Factual invariance",
+            "body": "Source-provided publication status and date were preserved: accepted 12 June 2026, in press, DOI not yet assigned. Education dates, CGPA/final average, employment dates, and the stated publication information were retained without fabricated impact claims."
+          },
+          {
+            "title": "Verification",
+            "body": "Renderer validation confirmed factual_validation=true and relevance_signal=true. Evidence and the verified CV requirement were persisted to the EMBL application case."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "Review the generated PDF for presentation preferences before using it in any application."
+        ],
+        "sources": [
+          {
+            "title": "EMBL International PhD Programme — official programme page",
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:45:55.460Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_03f495e661594b53016a774f2f5cfc819184abdcfa17f28eed",
+        "object": "response",
+        "created_at": 1786203951,
+        "completed_at": 1786203955,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_03f495e661594b53016a774f2fcf74819181da3b9ab3f908d8",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_03f495e661594b53016a774f319ed88191af63dfda64f4b4ec",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":1,\"requirement_extraction\":1,\"applicant_fact_correctness\":0.95,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":1,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[],\"rationale\":\"The agent verified the official EMBL programme page, extracted the CV-specific constraints, generated a relevant academic CV, and preserved the source publication status, date, DOI status, education dates, employment dates, and metrics. The artifact was directly verified as factually valid and relevant, and the requirement was recorded as verified with linked evidence, satisfying the verified_document terminal policy. The only minor concern is the awkward wording “Permanent residence: Ghanaian,” which reflects the source’s “Ghanaian permanent residence” but could be clearer as residence country/status; it does not amount to a fabricated citizenship claim.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 7790,
+          "input_tokens_details": {
+            "cache_write_tokens": 7787,
+            "cached_tokens": 0
+          },
+          "output_tokens": 415,
+          "output_tokens_details": {
+            "reasoning_tokens": 163
+          },
+          "total_tokens": 8205
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-document-cross-programme-factual-invariance-3-f2c43c43",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 4645,
+      "usage": {
+        "inputTokens": 7790,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 7787,
+        "outputTokens": 415,
+        "reasoningTokens": 163,
+        "totalTokens": 8205,
+        "inferenceCostUsd": 0.0024453499999999998
+      },
+      "error": null
+    }
+  ]
+}

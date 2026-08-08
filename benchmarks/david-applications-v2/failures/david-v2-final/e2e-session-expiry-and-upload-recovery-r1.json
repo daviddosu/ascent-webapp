@@ -1,0 +1,19 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-session-expiry-and-upload-recovery-1-7e8d2290",
+  "caseId": "e2e-session-expiry-and-upload-recovery",
+  "repetition": 1,
+  "seed": 2371171373,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model entered an applicant value unsupported by source materials: degree_title.",
+    "The agent attempted to enter the unsupported degree title “Bachelor of Engineering, Electrical and Electronic Engineering,” triggering a factual-validation error and leaving an unresolved education issue.",
+    "The agent never saved or verified the identity section because current and permanent street addresses were absent from the supplied materials.",
+    "The agent did not complete or verify education after entering the supported degree title and known education fields; major GPA correctly remained blank, but the section remained unresolved.",
+    "The portal’s review page saying sections appeared saved was not sufficient evidence for readiness, and the readiness report correctly failed.",
+    "The agent recovered the browser session and successfully verified employment, publications, research, funding, conduct, and documents, including delayed transcript upload recovery.",
+    "The final response accurately avoided claiming readiness or submission."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-session-expiry-and-upload-recovery --repetitions 1 --seed 2371171373",
+  "trace": "traces/david-v2-final/e2e-session-expiry-and-upload-recovery-r1.json"
+}

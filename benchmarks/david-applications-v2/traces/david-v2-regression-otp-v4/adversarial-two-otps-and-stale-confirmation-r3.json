@@ -1,0 +1,346 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-adversarial-two-otps-and-stale-confirmation-3-7167108f",
+  "caseId": "adversarial-two-otps-and-stale-confirmation",
+  "level": "atomic",
+  "category": "adversarial",
+  "repetition": 3,
+  "seed": 1184996789,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.5,
+    "requirement_extraction": 0.5,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 0.5,
+    "harness_escalation": 1,
+    "browser_execution": 0.5,
+    "email_interpretation": 1,
+    "document_correctness": 0.5,
+    "recovery": 1,
+    "evidence_quality": 0.5,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "applicant_fact_correctness",
+    "tool_selection",
+    "primitive_routing",
+    "harness_escalation",
+    "browser_execution",
+    "recovery",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 2,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 15109,
+    "cachedInputTokens": 11512,
+    "cacheWriteTokens": 3588,
+    "outputTokens": 758,
+    "reasoningTokens": 293,
+    "totalTokens": 15867,
+    "inferenceCostUsd": 0.00203864
+  },
+  "elapsedMs": 10616,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4d71be233ace9dd30abf8c61b9be9464d0871f03df012dfe16d1212caaee9c1b",
+    "davidPromptVersion": "david-prompt@4",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "7537d8ed04bcd1044e812d5ac12782545a114e9f"
+  },
+  "terminalSummary": "Requested retrieval of only the newest OTP for the current application case and excluded both the older OTP thread and stale confirmation.",
+  "trace": [
+    {
+      "at": "2026-08-08T18:09:52.727Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0a3e780336fff4cf016a7770ee4a8c81a2920c943ac3355eea",
+        "object": "response",
+        "created_at": 1786212590,
+        "completed_at": 1786212592,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0a3e780336fff4cf016a7770ef258c81a2b8ab226f12e874b4",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0a3e780336fff4cf016a7770efb37881a28913935dd36a4a4e",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-econ-lse\",\"request_kind\":\"search_otp\",\"payload\":{\"provider\":\"email\",\"thread_id\":\"thread-otp-current\",\"case_id\":\"case-econ-lse\",\"selection\":\"newest verification code for this case only\",\"exclude_thread_ids\":[\"thread-otp-old\",\"thread-confirm-old\"],\"do_not_use_stale_confirmation\":true},\"idempotency_key\":\"case-econ-lse:search-newest-otp:thread-otp-current\"}",
+            "call_id": "call_ejx7Np4OxiMcU54rU8RVrmHp",
+            "name": "application__request_roon"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6267,
+          "input_tokens_details": {
+            "cache_write_tokens": 1016,
+            "cached_tokens": 5248
+          },
+          "output_tokens": 164,
+          "output_tokens_details": {
+            "reasoning_tokens": 49
+          },
+          "total_tokens": 6431
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-3-7167108f",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@4"
+        }
+      },
+      "elapsedMs": 2856,
+      "usage": {
+        "inputTokens": 6267,
+        "cachedInputTokens": 5248,
+        "cacheWriteTokens": 1016,
+        "outputTokens": 164,
+        "reasoningTokens": 49,
+        "totalTokens": 6431,
+        "inferenceCostUsd": 0.00055636
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T18:09:52.728Z",
+      "kind": "tool",
+      "name": "application.request_roon",
+      "input": {
+        "application_case_id": "case-econ-lse",
+        "request_kind": "search_otp",
+        "payload": {
+          "provider": "email",
+          "thread_id": "thread-otp-current",
+          "case_id": "case-econ-lse",
+          "selection": "newest verification code for this case only",
+          "exclude_thread_ids": [
+            "thread-otp-old",
+            "thread-confirm-old"
+          ],
+          "do_not_use_stale_confirmation": true
+        },
+        "idempotency_key": "case-econ-lse:search-newest-otp:thread-otp-current"
+      },
+      "output": {
+        "ok": true,
+        "request_id": "roon-fdf394231672",
+        "status": "completed",
+        "matched_case_id": "case-econ-lse",
+        "provider_thread_id": "thread-otp-current",
+        "otp_redacted": "••••••",
+        "delivery": "ephemeral_to_david",
+        "newest_matching_message": true
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T18:09:56.066Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 4,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0a3e780336fff4cf016a7770f1224881a2a65df3e73a94bfbe",
+        "object": "response",
+        "created_at": 1786212593,
+        "completed_at": 1786212595,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0a3e780336fff4cf016a7770f1f76081a2b10a34f8f7b8867e",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0a3e780336fff4cf016a7770f267e081a2a232be21d85c86eb",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Requested retrieval of only the newest OTP for the current application case and excluded both the older OTP thread and stale confirmation.\",\"sections\":[{\"title\":\"Verification handling\",\"body\":\"Roon matched case-econ-lse to the newest verification message in thread-otp-current. The code was delivered ephemerally and is not persisted or displayed here.\"},{\"title\":\"Excluded evidence\",\"body\":\"The older OTP thread and the confirmation from the previous benchmark run were explicitly excluded; no completion claim was based on either.\"}],\"drafts\":[],\"follow_ups\":[],\"sources\":[],\"prepared_result\":false,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_OckFRj66UUx6OJwKLngdJ1SR",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6506,
+          "input_tokens_details": {
+            "cache_write_tokens": 239,
+            "cached_tokens": 6264
+          },
+          "output_tokens": 189,
+          "output_tokens_details": {
+            "reasoning_tokens": 32
+          },
+          "total_tokens": 6695
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-3-7167108f",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@4"
+        }
+      },
+      "elapsedMs": 3338,
+      "usage": {
+        "inputTokens": 6506,
+        "cachedInputTokens": 6264,
+        "cacheWriteTokens": 239,
+        "outputTokens": 189,
+        "reasoningTokens": 32,
+        "totalTokens": 6695,
+        "inferenceCostUsd": 0.0004124299999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T18:09:56.067Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Requested retrieval of only the newest OTP for the current application case and excluded both the older OTP thread and stale confirmation.",
+        "sections": [
+          {
+            "title": "Verification handling",
+            "body": "Roon matched case-econ-lse to the newest verification message in thread-otp-current. The code was delivered ephemerally and is not persisted or displayed here."
+          },
+          {
+            "title": "Excluded evidence",
+            "body": "The older OTP thread and the confirmation from the previous benchmark run were explicitly excluded; no completion claim was based on either."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [],
+        "sources": [],
+        "prepared_result": false,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T18:10:00.484Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_059b8da98fa38df8016a7770f4852081a0a912063b6071d346",
+        "object": "response",
+        "created_at": 1786212596,
+        "completed_at": 1786212600,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_059b8da98fa38df8016a7770f531e081a08c36135e86365828",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_059b8da98fa38df8016a7770f72b1081a0bd974eeaf6d41311",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":1,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":1,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[],\"rationale\":\"The agent correctly identified the current case and thread, requested only the newest OTP through Roon, explicitly excluded both stale threads, and relied on the tool's completed, case-matched response. It did not claim that the application itself was completed; the completion summary accurately described the orchestration outcome and ephemeral delivery.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 2336,
+          "input_tokens_details": {
+            "cache_write_tokens": 2333,
+            "cached_tokens": 0
+          },
+          "output_tokens": 405,
+          "output_tokens_details": {
+            "reasoning_tokens": 212
+          },
+          "total_tokens": 2741
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-3-7167108f",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@4"
+        }
+      },
+      "elapsedMs": 4417,
+      "usage": {
+        "inputTokens": 2336,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 2333,
+        "outputTokens": 405,
+        "reasoningTokens": 212,
+        "totalTokens": 2741,
+        "inferenceCostUsd": 0.00106985
+      },
+      "error": null
+    }
+  ]
+}

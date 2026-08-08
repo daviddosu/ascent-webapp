@@ -1,0 +1,21 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-e2e-engineering-to-ai-1-4b274508",
+  "caseId": "e2e-engineering-to-ai",
+  "repetition": 1,
+  "seed": 805481505,
+  "rootCause": "model_reasoning",
+  "failureReasons": [
+    "The model entered an applicant value unsupported by source materials: degree_title.",
+    "fetch failed",
+    "The agent attempted to enter the unsupported degree title “Bachelor of Engineering, Electrical and Electronic Engineering,” which the fixture explicitly rejected and the oracle marks as a fabricated applicant fact, despite later correcting it to the grounded BEng wording.",
+    "The agent did not reach the required ready_for_final_review terminal state; no review-section or final-review validation evidence was obtained.",
+    "Only seven of the required portal sections were checkpointed before the trace ended; Review was never reached.",
+    "References, English-language status, and prerequisite interpretation remained unresolved.",
+    "The context-request tool was invoked for information already available or not necessary, and the agent did not effectively resolve the genuinely necessary outstanding questions.",
+    "The approved CV and personal statement were relevant and factually supported, and the manuscript’s submitted status was correctly preserved.",
+    "The final response accurately reported incomplete status and did not falsely claim submission or completion."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case e2e-engineering-to-ai --repetitions 1 --seed 805481505",
+  "trace": "traces/david-v2-final/e2e-engineering-to-ai-r1.json"
+}

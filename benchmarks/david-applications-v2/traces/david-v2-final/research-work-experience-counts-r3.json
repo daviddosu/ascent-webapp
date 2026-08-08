@@ -1,0 +1,280 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-research-work-experience-counts-3-15bc48b3",
+  "caseId": "research-work-experience-counts",
+  "level": "atomic",
+  "category": "research",
+  "repetition": 3,
+  "seed": 1263023395,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.91,
+    "requirement_extraction": 0.475,
+    "applicant_fact_correctness": 0.93,
+    "tool_selection": 0.975,
+    "primitive_routing": 0.475,
+    "harness_escalation": 1,
+    "browser_execution": 0.45,
+    "email_interpretation": 0.5,
+    "document_correctness": 0.5,
+    "recovery": 1,
+    "evidence_quality": 0.9,
+    "final_task_completion": 0.92
+  },
+  "applicableDimensions": [
+    "research_correctness",
+    "requirement_extraction",
+    "applicant_fact_correctness",
+    "tool_selection",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 1,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 21409,
+    "cachedInputTokens": 9403,
+    "cacheWriteTokens": 3654,
+    "outputTokens": 1688,
+    "reasoningTokens": 731,
+    "totalTokens": 23097,
+    "inferenceCostUsd": 0.00479756
+  },
+  "elapsedMs": 20196,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Official LSE evidence shows the two roles provide relevant policy experience but do not meet the MPP’s stated five-year experience expectation as of August 8, 2026.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:31:12.569Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0d7e619318387bf5016a774bb55a0881a283c542de530ac9dc",
+        "object": "response",
+        "created_at": 1786203061,
+        "completed_at": 1786203072,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0d7e619318387bf5016a774bb8e02881a28cfdda9e2f60cb80",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_0d7e619318387bf5016a774bb9636481a2945fbe4e3e8e9884",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:lse.ac.uk/study-at-lse/graduate/master-of-public-policy work experience requirements Master of Public Policy LSE"
+              ],
+              "query": "site:lse.ac.uk/study-at-lse/graduate/master-of-public-policy work experience requirements Master of Public Policy LSE"
+            }
+          },
+          {
+            "id": "rs_0d7e619318387bf5016a774bbc10c481a2934fa7210042493a",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0d7e619318387bf5016a774bbe73e881a2a8a64def8379179f",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Official LSE evidence shows the two roles provide relevant policy experience but do not meet the MPP’s stated five-year experience expectation as of August 8, 2026.\",\"sections\":[{\"title\":\"Finding\",\"body\":\"LSE’s current 2026/27 Master of Public Policy page states that applicants must have at least five years of policy-relevant experience, while noting that exceptions may be granted for outstanding candidates with slightly less experience. This is an admissions entry expectation—not merely a competitive preference. citeturn0search0\"},{\"title\":\"Applicant experience calculation\",\"body\":\"Using the supplied employment history and excluding the 16 December 2023–3 March 2024 relocation/right-to-work interval: Accra Metropolitan Research Unit, 5 September 2022–15 December 2023: approximately 1 year 3 months; Institute for Fiscal Studies, 4 March 2024–8 August 2026: approximately 2 years 5 months. Combined: approximately 3 years 8 months of policy/research experience as of 8 August 2026.\"},{\"title\":\"How the roles fit\",\"body\":\"Both roles appear substantively policy-relevant: municipal revenue and social-protection/evaluation work at the Accra unit, followed by research at IFS. They therefore support the required type of experience, but the documented total is about 1 year 4 months below the ordinary five-year threshold. On the official wording, Lena would need to rely on the stated exception for an outstanding candidate with slightly less experience; the source does not guarantee that an exception will be granted. Her First Class Economics degree and quantitative coursework are relevant strengths, but they do not replace the published experience expectation. citeturn0search0\"},{\"title\":\"Conclusion\",\"body\":\"Verdict: the roles satisfy the policy-relevance dimension, but not the current five-year minimum on their face. This is an eligibility risk requiring an exception assessment, not simply a competitive disadvantage. The application should accurately present the roles and explain their policy impact, while avoiding any claim that the five-year requirement has been met.\"}],\"drafts\":[],\"follow_ups\":[\"If applying, verify directly with LSE SPP whether approximately 3 years 8 months may qualify as the programme’s “slightly less” exception.\"],\"sources\":[{\"title\":\"LSE — Master of Public Policy (2026/27 official programme page)\",\"url\":\"https://www.lse.ac.uk/study-at-lse/graduate/master-of-public-policy\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_HCpvgbIfBaBS48DG4PKLKxUS",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 18624,
+          "input_tokens_details": {
+            "cache_write_tokens": 872,
+            "cached_tokens": 9403
+          },
+          "output_tokens": 815,
+          "output_tokens_details": {
+            "reasoning_tokens": 248
+          },
+          "total_tokens": 19439
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-work-experience-counts-3-15bc48b3",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 11666,
+      "usage": {
+        "inputTokens": 18624,
+        "cachedInputTokens": 9403,
+        "cacheWriteTokens": 872,
+        "outputTokens": 815,
+        "reasoningTokens": 248,
+        "totalTokens": 19439,
+        "inferenceCostUsd": 0.0030538600000000003
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:31:12.570Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Official LSE evidence shows the two roles provide relevant policy experience but do not meet the MPP’s stated five-year experience expectation as of August 8, 2026.",
+        "sections": [
+          {
+            "title": "Finding",
+            "body": "LSE’s current 2026/27 Master of Public Policy page states that applicants must have at least five years of policy-relevant experience, while noting that exceptions may be granted for outstanding candidates with slightly less experience. This is an admissions entry expectation—not merely a competitive preference. citeturn0search0"
+          },
+          {
+            "title": "Applicant experience calculation",
+            "body": "Using the supplied employment history and excluding the 16 December 2023–3 March 2024 relocation/right-to-work interval: Accra Metropolitan Research Unit, 5 September 2022–15 December 2023: approximately 1 year 3 months; Institute for Fiscal Studies, 4 March 2024–8 August 2026: approximately 2 years 5 months. Combined: approximately 3 years 8 months of policy/research experience as of 8 August 2026."
+          },
+          {
+            "title": "How the roles fit",
+            "body": "Both roles appear substantively policy-relevant: municipal revenue and social-protection/evaluation work at the Accra unit, followed by research at IFS. They therefore support the required type of experience, but the documented total is about 1 year 4 months below the ordinary five-year threshold. On the official wording, Lena would need to rely on the stated exception for an outstanding candidate with slightly less experience; the source does not guarantee that an exception will be granted. Her First Class Economics degree and quantitative coursework are relevant strengths, but they do not replace the published experience expectation. citeturn0search0"
+          },
+          {
+            "title": "Conclusion",
+            "body": "Verdict: the roles satisfy the policy-relevance dimension, but not the current five-year minimum on their face. This is an eligibility risk requiring an exception assessment, not simply a competitive disadvantage. The application should accurately present the roles and explain their policy impact, while avoiding any claim that the five-year requirement has been met."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "If applying, verify directly with LSE SPP whether approximately 3 years 8 months may qualify as the programme’s “slightly less” exception."
+        ],
+        "sources": [
+          {
+            "title": "LSE — Master of Public Policy (2026/27 official programme page)",
+            "url": "https://www.lse.ac.uk/study-at-lse/graduate/master-of-public-policy"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 1,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:31:21.097Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0be95d417b67a13b016a774bc103c8819d8339537b9e9168cd",
+        "object": "response",
+        "created_at": 1786203073,
+        "completed_at": 1786203080,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0be95d417b67a13b016a774bc16cb8819dbecf18e425d65165",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_0be95d417b67a13b016a774bc61300819d833741a48516d453",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.82,\"requirement_extraction\":0.95,\"applicant_fact_correctness\":0.93,\"tool_selection\":0.95,\"primitive_routing\":0.95,\"harness_escalation\":1,\"browser_execution\":0.9,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":0.8,\"final_task_completion\":0.92},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[\"The answer clearly identifies the five-year experience statement as an admissions expectation rather than merely a competitive preference, but it does not separately explain whether LSE identifies any work-experience criterion as a competitive preference.\",\"The approximately 3 years 8 months calculation is anchored to 8 August 2026, a date not present in the supplied applicant materials; the trace does not show the underlying search result text establishing that date or independently documenting the calculation.\",\"The answer relies on a single citation marker and official URL; the trace does not expose the retrieved source passage, limiting verifiability of the precise five-year and exception wording.\"],\"rationale\":\"The agent used an official LSE source, accurately summarized the applicant’s two employment periods, excluded the documented relocation/right-to-work interval, and concluded that the roles are policy-relevant but do not meet the stated five-year expectation on their face. It appropriately avoided claiming that the applicant met the threshold and noted that an exception is not guaranteed. The atomic source-backed-answer terminal state was successfully reached, with no fabricated applicant facts or false completion. The main weakness is incomplete treatment of the requested eligibility-versus-competitive distinction and limited visible source evidence for the precise rule and date used in the experience calculation.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 2785,
+          "input_tokens_details": {
+            "cache_write_tokens": 2782,
+            "cached_tokens": 0
+          },
+          "output_tokens": 873,
+          "output_tokens_details": {
+            "reasoning_tokens": 483
+          },
+          "total_tokens": 3658
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-work-experience-counts-3-15bc48b3",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 8528,
+      "usage": {
+        "inputTokens": 2785,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 2782,
+        "outputTokens": 873,
+        "reasoningTokens": 483,
+        "totalTokens": 3658,
+        "inferenceCostUsd": 0.0017436999999999997
+      },
+      "error": null
+    }
+  ]
+}

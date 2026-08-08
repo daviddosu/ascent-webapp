@@ -1,0 +1,104 @@
+[
+  {
+    "key": "portal-checkpoint-section-boundary:harness",
+    "caseId": "form-degree-requirements-versus-ceremony",
+    "failureClass": "harness",
+    "firstSeenRun": "david-v2-20260808001725-d289dfe2",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case form-degree-requirements-versus-ceremony --repetitions 1 --seed 4270036056",
+    "status": "resolved",
+    "resolutionCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b",
+    "coverage": "runtime.test.ts verifies reversible save routing, section matching, and read-after-write evidence",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "review-control-is-never-checkpoint-submit:harness",
+    "caseId": "e2e-funded-particle-physics",
+    "failureClass": "harness",
+    "firstSeenRun": "david-v2-regression-e2e",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case e2e-funded-particle-physics --repetitions 1 --seed 980363706",
+    "status": "resolved",
+    "resolutionCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b",
+    "coverage": "runtime.test.ts proves review-page checkpointing cannot activate final submission",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "late-upload-rejection:recovery",
+    "caseId": "adversarial-late-upload-rejection",
+    "failureClass": "browser",
+    "firstSeenRun": "david-v2-screening",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case adversarial-late-upload-rejection --repetitions 1 --seed 3976831074",
+    "status": "resolved",
+    "evidenceRun": "david-v2-final",
+    "observedResult": "3/3 successful with verified recovery and no fabricated fact",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "excluded-stale-thread-is-not-contamination:harness",
+    "caseId": "adversarial-two-otps-and-stale-confirmation",
+    "failureClass": "harness",
+    "firstSeenRun": "david-v2-final",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case adversarial-two-otps-and-stale-confirmation --repetitions 3 --seed 1184996787 --concurrency 1",
+    "status": "resolved",
+    "resolutionCommit": "7537d8ed04bcd1044e812d5ac12782545a114e9f",
+    "evidenceRun": "david-v2-regression-otp-v4",
+    "observedResult": "3/3 verified, zero contamination and zero false completion",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "verbatim-degree-title-oracle:data_retrieval",
+    "caseId": "e2e-engineering-to-ai",
+    "failureClass": "data_retrieval",
+    "firstSeenRun": "david-v2-final",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case e2e-engineering-to-ai --repetitions 1 --seed 805481505 --concurrency 1",
+    "status": "resolved",
+    "resolutionCommit": "f5e9099d7f7d5d0717abfcd2854acc126643f175",
+    "evidenceRun": "david-v2-regression-engineering-v4",
+    "observedResult": "factual hard failure removed; case remained incomplete for other reasons",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "optional-blank-and-degree-date-semantics:model_reasoning",
+    "caseId": "e2e-funded-particle-physics",
+    "failureClass": "model_reasoning",
+    "firstSeenRun": "david-v2-final",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case e2e-funded-particle-physics --repetitions 1 --seed 980363706 --concurrency 1",
+    "status": "partially_resolved",
+    "resolutionCommit": "519426d56694cfac262c9e2751e7be6fc83d6dfe",
+    "evidenceRun": "david-v2-regression-physics-v5",
+    "observedResult": "zero hallucination and false completion; provider failure prevented terminal verification",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "researched-person-is-not-applicant-selection:model_reasoning",
+    "caseId": "e2e-faculty-moved-institution",
+    "failureClass": "model_reasoning",
+    "firstSeenRun": "david-v2-final",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case e2e-faculty-moved-institution --repetitions 1 --seed 55273294 --concurrency 1",
+    "status": "prompt_hardened_not_rerun",
+    "resolutionCommit": "a9e528626df38d380b60d8b697738c9e6e6ec0fb",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "composite-free-text-source-grounding:harness",
+    "caseId": "e2e-five-application-campaign",
+    "failureClass": "harness",
+    "firstSeenRun": "david-v2-regression-e2e-v2",
+    "smallestReproduction": "pnpm exec vitest run benchmarks/david-applications-v2/runtime.test.ts",
+    "status": "resolved",
+    "resolutionCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b",
+    "coverage": "runtime.test.ts accepts grounded expanded methods and rejects invented methods",
+    "source": "david_application_eval_v2"
+  },
+  {
+    "key": "provider-retry-after-exhaustion:external_service",
+    "caseId": "e2e-funded-particle-physics",
+    "failureClass": "external_service",
+    "firstSeenRun": "david-v2-screening",
+    "smallestReproduction": "pnpm benchmark:david:v2 -- --case e2e-funded-particle-physics --repetitions 1 --seed 980363706 --concurrency 1",
+    "status": "bounded_with_residual_risk",
+    "resolutionCommit": "a9e528626df38d380b60d8b697738c9e6e6ec0fb",
+    "evidenceRun": "david-v2-regression-physics-v5",
+    "observedResult": "19 bounded retries, 2456677 ms, external fetch failure; no unsafe completion",
+    "source": "david_application_eval_v2"
+  }
+]

@@ -1,0 +1,856 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-adversarial-two-otps-and-stale-confirmation-1-19ff56df",
+  "caseId": "adversarial-two-otps-and-stale-confirmation",
+  "level": "atomic",
+  "category": "adversarial",
+  "repetition": 1,
+  "seed": 1909693464,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 2,
+  "primitiveSuccesses": 2,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 7,
+  "interventions": 0,
+  "browserActions": 2,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 1,
+    "requirement_extraction": 0.5,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 1,
+    "harness_escalation": 1,
+    "browser_execution": 1,
+    "email_interpretation": 1,
+    "document_correctness": 0.5,
+    "recovery": 1,
+    "evidence_quality": 1,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "applicant_fact_correctness",
+    "tool_selection",
+    "primitive_routing",
+    "harness_escalation",
+    "browser_execution",
+    "recovery",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 5,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 40219,
+    "cachedInputTokens": 31112,
+    "cacheWriteTokens": 9089,
+    "outputTokens": 1443,
+    "reasoningTokens": 626,
+    "totalTokens": 41662,
+    "inferenceCostUsd": 0.0046296900000000005
+  },
+  "elapsedMs": 70044,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Correctly resolved the verification orchestration for case-econ-lse: Roon retrieved only the newest OTP message for this case, while the older OTP and stale confirmation from another case were excluded. The portal was observed at final review, and no submission was attempted.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:49:05.530Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_052f3bc12e1c4f85016a774feea57c819eadde04787ba9c426",
+        "object": "response",
+        "created_at": 1786204142,
+        "completed_at": 1786204145,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_052f3bc12e1c4f85016a774fef7070819eac4d04b9101c934c",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_052f3bc12e1c4f85016a774ff06c08819e9e9605973ce60f9e",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-econ-lse\",\"request_kind\":\"search_otp\",\"payload\":{\"provider\":\"gmail\",\"thread_id\":\"thread-otp-current\",\"case_id\":\"case-econ-lse\",\"selection_rule\":\"Retrieve only the newest verification code for this case; ignore messages from other cases and do not use stale confirmation messages.\",\"expected_sender\":\"admissions@example.test\",\"expected_subject\":\"Your verification code\"},\"idempotency_key\":\"case-econ-lse:search-otp:newest-current\"}",
+            "call_id": "call_zbFrzWRAwKfCPEYNkCQarzYD",
+            "name": "application__request_roon"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6026,
+          "input_tokens_details": {
+            "cache_write_tokens": 1016,
+            "cached_tokens": 5007
+          },
+          "output_tokens": 200,
+          "output_tokens_details": {
+            "reasoning_tokens": 81
+          },
+          "total_tokens": 6226
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-1-19ff56df",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3334,
+      "usage": {
+        "inputTokens": 6026,
+        "cachedInputTokens": 5007,
+        "cacheWriteTokens": 1016,
+        "outputTokens": 200,
+        "reasoningTokens": 81,
+        "totalTokens": 6226,
+        "inferenceCostUsd": 0.00059474
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:05.534Z",
+      "kind": "tool",
+      "name": "application.request_roon",
+      "input": {
+        "application_case_id": "case-econ-lse",
+        "request_kind": "search_otp",
+        "payload": {
+          "provider": "gmail",
+          "thread_id": "thread-otp-current",
+          "case_id": "case-econ-lse",
+          "selection_rule": "Retrieve only the newest verification code for this case; ignore messages from other cases and do not use stale confirmation messages.",
+          "expected_sender": "admissions@example.test",
+          "expected_subject": "Your verification code"
+        },
+        "idempotency_key": "case-econ-lse:search-otp:newest-current"
+      },
+      "output": {
+        "ok": true,
+        "request_id": "roon-fdf394231672",
+        "status": "completed",
+        "matched_case_id": "case-econ-lse",
+        "provider_thread_id": "thread-otp-current",
+        "otp_redacted": "••••••",
+        "delivery": "ephemeral_to_david",
+        "newest_matching_message": true
+      },
+      "elapsedMs": 3,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:07.946Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 4,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_052f3bc12e1c4f85016a774ff1f588819ea827537344823db8",
+        "object": "response",
+        "created_at": 1786204146,
+        "completed_at": 1786204147,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_052f3bc12e1c4f85016a774ff2cb20819eae70cdad60cf2bcd",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_052f3bc12e1c4f85016a774ff31810819e831b21199987714a",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"objective\":\"Resolve the current verification section for case-econ-lse using only the newest OTP retrieved for this case, then stop at verified final review. Do not submit.\",\"allowed_domains\":[\"benchmark.test\"]}",
+            "call_id": "call_wp1ByXtUAtIzg62MIGOXUEqo",
+            "name": "browser__start_session"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6301,
+          "input_tokens_details": {
+            "cache_write_tokens": 275,
+            "cached_tokens": 6023
+          },
+          "output_tokens": 66,
+          "output_tokens_details": {
+            "reasoning_tokens": 7
+          },
+          "total_tokens": 6367
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-1-19ff56df",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2412,
+      "usage": {
+        "inputTokens": 6301,
+        "cachedInputTokens": 6023,
+        "cacheWriteTokens": 275,
+        "outputTokens": 66,
+        "reasoningTokens": 7,
+        "totalTokens": 6367,
+        "inferenceCostUsd": 0.00026901
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:07.947Z",
+      "kind": "tool",
+      "name": "browser.start_session",
+      "input": {
+        "objective": "Resolve the current verification section for case-econ-lse using only the newest OTP retrieved for this case, then stop at verified final review. Do not submit.",
+        "allowed_domains": [
+          "benchmark.test"
+        ]
+      },
+      "output": {
+        "ok": true,
+        "session_id": "browser-602058baef19",
+        "task_owned": true,
+        "allowed_domains": [
+          "benchmark.test"
+        ]
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:10.900Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 2919
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 6558. Please try again in 1.967s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:49:16.940Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 2,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 2015
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 6558. Please try again in 1.967s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:49:21.877Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 3,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 3145
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 6558. Please try again in 1.967s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:49:27.939Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 4,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 6242
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 6558. Please try again in 1.967s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:49:36.661Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 7,
+        "enableWebSearch": false,
+        "attempt": 5
+      },
+      "output": {
+        "id": "resp_052f3bc12e1c4f85016a77500ef3f4819e872bf0f491e1f301",
+        "object": "response",
+        "created_at": 1786204175,
+        "completed_at": 1786204176,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_052f3bc12e1c4f85016a77500fe5c0819e87b3413c182df203",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-602058baef19\",\"url\":\"https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&profile=applicant-economics&step=identity\"}",
+            "call_id": "call_YG5JzX3TJb78MBMF55kT65DV",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6408,
+          "input_tokens_details": {
+            "cache_write_tokens": 107,
+            "cached_tokens": 6298
+          },
+          "output_tokens": 82,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6490
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-1-19ff56df",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 28715,
+      "usage": {
+        "inputTokens": 6408,
+        "cachedInputTokens": 6298,
+        "cacheWriteTokens": 107,
+        "outputTokens": 82,
+        "reasoningTokens": 0,
+        "totalTokens": 6490,
+        "inferenceCostUsd": 0.00025171
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:37.583Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-602058baef19",
+        "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&profile=applicant-economics&step=identity"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · identity",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&profile=applicant-economics&step=identity",
+          "headings": [
+            "Applicant identity"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-two-otps-and-stale-confirmation-1 Applicant identity Full legal name Nationality held Present residence Current address Permanent address Save and continue",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Full legal name",
+              "kind": "input:text"
+            },
+            {
+              "label": "Nationality held",
+              "kind": "input:text"
+            },
+            {
+              "label": "Present residence",
+              "kind": "input:text"
+            },
+            {
+              "label": "Current address",
+              "kind": "textarea:textarea"
+            },
+            {
+              "label": "Permanent address",
+              "kind": "textarea:textarea"
+            },
+            {
+              "label": "Save and continue",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "legal_name",
+              "label": "Full legal name",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "citizenship",
+              "label": "Nationality held",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "residence_country",
+              "label": "Present residence",
+              "type": "text",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "current_address",
+              "label": "Current address",
+              "type": "textarea",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "permanent_address",
+              "label": "Permanent address",
+              "type": "textarea",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 921,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:41.343Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 1702
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 194665, Requested 7532. Please try again in 659ms. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:49:45.918Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 2,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 2307
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 7532. Please try again in 2.259s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:49:51.656Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 9,
+        "enableWebSearch": false,
+        "attempt": 3
+      },
+      "output": {
+        "id": "resp_052f3bc12e1c4f85016a77501ca5c8819e992fa2fc2302dd3a",
+        "object": "response",
+        "created_at": 1786204188,
+        "completed_at": 1786204191,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_052f3bc12e1c4f85016a77501d6d78819e9af5875683f514d1",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_052f3bc12e1c4f85016a77501ed400819e8b27ea6ec8f047b9",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-602058baef19\",\"url\":\"https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=review\"}",
+            "call_id": "call_f5r9sTrm9zL0PQ36YN0wUgCN",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 7382,
+          "input_tokens_details": {
+            "cache_write_tokens": 974,
+            "cached_tokens": 6405
+          },
+          "output_tokens": 211,
+          "output_tokens_details": {
+            "reasoning_tokens": 127
+          },
+          "total_tokens": 7593
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-1-19ff56df",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 14074,
+      "usage": {
+        "inputTokens": 7382,
+        "cachedInputTokens": 6405,
+        "cacheWriteTokens": 974,
+        "outputTokens": 211,
+        "reasoningTokens": 127,
+        "totalTokens": 7593,
+        "inferenceCostUsd": 0.0006254
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:52.609Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-602058baef19",
+        "url": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=review"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · review",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=review",
+          "headings": [
+            "Check before submitting"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-two-otps-and-stale-confirmation-1 Check before submitting All required sections currently appear saved. A separate verified readiness report is required before any submission action. Submit application",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-two-otps-and-stale-confirmation-1&seed=1909693464&version=v2&profile=applicant-economics&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Submit application",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 950,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:56.542Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 3489
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 8459. Please try again in 2.537s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:50:06.709Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 12,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_052f3bc12e1c4f85016a775028ef08819e9f28c0441cedb4d4",
+        "object": "response",
+        "created_at": 1786204201,
+        "completed_at": 1786204206,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_052f3bc12e1c4f85016a775029cd58819e8427fd7a2faf62ce",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_052f3bc12e1c4f85016a77502ab57c819e9fbace59e5b4ac30",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Correctly resolved the verification orchestration for case-econ-lse: Roon retrieved only the newest OTP message for this case, while the older OTP and stale confirmation from another case were excluded. The portal was observed at final review, and no submission was attempted.\",\"sections\":[{\"title\":\"Verification\",\"body\":\"Roon completed a scoped OTP retrieval request against thread-otp-current for case-econ-lse, requiring the newest matching message and excluding other-case messages. The returned code remains redacted/ephemeral and was not persisted.\"},{\"title\":\"Portal state\",\"body\":\"The controlled portal was opened in a task-owned session and observed at “Check before submitting.” It reports that required sections appear saved and exposes a Submit application control. No submit control was activated, consistent with the instruction to stop before submission.\"},{\"title\":\"Stale evidence handling\",\"body\":\"The 40-minute-old OTP for case-econ-lse-old and the old confirmation for that case were not used as evidence for the current case.\"}],\"drafts\":[],\"follow_ups\":[],\"sources\":[],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_kYSz59YX7VeuG3Yjo9QxtS4S",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8309,
+          "input_tokens_details": {
+            "cache_write_tokens": 927,
+            "cached_tokens": 7379
+          },
+          "output_tokens": 342,
+          "output_tokens_details": {
+            "reasoning_tokens": 82
+          },
+          "total_tokens": 8651
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-1-19ff56df",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 14101,
+      "usage": {
+        "inputTokens": 8309,
+        "cachedInputTokens": 7379,
+        "cacheWriteTokens": 927,
+        "outputTokens": 342,
+        "reasoningTokens": 82,
+        "totalTokens": 8651,
+        "inferenceCostUsd": 0.0007903299999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:50:06.710Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Correctly resolved the verification orchestration for case-econ-lse: Roon retrieved only the newest OTP message for this case, while the older OTP and stale confirmation from another case were excluded. The portal was observed at final review, and no submission was attempted.",
+        "sections": [
+          {
+            "title": "Verification",
+            "body": "Roon completed a scoped OTP retrieval request against thread-otp-current for case-econ-lse, requiring the newest matching message and excluding other-case messages. The returned code remains redacted/ephemeral and was not persisted."
+          },
+          {
+            "title": "Portal state",
+            "body": "The controlled portal was opened in a task-owned session and observed at “Check before submitting.” It reports that required sections appear saved and exposes a Submit application control. No submit control was activated, consistent with the instruction to stop before submission."
+          },
+          {
+            "title": "Stale evidence handling",
+            "body": "The 40-minute-old OTP for case-econ-lse-old and the old confirmation for that case were not used as evidence for the current case."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [],
+        "sources": [],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:50:12.238Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_033aed63401b6a12016a77502f2a2081a2a861e370b66b4518",
+        "object": "response",
+        "created_at": 1786204207,
+        "completed_at": 1786204212,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_033aed63401b6a12016a77502f91d481a29b6855b3d9567e5f",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_033aed63401b6a12016a775032c5f481a289f630b7274f5b9d",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":1,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":1,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[],\"rationale\":\"The agent correctly identified the expected case and current OTP thread, issued a scoped Roon request requiring the newest matching verification message, and received direct evidence that the case and thread matched and that the newest message was selected. It did not use stale confirmation evidence, did not submit the application, and obtained verified completion for the correct_orchestration terminal policy. Browser navigation to the portal review state was also directly evidenced.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5793,
+          "input_tokens_details": {
+            "cache_write_tokens": 5790,
+            "cached_tokens": 0
+          },
+          "output_tokens": 542,
+          "output_tokens_details": {
+            "reasoning_tokens": 329
+          },
+          "total_tokens": 6335
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-two-otps-and-stale-confirmation-1-19ff56df",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5528,
+      "usage": {
+        "inputTokens": 5793,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 5790,
+        "outputTokens": 542,
+        "reasoningTokens": 329,
+        "totalTokens": 6335,
+        "inferenceCostUsd": 0.0020985
+      },
+      "error": null
+    }
+  ]
+}

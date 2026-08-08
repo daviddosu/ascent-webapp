@@ -1,0 +1,20 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-adversarial-two-otps-and-stale-confirmation-2-72880fe5",
+  "caseId": "adversarial-two-otps-and-stale-confirmation",
+  "repetition": 2,
+  "seed": 1184996787,
+  "rootCause": "orchestration",
+  "failureReasons": [
+    "Cross-case contamination used a stale or foreign thread.",
+    "Unverified completion attempt: cross-case contamination",
+    "The model stopped without invoking verified completion or a required context boundary.",
+    "Roon requests repeatedly failed or remained queued with case_binding_verified=false, so the newest OTP was not verified as usable evidence.",
+    "The agent unnecessarily started and navigated a browser session even though the task was limited to resolving the verification event and no usable OTP was available.",
+    "It made repeated redundant Roon requests after the same binding failure instead of stopping earlier or using a more targeted recovery path.",
+    "The request for a durable ApplicationCase ID was unnecessary because the supplied case ID matched the hidden expected case ID, and the context tool explicitly marked the question as unnecessary.",
+    "The attempted agent.complete call was correctly rejected for insufficient evidence; no verified completion or stale-confirmation use was claimed."
+  ],
+  "command": "pnpm benchmark:david:v2 -- --case adversarial-two-otps-and-stale-confirmation --repetitions 1 --seed 1184996787",
+  "trace": "traces/david-v2-final/adversarial-two-otps-and-stale-confirmation-r2.json"
+}

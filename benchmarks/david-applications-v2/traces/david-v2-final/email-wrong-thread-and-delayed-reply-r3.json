@@ -1,0 +1,439 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-email-wrong-thread-and-delayed-reply-3-d17433e4",
+  "caseId": "email-wrong-thread-and-delayed-reply",
+  "level": "atomic",
+  "category": "email",
+  "repetition": 3,
+  "seed": 1283515416,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.5,
+    "requirement_extraction": 0.5,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 0.5,
+    "harness_escalation": 1,
+    "browser_execution": 0.5,
+    "email_interpretation": 1,
+    "document_correctness": 0.5,
+    "recovery": 1,
+    "evidence_quality": 0.5,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "applicant_fact_correctness",
+    "tool_selection",
+    "email_interpretation",
+    "recovery",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 3,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 22047,
+    "cachedInputTokens": 17350,
+    "cacheWriteTokens": 4685,
+    "outputTokens": 1388,
+    "reasoningTokens": 644,
+    "totalTokens": 23435,
+    "inferenceCostUsd": 0.00318625
+  },
+  "elapsedMs": 16408,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "The writer reply was interpreted and recorded against Amara Okafor’s UCL particle-physics case, while the wrong AI-application case was explicitly left unchanged.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:47:11.609Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0bf4a9e370429f2d016a774f7beb8081a09e5d146153428610",
+        "object": "response",
+        "created_at": 1786204028,
+        "completed_at": 1786204031,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0bf4a9e370429f2d016a774f7ca06881a0afb1241e8bd7f430",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0bf4a9e370429f2d016a774f7e447c81a0acab09fbbfcbd646",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-physics-ucl\",\"contact_id\":null,\"provider\":\"writer@example.test\",\"provider_message_id\":null,\"provider_thread_id\":\"thread-ee-ucl\",\"direction\":\"inbound\",\"subject\":\"Re: AI MSc statement\",\"excerpt\":\"Writer says the detector-reconstruction paragraph belongs in Amara’s particle-physics application, not Tunde’s AI application.\",\"classification\":\"misthreaded_writer_reply\",\"data\":{\"intended_case_id\":\"case-physics-ucl\",\"wrong_thread\":true,\"do_not_modify_other_case\":true,\"interpretation\":\"Writer confirms detector-reconstruction content belongs to Amara’s UCL particle-physics application; no document or case revision authorized.\"},\"idempotency_key\":\"case-physics-ucl:thread-ee-ucl:misthreaded-writer-reply\"}",
+            "call_id": "call_kChd7itb0hb6lXXsTfos823g",
+            "name": "application__record_communication"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5978,
+          "input_tokens_details": {
+            "cache_write_tokens": 968,
+            "cached_tokens": 5007
+          },
+          "output_tokens": 354,
+          "output_tokens_details": {
+            "reasoning_tokens": 173
+          },
+          "total_tokens": 6332
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-email-wrong-thread-and-delayed-reply-3-d17433e4",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 4090,
+      "usage": {
+        "inputTokens": 5978,
+        "cachedInputTokens": 5007,
+        "cacheWriteTokens": 968,
+        "outputTokens": 354,
+        "reasoningTokens": 173,
+        "totalTokens": 6332,
+        "inferenceCostUsd": 0.0007675399999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:11.610Z",
+      "kind": "tool",
+      "name": "application.record_communication",
+      "input": {
+        "application_case_id": "case-physics-ucl",
+        "contact_id": null,
+        "provider": "writer@example.test",
+        "provider_message_id": null,
+        "provider_thread_id": "thread-ee-ucl",
+        "direction": "inbound",
+        "subject": "Re: AI MSc statement",
+        "excerpt": "Writer says the detector-reconstruction paragraph belongs in Amara’s particle-physics application, not Tunde’s AI application.",
+        "classification": "misthreaded_writer_reply",
+        "data": {
+          "intended_case_id": "case-physics-ucl",
+          "wrong_thread": true,
+          "do_not_modify_other_case": true,
+          "interpretation": "Writer confirms detector-reconstruction content belongs to Amara’s UCL particle-physics application; no document or case revision authorized."
+        },
+        "idempotency_key": "case-physics-ucl:thread-ee-ucl:misthreaded-writer-reply"
+      },
+      "output": {
+        "ok": true,
+        "communication_id": "communication-27d87627e5b1",
+        "case_binding_verified": true
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:15.478Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 4,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0bf4a9e370429f2d016a774f80097c81a0b8ff0deea2505862",
+        "object": "response",
+        "created_at": 1786204032,
+        "completed_at": 1786204035,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0bf4a9e370429f2d016a774f80ed0c81a0a49155992835f5ea",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0bf4a9e370429f2d016a774f826a0481a0ae3f49dc24481ca2",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-physics-ucl\",\"request_kind\":\"monitor_thread\",\"payload\":{\"provider\":\"gmail\",\"thread_id\":\"thread-ee-ucl\",\"purpose\":\"Preserve the inbound writer reply on Amara Okafor’s UCL particle-physics case only.\",\"classification\":\"misthreaded_writer_reply\",\"intended_case_id\":\"case-physics-ucl\",\"wrong_thread_case_action\":\"do_not_move_or_revise\",\"do_not_send\":true,\"do_not_modify_other_case\":true},\"idempotency_key\":\"case-physics-ucl:monitor-misthreaded-writer-reply:thread-ee-ucl\"}",
+            "call_id": "call_V7eyYlm05qvFjqLryM9x6j6W",
+            "name": "application__request_roon"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6371,
+          "input_tokens_details": {
+            "cache_write_tokens": 393,
+            "cached_tokens": 5975
+          },
+          "output_tokens": 295,
+          "output_tokens_details": {
+            "reasoning_tokens": 152
+          },
+          "total_tokens": 6666
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-email-wrong-thread-and-delayed-reply-3-d17433e4",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3868,
+      "usage": {
+        "inputTokens": 6371,
+        "cachedInputTokens": 5975,
+        "cacheWriteTokens": 393,
+        "outputTokens": 295,
+        "reasoningTokens": 152,
+        "totalTokens": 6666,
+        "inferenceCostUsd": 0.00057235
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:15.479Z",
+      "kind": "tool",
+      "name": "application.request_roon",
+      "input": {
+        "application_case_id": "case-physics-ucl",
+        "request_kind": "monitor_thread",
+        "payload": {
+          "provider": "gmail",
+          "thread_id": "thread-ee-ucl",
+          "purpose": "Preserve the inbound writer reply on Amara Okafor’s UCL particle-physics case only.",
+          "classification": "misthreaded_writer_reply",
+          "intended_case_id": "case-physics-ucl",
+          "wrong_thread_case_action": "do_not_move_or_revise",
+          "do_not_send": true,
+          "do_not_modify_other_case": true
+        },
+        "idempotency_key": "case-physics-ucl:monitor-misthreaded-writer-reply:thread-ee-ucl"
+      },
+      "output": {
+        "ok": true,
+        "request_id": "roon-889fff27ec0d",
+        "status": "queued",
+        "application_case_id": "case-physics-ucl",
+        "request_kind": "monitor_thread",
+        "case_binding_verified": true
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:18.906Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 7,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0bf4a9e370429f2d016a774f83f0ac81a09de546f3d964d18e",
+        "object": "response",
+        "created_at": 1786204036,
+        "completed_at": 1786204038,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0bf4a9e370429f2d016a774f84c78481a09bf6361bcf481a10",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_0bf4a9e370429f2d016a774f85116881a0b4f4f6b8ca0dcf53",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"The writer reply was interpreted and recorded against Amara Okafor’s UCL particle-physics case, while the wrong AI-application case was explicitly left unchanged.\",\"sections\":[{\"title\":\"Correct association\",\"body\":\"Recorded the reply on case-physics-ucl as a misthreaded writer reply. The writer’s detector-reconstruction clarification was preserved without treating it as authorization to revise application materials.\"},{\"title\":\"Protection of wrong case\",\"body\":\"The communication record and Roon monitoring request both explicitly require no movement or revision of the other case.\"},{\"title\":\"Orchestration evidence\",\"body\":\"Communication record communication-27d87627e5b1 was verified as bound to case-physics-ucl. Roon request roon-889fff27ec0d was queued for that same case and thread.\"}],\"drafts\":[],\"follow_ups\":[],\"sources\":[],\"prepared_result\":false,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_MhQ7ymxEOnG6Je26JfTRV0QF",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6723,
+          "input_tokens_details": {
+            "cache_write_tokens": 352,
+            "cached_tokens": 6368
+          },
+          "output_tokens": 235,
+          "output_tokens_details": {
+            "reasoning_tokens": 14
+          },
+          "total_tokens": 6958
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-email-wrong-thread-and-delayed-reply-3-d17433e4",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3430,
+      "usage": {
+        "inputTokens": 6723,
+        "cachedInputTokens": 6368,
+        "cacheWriteTokens": 352,
+        "outputTokens": 235,
+        "reasoningTokens": 14,
+        "totalTokens": 6958,
+        "inferenceCostUsd": 0.00049796
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:18.909Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "The writer reply was interpreted and recorded against Amara Okafor’s UCL particle-physics case, while the wrong AI-application case was explicitly left unchanged.",
+        "sections": [
+          {
+            "title": "Correct association",
+            "body": "Recorded the reply on case-physics-ucl as a misthreaded writer reply. The writer’s detector-reconstruction clarification was preserved without treating it as authorization to revise application materials."
+          },
+          {
+            "title": "Protection of wrong case",
+            "body": "The communication record and Roon monitoring request both explicitly require no movement or revision of the other case."
+          },
+          {
+            "title": "Orchestration evidence",
+            "body": "Communication record communication-27d87627e5b1 was verified as bound to case-physics-ucl. Roon request roon-889fff27ec0d was queued for that same case and thread."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [],
+        "sources": [],
+        "prepared_result": false,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:23.926Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_038d26ae08920e00016a774f87592481929ca00d04630b8126",
+        "object": "response",
+        "created_at": 1786204039,
+        "completed_at": 1786204043,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_038d26ae08920e00016a774f87c5788192a2f745ef8fd7d6c8",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_038d26ae08920e00016a774f8abbb48192907b348b55e67f14",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":1,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":1,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[],\"rationale\":\"The trace correctly interpreted the writer’s reply as misthreaded, associated it with case-physics-ucl, explicitly prohibited movement or revision of the other case, and recorded the communication with verified case binding. The monitoring request preserved the relevant thread without sending or modifying materials. Completion was supported by verified tool outputs and the terminal policy was satisfied.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 2975,
+          "input_tokens_details": {
+            "cache_write_tokens": 2972,
+            "cached_tokens": 0
+          },
+          "output_tokens": 504,
+          "output_tokens_details": {
+            "reasoning_tokens": 305
+          },
+          "total_tokens": 3479
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-email-wrong-thread-and-delayed-reply-3-d17433e4",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 5016,
+      "usage": {
+        "inputTokens": 2975,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 2972,
+        "outputTokens": 504,
+        "reasoningTokens": 305,
+        "totalTokens": 3479,
+        "inferenceCostUsd": 0.0013484
+      },
+      "error": null
+    }
+  ]
+}

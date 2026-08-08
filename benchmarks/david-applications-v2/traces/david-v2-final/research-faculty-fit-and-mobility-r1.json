@@ -1,0 +1,505 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-research-faculty-fit-and-mobility-1-b3c3b742",
+  "caseId": "research-faculty-fit-and-mobility",
+  "level": "atomic",
+  "category": "research",
+  "repetition": 1,
+  "seed": 643861517,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 0,
+  "primitiveSuccesses": 0,
+  "harnessAttempts": 0,
+  "harnessSuccesses": 0,
+  "rescueAttempts": 0,
+  "rescueSuccesses": 0,
+  "retries": 0,
+  "interventions": 0,
+  "browserActions": 0,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.925,
+    "requirement_extraction": 0.5,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 0.5,
+    "harness_escalation": 1,
+    "browser_execution": 0.45,
+    "email_interpretation": 0.5,
+    "document_correctness": 0.5,
+    "recovery": 0.95,
+    "evidence_quality": 0.925,
+    "final_task_completion": 0.95
+  },
+  "applicableDimensions": [
+    "research_correctness",
+    "requirement_extraction",
+    "applicant_fact_correctness",
+    "tool_selection",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 2,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 69278,
+    "cachedInputTokens": 19689,
+    "cacheWriteTokens": 8364,
+    "outputTokens": 3729,
+    "reasoningTokens": 1229,
+    "totalTokens": 73007,
+    "inferenceCostUsd": 0.015204579999999999
+  },
+  "elapsedMs": 49490,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Verified a current, source-backed faculty-fit shortlist for Priya’s single-cell host–pathogen interests and separately checked EMBL’s official recruiting-group list. Scientific fit is supported for three current EMBL group leaders; current student acceptance is verified only at the programme-list level, and none of the three appears on the current recruiting list.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:32:52.359Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_00e05bc94aece227016a774c047d98819d8fc7c7d860a3c78b",
+        "object": "response",
+        "created_at": 1786203140,
+        "completed_at": 1786203172,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_00e05bc94aece227016a774c056d50819db7b958bf97f95c99",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00e05bc94aece227016a774c0661c4819d844cd83c656adbdf",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org group leader single-cell host pathogen EMBL",
+                "site:embl.org EMBL faculty host pathogen single-cell group leader",
+                "site:embl.org EMBL International PhD Programme group leaders students accepting"
+              ],
+              "query": "site:embl.org group leader single-cell host pathogen EMBL"
+            }
+          },
+          {
+            "id": "rs_00e05bc94aece227016a774c0b397c819d9637ada192d1a690",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00e05bc94aece227016a774c0c0bac819db684417110fda02c",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups Wolfgang Huber group EMBL single-cell infectious disease",
+                "site:embl.org/groups Nassos Typas group EMBL microbiome infection",
+                "site:embl.org/groups Antoine-Emmanuel Saliba EMBL group leader"
+              ],
+              "query": "site:embl.org/groups Wolfgang Huber group EMBL single-cell infectious disease"
+            }
+          },
+          {
+            "id": "rs_00e05bc94aece227016a774c0fa230819d952e498380bb05d9",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00e05bc94aece227016a774c105614819da8417a6290577ea7",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups Georg Zeller EMBL group single-cell spatial transcriptomics",
+                "site:embl.org/people/person Georg Zeller EMBL",
+                "site:embl.org recruiting group leaders Zeller 2026 EMBL"
+              ],
+              "query": "site:embl.org/groups Georg Zeller EMBL group single-cell spatial transcriptomics"
+            }
+          },
+          {
+            "id": "rs_00e05bc94aece227016a774c1697fc819d93d1d983617e2c57",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00e05bc94aece227016a774c17e67c819d8048ce1a012974eb",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org \"Antoine-Emmanuel Saliba\" group leader EMBL",
+                "site:embl.org \"host-pathogen\" \"single-cell\" EMBL group leader",
+                "site:embl.org/groups \"infection\" \"single-cell\" EMBL"
+              ],
+              "query": "site:embl.org \"Antoine-Emmanuel Saliba\" group leader EMBL"
+            }
+          },
+          {
+            "id": "rs_00e05bc94aece227016a774c1c522c819db2791d3c9785b3f7",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_00e05bc94aece227016a774c1e5730819d9630548eaac1a2c2",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [
+                  {
+                    "type": "url_citation",
+                    "end_index": 976,
+                    "start_index": 894,
+                    "title": "Wolfgang Huber, Group Leader and Senior Scientist | People | EMBL",
+                    "url": "https://www.embl.org/people/person/wolfgang-huber/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 1350,
+                    "start_index": 1228,
+                    "title": "Recruiting Group Leaders – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 1937,
+                    "start_index": 1871,
+                    "title": "Typas Group – Systems microbiology",
+                    "url": "https://www.embl.org/groups/typas/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 2431,
+                    "start_index": 2309,
+                    "title": "Recruiting Group Leaders – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 3090,
+                    "start_index": 3019,
+                    "title": "van Gestel Group – Evolution of microbial life cycles",
+                    "url": "https://www.embl.org/groups/van-gestel/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 3367,
+                    "start_index": 3245,
+                    "title": "Recruiting Group Leaders – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai"
+                  },
+                  {
+                    "type": "url_citation",
+                    "end_index": 5094,
+                    "start_index": 4972,
+                    "title": "Recruiting Group Leaders – EMBL International PhD Programme",
+                    "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai"
+                  }
+                ],
+                "logprobs": [],
+                "text": "## Best-fit current EMBL group leaders\n\nI found **two strong fits and one plausible adjacent fit** for Priya’s stated interests in single-cell analysis, host–pathogen biology, pathogen genomics, and reproducible computational workflows.\n\n| Group leader | Current affiliation | Evidence of scientific fit | Evidence they are accepting PhD students |\n|---|---|---|---|\n| **Wolfgang Huber** | Group Leader and Senior Scientist, **EMBL Heidelberg**; Huber Group | **Strongest computational fit.** His group develops methods for single-cell and spatial omics, CRISPR/drug perturbation data, and quantitative biology. EMBL’s Infection Biology pages specifically identify his work with single-cell omics, perturbation assays, and infectious-disease applications including **malaria and leptospirosis**. This aligns closely with Priya’s scRNA-seq, malaria, R/Python, and Bayesian-modelling background. ([embl.org](https://www.embl.org/people/person/wolfgang-huber/?utm_source=openai)) | **Not verified.** Huber does not appear in EMBL’s current preliminary list of groups actively recruiting for the 2026 Summer Recruitment. The list may change, but there is no official evidence located that his group is currently accepting students. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai)) |\n| **Nassos Typas** | Head of Molecular Systems Biology and Group Leader, **EMBL Heidelberg** | **Strong host–pathogen and microbial-systems fit.** The Typas group studies bacterial cellular networks, microbiomes, antibiotics, and host–pathogen interactions, including Salmonella infection and bacterial responses within host cells. Its work combines high-throughput genetics, sequencing, computational analysis, and reproducible systems approaches—highly relevant to Priya’s pathogen-genomics and Nextflow experience. ([embl.org](https://www.embl.org/groups/typas/?utm_source=openai)) | **Not verified for the EIPP.** Typas is not listed among the current 2026 recruiting groups on EMBL’s official recruitment page. An EMBL project document shows a recent Typas-hosted project involving pathogen/commensal *E. coli*, microbiomes, sequencing pipelines, and Python/R, but that is evidence of a project opportunity—not proof of an open EIPP PhD position now. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai)) |\n| **Jordi van Gestel** | Group Leader, **EMBL Heidelberg**, Developmental Biology Unit / Microbial Ecosystems Transversal Theme | **Adjacent but genuine fit.** His group uses quantitative single-cell microscopy, functional genomics, CRISPR libraries, experimental evolution, and mathematical modelling to study microbial interactions and the evolution of host–symbiont or host–pathogen relationships. This fits Priya’s single-cell and reproducible computational interests, although the biological systems are presently more microbial ecology/predation than human infection or malaria. ([embl.org](https://www.embl.org/groups/van-gestel/?utm_source=openai)) | **Not verified.** His group is not listed among the current 2026 EIPP recruiting groups, and I found no official current PhD vacancy on the group page. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai)) |\n\n## Recommendation\n\n1. **Wolfgang Huber — highest overall fit**  \n   Best match for Priya’s computational single-cell profile and malaria-related experience. A proposed project could focus on single-cell or spatial analysis of infected tissues, host-response heterogeneity, or perturbation-based host–pathogen modelling.\n\n2. **Nassos Typas — strongest pathogen/microbial-systems fit**  \n   Particularly suitable if Priya wants to move toward bacterial infection, microbiome–pathogen interactions, antimicrobial resistance, or genome-wide functional screens.\n\n3. **Jordi van Gestel — exploratory third choice**  \n   Worth considering if Priya is open to broader microbial host–pathogen evolution and single-cell experimental systems, but it is a less direct match than Huber or Typas for human infectious disease.\n\n## Important distinction: fit versus student availability\n\nThe official EMBL recruitment page states that its recruiting-group list identifies groups **actively looking to hire PhD students**, but also warns that the list is preliminary and may change. Neither Huber, Typas, nor van Gestel appears on the current list I found. Therefore:\n\n- **Scientific fit:** verified for all three from official EMBL group or programme pages.\n- **Current acceptance of PhD students:** **not verified for any of the three**.\n- The 2026 Summer Recruitment is closed; EMBL states that the next **2027 Winter Recruitment opens in September 2026**. The programme’s application process is centralised, and applicants indicate groups of interest rather than relying solely on individual informal recruitment. ([embl.org](https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/?utm_source=openai))\n\n**Bottom line:** Priya should prioritise **Huber** and **Typas** as the two substantive fits, with **van Gestel** as a defensible third option. She should not describe any of them as “accepting students” unless EMBL’s next official recruiting-group list or a group-specific vacancy confirms it."
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 43066,
+          "input_tokens_details": {
+            "cache_write_tokens": 883,
+            "cached_tokens": 9403
+          },
+          "output_tokens": 1793,
+          "output_tokens_details": {
+            "reasoning_tokens": 672
+          },
+          "total_tokens": 44859
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-1-b3c3b742",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 32315,
+      "usage": {
+        "inputTokens": 43066,
+        "cachedInputTokens": 9403,
+        "cacheWriteTokens": 883,
+        "outputTokens": 1793,
+        "reasoningTokens": 672,
+        "totalTokens": 44859,
+        "inferenceCostUsd": 0.00911641
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:03.169Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 12,
+        "enableWebSearch": true,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_00e05bc94aece227016a774c24c7dc819da448a2399b7337f2",
+        "object": "response",
+        "created_at": 1786203172,
+        "completed_at": 1786203183,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_00e05bc94aece227016a774c2550b4819d9f7b208236539178",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "ws_00e05bc94aece227016a774c2667c0819d87783ec655d72094",
+            "type": "web_search_call",
+            "status": "completed",
+            "action": {
+              "type": "search",
+              "queries": [
+                "site:embl.org/groups/huber Wolfgang Huber EMBL group",
+                "site:embl.org/groups/typas Nassos Typas EMBL group",
+                "site:embl.org/groups/van-gestel Jordi van Gestel EMBL group",
+                "site:embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders 2026"
+              ],
+              "query": "site:embl.org/groups/huber Wolfgang Huber EMBL group"
+            }
+          },
+          {
+            "id": "rs_00e05bc94aece227016a774c2b5d68819d8b023ccdf3f682fc",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_00e05bc94aece227016a774c2c3008819d837e43aac1ce7931",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Verified a current, source-backed faculty-fit shortlist for Priya’s single-cell host–pathogen interests and separately checked EMBL’s official recruiting-group list. Scientific fit is supported for three current EMBL group leaders; current student acceptance is verified only at the programme-list level, and none of the three appears on the current recruiting list.\",\"sections\":[{\"title\":\"Shortlist\",\"body\":\"1. Wolfgang Huber — strongest computational/single-cell fit. EMBL identifies him as Group Leader and Senior Scientist in Heidelberg. His group develops statistical and computational methods for single-cell and spatial omics, CRISPR/drug perturbation assays, quantitative imaging, and biomedical/clinical datasets. This directly matches Priya’s scRNA-seq, R/Python, Bayesian-modelling, and malaria-related profile. citeturn0search4turn0search9\\n\\n2. Nassos Typas — strongest bacterial host–pathogen/microbial-systems fit. EMBL identifies him as Head of Molecular Systems Biology and Group Leader. His group studies bacterial cellular networks, sequencing-enabled genome-wide readouts, antibiotic resistance, and pathogenic or commensal bacteria in microbiomes. An official EMBL project description hosted by Typas specifically involves pathogenic/commensal E. coli, sequencing pipelines, metagenomics, Python/R, and machine learning. citeturn0search1turn0search10turn0search12\\n\\n3. Jordi van Gestel — credible adjacent fit. EMBL identifies him as a Heidelberg Group Leader. His group combines quantitative single-cell microscopy, functional genomics, high-content CRISPR libraries, experimental evolution, and mathematical modelling to study microbial predator–prey and emerging host–symbiont/host–pathogen interactions. The match is less direct for human infection or malaria than Huber or Typas. citeturn0search2turn0search5\"},{\"title\":\"Fit versus acceptance evidence\",\"body\":\"The official EMBL International PhD Programme recruiting page says its listed groups are actively looking to hire PhD students and that the list is preliminary and may change. The current list includes the Typas Group but does not include the Huber Group or van Gestel Group. Therefore, current EIPP recruitment is verified for Typas at the programme-list level only; it is not verified for Huber or van Gestel. This does not establish that Typas has a project matching Priya’s exact interests, only that the group is currently listed as recruiting. citeturn0search0\"},{\"title\":\"Programme timing\",\"body\":\"EMBL’s official application page states that 2026 Summer Recruitment is closed and that the next 2027 Winter Recruitment opens in September 2026. The page also explains that applicants select groups of interest and that both recruiting and non-recruiting Group Leaders participate in the virtual panel assessment. citeturn0search7turn0search11\"},{\"title\":\"Recommended ordering\",\"body\":\"Prioritise Huber for computational single-cell and spatial-omics alignment; Typas for bacterial infection, microbiome, pathogen genomics, and current EIPP recruitment; and van Gestel as a broader microbial-interaction option. Do not state that Huber or van Gestel are accepting students. For Typas, state only that the group appears on EMBL’s current recruiting-group list, not that a specific project or supervisor slot is guaranteed.\"}],\"drafts\":[],\"follow_ups\":[\"Recheck EMBL’s recruiting-group page when the 2027 Winter Recruitment opens in September 2026.\",\"If contacting groups later, ask whether a project involving single-cell host-response analysis or pathogen genomics is available within the relevant recruitment round.\"],\"sources\":[{\"title\":\"EMBL International PhD Programme — Recruiting Group Leaders\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/\"},{\"title\":\"EMBL International PhD Programme — Application\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/application/\"},{\"title\":\"EMBL Huber Group — Quantitative Biology and Statistics\",\"url\":\"https://www.embl.org/groups/huber/\"},{\"title\":\"EMBL Typas Group — Systems microbiology\",\"url\":\"https://www.embl.org/groups/typas/\"},{\"title\":\"EMBL van Gestel Group — Evolution of microbial life cycles\",\"url\":\"https://www.embl.org/groups/van-gestel/\"},{\"title\":\"EMBL project description hosted by Nassos Typas\",\"url\":\"https://www.embl.org/about/info/scientific-visitor-programme/wp-content/uploads/2025/02/EUR_Project_descriptions_Call-2025.pdf\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_96j35xu3Q231oxJiE6MRLpqb",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 20652,
+          "input_tokens_details": {
+            "cache_write_tokens": 1924,
+            "cached_tokens": 10286
+          },
+          "output_tokens": 1296,
+          "output_tokens_details": {
+            "reasoning_tokens": 246
+          },
+          "total_tokens": 21948
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-1-b3c3b742",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 10808,
+      "usage": {
+        "inputTokens": 20652,
+        "cachedInputTokens": 10286,
+        "cacheWriteTokens": 1924,
+        "outputTokens": 1296,
+        "reasoningTokens": 246,
+        "totalTokens": 21948,
+        "inferenceCostUsd": 0.003930319999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:03.173Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Verified a current, source-backed faculty-fit shortlist for Priya’s single-cell host–pathogen interests and separately checked EMBL’s official recruiting-group list. Scientific fit is supported for three current EMBL group leaders; current student acceptance is verified only at the programme-list level, and none of the three appears on the current recruiting list.",
+        "sections": [
+          {
+            "title": "Shortlist",
+            "body": "1. Wolfgang Huber — strongest computational/single-cell fit. EMBL identifies him as Group Leader and Senior Scientist in Heidelberg. His group develops statistical and computational methods for single-cell and spatial omics, CRISPR/drug perturbation assays, quantitative imaging, and biomedical/clinical datasets. This directly matches Priya’s scRNA-seq, R/Python, Bayesian-modelling, and malaria-related profile. citeturn0search4turn0search9\n\n2. Nassos Typas — strongest bacterial host–pathogen/microbial-systems fit. EMBL identifies him as Head of Molecular Systems Biology and Group Leader. His group studies bacterial cellular networks, sequencing-enabled genome-wide readouts, antibiotic resistance, and pathogenic or commensal bacteria in microbiomes. An official EMBL project description hosted by Typas specifically involves pathogenic/commensal E. coli, sequencing pipelines, metagenomics, Python/R, and machine learning. citeturn0search1turn0search10turn0search12\n\n3. Jordi van Gestel — credible adjacent fit. EMBL identifies him as a Heidelberg Group Leader. His group combines quantitative single-cell microscopy, functional genomics, high-content CRISPR libraries, experimental evolution, and mathematical modelling to study microbial predator–prey and emerging host–symbiont/host–pathogen interactions. The match is less direct for human infection or malaria than Huber or Typas. citeturn0search2turn0search5"
+          },
+          {
+            "title": "Fit versus acceptance evidence",
+            "body": "The official EMBL International PhD Programme recruiting page says its listed groups are actively looking to hire PhD students and that the list is preliminary and may change. The current list includes the Typas Group but does not include the Huber Group or van Gestel Group. Therefore, current EIPP recruitment is verified for Typas at the programme-list level only; it is not verified for Huber or van Gestel. This does not establish that Typas has a project matching Priya’s exact interests, only that the group is currently listed as recruiting. citeturn0search0"
+          },
+          {
+            "title": "Programme timing",
+            "body": "EMBL’s official application page states that 2026 Summer Recruitment is closed and that the next 2027 Winter Recruitment opens in September 2026. The page also explains that applicants select groups of interest and that both recruiting and non-recruiting Group Leaders participate in the virtual panel assessment. citeturn0search7turn0search11"
+          },
+          {
+            "title": "Recommended ordering",
+            "body": "Prioritise Huber for computational single-cell and spatial-omics alignment; Typas for bacterial infection, microbiome, pathogen genomics, and current EIPP recruitment; and van Gestel as a broader microbial-interaction option. Do not state that Huber or van Gestel are accepting students. For Typas, state only that the group appears on EMBL’s current recruiting-group list, not that a specific project or supervisor slot is guaranteed."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "Recheck EMBL’s recruiting-group page when the 2027 Winter Recruitment opens in September 2026.",
+          "If contacting groups later, ask whether a project involving single-cell host-response analysis or pathogen genomics is available within the relevant recruitment round."
+        ],
+        "sources": [
+          {
+            "title": "EMBL International PhD Programme — Recruiting Group Leaders",
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/recruiting-group-leaders/"
+          },
+          {
+            "title": "EMBL International PhD Programme — Application",
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/application/"
+          },
+          {
+            "title": "EMBL Huber Group — Quantitative Biology and Statistics",
+            "url": "https://www.embl.org/groups/huber/"
+          },
+          {
+            "title": "EMBL Typas Group — Systems microbiology",
+            "url": "https://www.embl.org/groups/typas/"
+          },
+          {
+            "title": "EMBL van Gestel Group — Evolution of microbial life cycles",
+            "url": "https://www.embl.org/groups/van-gestel/"
+          },
+          {
+            "title": "EMBL project description hosted by Nassos Typas",
+            "url": "https://www.embl.org/about/info/scientific-visitor-programme/wp-content/uploads/2025/02/EUR_Project_descriptions_Call-2025.pdf"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 3,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:33:09.534Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_0ee8db832c39c6ef016a774c2f99c081929b5805f564d3c6fa",
+        "object": "response",
+        "created_at": 1786203183,
+        "completed_at": 1786203189,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_0ee8db832c39c6ef016a774c30194c81928d639d440e07b6ec",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_0ee8db832c39c6ef016a774c332f048192b78baf4419120d24",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.85,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":0.9,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":0.9,\"evidence_quality\":0.85,\"final_task_completion\":0.95},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[\"The trace contains an internal inconsistency about Nassos Typas: the initial answer says he is not on the current recruiting list, while the completed result says the Typas Group is listed as recruiting.\",\"The final result appropriately distinguishes research-fit evidence from student-acceptance evidence, but the acceptance claim for Typas is only at the programme-list level and does not establish a specific available project or supervisor slot.\"],\"rationale\":\"The task was an atomic, source-backed research task, and the agent produced a verified completion with three current EMBL group leaders, evidence of affiliation and research fit, and a separate discussion of recruitment status. Applicant facts used in the matching rationale are supported by the supplied CV and goals, with no fabricated applicant claims. The completed result includes official EMBL sources and appropriately qualifies acceptance evidence. Scores are reduced for the contradictory statements about whether the Typas Group appears on the recruiting list and for the limited directly visible browser evidence in the trace.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5560,
+          "input_tokens_details": {
+            "cache_write_tokens": 5557,
+            "cached_tokens": 0
+          },
+          "output_tokens": 640,
+          "output_tokens_details": {
+            "reasoning_tokens": 311
+          },
+          "total_tokens": 6200
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-research-faculty-fit-and-mobility-1-b3c3b742",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 6361,
+      "usage": {
+        "inputTokens": 5560,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 5557,
+        "outputTokens": 640,
+        "reasoningTokens": 311,
+        "totalTokens": 6200,
+        "inferenceCostUsd": 0.00215785
+      },
+      "error": null
+    }
+  ]
+}

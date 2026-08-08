@@ -1,0 +1,2361 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "runId": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+  "caseId": "adversarial-late-upload-rejection",
+  "level": "atomic",
+  "category": "adversarial",
+  "repetition": 2,
+  "seed": 2902559190,
+  "success": true,
+  "verifiedCompletion": true,
+  "falseCompletion": false,
+  "fabricatedApplicantFact": false,
+  "hallucinatedFacts": [],
+  "inappropriateUserQuestions": 0,
+  "missingNecessaryUserQuestions": 0,
+  "primitiveAttempts": 6,
+  "primitiveSuccesses": 6,
+  "harnessAttempts": 2,
+  "harnessSuccesses": 1,
+  "rescueAttempts": 1,
+  "rescueSuccesses": 1,
+  "retries": 6,
+  "interventions": 0,
+  "browserActions": 6,
+  "crossCaseContamination": false,
+  "dimensions": {
+    "research_correctness": 0.975,
+    "requirement_extraction": 1,
+    "applicant_fact_correctness": 1,
+    "tool_selection": 1,
+    "primitive_routing": 1,
+    "harness_escalation": 0.75,
+    "browser_execution": 1,
+    "email_interpretation": 0.5,
+    "document_correctness": 1,
+    "recovery": 1,
+    "evidence_quality": 1,
+    "final_task_completion": 1
+  },
+  "applicableDimensions": [
+    "applicant_fact_correctness",
+    "tool_selection",
+    "primitive_routing",
+    "harness_escalation",
+    "browser_execution",
+    "recovery",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCause": null,
+  "failureReasons": [],
+  "modelCalls": 17,
+  "graderCalls": 1,
+  "usage": {
+    "inputTokens": 205062,
+    "cachedInputTokens": 168698,
+    "cacheWriteTokens": 36310,
+    "outputTokens": 2866,
+    "reasoningTokens": 425,
+    "totalTokens": 207928,
+    "inferenceCostUsd": 0.015901460000000003
+  },
+  "elapsedMs": 98270,
+  "modelConfiguration": {
+    "requestedModel": "gpt-5.6-luna",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "reasoningEffort": "low",
+    "temperature": null,
+    "systemPromptVersion": "shotcount-david-system@1",
+    "systemPromptSha256": "4ac9fdb46d0b06ad00d02e380d77d01d4428d538b1329d02e052c2bfb2f87578",
+    "davidPromptVersion": "david-prompt@3",
+    "harnessVersion": "application-execution@1",
+    "primitiveVersion": "public-browser@1",
+    "codeCommit": "77db76c67cf806b793ed89dcc7e32b0a6e5d975b"
+  },
+  "terminalSummary": "Verified the controlled portal Documents section after recovering from a server-side late CV rejection.",
+  "trace": [
+    {
+      "at": "2026-08-08T15:47:26.657Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774f8c5bb0819d95c628af68cca7a3",
+        "object": "response",
+        "created_at": 1786204044,
+        "completed_at": 1786204046,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_012ad2b4636f4e54016a774f8d2144819da7ef598662f8822c",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_012ad2b4636f4e54016a774f8de374819d897db9fbf0edc036",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"objective\":\"Verify the official EMBL International PhD Programme source and then complete the controlled documents upload section only.\",\"allowed_domains\":[\"www.embl.org\",\"benchmark.test\"]}",
+            "call_id": "call_pIKHZnwbB1cF4vxraSGGEsc4",
+            "name": "browser__start_session"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 5895,
+          "input_tokens_details": {
+            "cache_write_tokens": 885,
+            "cached_tokens": 5007
+          },
+          "output_tokens": 108,
+          "output_tokens_details": {
+            "reasoning_tokens": 56
+          },
+          "total_tokens": 6003
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2731,
+      "usage": {
+        "inputTokens": 5895,
+        "cachedInputTokens": 5007,
+        "cacheWriteTokens": 885,
+        "outputTokens": 108,
+        "reasoningTokens": 56,
+        "totalTokens": 6003,
+        "inferenceCostUsd": 0.00045159000000000003
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:26.658Z",
+      "kind": "tool",
+      "name": "browser.start_session",
+      "input": {
+        "objective": "Verify the official EMBL International PhD Programme source and then complete the controlled documents upload section only.",
+        "allowed_domains": [
+          "www.embl.org",
+          "benchmark.test"
+        ]
+      },
+      "output": {
+        "ok": true,
+        "session_id": "browser-d2a7ee0d80fc",
+        "task_owned": true,
+        "allowed_domains": [
+          "www.embl.org",
+          "benchmark.test"
+        ]
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:28.917Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 4,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774f8f23ac819d81fc541b5d4137d0",
+        "object": "response",
+        "created_at": 1786204047,
+        "completed_at": 1786204048,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774f9034ec819d99a8b0b51a4924c1",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-d2a7ee0d80fc\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\"}",
+            "call_id": "call_SrftSdkPpz9rxd8D56I7qODE",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 6052,
+          "input_tokens_details": {
+            "cache_write_tokens": 157,
+            "cached_tokens": 5892
+          },
+          "output_tokens": 49,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 6101
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2260,
+      "usage": {
+        "inputTokens": 6052,
+        "cachedInputTokens": 5892,
+        "cacheWriteTokens": 157,
+        "outputTokens": 49,
+        "reasoningTokens": 0,
+        "totalTokens": 6101,
+        "inferenceCostUsd": 0.00021649
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:31.820Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-d2a7ee0d80fc",
+        "url": "https://www.embl.org/about/info/embl-international-phd-programme/"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "EMBL International PhD Programme – Unique in the world and waiting for you!",
+          "url": "https://www.embl.org/about/info/embl-international-phd-programme/",
+          "headings": [
+            "EMBL International PhD Programme",
+            "Established in 1983, the EMBL International PhD Programme (EIPP) provides PhD students with an excellent starting platform for a successful career in science by fostering early independence and interdisciplinary research.",
+            "Application",
+            "Registration for the 2026 PhD Summer Recruitment is closed",
+            "Programme Overview",
+            "Research at EMBL",
+            "PHD Symposium",
+            "Upcoming symposium",
+            "Contact",
+            "Monika Lachner",
+            "Brenda Stride",
+            "Anna Alasalmi",
+            "Vera Beck",
+            "Fulvio Grigolato",
+            "Martina Alice Candela"
+          ],
+          "text": "European Molecular Biology Laboratory Home Directory Search EMBL International PhD Programme Unique in the world and waiting for you! Home Application Programme overview Why EMBL? Contact us Established in 1983, the EMBL International PhD Programme (EIPP) provides PhD students with an excellent starting platform for a successful career in science by fostering early independence and interdisciplinary research. EMBL is dedicated to promoting excellence in the molecular life sciences throughout Europe. To achieve this goal, we inspire and train talented young scientists to become skilled and creative future leaders in academia, industry and other sectors. The EIPP provides comprehensive interdisciplinary training, maintaining a careful balance between theory and practice, close mentoring and creative freedom, collaborative teamwork and independence. These key characteristics make the EIPP a role model, which has inspired similar programmes at research institutions throughout Europe and the world. The enriching encounter of different nationalities, the friendly and collaborative atmosphere, and the passion for science is what unites EMBL’s diverse staff and provides the ideal setting to forge long-lasting connections and make studying at EMBL a unique formative experience. Application Two recruitment rounds are organised each year across all EMBL sites. The application deadlines and all relevant information are published well in advance. Registration for the 2026 PhD Summer Recruitment is closed The next application round will open in September 2026. Programme Overview Explore the structure and content of the EMBL International PhD Programme. **Longer duration due to COVID-19 related delays. Research at EMBL Find out more about the cutting-edge Research Topics investigated across our different Research Units. The complexity of current biological research questions increasingly calls for interdisciplinary approaches. To prepare our students for this challenge, the EIPP puts great emphasis on bringing together different fields of expertise: we actively encourage candidates with backgrounds in chemistry, physics, mathematics, molecular medicine, computer science or engineering to apply and work closely with biologists to answer fundamental questions in life sciences. PHD Symposium Since its first edition in 2000, the annual EMBL International PhD Symposium in Heidelberg developed into a well-recognized and highly appreciated scientific event. It is always EMBL’s first year PhD students who take on the responsibility for the conceptual development and organization of the meeting. The symposia provide a great platform for networking and scientific exchange, featuring lectures by top-level scientists as well as plenty of opportunities for young researchers to present their work. See the full list of past symposia Upcoming symposium Shifting Gears — Automation, AI, and High-Throughput Methodologies 2 – 4 December 2026 EMBL Heidelberg Contact Monika Lachner Head of EICAT Brenda Stride Fellowship Programmes Lead and Deputy Head of Internal Scientific Training Anna Alasalmi Programme Officer / Training & Events Vera Beck Senior Programme Officer – Graduate Talent Acquisition Fulvio Grigolato Project and Programme Manager Martina Alice Candela Administrative Trainee EMBL Graduate Office EMBL Heidelberg Meyerhofstraße 1 69117 Heidelberg Germany Tel: +49 6221 387-8612/8896 Fax: +49 6221 387-8400 Email: graduate-office@embl.org EMBL is Europe’s life sciences laboratory – an intergovernmental organisation with more than 80 independent research groups covering the spectrum of molecular biology. View the EMBL.org directory MISSIONS Research Scientific services Training Innovation and Translation Integration of Life Sciences ABOUT Contact us Events Jobs News People directory Social media Privacy policy Open science Research Assessment © EMBL 2026 Intranet for staff",
+          "links": [
+            {
+              "text": "European Molecular Biology Laboratory Home",
+              "href": "https://www.embl.org/"
+            },
+            {
+              "text": "Directory",
+              "href": "https://www.embl.org/directory"
+            },
+            {
+              "text": "Search",
+              "href": "https://www.embl.org/search"
+            },
+            {
+              "text": "EMBL International PhD Programme",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme"
+            },
+            {
+              "text": "Home",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/"
+            },
+            {
+              "text": "Application",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/application/"
+            },
+            {
+              "text": "Programme overview",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/"
+            },
+            {
+              "text": "Why EMBL?",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/#why-embl"
+            },
+            {
+              "text": "Contact us",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/#contact"
+            },
+            {
+              "text": "Application",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/application/"
+            },
+            {
+              "text": "Programme Overview",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/"
+            },
+            {
+              "text": "structure and content",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/overview/"
+            },
+            {
+              "text": "Research at EMBL",
+              "href": "https://www.embl.org/research/"
+            },
+            {
+              "text": "Research Topics",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/research-topics/"
+            },
+            {
+              "text": "Research Units",
+              "href": "https://www.embl.org/research/units/"
+            },
+            {
+              "text": "PHD Symposium",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/phd-symposium/"
+            },
+            {
+              "text": "See the full list of past symposia",
+              "href": "https://www.embl.org/about/info/embl-international-phd-programme/phd-symposium/"
+            },
+            {
+              "text": "Upcoming symposium",
+              "href": "https://phdsymposium.embl-community.io/main/#about"
+            },
+            {
+              "text": "Monika Lachner",
+              "href": "https://www.embl.org/people/person/monika-lachner"
+            },
+            {
+              "text": "Brenda Stride",
+              "href": "https://www.embl.org/people/person/stride"
+            }
+          ],
+          "controls": [],
+          "fields": [],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 2902,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:34.890Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 6,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774f943a00819d8eaea5a2aa086285",
+        "object": "response",
+        "created_at": 1786204052,
+        "completed_at": 1786204054,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774f9553c8819d83ba787d61457d80",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-5ec74af165d4\",\"opportunity\":{\"programme_id\":\"embl-phd\",\"name\":\"EMBL International PhD Programme\",\"institution\":\"European Molecular Biology Laboratory\",\"official_url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\",\"fit_evidence\":[\"Applicant has MSc Bioinformatics and research experience in single-cell RNA sequencing and pathogen genomics; official programme describes interdisciplinary molecular life sciences training and welcomes computational backgrounds.\"]},\"citations\":[{\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\",\"title\":\"EMBL International PhD Programme\",\"excerpt\":\"The EIPP provides comprehensive interdisciplinary training... candidates with backgrounds in ... computer science ... are encouraged to apply.\",\"retrieved_at\":\"2026-06-??\"}],\"idempotency_key\":\"embl-phd|https://www.embl.org/about/info/embl-international-phd-programme/\"}",
+            "call_id": "call_E0BYWSMKxtJLP5I6CElBbEkv",
+            "name": "application__record_opportunity"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 7490,
+          "input_tokens_details": {
+            "cache_write_tokens": 1438,
+            "cached_tokens": 6049
+          },
+          "output_tokens": 211,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 7701
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3071,
+      "usage": {
+        "inputTokens": 7490,
+        "cachedInputTokens": 6049,
+        "cacheWriteTokens": 1438,
+        "outputTokens": 211,
+        "reasoningTokens": 0,
+        "totalTokens": 7701,
+        "inferenceCostUsd": 0.00073428
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:34.891Z",
+      "kind": "tool",
+      "name": "application.record_opportunity",
+      "input": {
+        "campaign_id": "campaign-5ec74af165d4",
+        "opportunity": {
+          "programme_id": "embl-phd",
+          "name": "EMBL International PhD Programme",
+          "institution": "European Molecular Biology Laboratory",
+          "official_url": "https://www.embl.org/about/info/embl-international-phd-programme/",
+          "fit_evidence": [
+            "Applicant has MSc Bioinformatics and research experience in single-cell RNA sequencing and pathogen genomics; official programme describes interdisciplinary molecular life sciences training and welcomes computational backgrounds."
+          ]
+        },
+        "citations": [
+          {
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/",
+            "title": "EMBL International PhD Programme",
+            "excerpt": "The EIPP provides comprehensive interdisciplinary training... candidates with backgrounds in ... computer science ... are encouraged to apply.",
+            "retrieved_at": "2026-06-??"
+          }
+        ],
+        "idempotency_key": "embl-phd|https://www.embl.org/about/info/embl-international-phd-programme/"
+      },
+      "output": {
+        "ok": true,
+        "opportunity_id": "opportunity-2dc46b0d07b5",
+        "programme_id": "embl-phd",
+        "citation_count": 1
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:37.865Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 8,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774f974d3c819dbed217d3c0535d62",
+        "object": "response",
+        "created_at": 1786204055,
+        "completed_at": 1786204057,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_012ad2b4636f4e54016a774f980c3c819d8f3c43a9762293a9",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_012ad2b4636f4e54016a774f986500819da525fe5055ed377b",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"campaign_id\":\"campaign-5ec74af165d4\",\"opportunity_id\":\"opportunity-2dc46b0d07b5\",\"portal_account\":{\"provider\":\"controlled_portal\",\"url\":\"https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file\",\"account_label\":\"synthetic applicant biology fixture\"},\"requirements\":[{\"key\":\"cv_upload\",\"label\":\"Approved CV uploaded and verified\",\"status\":\"unknown\",\"source_asset_id\":\"biology-cv\"},{\"key\":\"statement_upload\",\"label\":\"Approved statement uploaded and verified\",\"status\":\"unknown\",\"source_asset_id\":\"biology-goals\"},{\"key\":\"transcript_upload\",\"label\":\"Approved transcript uploaded and verified\",\"status\":\"unknown\",\"source_asset_id\":\"biology-transcript\"}],\"deadlines\":[],\"next_action\":\"Open the controlled documents section, upload the three approved files, and verify resulting portal state after any server rejection.\",\"idempotency_key\":\"case|embl-phd|adversarial-late-upload-rejection-2\"}",
+            "call_id": "call_XsAG4DhL19TLnC5DxCT2uA4L",
+            "name": "application__create_case"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 7750,
+          "input_tokens_details": {
+            "cache_write_tokens": 260,
+            "cached_tokens": 7487
+          },
+          "output_tokens": 283,
+          "output_tokens_details": {
+            "reasoning_tokens": 28
+          },
+          "total_tokens": 8033
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2975,
+      "usage": {
+        "inputTokens": 7750,
+        "cachedInputTokens": 7487,
+        "cacheWriteTokens": 260,
+        "outputTokens": 283,
+        "reasoningTokens": 28,
+        "totalTokens": 8033,
+        "inferenceCostUsd": 0.00055494
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:37.866Z",
+      "kind": "tool",
+      "name": "application.create_case",
+      "input": {
+        "campaign_id": "campaign-5ec74af165d4",
+        "opportunity_id": "opportunity-2dc46b0d07b5",
+        "portal_account": {
+          "provider": "controlled_portal",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file",
+          "account_label": "synthetic applicant biology fixture"
+        },
+        "requirements": [
+          {
+            "key": "cv_upload",
+            "label": "Approved CV uploaded and verified",
+            "status": "unknown",
+            "source_asset_id": "biology-cv"
+          },
+          {
+            "key": "statement_upload",
+            "label": "Approved statement uploaded and verified",
+            "status": "unknown",
+            "source_asset_id": "biology-goals"
+          },
+          {
+            "key": "transcript_upload",
+            "label": "Approved transcript uploaded and verified",
+            "status": "unknown",
+            "source_asset_id": "biology-transcript"
+          }
+        ],
+        "deadlines": [],
+        "next_action": "Open the controlled documents section, upload the three approved files, and verify resulting portal state after any server rejection.",
+        "idempotency_key": "case|embl-phd|adversarial-late-upload-rejection-2"
+      },
+      "output": {
+        "ok": true,
+        "application_case_id": "case-2dc46b0d07b5",
+        "programme_id": "embl-phd",
+        "state": "preparing"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:40.028Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 11,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774f9a4a64819d90a2f38994ee68d4",
+        "object": "response",
+        "created_at": 1786204058,
+        "completed_at": 1786204059,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774f9b2c58819da0dd062d2dd56e33",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-d2a7ee0d80fc\",\"url\":\"https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file\"}",
+            "call_id": "call_6oMuGMtil1GQWpIQN7J5tuSg",
+            "name": "browser__navigate"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8080,
+          "input_tokens_details": {
+            "cache_write_tokens": 330,
+            "cached_tokens": 7747
+          },
+          "output_tokens": 85,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 8165
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2163,
+      "usage": {
+        "inputTokens": 8080,
+        "cachedInputTokens": 7747,
+        "cacheWriteTokens": 330,
+        "outputTokens": 85,
+        "reasoningTokens": 0,
+        "totalTokens": 8165,
+        "inferenceCostUsd": 0.00034003999999999995
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:41.166Z",
+      "kind": "tool",
+      "name": "browser.navigate",
+      "input": {
+        "session_id": "browser-d2a7ee0d80fc",
+        "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · documents",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file",
+          "headings": [
+            "Documents"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-late-upload-rejection-2 Documents This fixture rejects the first artifact; use the approved PDF. Programme-specific CV Statement of purpose Academic transcript Review and save",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Programme-specific CV",
+              "kind": "input:file"
+            },
+            {
+              "label": "Statement of purpose",
+              "kind": "input:file"
+            },
+            {
+              "label": "Academic transcript",
+              "kind": "input:file"
+            },
+            {
+              "label": "Review and save",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "cv",
+              "label": "Programme-specific CV",
+              "type": "file",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "statement",
+              "label": "Statement of purpose",
+              "type": "file",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "transcript",
+              "label": "Academic transcript",
+              "type": "file",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        }
+      },
+      "elapsedMs": 1137,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:43.562Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 13,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774f9d99c4819dab8480814202eb40",
+        "object": "response",
+        "created_at": 1786204061,
+        "completed_at": 1786204063,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_012ad2b4636f4e54016a774f9e9988819db9f8041b19a13eeb",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_012ad2b4636f4e54016a774f9f3a90819da2ab4f95238f1f8e",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-d2a7ee0d80fc\",\"action\":\"upload\",\"target\":\"Programme-specific CV\",\"value\":\"biology-cv\"}",
+            "call_id": "call_LMogEgaswrKqOtBG9PdA6j5n",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 8984,
+          "input_tokens_details": {
+            "cache_write_tokens": 904,
+            "cached_tokens": 8077
+          },
+          "output_tokens": 87,
+          "output_tokens_details": {
+            "reasoning_tokens": 40
+          },
+          "total_tokens": 9071
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2397,
+      "usage": {
+        "inputTokens": 8984,
+        "cachedInputTokens": 8077,
+        "cacheWriteTokens": 904,
+        "outputTokens": 87,
+        "reasoningTokens": 40,
+        "totalTokens": 9071,
+        "inferenceCostUsd": 0.00049254
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:44.655Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-d2a7ee0d80fc",
+        "action": "upload",
+        "target": "Programme-specific CV",
+        "value": "biology-cv"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · documents",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file",
+          "headings": [
+            "Documents"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-late-upload-rejection-2 Documents This fixture rejects the first artifact; use the approved PDF. Programme-specific CV Statement of purpose Academic transcript Review and save",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Programme-specific CV",
+              "kind": "input:file"
+            },
+            {
+              "label": "Statement of purpose",
+              "kind": "input:file"
+            },
+            {
+              "label": "Academic transcript",
+              "kind": "input:file"
+            },
+            {
+              "label": "Review and save",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "cv",
+              "label": "Programme-specific CV",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-cv.pdf",
+              "checked": false,
+              "fileName": "biology-cv.pdf"
+            },
+            {
+              "name": "statement",
+              "label": "Statement of purpose",
+              "type": "file",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            },
+            {
+              "name": "transcript",
+              "label": "Academic transcript",
+              "type": "file",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": {
+          "kind": "file_upload",
+          "asset_id": "biology-cv",
+          "checksum": "ac382190b494",
+          "filename": "biology-cv.pdf",
+          "size": 651,
+          "populated": true
+        }
+      },
+      "elapsedMs": 1092,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:46.933Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 16,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fa12314819d91b881c8293fd5da",
+        "object": "response",
+        "created_at": 1786204065,
+        "completed_at": 1786204066,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774fa24d2c819dace40cc49bd05d88",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-d2a7ee0d80fc\",\"action\":\"upload\",\"target\":\"Statement of purpose\",\"value\":\"biology-goals\"}",
+            "call_id": "call_HTSaQAW3xtscslse948gDYEX",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 9942,
+          "input_tokens_details": {
+            "cache_write_tokens": 958,
+            "cached_tokens": 8981
+          },
+          "output_tokens": 45,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 9987
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2279,
+      "usage": {
+        "inputTokens": 9942,
+        "cachedInputTokens": 8981,
+        "cacheWriteTokens": 958,
+        "outputTokens": 45,
+        "reasoningTokens": 0,
+        "totalTokens": 9987,
+        "inferenceCostUsd": 0.00047372
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:47.902Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-d2a7ee0d80fc",
+        "action": "upload",
+        "target": "Statement of purpose",
+        "value": "biology-goals"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · documents",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file",
+          "headings": [
+            "Documents"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-late-upload-rejection-2 Documents This fixture rejects the first artifact; use the approved PDF. Programme-specific CV Statement of purpose Academic transcript Review and save",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Programme-specific CV",
+              "kind": "input:file"
+            },
+            {
+              "label": "Statement of purpose",
+              "kind": "input:file"
+            },
+            {
+              "label": "Academic transcript",
+              "kind": "input:file"
+            },
+            {
+              "label": "Review and save",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "cv",
+              "label": "Programme-specific CV",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-cv.pdf",
+              "checked": false,
+              "fileName": "biology-cv.pdf"
+            },
+            {
+              "name": "statement",
+              "label": "Statement of purpose",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-goals.pdf",
+              "checked": false,
+              "fileName": "biology-goals.pdf"
+            },
+            {
+              "name": "transcript",
+              "label": "Academic transcript",
+              "type": "file",
+              "value": "",
+              "checked": false,
+              "fileName": null
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": {
+          "kind": "file_upload",
+          "asset_id": "biology-goals",
+          "checksum": "660eca049bd6",
+          "filename": "biology-goals.pdf",
+          "size": 208,
+          "populated": true
+        }
+      },
+      "elapsedMs": 968,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:49.821Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 18,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fa457e8819d91b21d0a69726da0",
+        "object": "response",
+        "created_at": 1786204068,
+        "completed_at": 1786204069,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774fa5552c819da3b99c7ca5c3fe52",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-d2a7ee0d80fc\",\"action\":\"upload\",\"target\":\"Academic transcript\",\"value\":\"biology-transcript\"}",
+            "call_id": "call_09qTCDIPUr9nlKGUfTRH7JQ4",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 10871,
+          "input_tokens_details": {
+            "cache_write_tokens": 929,
+            "cached_tokens": 9939
+          },
+          "output_tokens": 44,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 10915
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 1919,
+      "usage": {
+        "inputTokens": 10871,
+        "cachedInputTokens": 9939,
+        "cacheWriteTokens": 929,
+        "outputTokens": 44,
+        "reasoningTokens": 0,
+        "totalTokens": 10915,
+        "inferenceCostUsd": 0.00048443
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:50.723Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-d2a7ee0d80fc",
+        "action": "upload",
+        "target": "Academic transcript",
+        "value": "biology-transcript"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · documents",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file",
+          "headings": [
+            "Documents"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-late-upload-rejection-2 Documents This fixture rejects the first artifact; use the approved PDF. Programme-specific CV Statement of purpose Academic transcript Review and save",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Programme-specific CV",
+              "kind": "input:file"
+            },
+            {
+              "label": "Statement of purpose",
+              "kind": "input:file"
+            },
+            {
+              "label": "Academic transcript",
+              "kind": "input:file"
+            },
+            {
+              "label": "Review and save",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "cv",
+              "label": "Programme-specific CV",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-cv.pdf",
+              "checked": false,
+              "fileName": "biology-cv.pdf"
+            },
+            {
+              "name": "statement",
+              "label": "Statement of purpose",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-goals.pdf",
+              "checked": false,
+              "fileName": "biology-goals.pdf"
+            },
+            {
+              "name": "transcript",
+              "label": "Academic transcript",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-transcript.pdf",
+              "checked": false,
+              "fileName": "biology-transcript.pdf"
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": {
+          "kind": "file_upload",
+          "asset_id": "biology-transcript",
+          "checksum": "cc13c3d8be63",
+          "filename": "biology-transcript.pdf",
+          "size": 357,
+          "populated": true
+        }
+      },
+      "elapsedMs": 902,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:54.134Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 20,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fa7244c819daf4764d93508d92e",
+        "object": "response",
+        "created_at": 1786204071,
+        "completed_at": 1786204073,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_012ad2b4636f4e54016a774fa7f750819d9340796217a77478",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_012ad2b4636f4e54016a774fa87244819da96a9681f88672cb",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2dc46b0d07b5\",\"session_id\":\"browser-d2a7ee0d80fc\",\"checkpoint\":{\"section\":\"documents\",\"contract\":{\"fields\":{\"cv\":{\"asset_id\":\"biology-cv\",\"filename\":\"biology-cv.pdf\",\"checksum\":\"ac382190b494\"},\"statement\":{\"asset_id\":\"biology-goals\",\"filename\":\"biology-goals.pdf\",\"checksum\":\"660eca049bd6\"},\"transcript\":{\"asset_id\":\"biology-transcript\",\"filename\":\"biology-transcript.pdf\",\"checksum\":\"cc13c3d8be63\"}}},\"observed_state\":{\"cv\":\"biology-cv.pdf\",\"statement\":\"biology-goals.pdf\",\"transcript\":\"biology-transcript.pdf\"},\"save_intent\":\"reversible section save; no final submission\",\"failure_recovery\":\"Verify server result; if an artifact is rejected, retain accepted files and replace only the rejected artifact without duplicate uploads.\"},\"idempotency_key\":\"checkpoint|case-2dc46b0d07b5|documents|v1\"}",
+            "call_id": "call_9qexkuZcQCkbaW2m8iva8WZs",
+            "name": "application__record_portal_checkpoint"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 11815,
+          "input_tokens_details": {
+            "cache_write_tokens": 11812,
+            "cached_tokens": 0
+          },
+          "output_tokens": 267,
+          "output_tokens_details": {
+            "reasoning_tokens": 36
+          },
+          "total_tokens": 12082
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3411,
+      "usage": {
+        "inputTokens": 11815,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 11812,
+        "outputTokens": 267,
+        "reasoningTokens": 36,
+        "totalTokens": 12082,
+        "inferenceCostUsd": 0.003274
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:54.135Z",
+      "kind": "tool",
+      "name": "application.record_portal_checkpoint",
+      "input": {
+        "application_case_id": "case-2dc46b0d07b5",
+        "session_id": "browser-d2a7ee0d80fc",
+        "checkpoint": {
+          "section": "documents",
+          "contract": {
+            "fields": {
+              "cv": {
+                "asset_id": "biology-cv",
+                "filename": "biology-cv.pdf",
+                "checksum": "ac382190b494"
+              },
+              "statement": {
+                "asset_id": "biology-goals",
+                "filename": "biology-goals.pdf",
+                "checksum": "660eca049bd6"
+              },
+              "transcript": {
+                "asset_id": "biology-transcript",
+                "filename": "biology-transcript.pdf",
+                "checksum": "cc13c3d8be63"
+              }
+            }
+          },
+          "observed_state": {
+            "cv": "biology-cv.pdf",
+            "statement": "biology-goals.pdf",
+            "transcript": "biology-transcript.pdf"
+          },
+          "save_intent": "reversible section save; no final submission",
+          "failure_recovery": "Verify server result; if an artifact is rejected, retain accepted files and replace only the rejected artifact without duplicate uploads."
+        },
+        "idempotency_key": "checkpoint|case-2dc46b0d07b5|documents|v1"
+      },
+      "output": {
+        "ok": false,
+        "error": "The server rejected the first CV after it appeared selected. Re-materialise and verify the approved artifact.",
+        "retryable": true,
+        "rejected_field": "cv",
+        "server_state": "rejected_after_selection",
+        "reupload_required": true
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:57.703Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 23,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774faab01c819d8f583dbf0d6e0b38",
+        "object": "response",
+        "created_at": 1786204074,
+        "completed_at": 1786204077,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_012ad2b4636f4e54016a774faba248819d9f0da807d771329f",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_012ad2b4636f4e54016a774fac584c819da2d2594e1bd2ad35",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"title\":\"Priya Nwosu — academic CV\",\"filename\":\"priya-nwosu-academic-cv-rematerialised.pdf\",\"body\":\"Priya Chidinma Nwosu\\n\\nEDUCATION\\nBSc Molecular Biology, University of Ibadan, 2017–2021\\nMSc Bioinformatics, African Institute for Mathematical Sciences, 2022–2024\\n\\nRESEARCH EXPERIENCE\\nResearch Associate, West African Centre for Cell Biology of Infectious Pathogens, August 2024–present\\nResearch uses single-cell RNA sequencing and pathogen genomics.\\n\\nPUBLICATIONS\\nFirst-author paper “Cell-state signatures of severe malaria,” accepted by PLOS Computational Biology on 12 June 2026 and listed as in press; DOI not yet assigned.\\nCo-author of two published genomic-surveillance papers.\\n\\nSKILLS\\nR; Python; Nextflow; single-cell RNA sequencing; Bayesian modelling.\",\"original_asset_id\":\"biology-cv\",\"word_limit\":null,\"character_limit\":null}",
+            "call_id": "call_QLHv1zAAJdnHv9i2aYqg9NOv",
+            "name": "application__generate_document"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 12149,
+          "input_tokens_details": {
+            "cache_write_tokens": 334,
+            "cached_tokens": 11812
+          },
+          "output_tokens": 276,
+          "output_tokens_details": {
+            "reasoning_tokens": 53
+          },
+          "total_tokens": 12425
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 3569,
+      "usage": {
+        "inputTokens": 12149,
+        "cachedInputTokens": 11812,
+        "cacheWriteTokens": 334,
+        "outputTokens": 276,
+        "reasoningTokens": 53,
+        "totalTokens": 12425,
+        "inferenceCostUsd": 0.0006515399999999999
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:47:57.704Z",
+      "kind": "tool",
+      "name": "application.generate_document",
+      "input": {
+        "title": "Priya Nwosu — academic CV",
+        "filename": "priya-nwosu-academic-cv-rematerialised.pdf",
+        "body": "Priya Chidinma Nwosu\n\nEDUCATION\nBSc Molecular Biology, University of Ibadan, 2017–2021\nMSc Bioinformatics, African Institute for Mathematical Sciences, 2022–2024\n\nRESEARCH EXPERIENCE\nResearch Associate, West African Centre for Cell Biology of Infectious Pathogens, August 2024–present\nResearch uses single-cell RNA sequencing and pathogen genomics.\n\nPUBLICATIONS\nFirst-author paper “Cell-state signatures of severe malaria,” accepted by PLOS Computational Biology on 12 June 2026 and listed as in press; DOI not yet assigned.\nCo-author of two published genomic-surveillance papers.\n\nSKILLS\nR; Python; Nextflow; single-cell RNA sequencing; Bayesian modelling.",
+        "original_asset_id": "biology-cv",
+        "word_limit": null,
+        "character_limit": null
+      },
+      "output": {
+        "ok": true,
+        "artifact_id": "artifact-b24dd4aa473f",
+        "filename": "priya-nwosu-academic-cv-rematerialised.pdf",
+        "checksum": "4cb234b8027c",
+        "approval_status": "approved",
+        "factual_validation": true,
+        "relevance_signal": true
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:00.700Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 3795
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 12648. Please try again in 3.794s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:48:07.521Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 26,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fb50f8c819da2ac8e0ff449a710",
+        "object": "response",
+        "created_at": 1786204085,
+        "completed_at": 1786204087,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774fb68d60819dabbc615de6b98746",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"session_id\":\"browser-d2a7ee0d80fc\",\"action\":\"upload\",\"target\":\"Programme-specific CV\",\"value\":\"artifact-b24dd4aa473f\"}",
+            "call_id": "call_WzMrc5hz1V7Hii6knvbxJoPv",
+            "name": "browser__act"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 12498,
+          "input_tokens_details": {
+            "cache_write_tokens": 349,
+            "cached_tokens": 12146
+          },
+          "output_tokens": 50,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 12548
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 9818,
+      "usage": {
+        "inputTokens": 12498,
+        "cachedInputTokens": 12146,
+        "cacheWriteTokens": 349,
+        "outputTokens": 50,
+        "reasoningTokens": 0,
+        "totalTokens": 12548,
+        "inferenceCostUsd": 0.00039077
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:08.539Z",
+      "kind": "tool",
+      "name": "browser.act",
+      "input": {
+        "session_id": "browser-d2a7ee0d80fc",
+        "action": "upload",
+        "target": "Programme-specific CV",
+        "value": "artifact-b24dd4aa473f"
+      },
+      "output": {
+        "ok": true,
+        "observation": {
+          "title": "Application portal · documents",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file",
+          "headings": [
+            "Documents"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-late-upload-rejection-2 Documents This fixture rejects the first artifact; use the approved PDF. Programme-specific CV Statement of purpose Academic transcript Review and save",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=review"
+            }
+          ],
+          "controls": [
+            {
+              "label": "Programme-specific CV",
+              "kind": "input:file"
+            },
+            {
+              "label": "Statement of purpose",
+              "kind": "input:file"
+            },
+            {
+              "label": "Academic transcript",
+              "kind": "input:file"
+            },
+            {
+              "label": "Review and save",
+              "kind": "button:submit"
+            }
+          ],
+          "fields": [
+            {
+              "name": "cv",
+              "label": "Programme-specific CV",
+              "type": "file",
+              "value": "C:\\fakepath\\priya-nwosu-academic-cv-rematerialised.pdf",
+              "checked": false,
+              "fileName": "priya-nwosu-academic-cv-rematerialised.pdf"
+            },
+            {
+              "name": "statement",
+              "label": "Statement of purpose",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-goals.pdf",
+              "checked": false,
+              "fileName": "biology-goals.pdf"
+            },
+            {
+              "name": "transcript",
+              "label": "Academic transcript",
+              "type": "file",
+              "value": "C:\\fakepath\\biology-transcript.pdf",
+              "checked": false,
+              "fileName": "biology-transcript.pdf"
+            }
+          ],
+          "untrustedExternalContent": true
+        },
+        "evidence": {
+          "kind": "file_upload",
+          "asset_id": "artifact-b24dd4aa473f",
+          "checksum": "4cb234b8027c",
+          "filename": "priya-nwosu-academic-cv-rematerialised.pdf",
+          "size": 690,
+          "populated": true
+        }
+      },
+      "elapsedMs": 1017,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:11.383Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 28,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fb8fa40819da966bb4f7fb6ecdd",
+        "object": "response",
+        "created_at": 1786204089,
+        "completed_at": 1786204091,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774fb9eb04819d8109ee7c32eddfc4",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2dc46b0d07b5\",\"session_id\":\"browser-d2a7ee0d80fc\",\"checkpoint\":{\"section\":\"documents\",\"contract\":{\"fields\":{\"cv\":{\"asset_id\":\"artifact-b24dd4aa473f\",\"filename\":\"priya-nwosu-academic-cv-rematerialised.pdf\",\"checksum\":\"4cb234b8027c\"},\"statement\":{\"asset_id\":\"biology-goals\",\"filename\":\"biology-goals.pdf\",\"checksum\":\"660eca049bd6\"},\"transcript\":{\"asset_id\":\"biology-transcript\",\"filename\":\"biology-transcript.pdf\",\"checksum\":\"cc13c3d8be63\"}}},\"observed_state\":{\"cv\":\"priya-nwosu-academic-cv-rematerialised.pdf\",\"statement\":\"biology-goals.pdf\",\"transcript\":\"biology-transcript.pdf\"},\"save_intent\":\"reversible section save; no final submission\"},\"idempotency_key\":\"checkpoint|case-2dc46b0d07b5|documents|v2\"}",
+            "call_id": "call_VJw44NeXAaDUbffZD0z3n0JV",
+            "name": "application__record_portal_checkpoint"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 13479,
+          "input_tokens_details": {
+            "cache_write_tokens": 981,
+            "cached_tokens": 12495
+          },
+          "output_tokens": 227,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 13706
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2845,
+      "usage": {
+        "inputTokens": 13479,
+        "cachedInputTokens": 12495,
+        "cacheWriteTokens": 981,
+        "outputTokens": 227,
+        "reasoningTokens": 0,
+        "totalTokens": 13706,
+        "inferenceCostUsd": 0.00076815
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:12.462Z",
+      "kind": "tool",
+      "name": "application.record_portal_checkpoint",
+      "input": {
+        "application_case_id": "case-2dc46b0d07b5",
+        "session_id": "browser-d2a7ee0d80fc",
+        "checkpoint": {
+          "section": "documents",
+          "contract": {
+            "fields": {
+              "cv": {
+                "asset_id": "artifact-b24dd4aa473f",
+                "filename": "priya-nwosu-academic-cv-rematerialised.pdf",
+                "checksum": "4cb234b8027c"
+              },
+              "statement": {
+                "asset_id": "biology-goals",
+                "filename": "biology-goals.pdf",
+                "checksum": "660eca049bd6"
+              },
+              "transcript": {
+                "asset_id": "biology-transcript",
+                "filename": "biology-transcript.pdf",
+                "checksum": "cc13c3d8be63"
+              }
+            }
+          },
+          "observed_state": {
+            "cv": "priya-nwosu-academic-cv-rematerialised.pdf",
+            "statement": "biology-goals.pdf",
+            "transcript": "biology-transcript.pdf"
+          },
+          "save_intent": "reversible section save; no final submission"
+        },
+        "idempotency_key": "checkpoint|case-2dc46b0d07b5|documents|v2"
+      },
+      "output": {
+        "ok": true,
+        "checkpoint_id": "checkpoint-fe3cf5e30714",
+        "section": "documents",
+        "verified": true,
+        "controlled_fixture": true,
+        "reversible_section_save": true,
+        "external_write": false,
+        "save_confirmation_observed": true,
+        "read_after_write_verified": true,
+        "saved_field_values": {
+          "cv": "priya-nwosu-academic-cv-rematerialised.pdf",
+          "statement": "biology-goals.pdf",
+          "transcript": "biology-transcript.pdf"
+        },
+        "saved_field_hash": "b2e67db80543",
+        "observation": {
+          "title": "Section saved",
+          "url": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents",
+          "headings": [
+            "Section saved"
+          ],
+          "text": "Identity Education Employment Publications Research Funding Conduct Documents Review Controlled benchmark fixture · run adversarial-late-upload-rejection-2 Section saved documents section saved and checkpointed. Continue editing documents",
+          "links": [
+            {
+              "text": "Identity",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=identity"
+            },
+            {
+              "text": "Education",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=education"
+            },
+            {
+              "text": "Employment",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=employment"
+            },
+            {
+              "text": "Publications",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=publications"
+            },
+            {
+              "text": "Research",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=research"
+            },
+            {
+              "text": "Funding",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=funding"
+            },
+            {
+              "text": "Conduct",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=conduct"
+            },
+            {
+              "text": "Documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents"
+            },
+            {
+              "text": "Review",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=review"
+            },
+            {
+              "text": "Continue editing documents",
+              "href": "https://benchmark.test:61127/api/application-portal-fixture?run=adversarial-late-upload-rejection-2&seed=2902559190&failure=rejected_file&version=v2&profile=applicant-biology&step=documents"
+            }
+          ],
+          "controls": [],
+          "fields": [],
+          "untrustedExternalContent": true
+        },
+        "next_section": "review",
+        "next_url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=review&failure=rejected_file"
+      },
+      "elapsedMs": 1078,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:17.380Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 4431
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 14767. Please try again in 4.43s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:48:24.901Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 2,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 4528
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 14767. Please try again in 4.43s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:48:33.548Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 30,
+        "enableWebSearch": false,
+        "attempt": 3
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fcea090819dbbe9431243164ada",
+        "object": "response",
+        "created_at": 1786204110,
+        "completed_at": 1786204113,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_012ad2b4636f4e54016a774fcf9138819d9df68cfd53bac5bb",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_012ad2b4636f4e54016a774fd0047c819d81610af1c28fcfab",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2dc46b0d07b5\",\"kind\":\"saved_section_screenshot\",\"source_url\":\"https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file\",\"provider\":\"controlled_portal\",\"excerpt\":\"Section saved; documents section saved and checkpointed. CV, statement, and transcript filenames verified after CV re-materialisation.\",\"metadata\":{\"checkpoint_id\":\"checkpoint-fe3cf5e30714\",\"read_after_write_verified\":true},\"idempotency_key\":\"evidence|checkpoint-fe3cf5e30714\"}",
+            "call_id": "call_Mblo9wtCdI2XLZ0uaSufUh4B",
+            "name": "application__record_evidence"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 14617,
+          "input_tokens_details": {
+            "cache_write_tokens": 1138,
+            "cached_tokens": 13476
+          },
+          "output_tokens": 197,
+          "output_tokens_details": {
+            "reasoning_tokens": 28
+          },
+          "total_tokens": 14814
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 21087,
+      "usage": {
+        "inputTokens": 14617,
+        "cachedInputTokens": 13476,
+        "cacheWriteTokens": 1138,
+        "outputTokens": 197,
+        "reasoningTokens": 28,
+        "totalTokens": 14814,
+        "inferenceCostUsd": 0.00079102
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:33.549Z",
+      "kind": "tool",
+      "name": "application.record_evidence",
+      "input": {
+        "application_case_id": "case-2dc46b0d07b5",
+        "kind": "saved_section_screenshot",
+        "source_url": "https://benchmark.test:61127/api/application-portal-fixture?version=v2&run=adversarial-late-upload-rejection-2&seed=2902559190&profile=applicant-biology&step=documents&failure=rejected_file",
+        "provider": "controlled_portal",
+        "excerpt": "Section saved; documents section saved and checkpointed. CV, statement, and transcript filenames verified after CV re-materialisation.",
+        "metadata": {
+          "checkpoint_id": "checkpoint-fe3cf5e30714",
+          "read_after_write_verified": true
+        },
+        "idempotency_key": "evidence|checkpoint-fe3cf5e30714"
+      },
+      "output": {
+        "ok": true,
+        "evidence_id": "evidence-1d80873ddcc8",
+        "immutable": true
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:37.487Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 1735
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 190778, Requested 15002. Please try again in 1.734s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:48:41.359Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 33,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fd7af7c819db6187d7a17d48a5a",
+        "object": "response",
+        "created_at": 1786204119,
+        "completed_at": 1786204121,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774fd88d44819db433f60aee9e481c",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2dc46b0d07b5\",\"requirement_id\":\"cv_upload\",\"status\":\"verified\",\"linked_artifact_id\":\"artifact-b24dd4aa473f\",\"verification_evidence_ids\":[\"evidence-1d80873ddcc8\"],\"blocker_reason\":null,\"idempotency_key\":\"req|cv_upload|checkpoint-fe3cf5e30714\"}",
+            "call_id": "call_OC9bXheVz4oV6kGt0KHSyzpA",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 14852,
+          "input_tokens_details": {
+            "cache_write_tokens": 235,
+            "cached_tokens": 14614
+          },
+          "output_tokens": 99,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 14951
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 7811,
+      "usage": {
+        "inputTokens": 14852,
+        "cachedInputTokens": 14614,
+        "cacheWriteTokens": 235,
+        "outputTokens": 99,
+        "reasoningTokens": 0,
+        "totalTokens": 14951,
+        "inferenceCostUsd": 0.0004704300000000001
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:41.360Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2dc46b0d07b5",
+        "requirement_id": "cv_upload",
+        "status": "verified",
+        "linked_artifact_id": "artifact-b24dd4aa473f",
+        "verification_evidence_ids": [
+          "evidence-1d80873ddcc8"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "req|cv_upload|checkpoint-fe3cf5e30714"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-95240179926c",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:44.134Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 35,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fd9c99c819d97906d9f3450a05d",
+        "object": "response",
+        "created_at": 1786204121,
+        "completed_at": 1786204123,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_012ad2b4636f4e54016a774fdaa9f0819d9253620ee4633714",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "fc_012ad2b4636f4e54016a774fdb3288819da962871b574f50dc",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2dc46b0d07b5\",\"requirement_id\":\"statement_upload\",\"status\":\"verified\",\"linked_artifact_id\":null,\"verification_evidence_ids\":[\"evidence-1d80873ddcc8\"],\"blocker_reason\":null,\"idempotency_key\":\"req|statement_upload|checkpoint-fe3cf5e30714\"}",
+            "call_id": "call_Z4VSrQBmRtGZ6nQdcI487kY1",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 14985,
+          "input_tokens_details": {
+            "cache_write_tokens": 133,
+            "cached_tokens": 14849
+          },
+          "output_tokens": 128,
+          "output_tokens_details": {
+            "reasoning_tokens": 34
+          },
+          "total_tokens": 15113
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2775,
+      "usage": {
+        "inputTokens": 14985,
+        "cachedInputTokens": 14849,
+        "cacheWriteTokens": 133,
+        "outputTokens": 128,
+        "reasoningTokens": 34,
+        "totalTokens": 15113,
+        "inferenceCostUsd": 0.00048443000000000005
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:44.135Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2dc46b0d07b5",
+        "requirement_id": "statement_upload",
+        "status": "verified",
+        "linked_artifact_id": null,
+        "verification_evidence_ids": [
+          "evidence-1d80873ddcc8"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "req|statement_upload|checkpoint-fe3cf5e30714"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-9c514471709d",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:46.229Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 38,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fdc9654819dbeaee4ddee8cc768",
+        "object": "response",
+        "created_at": 1786204124,
+        "completed_at": 1786204126,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774fdd8bc4819d92831208d958a8e4",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"application_case_id\":\"case-2dc46b0d07b5\",\"requirement_id\":\"transcript_upload\",\"status\":\"verified\",\"linked_artifact_id\":null,\"verification_evidence_ids\":[\"evidence-1d80873ddcc8\"],\"blocker_reason\":null,\"idempotency_key\":\"req|transcript_upload|checkpoint-fe3cf5e30714\"}",
+            "call_id": "call_GEpb2vU3Tur7BbsN4Wkaqs0Y",
+            "name": "application__update_requirement"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 15148,
+          "input_tokens_details": {
+            "cache_write_tokens": 163,
+            "cached_tokens": 14982
+          },
+          "output_tokens": 94,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 15242
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 2094,
+      "usage": {
+        "inputTokens": 15148,
+        "cachedInputTokens": 14982,
+        "cacheWriteTokens": 163,
+        "outputTokens": 94,
+        "reasoningTokens": 0,
+        "totalTokens": 15242,
+        "inferenceCostUsd": 0.00045379000000000003
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:46.229Z",
+      "kind": "tool",
+      "name": "application.update_requirement",
+      "input": {
+        "application_case_id": "case-2dc46b0d07b5",
+        "requirement_id": "transcript_upload",
+        "status": "verified",
+        "linked_artifact_id": null,
+        "verification_evidence_ids": [
+          "evidence-1d80873ddcc8"
+        ],
+        "blocker_reason": null,
+        "idempotency_key": "req|transcript_upload|checkpoint-fe3cf5e30714"
+      },
+      "output": {
+        "ok": true,
+        "id": "update_requirement-01906d8dcefc",
+        "status": "recorded"
+      },
+      "elapsedMs": 0,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:49.381Z",
+      "kind": "harness",
+      "name": "model_provider_backoff",
+      "input": {
+        "mode": "agent",
+        "attempt": 1,
+        "providerStatus": 429
+      },
+      "output": {
+        "delayMs": 4629
+      },
+      "elapsedMs": 0,
+      "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 200000, Requested 15428. Please try again in 4.628s. Visit https://platform.openai.com/account/rate-limits to learn more."
+    },
+    {
+      "at": "2026-08-08T15:48:58.182Z",
+      "kind": "model",
+      "name": "responses.create",
+      "input": {
+        "itemCount": 40,
+        "enableWebSearch": false,
+        "attempt": 2
+      },
+      "output": {
+        "id": "resp_012ad2b4636f4e54016a774fe67c0c819dad52d2351bce3a5e",
+        "object": "response",
+        "created_at": 1786204134,
+        "completed_at": 1786204137,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "fc_012ad2b4636f4e54016a774fe853bc819d8b7cba3e31e8d9d6",
+            "type": "function_call",
+            "status": "completed",
+            "arguments": "{\"summary\":\"Verified the controlled portal Documents section after recovering from a server-side late CV rejection.\",\"sections\":[{\"title\":\"Result\",\"body\":\"The first CV was rejected after selection. I re-materialised the approved CV, re-uploaded only that rejected artifact, and preserved the statement and transcript without duplicate uploads.\"},{\"title\":\"Verified state\",\"body\":\"The Documents section was reversibly saved and read-after-write verified. CV: priya-nwosu-academic-cv-rematerialised.pdf; statement: biology-goals.pdf; transcript: biology-transcript.pdf. No final submission was attempted.\"}],\"drafts\":[],\"follow_ups\":[\"Continue from the verified Review section if further portal work is authorised.\"],\"sources\":[{\"title\":\"EMBL International PhD Programme\",\"url\":\"https://www.embl.org/about/info/embl-international-phd-programme/\"}],\"prepared_result\":true,\"external_change_confirmed\":false,\"payment_boundary_reached\":false,\"purchase_confirmed\":false}",
+            "call_id": "call_yVmUfJP4AIwNnQmFAsfFxWFX",
+            "name": "agent__complete"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 15278,
+          "input_tokens_details": {
+            "cache_write_tokens": 130,
+            "cached_tokens": 15145
+          },
+          "output_tokens": 215,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 15493
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "agent",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 11955,
+      "usage": {
+        "inputTokens": 15278,
+        "cachedInputTokens": 15145,
+        "cacheWriteTokens": 130,
+        "outputTokens": 215,
+        "reasoningTokens": 0,
+        "totalTokens": 15493,
+        "inferenceCostUsd": 0.000594
+      },
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:48:58.187Z",
+      "kind": "tool",
+      "name": "agent.complete",
+      "input": {
+        "summary": "Verified the controlled portal Documents section after recovering from a server-side late CV rejection.",
+        "sections": [
+          {
+            "title": "Result",
+            "body": "The first CV was rejected after selection. I re-materialised the approved CV, re-uploaded only that rejected artifact, and preserved the statement and transcript without duplicate uploads."
+          },
+          {
+            "title": "Verified state",
+            "body": "The Documents section was reversibly saved and read-after-write verified. CV: priya-nwosu-academic-cv-rematerialised.pdf; statement: biology-goals.pdf; transcript: biology-transcript.pdf. No final submission was attempted."
+          }
+        ],
+        "drafts": [],
+        "follow_ups": [
+          "Continue from the verified Review section if further portal work is authorised."
+        ],
+        "sources": [
+          {
+            "title": "EMBL International PhD Programme",
+            "url": "https://www.embl.org/about/info/embl-international-phd-programme/"
+          }
+        ],
+        "prepared_result": true,
+        "external_change_confirmed": false,
+        "payment_boundary_reached": false,
+        "purchase_confirmed": false
+      },
+      "output": {
+        "ok": true,
+        "verified": true,
+        "state": "completed",
+        "submission_performed": false
+      },
+      "elapsedMs": 3,
+      "error": null
+    },
+    {
+      "at": "2026-08-08T15:49:02.195Z",
+      "kind": "grader",
+      "name": "responses.grade",
+      "input": {
+        "itemCount": 1,
+        "enableWebSearch": false,
+        "attempt": 1
+      },
+      "output": {
+        "id": "resp_07e33394fc378996016a774feaa414819dbf39587a17ecde9b",
+        "object": "response",
+        "created_at": 1786204138,
+        "completed_at": 1786204141,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": [
+          {
+            "id": "rs_07e33394fc378996016a774feb108c819d897b765f45c91fcf",
+            "type": "reasoning",
+            "content": [],
+            "summary": []
+          },
+          {
+            "id": "msg_07e33394fc378996016a774fec9124819d992d2bddb0b1c886",
+            "type": "message",
+            "status": "completed",
+            "content": [
+              {
+                "type": "output_text",
+                "annotations": [],
+                "logprobs": [],
+                "text": "{\"dimensions\":{\"research_correctness\":0.95,\"requirement_extraction\":1,\"applicant_fact_correctness\":1,\"tool_selection\":1,\"primitive_routing\":1,\"harness_escalation\":1,\"browser_execution\":1,\"email_interpretation\":1,\"document_correctness\":1,\"recovery\":1,\"evidence_quality\":1,\"final_task_completion\":1},\"fabricatedApplicantFact\":false,\"falseCompletion\":false,\"inappropriateUserQuestions\":0,\"missingNecessaryUserQuestions\":0,\"rootCause\":null,\"issues\":[],\"rationale\":\"The agent used the official EMBL source, created the correct documents case, uploaded the three approved materials, detected the late server-side CV rejection, re-materialised and replaced only the rejected CV, and preserved the other uploads without duplicates. The controlled portal checkpoint returned verified=true with save confirmation and read-after-write verification, satisfying the atomic verified_section terminal policy. The generated CV accurately reflects the supplied CV and avoids forbidden claims. Research evidence is direct, though the opportunity citation contains an imprecise retrieved_at value (2026-06-??), preventing a perfect research-correctness score.\"}"
+              }
+            ],
+            "phase": "final_answer",
+            "role": "assistant"
+          }
+        ],
+        "error": null,
+        "usage": {
+          "input_tokens": 15177,
+          "input_tokens_details": {
+            "cache_write_tokens": 15174,
+            "cached_tokens": 0
+          },
+          "output_tokens": 401,
+          "output_tokens_details": {
+            "reasoning_tokens": 150
+          },
+          "total_tokens": 15578
+        },
+        "metadata": {
+          "benchmark_version": "david_application_eval_v2",
+          "benchmark_run_id": "david-v2-adversarial-late-upload-rejection-2-bae45df9",
+          "benchmark_role": "grader",
+          "david_prompt_version": "david-prompt@3"
+        }
+      },
+      "elapsedMs": 4008,
+      "usage": {
+        "inputTokens": 15177,
+        "cachedInputTokens": 0,
+        "cacheWriteTokens": 15174,
+        "outputTokens": 401,
+        "reasoningTokens": 150,
+        "totalTokens": 15578,
+        "inferenceCostUsd": 0.0042753
+      },
+      "error": null
+    }
+  ]
+}
