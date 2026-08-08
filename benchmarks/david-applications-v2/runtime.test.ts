@@ -30,6 +30,17 @@ describe('v2 isolated production browser runtime', () => {
     )).toBe(false)
   })
 
+  it('does not treat explicitly excluded stale threads as selected associations', () => {
+    const payload = {
+      expected_current_thread: 'thread-otp-current',
+      quarantine_threads: ['thread-otp-old', 'thread-confirm-old'],
+      excluded_thread_id: 'thread-other-old',
+    }
+    expect(testing.selectedAssociationIds(payload, 'thread')).toEqual(['thread-otp-current'])
+    expect(testing.selectedAssociationIds({ expected_current_thread: 'thread-otp-old' }, 'thread'))
+      .toEqual(['thread-otp-old'])
+  })
+
   it('grounds ambiguous degree dates and verifies a real browser checkpoint', async () => {
     const benchmarkCase = {
       ...spec.atomicCases.find(item => item.id === 'form-degree-requirements-versus-ceremony')!,

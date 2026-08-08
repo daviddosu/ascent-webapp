@@ -97,6 +97,18 @@ function flattened(value: unknown) {
   return String(value ?? '')
 }
 
+function selectedAssociationIds(payload: unknown, kind: 'case' | 'thread', parentKey = ''): string[] {
+  const key = normalized(parentKey).replaceAll(' ', '_')
+  if (/(?:^|_)(?:exclude|excluded|excluding|quarantine|quarantined|forbidden|ignore|ignored|reject|rejected|stale)(?:_|$)/.test(key)) return []
+  if (Array.isArray(payload)) return payload.flatMap(value => selectedAssociationIds(value, kind, parentKey))
+  if (payload && typeof payload === 'object') {
+    return Object.entries(payload as Record<string, unknown>)
+      .flatMap(([childKey, value]) => selectedAssociationIds(value, kind, childKey))
+  }
+  const associationKey = kind === 'case' ? /(?:^|_)case(?:_id)?$/ : /(?:^|_)thread(?:_id)?$/
+  return associationKey.test(key) && typeof payload === 'string' ? [payload] : []
+}
+
 function shortId(value: string) {
   return createHash('sha256').update(value).digest('hex').slice(0, 12)
 }
@@ -356,13 +368,14 @@ export class StochasticApplicationRuntime {
 
   private validateCaseAssociation(caseId: string, payload: unknown) {
     const oracle = this.input.caseOracle
-    const payloadText = flattened(payload)
-    if (oracle.forbiddenCaseIds?.some(value => caseId === value || payloadText.includes(value))) {
+    const selectedCaseIds = selectedAssociationIds(payload, 'case')
+    if (oracle.forbiddenCaseIds?.some(value => caseId === value || selectedCaseIds.includes(value))) {
       this.crossCaseContamination = true
       this.fail(`Cross-case contamination used forbidden case ${caseId}.`, 'orchestration')
       return false
     }
-    if (oracle.forbiddenThreadIds?.some(value => payloadText.includes(value))) {
+    const selectedThreadIds = selectedAssociationIds(payload, 'thread')
+    if (oracle.forbiddenThreadIds?.some(value => selectedThreadIds.includes(value))) {
       this.crossCaseContamination = true
       this.fail('Cross-case contamination used a stale or foreign thread.', 'orchestration')
       return false
@@ -785,4 +798,4 @@ export class StochasticApplicationRuntime {
   }
 }
 
-export const testing = { compositeValueGrounded }
+export const testing = { compositeValueGrounded, selectedAssociationIds }
