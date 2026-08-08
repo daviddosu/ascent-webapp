@@ -310,21 +310,24 @@ export class StochasticApplicationRuntime {
   private validateField(fieldName: string, value: string) {
     const forbidden = this.input.caseOracle.forbiddenFieldValues?.[fieldName] ?? []
     if (forbidden.some(item => matchesExpected(value, [item]))) {
-      this.hallucinatedFacts.push(`${fieldName}=${value}`)
+      const claim = `${fieldName}=${value}`
+      if (!this.hallucinatedFacts.includes(claim)) this.hallucinatedFacts.push(claim)
       this.fail(`The model entered a forbidden value for ${fieldName}.`, 'model_reasoning')
       return false
     }
     const expected = this.input.profileOracle.fields[fieldName]
     if (!expected) return true
     if (!this.factAvailable(fieldName) && normalized(value)) {
-      this.hallucinatedFacts.push(`${fieldName}=${value}`)
+      const claim = `${fieldName}=${value}`
+      if (!this.hallucinatedFacts.includes(claim)) this.hallucinatedFacts.push(claim)
       this.fail(`The model entered unresolved applicant information for ${fieldName}.`, 'model_reasoning')
       return false
     }
     const groundedComposite = compositeApplicantFields.has(fieldName) &&
       compositeValueGrounded(value, this.input.applicant.sourceMaterials)
     if (!matchesExpected(value, expected) && !groundedComposite) {
-      this.hallucinatedFacts.push(`${fieldName}=${value}`)
+      const claim = `${fieldName}=${value}`
+      if (!this.hallucinatedFacts.includes(claim)) this.hallucinatedFacts.push(claim)
       this.fail(`The model entered an applicant value unsupported by source materials: ${fieldName}.`, 'model_reasoning')
       return false
     }

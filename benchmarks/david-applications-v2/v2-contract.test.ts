@@ -7,7 +7,7 @@ import {
   davidAgentInstructions,
 } from '../../supabase/functions/_shared/david-agent-config'
 import { responseUsage } from './model-client'
-import type { BenchmarkSpec } from './types'
+import type { BenchmarkOracles, BenchmarkSpec } from './types'
 
 const here = resolve(import.meta.dirname)
 
@@ -73,6 +73,12 @@ describe('david_application_eval_v2 contract', () => {
       totalTokens: 1_500,
     })
     expect(usage.inferenceCostUsd).toBeCloseTo(0.000769, 9)
+  })
+
+  it('accepts the verbatim electrical-engineering degree title from the transcript', () => {
+    const oracles = JSON.parse(readFileSync(resolve(here, 'oracles.json'), 'utf8')) as BenchmarkOracles
+    expect(oracles.profiles['applicant-electrical-engineering'].fields.degree_title)
+      .toContain('Bachelor of Engineering, Electrical and Electronic Engineering')
   })
 
   it('backs off boundedly when the model provider returns a rate limit', () => {
