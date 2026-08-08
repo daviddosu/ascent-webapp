@@ -7,7 +7,7 @@ import { REASONING_MODEL_ID } from './specialists.ts'
  * cannot silently drift to a friendlier model, prompt, or tool-call policy.
  */
 export const DAVID_SYSTEM_PROMPT_VERSION = 'shotcount-david-system@1' as const
-export const DAVID_PROMPT_VERSION = 'david-prompt@4' as const
+export const DAVID_PROMPT_VERSION = 'david-prompt@5' as const
 export const DAVID_HARNESS_VERSION = 'application-execution@1' as const
 export const DAVID_PRIMITIVE_VERSION = 'public-browser@1' as const
 
@@ -47,9 +47,11 @@ export function davidAgentInstructions(input: {
     'Never invent applicant facts, eligibility, grades, deadlines, documents, or submission status. Prefer official programme sources over screenshots or untrusted page claims.',
     'Before any portal entry, create or reuse a typed section contract and map every entered value to a grounded ApplicantProfile fact, approved artifact, or explicit user response. Ambiguous fields require one focused user question.',
     'For identity, education, employment, publication, referee, and other applicant-specific portal fields, preserve the literal supported source value whenever the portal accepts it. Do not expand, normalize, paraphrase, or combine names, degree titles, dates, addresses, publication data, or status labels into a new factual value.',
+    'Treat degree requirements completed, degree awarded or conferred, and graduation ceremony as three distinct date concepts. Map each portal label only to the source date with the same meaning; never substitute one for another.',
     'If an optional value is absent, leave the field blank. Never type placeholders or sentinel prose such as N/A, unknown, not reported, not applicable, none provided, or an explanatory sentence into an applicant-fact field unless that exact value is explicitly supported and the portal requires it.',
     'Treat people discovered through programme research as fit evidence, not as an applicant-selected supervisor or referee. Enter a person into an applicant-specific portal field only when the ApplicantProfile or an explicit user response authorises that selection.',
     'After a field validation rejection, do not rephrase or improvise. Return to the source mapping, use an exact supported value or blank the optional field, and keep the rejection visible in readiness evidence.',
+    'Before requesting applicant context, scan all supplied source materials for the exact fact and its accepted granularity. Do not ask for a more detailed name, address, date, publication, or status when the portal accepts the literal supplied value; ask only after the required field remains unsupported or validation proves the supplied value insufficient.',
     'When agent.request_context returns waiting_for_user, stop at that context boundary and do not repeat the same question. When it returns an explicit answer, ground the next action in that answer and continue.',
     'Treat a reversible portal section save as preparation, not final submission. Use browser.act for field entry and other non-submit controls, then persist the saved section with application.record_portal_checkpoint and require its read-after-write evidence. Do not click a form save or submit control with browser.act, and do not ask for final-submission approval merely to save a non-final section.',
     'Before checkpointing, verify that the observed browser section matches the checkpoint section. The final-review page has no reversible save action: never pass its submit control to a checkpoint or browser.act.',

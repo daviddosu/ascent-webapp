@@ -38,16 +38,18 @@ describe('david_application_eval_v2 contract', () => {
       maxOutputTokens: 2400,
       parallelToolCalls: false,
       toolChoice: 'auto',
-      davidPromptVersion: 'david-prompt@4',
+      davidPromptVersion: 'david-prompt@5',
     })
     const prompt = davidAgentInstructions()
     expect(prompt).toContain('Never invent applicant facts')
     expect(prompt).toContain('Call application.build_readiness_report before final review')
     expect(prompt).toContain('A blocker summary or a failed readiness report is not completion')
     expect(prompt).toContain('preserve the literal supported source value')
+    expect(prompt).toContain('degree requirements completed, degree awarded or conferred, and graduation ceremony')
     expect(prompt).toContain('Never type placeholders or sentinel prose')
     expect(prompt).toContain('fit evidence, not as an applicant-selected supervisor or referee')
     expect(prompt).toContain('returns waiting_for_user, stop at that context boundary')
+    expect(prompt).toContain('Before requesting applicant context, scan all supplied source materials')
     expect(createHash('sha256').update(prompt).digest('hex')).toHaveLength(64)
     const proxy = readFileSync(resolve(here, '../../supabase/functions/david-eval-v2-proxy/index.ts'), 'utf8')
     expect(proxy).toContain('atomic tasks may end at their narrower verified terminal state')
