@@ -1,0 +1,118 @@
+{
+  "benchmarkVersion": "david_application_eval_v2_1",
+  "sourceRun": "david-v2-final",
+  "method": "Reconstructed from the immutable v2 spec, applicant fixture, hidden oracle, full trace, failure record, and final grader result. The first wrong point is the earliest unsupported, redundant, incorrectly ordered, or unrecovered decision—not merely the final symptom.",
+  "failures": [
+    {
+      "caseId": "e2e-computational-biology-phd",
+      "objective": "Prepare the computational-biology PhD application through verified final review while preserving faculty-fit and in-press semantics.",
+      "profileAndFiles": "Biology profile; BSc and MSc records, CV, transcript, research record, publication record, goals, referees.",
+      "campaignAndCase": "One verified EMBL opportunity and one case; identity through conduct checkpointed; documents and Review never reached.",
+      "planAndExecution": "Research, create case, generate CV, traverse portal, then readiness. Primitive portal actions generally succeeded; no material harness escalation completed the missing tail.",
+      "sourcesAndConclusions": "Official EMBL material was retrieved; faculty fit was kept distinct from availability and publication status was preserved.",
+      "externalState": "No Gmail, writer, referee, professor, or approval action. One unnecessary education-order question. Repeated model-provider backoff ended the run.",
+      "firstWrongPoint": "Asked the user which of two already available degree records to enter instead of applying the deterministic highest/relevant-degree rule and preserving the second record as a requirement.",
+      "rootCauses": ["planning", "wrong next-action selection", "context retrieval", "state recovery", "external services"],
+      "causalChain": "unnecessary degree-order clarification → avoidable stalled turn → incomplete education representation → documents/checkpoints left unfinished → provider exhaustion → no verified final review",
+      "finalClaim": "No completion claim; trace terminated on external fetch exhaustion."
+    },
+    {
+      "caseId": "e2e-engineering-to-ai",
+      "objective": "Prepare the electrical-engineering applicant's UCL CS MSc application through verified final review, preserving prerequisite and manuscript status.",
+      "profileAndFiles": "Electrical-engineering profile; transcript, CV, employment, research, submitted manuscript, goals, referees.",
+      "campaignAndCase": "One verified UCL opportunity and one case; eight portal sections eventually checkpointed but readiness remained false.",
+      "planAndExecution": "Batched an invalid five-field clarification, generated grounded CV/statement, and operated the portal. Primitive rejected one degree-title variant; harness retained the factual error in readiness.",
+      "sourcesAndConclusions": "Official programme evidence retrieved; submitted manuscript semantics preserved; prerequisite and English status remained unresolved.",
+      "externalState": "No provider-confirmed Gmail/referee actions or approval. Context requests were redundant or over-broad.",
+      "firstWrongPoint": "Treated multiple facts as missing despite available source material, then proposed a degree title the runtime did not resolve to the transcript's canonical fact.",
+      "rootCauses": ["applicant-fact grounding", "context retrieval", "planning", "tool-result misunderstanding", "wrong next-action selection"],
+      "causalChain": "stale/incomplete profile resolution → unsupported degree-title action → persistent factual-error ledger → readiness rejected → final review never verified",
+      "finalClaim": "Accurately reported incompletion; no false completion."
+    },
+    {
+      "caseId": "e2e-faculty-moved-institution",
+      "objective": "Verify current faculty affiliation and prepare the EMBL case without treating an old indexed person as selected.",
+      "profileAndFiles": "Biology profile and the same seven source assets; no applicant-selected supervisor.",
+      "campaignAndCase": "One EMBL case; all eight portal sections checkpointed, but readiness remained false from the supervisor fact error.",
+      "planAndExecution": "Correctly sought current affiliation evidence, then entered Wolfgang Huber as the applicant's potential supervisor. The browser rejected it twice; the model continued around the rejection.",
+      "sourcesAndConclusions": "Official evidence established a current scientist, but not identity with the unspecified old-page person and not applicant selection.",
+      "externalState": "No Gmail/writer/referee/approval action; repeated unnecessary context request after the missing identity was already explicit.",
+      "firstWrongPoint": "Converted a researched faculty candidate into an applicant-specific supervisor value without an ApplicantProfile fact or explicit user selection.",
+      "rootCauses": ["unsupported inference", "applicant-fact grounding", "requirement interpretation", "tool-result misunderstanding", "premature execution"],
+      "causalChain": "faculty research evidence → unsupported identity/selection inference → rejected portal value → factual-error ledger → readiness blocked",
+      "finalClaim": "No completion claim; final state remained unready."
+    },
+    {
+      "caseId": "e2e-five-application-campaign",
+      "objective": "Coordinate five ApplicationCases with correct case, artifact, contact, deadline, thread, and portal isolation through verified final review.",
+      "profileAndFiles": "Incomplete interdisciplinary profile; CV, conflicting transcript/portal export, employment, projects, goals, referee material. Simulated answers existed for GPA, completion date, and academic referee.",
+      "campaignAndCase": "Five opportunities and five cases were created; meaningful portal work stayed concentrated on one UCL case and only four successful checkpoints were recorded.",
+      "planAndExecution": "Created campaign breadth before resolving shared facts and graph dependencies. Entered unsupported overlap prose and publication labels, then repeatedly rebuilt readiness for one case.",
+      "sourcesAndConclusions": "Programme research was partial. The legal name was available but treated as missing; three genuinely missing facts were not requested one at a time and consumed.",
+      "externalState": "No completed writer/referee/Gmail flow and no approval. No recorded cross-case contamination, but four cases were effectively starved.",
+      "firstWrongPoint": "Expanded to all five cases before resolving shared profile blockers and assigning a deterministic current case/next dependency.",
+      "rootCauses": ["planning", "applicant-fact grounding", "wrong next-action selection", "missing dependency", "stale context", "unsupported inference"],
+      "causalChain": "unresolved shared profile facts → five cases created without dependency ordering → one-case tunnel vision → unsupported overlap/publication values → four cases unprepared → campaign completion impossible",
+      "finalClaim": "No completion claim; readiness false."
+    },
+    {
+      "caseId": "e2e-funded-particle-physics",
+      "objective": "Prepare the funded UCL particle-physics PhD case through verified final review using the approved referee and no unsupported facts.",
+      "profileAndFiles": "Physics profile; CV, transcript, detector project, CERN research, publication, goals, referees.",
+      "campaignAndCase": "One UCL case; all eight portal sections checkpointed; readiness remained false only because the rejected major-GPA attempt stayed in the factual ledger.",
+      "planAndExecution": "Correctly researched Masters-level eligibility risk and funding, but typed 'Not reported on transcript' into a fact field. It later left the field blank and finished portal execution.",
+      "sourcesAndConclusions": "Official UCL evidence and applicant sources otherwise remained grounded; no supervisor or award was invented.",
+      "externalState": "Approved referee identified but no provider action required in the fixture; no Gmail or submission approval.",
+      "firstWrongPoint": "Converted absence of a major-only GPA into placeholder prose instead of preserving UNRESOLVED and excluding the optional field.",
+      "rootCauses": ["applicant-fact grounding", "unsupported inference", "requirement interpretation", "tool-result misunderstanding"],
+      "causalChain": "missing major GPA → placeholder treated as value → fact gate absent → rejected action persisted as factual defect → otherwise complete case failed readiness",
+      "finalClaim": "No false completion; final readiness accurately remained false."
+    },
+    {
+      "caseId": "e2e-incomplete-records-recovery",
+      "objective": "Resolve conflicting GPA, missing completion date, and academic referee; recover a save failure; reach verified final review without guessing.",
+      "profileAndFiles": "Incomplete interdisciplinary profile with conflicting records and only professional referees; three simulated user answers were available.",
+      "campaignAndCase": "One UCL case; no portal checkpoint was verified after the controlled identity save failure.",
+      "planAndExecution": "Asked for GPA and completion date together, failed to consume the one-field context contract, repeated the same request, queued but did not complete Roon referee resolution, and did not retry from preserved browser state.",
+      "sourcesAndConclusions": "Correctly recognized GPA/date conflict and academic-referee gap; did not fabricate.",
+      "externalState": "Roon request queued only; no Gmail provider result, referee resolution, writer state, or approval.",
+      "firstWrongPoint": "Produced a multi-field context request against a one-field harness contract, so available simulated answers were never merged into authoritative state.",
+      "rootCauses": ["context retrieval", "planning", "state recovery", "referee coordination", "tool-result misunderstanding", "missing dependency"],
+      "causalChain": "multi-field request rejected → answers not merged → duplicate request → save failure not resumed → referee request only queued → zero checkpoints → readiness impossible",
+      "finalClaim": "No completion claim; readiness false."
+    },
+    {
+      "caseId": "e2e-session-expiry-and-upload-recovery",
+      "objective": "Recover an expired/restarted ETH portal session and delayed upload without losing confirmed fields or duplicating actions.",
+      "profileAndFiles": "Electrical-engineering profile and source assets; address detail absent, degree and publication facts available.",
+      "campaignAndCase": "One ETH case; session and upload recovered; employment through documents checkpointed, but identity and education stayed unresolved.",
+      "planAndExecution": "Asked redundant address questions, recovered the browser, then trusted Review's broad saved-state text over section-specific evidence and used the unsupported degree-title variant.",
+      "sourcesAndConclusions": "Publication status and most profile fields remained correct. Current/permanent street addresses were genuinely absent but the harness did not require unnecessary detail.",
+      "externalState": "No Gmail/writer/referee/approval action. Delayed upload recovery succeeded with evidence.",
+      "firstWrongPoint": "Did not restore the exact last verified section contract after browser restart; it jumped to Review and attempted to reconstruct state from stale page text.",
+      "rootCauses": ["state recovery", "stale context", "applicant-fact grounding", "browser reasoning", "tool-result misunderstanding"],
+      "causalChain": "browser restart → stale Review inference → identity checkpoint claimed on wrong page → unsupported degree action → partial replay only → identity/education missing → readiness rejected",
+      "finalClaim": "Accurately avoided readiness/submission claim."
+    },
+    {
+      "caseId": "e2e-writer-revision-recovery",
+      "objective": "Diagnose a wrong-university/unsupported-claim/incomplete writer draft, obtain a precise revision, and reach verified final review.",
+      "profileAndFiles": "Economics profile; CV, transcript, employment, research, goals, referees, and an inbound defective writer draft.",
+      "campaignAndCase": "One LSE case; identity, education, employment, research, funding, and conduct checkpointed; publications/documents stayed blocked.",
+      "planAndExecution": "Detected the three writer defects and created a revision assignment, but accepted no returned artifact. It also entered an unsupported ceremony date and repeatedly asked for unavailable publication detail.",
+      "sourcesAndConclusions": "Writer diagnosis was correct; exact publication title/venue were absent and should have stayed excluded/unresolved.",
+      "externalState": "Communication and writer assignment were recorded, Roon delivery was only queued, no verified revised artifact/provider send, no referee or approval action.",
+      "firstWrongPoint": "Advanced from prepared revision request as if writer execution could continue without provider-confirmed send and a returned checksum-bound artifact.",
+      "rootCauses": ["writer coordination", "missing dependency", "premature execution", "applicant-fact grounding", "communication reasoning", "tool-result misunderstanding"],
+      "causalChain": "defective draft diagnosed → revision merely prepared/queued → no provider-confirmed writer loop → no accepted statement artifact → documents blocked; unsupported ceremony date added a hard factual defect",
+      "finalClaim": "No completion claim; readiness remained false."
+    }
+  ],
+  "causeCounts": {
+    "modelReasoning": 7,
+    "promptOrContext": 7,
+    "harnessOrState": 6,
+    "tools": 5,
+    "externalServices": 1
+  }
+}

@@ -9,6 +9,8 @@ import { REASONING_MODEL_ID } from './specialists.ts'
 export const DAVID_SYSTEM_PROMPT_VERSION = 'shotcount-david-system@1' as const
 export const DAVID_PROMPT_VERSION = 'david-prompt@5' as const
 export const DAVID_HARNESS_VERSION = 'application-execution@1' as const
+export const DAVID_APPLICATION_V21_PROMPT_VERSION = 'david-prompt@6' as const
+export const DAVID_APPLICATION_V21_HARNESS_VERSION = 'david-application-controller@2.1' as const
 export const DAVID_PRIMITIVE_VERSION = 'public-browser@1' as const
 
 export const DAVID_PRODUCTION_MODEL_CONFIG = {
@@ -23,6 +25,12 @@ export const DAVID_PRODUCTION_MODEL_CONFIG = {
   davidPromptVersion: DAVID_PROMPT_VERSION,
   harnessVersion: DAVID_HARNESS_VERSION,
   primitiveVersion: DAVID_PRIMITIVE_VERSION,
+} as const
+
+export const DAVID_APPLICATION_V21_MODEL_CONFIG = {
+  ...DAVID_PRODUCTION_MODEL_CONFIG,
+  davidPromptVersion: DAVID_APPLICATION_V21_PROMPT_VERSION,
+  harnessVersion: DAVID_APPLICATION_V21_HARNESS_VERSION,
 } as const
 
 export function davidAgentInstructions(input: {
@@ -63,5 +71,19 @@ export function davidAgentInstructions(input: {
     'Call application.build_readiness_report before final review. It must include completed requirements, unresolved warnings, grounded entered facts, approved final artifact IDs, essay versions, referee status, fee, declarations, and portal validation evidence. Call application.submit only after the user approves that exact package and pass its returned package_checksum; the tool is idempotent and the browser result must include provider confirmation evidence.',
     'After a verified submission, capture screenshots, confirmation IDs, receipts, and the matching confirmation email through Roon, mark the ApplicationCase submitted, and continue monitoring missing documents, interviews, offers, rejections, scholarship updates, payment requests, and visa or enrolment steps.',
     'You do not have direct Gmail or Calendar access. Roon owns those provider actions and returns a typed result to the same ApplicationCase and AgentRun.',
+  ].join(' ')
+}
+
+export function davidApplicationV21Instructions(input: {
+  displayName?: string
+  roleDescription?: string
+} = {}) {
+  return [
+    davidAgentInstructions(input),
+    'Treat AUTHORITATIVE_APPLICATION_CONTEXT_V2_1 as the compact current truth. Work only on its current ApplicationCase and controller state; retrieve historical evidence by durable ID instead of reconstructing state from old model turns.',
+    'Every applicant fact is either VERIFIED or UNRESOLVED. Use only the exact fact IDs listed in verifiedFacts as downstream provenance. A required UNRESOLVED fact blocks the dependent action; never turn missingness, a guess, or generated prose into a value.',
+    'Propose exactly one action inside the current controller state. Respect requirement dependencyIds and the deterministic nextAction. If the controller rejects an action, preserve completed work and issue one corrected action from the structured error; never restart the workflow.',
+    'NO_EVIDENCE means NO_COMPLETION. A model statement, tool success string, portal appearance, prepared draft, or queued handoff cannot advance a consequential step without the expected typed provider, checkpoint, artifact-checksum, approval, or submission evidence.',
+    'For application.generate_document, pass every source_fact_id used in its text. Each ID must appear in verifiedFacts.',
   ].join(' ')
 }

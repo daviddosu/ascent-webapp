@@ -1,0 +1,17 @@
+{
+  "benchmarkVersion": "david_application_eval_v2_1",
+  "sourceBenchmarkVersion": "david_application_eval_v2",
+  "sourceSpecSha256": "bd952d1b8061f0c02b83a91ba04290c01e8c86cf871dba646fbe824f38ebe820",
+  "sourceOraclesSha256": "22f2b030284858593724398598948b8be388de4ce270e15fde6b32fe1a49be0f",
+  "repetitions": 5,
+  "cases": [
+    { "id": "e2e-computational-biology-phd", "traceSha256": "2f2571848bb97178507a19e994c925971364bef05541b9b96d75551b3fbd2dd6" },
+    { "id": "e2e-engineering-to-ai", "traceSha256": "90a9acde9ea6852ccc57df742ad28faf351166672cbf6e1050cda2125b635a19" },
+    { "id": "e2e-faculty-moved-institution", "traceSha256": "3141c594e0f16f9aab7f543904a9f952c6b1b221bddb99d4748ebe1a6193bf9e" },
+    { "id": "e2e-five-application-campaign", "traceSha256": "5b84d3969c72aa47111768f52f043972cbd34e839ce25f2afa0eaf6ee35eb914" },
+    { "id": "e2e-funded-particle-physics", "traceSha256": "384f81d0a67b91093efc1705a4c5bc5380195ed2cc5d5811240843d439ca45fa" },
+    { "id": "e2e-incomplete-records-recovery", "traceSha256": "dfc60387e7638e4eb116a15264d58c0dc70444bf43b6896c6a1f295e51c9f0ac" },
+    { "id": "e2e-session-expiry-and-upload-recovery", "traceSha256": "3ba6a53a53a7028845733988287b38789222a53d756dc4c0b9ba9c8c41cd63c6" },
+    { "id": "e2e-writer-revision-recovery", "traceSha256": "aaa97d11a234633f25ab87348e5dec518229ccd6ede588b7543e3d82e0b84950" }
+  ]
+}

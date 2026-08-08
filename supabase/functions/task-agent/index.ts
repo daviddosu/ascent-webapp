@@ -70,10 +70,27 @@ import {
   type DavidApplicationState,
 } from '../_shared/david-applications.ts'
 import { isApplicationIntent } from '../_shared/application.ts'
+import {
+  applicationControllerStateFromLegacy,
+  buildAuthoritativeApplicationContext,
+  recoverInvalidApplicationAction,
+  resolveApplicationFact,
+  serializeAuthoritativeApplicationContext,
+  validateApplicationAction,
+  verifyApplicationCompletion,
+  type ApplicationControllerState,
+  type ApplicationValidationError,
+  type ControllerEvidence,
+  type EvidenceType as ControllerEvidenceType,
+  type FactCandidate,
+  type FactResolution,
+  type ProposedApplicationAction,
+  type RequirementNode,
+} from '../_shared/application-controller.ts'
 import { renderCanonicalCv, validateCvData, type CvData, type CvPageTarget } from '../_shared/cv.ts'
 import {
-  DAVID_PRODUCTION_MODEL_CONFIG,
-  davidAgentInstructions,
+  DAVID_APPLICATION_V21_MODEL_CONFIG,
+  davidApplicationV21Instructions,
 } from '../_shared/david-agent-config.ts'
 
 type RequestBody = {
@@ -2348,6 +2365,7 @@ function nextApplicationState(run: AgentRunRow, patch: ApplicationStatePatch): D
 
 function normalizeRequirementPayload(value: unknown, applicationCaseId: string) {
   const input = recordValue(value)
+  const source = recordValue(input.source)
   const allowedCategories = new Set(['identity', 'academic', 'test', 'essay', 'reference', 'financial', 'portfolio', 'portal', 'other'])
   const allowedResponsibleParties = new Set(['applicant', 'david', 'writer', 'referee', 'roon', 'institution'])
   const statusValues = new Set(['unknown', 'verified', 'missing', 'in_progress', 'awaiting_user', 'awaiting_writer', 'awaiting_referee', 'awaiting_institution', 'ready', 'approved', 'submitted', 'rejected', 'waived', 'expired'])
@@ -2366,7 +2384,10 @@ function normalizeRequirementPayload(value: unknown, applicationCaseId: string) 
     responsible_party: allowedResponsibleParties.has(safeString(input.responsible_party ?? input.responsibleParty, 80)) ? safeString(input.responsible_party ?? input.responsibleParty, 80) : 'applicant',
     linked_artifact_id: safeString(input.linked_artifact_id ?? input.linkedArtifactId, 80) || null,
     verification_evidence_ids: stringArray(input.verification_evidence_ids ?? input.verificationEvidenceIds, 120),
-    source: recordValue(input.source),
+    source,
+    source_id: safeString(input.source_id ?? input.sourceId ?? source.id ?? source.url, 2_000) || null,
+    dependency_ids: stringArray(input.dependency_ids ?? input.dependencyIds ?? input.dependencies, 500),
+    evidence_contract: recordValue(input.evidence_contract ?? input.evidenceContract),
     blocker_reason: safeString(input.blocker_reason ?? input.blockerReason, 1_000) || null,
   }
 }
@@ -2460,6 +2481,296 @@ async function applicationCaseContext(admin: AdminClient, run: AgentRunRow, case
     approvalStatus: safeString(row.approval_status, 80) as never, finalSubmissionDestination: safeString(row.final_submission_destination, 500) || null,
   }))
   return { row: caseResult.data, applicationCase, opportunity: applicationOpportunityFromRow(opportunityResult.data), artifacts }
+}
+
+type ApplicationControllerSnapshot = {
+  state: ApplicationControllerState
+  caseId: string | null
+  facts: FactResolution[]
+  requirements: RequirementNode[]
+  evidence: ControllerEvidence[]
+  completedIdempotencyKeys: string[]
+  readinessVerified: boolean
+  submissionApproved: boolean
+  serializedContext: string
+}
+
+function controllerRequirementStatus(value: string): RequirementNode['status'] {
+  if (['verified', 'approved'].includes(value)) return 'VERIFIED'
+  if (value === 'ready') return 'READY'
+  if (value === 'waived') return 'WAIVED'
+  if (value === 'submitted') return 'SUBMITTED'
+  if (value === 'in_progress') return 'IN_PROGRESS'
+  if (['awaiting_user', 'awaiting_writer', 'awaiting_referee', 'awaiting_institution'].includes(value)) return 'WAITING'
+  if (['rejected', 'expired'].includes(value)) return 'BLOCKED'
+  return 'UNRESOLVED'
+}
+
+function profileFactResolutions(profile: unknown) {
+  const candidates = new Map<string, FactCandidate[]>()
+  const visit = (value: unknown, path: string) => {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => visit(item, `${path}[${index}]`))
+      return
+    }
+    if (!value || typeof value !== 'object') return
+    const record = value as Record<string, unknown>
+    const provenance = recordValue(record.provenance)
+    if (Object.hasOwn(record, 'value') && Object.keys(provenance).length) {
+      const kindValue = safeString(provenance.kind, 80)
+      const kind = ['user_statement', 'uploaded_document', 'verified_external_source', 'provider_observation', 'generated_inference'].includes(kindValue)
+        ? kindValue as FactCandidate['provenance']['kind']
+        : 'generated_inference'
+      const sourceAssetIds = stringArray(provenance.sourceAssetIds ?? provenance.source_asset_ids, 120)
+      const sourceId = safeString(provenance.sourceId ?? provenance.source_id, 200) || sourceAssetIds[0] || safeString(provenance.sourceUrl ?? provenance.source_url, 2_000) || null
+      const confidenceValue = safeString(provenance.confidence, 20)
+      const candidate: FactCandidate = {
+        value: record.value,
+        provenance: {
+          kind,
+          sourceId,
+          sourceAssetIds,
+          sourceUrl: safeString(provenance.sourceUrl ?? provenance.source_url, 2_000) || null,
+          confirmed: provenance.confirmed === true,
+        },
+        confidence: ['high', 'medium', 'low'].includes(confidenceValue) ? confidenceValue as FactCandidate['confidence'] : 'low',
+      }
+      const factId = `profile:${path}`
+      candidates.set(factId, [...(candidates.get(factId) ?? []), candidate])
+      return
+    }
+    for (const [key, child] of Object.entries(record)) visit(child, path ? `${path}.${key}` : key)
+  }
+  visit(profile, '')
+  return [...candidates.entries()].map(([factId, values]) => resolveApplicationFact(factId, values))
+}
+
+function controllerEvidenceType(kind: string): ControllerEvidenceType | null {
+  switch (kind) {
+    case 'official_requirement_source':
+    case 'programme_snapshot': return 'OFFICIAL_SOURCE'
+    case 'approval_record': return 'APPROVAL'
+    case 'uploaded_file_verification': return 'UPLOAD_PRESENCE'
+    case 'saved_section_screenshot': return 'PORTAL_OBSERVATION'
+    case 'sent_message':
+    case 'received_message':
+    case 'status_email': return 'PROVIDER_MESSAGE'
+    case 'submission_confirmation': return 'SUBMISSION_CONFIRMATION'
+    case 'application_id': return 'APPLICATION_ID'
+    default: return null
+  }
+}
+
+async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentRunRow): Promise<ApplicationControllerSnapshot | null> {
+  if (run.active_specialist_id !== 'david' || !run.application_state) return null
+  const caseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state.currentCaseId, 80) || null
+  const campaignId = safeString(run.context?.application_campaign_id, 80) || safeString(run.application_state.campaignId, 80) || null
+  const [profileResult, campaignResult, caseResult, requirementsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult] = await Promise.all([
+    admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle(),
+    campaignId ? admin.from('application_campaigns').select('id,status,data,next_action').eq('id', campaignId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    caseId ? admin.from('application_cases').select('id,current_stage,status,data,next_action,application_id').eq('id', caseId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    caseId ? admin.from('application_requirements').select('id,application_case_id,name,required,status,source,source_id,dependency_ids,evidence_contract,responsible_party,deadline_at,verification_evidence_ids,linked_artifact_id,blocker_reason').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('application_artifacts').select('id,application_case_id,checksum,approval_status,kind').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('application_contacts').select('id,kind,provider_contact_id,gmail_thread_id,last_provider_message_id,data').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('human_assignments').select('id,status,deadline_at,final_artifact_id').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('application_communications').select('id,direction,classification,provider_message_id,provider_thread_id,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('portal_checkpoints').select('id,application_case_id,verified,section,save_confirmation,session_information,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('application_evidence').select('id,application_case_id,kind,source_url,provider_message_id,provider_thread_id,asset_id,metadata,captured_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('captured_at', { ascending: false }).limit(80) : Promise.resolve({ data: [], error: null }),
+    admin.from('agent_approvals').select('id,kind,status,updated_at').eq('run_id', run.id).eq('user_id', run.user_id).order('updated_at', { ascending: false }).limit(20),
+    admin.from('agent_actions').select('idempotency_key,status,provider_action_id,tool_name').eq('run_id', run.id).eq('user_id', run.user_id).eq('status', 'succeeded').not('provider_action_id', 'is', null).limit(200),
+  ])
+  const results = [profileResult, campaignResult, caseResult, requirementsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult]
+  const fatal = results.find(result => result.error && result.error.code !== '42P01')?.error
+  if (fatal) throw new Error(fatal.message)
+  const facts = profileFactResolutions(profileResult.data?.profile)
+  const rawRequirements = requirementsResult.data ?? []
+  const requirementIdsByName = new Map(rawRequirements.map(requirement => [safeString(requirement.name, 500).toLocaleLowerCase(), safeString(requirement.id, 80)]))
+  const requirements: RequirementNode[] = rawRequirements.map(requirement => {
+    const source = recordValue(requirement.source)
+    const explicitDependencies = stringArray(requirement.dependency_ids ?? source.dependency_ids ?? source.dependencyIds ?? source.dependencies, 500)
+    const dependencyIds = explicitDependencies.map(dependency => requirementIdsByName.get(dependency.toLocaleLowerCase()) ?? dependency).filter(Boolean)
+    const evidenceIds = stringArray(requirement.verification_evidence_ids, 120)
+    const linkedArtifactId = safeString(requirement.linked_artifact_id, 80)
+    if (linkedArtifactId && !evidenceIds.includes(linkedArtifactId)) evidenceIds.push(linkedArtifactId)
+    return {
+      id: safeString(requirement.id, 80),
+      caseId: safeString(requirement.application_case_id, 80),
+      name: safeString(requirement.name, 500),
+      required: requirement.required !== false,
+      status: controllerRequirementStatus(safeString(requirement.status, 80)),
+      sourceId: safeString(requirement.source_id ?? source.id ?? source.source_id ?? source.url, 2_000) || null,
+      dependencyIds,
+      responsible: safeString(requirement.responsible_party, 80) as RequirementNode['responsible'],
+      deadline: safeString(requirement.deadline_at, 80) || null,
+      evidenceIds,
+      blocker: safeString(requirement.blocker_reason, 1_000) || null,
+    }
+  })
+  const checkpoints = checkpointsResult.data ?? []
+  const latestCheckpoint = checkpoints[0] ?? null
+  const caseData = recordValue(caseResult.data?.data)
+  const readinessReport = recordValue(caseData.readinessReport)
+  const readinessVerified = readinessReport.ready === true && latestCheckpoint?.verified === true
+  const submissionApproved = (approvalsResult.data ?? []).some(approval => approval.kind === 'browser_submit' && approval.status === 'approved')
+  let state = applicationControllerStateFromLegacy({
+    campaignStatus: safeString(campaignResult.data?.status, 80),
+    caseStage: safeString(caseResult.data?.current_stage, 80),
+    caseStatus: safeString(caseResult.data?.status, 80),
+    hasCase: Boolean(caseId && caseResult.data),
+    readinessVerified,
+    submissionApproved,
+    submissionConfirmed: Boolean(caseResult.data?.application_id),
+  })
+  const verifiedOpportunityCount = Number(recordValue(campaignResult.data?.data).verified_opportunity_count ?? run.application_state.verifiedOpportunityCount ?? 0)
+  if (!caseId && verifiedOpportunityCount > 0 && /\b(?:prepare|apply|application)\b/i.test(run.objective) && !/\b(?:find|research|shortlist|recommend|compare)\b/i.test(run.objective)) state = 'CASE_CREATION'
+  if (state === 'PORTAL_EXECUTION' && latestCheckpoint?.verified === true && /review|final/i.test(safeString(latestCheckpoint.section, 160))) state = 'READINESS_REVIEW'
+  const evidence: ControllerEvidence[] = []
+  for (const item of evidenceResult.data ?? []) {
+    const metadata = recordValue(item.metadata)
+    const type = safeString(item.kind, 80) === 'uploaded_file_verification' && safeString(metadata.checksum, 128)
+      ? 'DOCUMENT_CHECKSUM'
+      : controllerEvidenceType(safeString(item.kind, 80))
+    if (!type) continue
+    evidence.push({
+      id: safeString(item.id, 80), caseId: safeString(item.application_case_id, 80), type, verified: true,
+      sourceId: safeString(item.source_url ?? item.asset_id, 2_000) || null,
+      providerId: safeString(item.provider_message_id, 256) || null,
+      threadId: safeString(item.provider_thread_id, 256) || null,
+      artifactId: safeString(metadata.artifact_id ?? item.asset_id, 80) || null,
+      checksum: safeString(metadata.checksum, 128) || null,
+      capturedAt: safeString(item.captured_at, 80) || null,
+    })
+  }
+  for (const checkpoint of checkpoints) {
+    evidence.push({ id: safeString(checkpoint.id, 80), caseId: safeString(checkpoint.application_case_id, 80), type: 'PORTAL_SAVE_CONFIRMATION', verified: checkpoint.verified === true && Boolean(checkpoint.save_confirmation), sourceId: safeString(recordValue(checkpoint.session_information).sessionId, 80) || null, capturedAt: safeString(checkpoint.created_at, 80) || null })
+  }
+  const contacts = contactsResult.data ?? []
+  const contactStatus = (contact: Record<string, unknown>) => safeString(recordValue(contact.data).status, 80) || 'recorded'
+  const authoritativeContext = buildAuthoritativeApplicationContext({
+    objective: run.objective,
+    campaignId,
+    caseId,
+    state,
+    nextAction: safeString(caseResult.data?.next_action ?? campaignResult.data?.next_action ?? run.application_state.nextAction, 500) || null,
+    requirements,
+    facts,
+    artifacts: (artifactsResult.data ?? []).map(artifact => ({ id: safeString(artifact.id, 80), checksum: safeString(artifact.checksum, 128) || null, status: `${safeString(artifact.kind, 80)}:${safeString(artifact.approval_status, 80)}`, caseId: safeString(artifact.application_case_id, 80) })),
+    writer: (assignmentsResult.data ?? []).map(assignment => ({ id: safeString(assignment.id, 80), status: safeString(assignment.status, 80), deadline: safeString(assignment.deadline_at, 80) || null })),
+    referee: contacts.filter(contact => contact.kind === 'referee').map(contact => ({ id: safeString(contact.id, 80), status: contactStatus(contact), providerId: safeString(contact.last_provider_message_id ?? contact.provider_contact_id, 256) || null, threadId: safeString(contact.gmail_thread_id, 256) || null })),
+    professor: contacts.filter(contact => contact.kind === 'professor').map(contact => ({ id: safeString(contact.id, 80), status: contactStatus(contact), providerId: safeString(contact.last_provider_message_id ?? contact.provider_contact_id, 256) || null, threadId: safeString(contact.gmail_thread_id, 256) || null })),
+    gmail: (communicationsResult.data ?? []).map(communication => ({ providerId: safeString(communication.provider_message_id, 256) || null, threadId: safeString(communication.provider_thread_id, 256) || null, direction: safeString(communication.direction, 40), classification: safeString(communication.classification, 80) || null })),
+    checkpoint: latestCheckpoint ? { id: safeString(latestCheckpoint.id, 80), verified: latestCheckpoint.verified === true, section: safeString(latestCheckpoint.section, 160), caseId: safeString(latestCheckpoint.application_case_id, 80) } : null,
+    approvals: (approvalsResult.data ?? []).map(approval => ({ id: safeString(approval.id, 80), kind: safeString(approval.kind, 80), status: safeString(approval.status, 80) })),
+  })
+  if (facts.length) {
+    const persistedFacts = await admin.from('application_fact_resolutions').upsert(facts.map(fact => ({
+      user_id: run.user_id,
+      agent_run_id: run.id,
+      campaign_id: campaignId,
+      application_case_id: caseId,
+      fact_id: fact.factId,
+      value: fact.value,
+      verification: fact.verification,
+      provenance: fact.provenance,
+      confidence: fact.confidence,
+      conflict: fact.conflict,
+      candidates: fact.candidates,
+      reason: fact.reason,
+    })), { onConflict: 'user_id,agent_run_id,fact_id' })
+    if (persistedFacts.error && !['42P01', 'PGRST205'].includes(persistedFacts.error.code ?? '')) throw new Error(persistedFacts.error.message)
+  }
+  if (caseId) {
+    const persistedController = await admin.from('application_cases').update({
+      controller_state: state,
+      controller_version: 'david-application-controller@2.1',
+      controller_updated_at: new Date().toISOString(),
+    }).eq('id', caseId).eq('user_id', run.user_id)
+    if (persistedController.error && !['42703', 'PGRST204'].includes(persistedController.error.code ?? '')) throw new Error(persistedController.error.message)
+  }
+  return {
+    state,
+    caseId,
+    facts,
+    requirements,
+    evidence,
+    completedIdempotencyKeys: (actionsResult.data ?? []).map(action => safeString(action.idempotency_key, 300)).filter(Boolean),
+    readinessVerified,
+    submissionApproved,
+    serializedContext: serializeAuthoritativeApplicationContext(authoritativeContext),
+  }
+}
+
+function applicationToolAction(toolName: string, argumentsValue: Record<string, unknown>, snapshot: ApplicationControllerSnapshot): ProposedApplicationAction | null {
+  if (!toolName.startsWith('application.')) return null
+  const caseId = safeString(argumentsValue.application_case_id, 80) || snapshot.caseId
+  const idempotencyKey = safeString(argumentsValue.idempotency_key, 300) || (toolName === 'application.submit' ? `submit:${caseId}` : null)
+  const evidenceByTool: Partial<Record<string, ControllerEvidenceType[]>> = {
+    'application.record_opportunity': ['OFFICIAL_SOURCE'],
+    'application.record_portal_checkpoint': ['PORTAL_SAVE_CONFIRMATION', 'PORTAL_OBSERVATION'],
+    'application.record_communication': ['PROVIDER_MESSAGE', 'PROVIDER_THREAD'],
+    'application.generate_document': ['DOCUMENT_CHECKSUM'],
+    'application.generate_cv': ['DOCUMENT_CHECKSUM'],
+    'application.build_readiness_report': ['PORTAL_SAVE_CONFIRMATION'],
+    'application.submit': ['SUBMISSION_CONFIRMATION', 'APPLICATION_ID'],
+  }
+  const kindByTool: Record<string, string> = {
+    'application.record_opportunity': 'research',
+    'application.create_case': 'case',
+    'application.record_contact': safeString(argumentsValue.kind, 80) === 'professor' ? 'professor' : safeString(argumentsValue.kind, 80) === 'referee' ? 'referee' : 'document',
+    'application.register_writer': 'writer',
+    'application.select_writer': 'writer',
+    'application.update_requirement': 'requirement',
+    'application.record_portal_checkpoint': 'portal',
+    'application.record_evidence': 'evidence',
+    'application.record_communication': 'communication',
+    'application.create_human_assignment': 'writer',
+    'application.build_referee_support_pack': 'referee',
+    'application.build_readiness_report': 'readiness',
+    'application.generate_document': 'document',
+    'application.generate_cv': 'document',
+    'application.submit': 'submission',
+    'application.request_roon': safeString(argumentsValue.request_kind, 80).includes('professor') ? 'professor' : safeString(argumentsValue.request_kind, 80).includes('referee') ? 'referee' : 'communication',
+  }
+  const nextStateByTool: Partial<Record<string, ApplicationControllerState>> = {
+    'application.create_case': 'DOCUMENT_PREPARATION',
+    'application.create_human_assignment': 'WRITER_EXECUTION',
+    'application.build_referee_support_pack': 'REFEREE_EXECUTION',
+    'application.build_readiness_report': 'SUBMISSION_APPROVAL',
+    'application.submit': 'POST_SUBMISSION',
+  }
+  const requiredFactIds: string[] = []
+  if (toolName === 'application.record_portal_checkpoint') {
+    const checkpoint = recordValue(argumentsValue.checkpoint)
+    const enteredValues = recordValue(checkpoint.entered_values ?? checkpoint.enteredValues)
+    const valueSources = recordValue(checkpoint.value_sources ?? checkpoint.valueSources)
+    for (const field of Object.keys(enteredValues)) {
+      const sourceId = safeString(valueSources[field], 500)
+      const exact = snapshot.facts.find(fact => fact.factId === sourceId || `fact:${fact.factId}` === sourceId)
+      const suffix = snapshot.facts.filter(fact => fact.factId.toLocaleLowerCase().endsWith(`.${field.toLocaleLowerCase()}`))
+      const resolved = exact ?? (suffix.length === 1 ? suffix[0] : null)
+      requiredFactIds.push(resolved?.factId ?? `unresolved:portal-field:${field}`)
+    }
+  }
+  if (toolName === 'application.generate_document') requiredFactIds.push(...stringArray(argumentsValue.source_fact_ids, 300))
+  const completingRequirement = toolName === 'application.update_requirement' && ['verified', 'ready', 'approved', 'submitted'].includes(safeString(argumentsValue.status, 80))
+  const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.submit'].includes(toolName) || completingRequirement
+  if (completingRequirement) {
+    if (safeString(argumentsValue.linked_artifact_id, 80)) evidenceByTool[toolName] = ['DOCUMENT_CHECKSUM']
+    else if (stringArray(argumentsValue.verification_evidence_ids, 120).length) evidenceByTool[toolName] = ['PORTAL_OBSERVATION']
+  }
+  return {
+    id: `${toolName}:${idempotencyKey ?? crypto.randomUUID()}`,
+    kind: kindByTool[toolName] ?? 'requirement',
+    toolName,
+    caseId,
+    targetRequirementId: safeString(argumentsValue.requirement_id, 80) || null,
+    requiredFactIds,
+    expectedEvidenceTypes: evidenceByTool[toolName] ?? [],
+    intendedNextState: nextStateByTool[toolName] ?? null,
+    completed: false,
+    consequential,
+    idempotencyKey,
+  }
 }
 
 async function executeProviderTool(
@@ -2949,8 +3260,10 @@ async function executeProviderTool(
   if (toolName === 'application.record_communication') {
     const caseId = safeString(argumentsValue.application_case_id, 80)
     const communicationData = recordValue(argumentsValue.data)
-    if (!caseId || !safeString(argumentsValue.provider, 120) || containsSensitiveApplicationKeys(communicationData)) {
-      return { kind: 'pause', status: 'waiting_for_user', code: 'application_communication_invalid', message: 'The application communication is incomplete or contains sensitive values.', value: { valid: false }, actionStatus: 'failed' }
+    const providerMessageId = safeString(argumentsValue.provider_message_id, 256)
+    const providerThreadId = safeString(argumentsValue.provider_thread_id, 256)
+    if (!caseId || !safeString(argumentsValue.provider, 120) || !providerMessageId || !providerThreadId || containsSensitiveApplicationKeys(communicationData)) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'application_communication_invalid', message: 'The application communication needs its ApplicationCase, provider message ID, provider thread ID, and a non-sensitive payload.', value: { valid: false }, actionStatus: 'failed' }
     }
     const ownedCase = await admin.from('application_cases').select('id,data,task_id,campaign_id').eq('id', caseId).eq('user_id', run.user_id).maybeSingle()
     if (ownedCase.error) throw new Error(ownedCase.error.message)
@@ -3460,6 +3773,7 @@ async function executeProviderTool(
       }
     }
     const body = safeString(argumentsValue.body, 30000)
+    const sourceFactIds = stringArray(argumentsValue.source_fact_ids, 300)
     const wordLimit = argumentsValue.word_limit === null ? null : Number(argumentsValue.word_limit)
     const characterLimit = argumentsValue.character_limit === null ? null : Number(argumentsValue.character_limit)
     const validation = validateDocumentText(body, wordLimit, characterLimit)
@@ -3541,10 +3855,24 @@ async function executeProviderTool(
         revision_history: [],
         checksum,
         approval_status: 'pending',
+        metadata: { source_fact_ids: sourceFactIds },
       }).select('id').maybeSingle<{ id: string }>()
       if (artifact.error && artifact.error.code !== '42P01') throw new Error(artifact.error.message)
       applicationArtifactId = artifact.data?.id ?? null
       if (applicationArtifactId) {
+        const documentEvidence = await admin.from('application_evidence').upsert({
+          user_id: run.user_id,
+          application_case_id: applicationCaseId,
+          task_id: run.task_id,
+          agent_run_id: run.id,
+          kind: 'uploaded_file_verification',
+          provider: 'private-file-assets',
+          asset_id: assetId,
+          excerpt: `${filename} checksum verified against its immutable private asset.`,
+          metadata: { artifact_id: applicationArtifactId, checksum, source_fact_ids: sourceFactIds },
+          idempotency_key: `document-checksum:${applicationArtifactId}:${checksum}`,
+        }, { onConflict: 'user_id,application_case_id,idempotency_key' })
+        if (documentEvidence.error) throw new Error(documentEvidence.error.message)
         const requirementResult = await admin.from('application_requirements')
           .select('id,name,linked_artifact_id')
           .eq('application_case_id', applicationCaseId)
@@ -4330,6 +4658,42 @@ async function completionSatisfied(
     // protects a legacy run from accepting a model-only submission claim.
     if (!submissionEvidence.data?.length) return false
   }
+  if (run.active_specialist_id === 'david' && run.application_state) {
+    const objective = `${run.objective} ${safeString(run.context?.description, 4_000)}`
+    const applicationController = await loadApplicationControllerSnapshot(admin, run)
+    if (!applicationController || !applicationController.caseId) return false
+    if (/\b(?:submit|send in|final submission)\b/i.test(objective)) {
+      if (!verifyApplicationCompletion({
+        intendedAction: 'Submit the exact approved application package.',
+        expectedState: 'POST_SUBMISSION',
+        evidenceTypes: ['SUBMISSION_CONFIRMATION', 'APPLICATION_ID'],
+        caseId: applicationController.caseId,
+      }, applicationController.evidence)) return false
+    } else if (/\b(?:final review|ready for (?:final )?review|through verified final review|prepare(?:d| this| the)? application)\b/i.test(objective)) {
+      if (!applicationController.readinessVerified || !verifyApplicationCompletion({
+        intendedAction: 'Reach verified final review without submission.',
+        expectedState: 'SUBMISSION_APPROVAL',
+        evidenceTypes: ['PORTAL_SAVE_CONFIRMATION', 'PORTAL_OBSERVATION'],
+        caseId: applicationController.caseId,
+      }, applicationController.evidence)) return false
+      const campaignCaseIds = [...new Set([
+        ...(run.application_state.caseIds ?? []),
+        ...stringArray(run.context?.application_case_ids, 80),
+      ])]
+      if (campaignCaseIds.length > 1) {
+        const [casesResult, checkpointsResult, observationsResult] = await Promise.all([
+          admin.from('application_cases').select('id,data').eq('user_id', run.user_id).in('id', campaignCaseIds),
+          admin.from('portal_checkpoints').select('application_case_id,verified,section').eq('user_id', run.user_id).in('application_case_id', campaignCaseIds),
+          admin.from('application_evidence').select('application_case_id,kind').eq('user_id', run.user_id).in('application_case_id', campaignCaseIds).eq('kind', 'saved_section_screenshot'),
+        ])
+        if (casesResult.error || checkpointsResult.error || observationsResult.error) throw new Error(casesResult.error?.message ?? checkpointsResult.error?.message ?? observationsResult.error?.message ?? 'Could not verify the application campaign.')
+        const completeCaseIds = new Set((casesResult.data ?? []).filter(applicationCase => recordValue(recordValue(applicationCase.data).readinessReport).ready === true).map(applicationCase => safeString(applicationCase.id, 80)))
+        const reviewCheckpointCaseIds = new Set((checkpointsResult.data ?? []).filter(checkpoint => checkpoint.verified === true && /review|final/i.test(safeString(checkpoint.section, 160))).map(checkpoint => safeString(checkpoint.application_case_id, 80)))
+        const observationCaseIds = new Set((observationsResult.data ?? []).map(item => safeString(item.application_case_id, 80)))
+        if (!campaignCaseIds.every(id => completeCaseIds.has(id) && reviewCheckpointCaseIds.has(id) && observationCaseIds.has(id))) return false
+      }
+    }
+  }
   const attachments = Array.isArray(run.context?.attachments) ? run.context.attachments as Array<Record<string, unknown>> : []
   const isScreenshotApplication = /\bapply\b/i.test(run.objective) &&
     attachments.some(asset => ['image/png', 'image/jpeg'].includes(safeString(asset.mime_type, 120)))
@@ -4671,7 +5035,7 @@ function agentInstructions(run?: AgentRunRow) {
   const specialist = getSpecialist(run?.active_specialist_id ?? 'roon')
   if (!run || !specialist || specialist.id === 'roon') return roonAgentInstructions()
   if (specialist.id === 'david') {
-    return davidAgentInstructions({
+    return davidApplicationV21Instructions({
       displayName: specialist.displayName,
       roleDescription: specialist.roleDescription,
     })
@@ -4708,11 +5072,34 @@ async function callOpenAI(
   run: AgentRunRow,
   history: OpenAIOutputItem[],
 ) {
-  const model = DAVID_PRODUCTION_MODEL_CONFIG.model
+  const model = 'gpt-5.6-luna'
   const specialist = getSpecialist(run.active_specialist_id)
   if (!specialist) throw new Error('The task has no valid active specialist contract.')
   const tools: Array<Record<string, unknown>> = agentToolDefinitions
     .filter(tool => specialistCanUseTool(specialist.id, tool.name))
+    .map(tool => {
+      if (specialist.id !== 'david' || tool.name !== 'application.generate_document') return tool
+      const parameters = recordValue(tool.parameters)
+      const properties = recordValue(parameters.properties)
+      return {
+        ...tool,
+        strict: false,
+        parameters: {
+          ...parameters,
+          properties: {
+            ...properties,
+            source_fact_ids: {
+              type: 'array',
+              items: { type: 'string', maxLength: 300 },
+              minItems: 1,
+              maxItems: 200,
+              description: 'VERIFIED fact IDs from AUTHORITATIVE_APPLICATION_CONTEXT_V2_1 used in the document.',
+            },
+          },
+          required: [...new Set([...(Array.isArray(parameters.required) ? parameters.required.map(String) : []), 'source_fact_ids'])],
+        },
+      }
+    })
     .map(openAIToolDefinition)
   const screenshotApplication = /\bapply\b/i.test(run.objective) &&
     Array.isArray(run.context?.attachments) &&
@@ -4730,14 +5117,14 @@ async function callOpenAI(
     },
     body: JSON.stringify({
       model,
-      reasoning: DAVID_PRODUCTION_MODEL_CONFIG.reasoning,
-      store: DAVID_PRODUCTION_MODEL_CONFIG.store,
+      reasoning: DAVID_APPLICATION_V21_MODEL_CONFIG.reasoning,
+      store: DAVID_APPLICATION_V21_MODEL_CONFIG.store,
       // Email and scheduling turns are short, tool-led decisions. Keeping
       // their response budget tight removes avoidable approval latency while
       // research and application work retain the larger budget.
-      max_output_tokens: ['gmail', 'scheduling'].includes(run.capability) ? 1_100 : DAVID_PRODUCTION_MODEL_CONFIG.maxOutputTokens,
-      parallel_tool_calls: DAVID_PRODUCTION_MODEL_CONFIG.parallelToolCalls,
-      tool_choice: DAVID_PRODUCTION_MODEL_CONFIG.toolChoice,
+      max_output_tokens: ['gmail', 'scheduling'].includes(run.capability) ? 1_100 : DAVID_APPLICATION_V21_MODEL_CONFIG.maxOutputTokens,
+      parallel_tool_calls: DAVID_APPLICATION_V21_MODEL_CONFIG.parallelToolCalls,
+      tool_choice: DAVID_APPLICATION_V21_MODEL_CONFIG.toolChoice,
       tools,
       instructions: agentInstructions(run),
       input: history,
@@ -7473,7 +7860,14 @@ async function advanceRun(
     : await loadModelHistory(admin, current)
 
   for (let iteration = 0; iteration < maximumModelSteps; iteration += 1) {
-    const response = await callOpenAI(openaiKey, current, history)
+    const applicationController = await loadApplicationControllerSnapshot(admin, current)
+    const modelHistory = applicationController
+      ? [...history, {
+          role: 'user',
+          content: [{ type: 'input_text', text: applicationController.serializedContext }],
+        }]
+      : history
+    const response = await callOpenAI(openaiKey, current, modelHistory)
     const benchmarkRunId = safeString(current.context?.benchmark_run_id, 160)
     const applicationRun = /\bapply\b/i.test(current.objective) &&
       Array.isArray(current.context?.attachments) &&
@@ -7567,6 +7961,60 @@ async function advanceRun(
         tool_name: toolName,
       })
       return current
+    }
+
+    const proposedApplicationAction = applicationController
+      ? applicationToolAction(toolName, argumentsValue, applicationController)
+      : null
+    if (applicationController && proposedApplicationAction) {
+      const controllerErrors = validateApplicationAction({
+        state: applicationController.state,
+        currentCaseId: applicationController.caseId,
+        action: proposedApplicationAction,
+        facts: applicationController.facts,
+        requirements: applicationController.requirements,
+        completedIdempotencyKeys: applicationController.completedIdempotencyKeys,
+        readinessVerified: applicationController.readinessVerified,
+        submissionApproved: applicationController.submissionApproved,
+      })
+      if (controllerErrors.length) {
+        const error = controllerErrors[0]!
+        const retryKey = `application_controller_retry:${error.code}`
+        const priorRetries = Number(current.context?.[retryKey] ?? 0)
+        const recovery = recoverInvalidApplicationAction({ state: applicationController.state, error, priorRetries })
+        history.push({
+          type: 'function_call_output',
+          call_id: safeString(call.call_id, 256),
+          output: JSON.stringify({
+            ok: false,
+            error_code: error.code,
+            error_message: recovery.instruction,
+            controller_state: recovery.state,
+            preserve_state: true,
+            retry_allowed: recovery.retryAllowed,
+            fallback: recovery.fallback,
+            details: error.details,
+          }),
+        })
+        current = await updateRun(admin, current, {
+          context: {
+            ...(current.context ?? {}),
+            [retryKey]: recovery.retryCount,
+            application_controller_state: recovery.state,
+            application_controller_fallback: recovery.fallback,
+          },
+        })
+        await saveModelHistory(admin, current, history, response.id)
+        await addEvent(admin, current, 'application_controller_action_rejected', current.status, recovery.instruction, {
+          tool_name: toolName,
+          action_id: proposedApplicationAction.id,
+          controller_state: applicationController.state,
+          validation_errors: controllerErrors,
+          retry_count: recovery.retryCount,
+          fallback: recovery.fallback,
+        })
+        continue
+      }
     }
 
     const communicationGuard = requestedCommunicationToolGuard(current, toolName, argumentsValue)

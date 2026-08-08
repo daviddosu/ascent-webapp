@@ -1,0 +1,28 @@
+# David Application Eval v2.1 — end-to-end repair report
+
+Generated from the frozen `david-v2-final` failures and live v2.1 runs through `david-v21-eight-pass1-v1`.
+
+1. **Root cause of each original failure.** Full reconstruction is in `forensics.json`. Computational biology: unnecessary degree-order clarification plus provider exhaustion. Engineering-to-AI: stale profile resolution led to an unsupported degree action. Faculty mobility: researched faculty was converted into applicant selection. Five-case campaign: shared blockers were not resolved before breadth expansion and one-case tunnel vision. Particle physics: missing major GPA became placeholder prose. Incomplete records: a multi-field question violated the one-fact context contract, then save/referee recovery stalled. Session recovery: stale Review text replaced exact checkpoint recovery. Writer revision: prepared/queued revision was mistaken for a completed provider/artifact dependency.
+2. **Failures caused by model reasoning:** 7/8 had a model-reasoning contribution.
+3. **Failures caused by prompt/context:** 7/8 had prompt, stale-context, or retrieval contribution.
+4. **Failures caused by harness/state:** 6/8 had state, dependency, recovery, or next-action contribution.
+5. **Failures caused by tools:** 5/8 involved tool-result interpretation, provider evidence, browser recovery, or one-field context-contract handling.
+6. **Failures caused by external services:** 1/8 was terminally caused by model-provider exhaustion; rate limiting contributed latency to the v2.1 slice.
+7. **Fact gate.** `resolveApplicationFact` returns value, provenance, `VERIFIED|UNRESOLVED`, confidence, conflict, candidates, and reason. Conflicting, missing, inferred, or unconfirmed facts return `UNRESOLVED` with no downstream value. Production persists resolutions in `application_fact_resolutions`; portal and document actions are prevalidated against current fact IDs.
+8. **Completion gate.** `verifyApplicationCompletion` requires case-scoped typed evidence and exact provider/thread/artifact/checksum bindings. Production final-review and submission completion now enforce `NO_EVIDENCE => NO_COMPLETION`; multi-case completion verifies every case.
+9. **State machine.** Added all 18 required states with entry/input/action/completion/next/recovery/prohibited-transition contracts. The model acts inside a state; the harness validates advancement.
+10. **Requirement graph.** Added source ID, dependency IDs, evidence contract, responsible party, deadline, evidence, blocker, graph validation, cycle/cross-case checks, and completion semantics.
+11. **Next-action engine.** Added deterministic deadline, dependency fan-out, available-input, lead-time, follow-up, document, portal, and research priority. It rejects completed, dependency-skipping, unresolved-fact, wrong-case, and duplicate consequential actions.
+12. **Context.** Production constructs a compact authoritative snapshot from profile, campaign, current case, requirements, artifacts, writer/referee/professor/Gmail/checkpoint/approval/deadline state. The replay keeps only eight recent model turns plus the replaced snapshot.
+13. **Regression cases added.** No broad cases. The eight original failures are frozen in `frozen-cases.json` with immutable source hashes and replayed through a separate v2.1 runner/proxy.
+14. **Failed-case regression pass@1/pass@3.** Live pass@1 was **4/8 (50%)**: computational biology, engineering-to-AI, particle physics, and session/upload recovery passed. Pass@3 was not run because pass@1 failed the 90% qualification gate. The required five repetitions were therefore not claimed.
+15. **New full-v2 E2E score.** Not rerun: the failed-case qualification gate did not pass. Preserved baseline remains **2/10**.
+16. **Atomic score.** Full v2 was not rerun; preserved baseline remains **47/48 samples, 16/16 pass@1, 100% pass@3**.
+17. **Fabricated-fact count.** **0** in the calibrated targeted success and **0/8** in the eight-case live slice (baseline: six samples).
+18. **False-completion count.** **0** in all v2.1 live runs and **0/8** in the eight-case slice (baseline: one sample).
+19. **V1 score.** Preserved v1 remains **68/68**. Its tree hash is unchanged; it was not rewritten or rerun because v2.1 did not qualify for the conditional full-suite stage.
+20. **Total inference cost.** **$1.36728845** across all v2.1 live attempts: one invalid allowlist run, two fact-gate calibrations, one targeted passing run, and the eight-case pass@1 slice. The qualified targeted pass cost $0.12505003; the eight-case slice cost $0.90464681.
+21. **Remaining failures/blocker.** Faculty mobility and writer revision exhausted 64 turns around changed/moved browser targets or missing external artifact transitions. The five-case campaign stopped after one case; incomplete records stopped without consuming all one-at-a-time simulated answers. Safety is fixed, but model convergence is only 50%, provider TPM backoff was frequent, and the deterministic wrapper still lacks enough automatic case rotation and provider-state fallback to meet 90%. Launching 40 more runs would be unreasonable until those engineering gaps are closed.
+22. **Final commit hash.** Reported in the Codex task handoff because a Git commit cannot contain its own final hash.
+
+Verification: the v2.1 and production-contract slice passes 280/280 tests, the production build succeeds, and the task-agent source transpiles without syntax diagnostics. The repository-wide suite passes 656 tests and retains two unrelated, date-sensitive calendar fixture failures in `src/app.test.ts`.

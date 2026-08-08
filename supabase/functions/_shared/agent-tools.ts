@@ -1390,6 +1390,7 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateString(value.filename, 255) &&
         /\.pdf$/i.test(String(value.filename)) &&
         validateString(value.body, 30000) &&
+        (value.source_fact_ids === undefined || validateStringArray(value.source_fact_ids, 200, 300, 1)) &&
         (value.original_asset_id === null || /^[0-9a-f-]{36}$/i.test(String(value.original_asset_id))) &&
         (value.word_limit === null || (Number.isInteger(value.word_limit) && Number(value.word_limit) > 0)) &&
         (value.character_limit === null || (Number.isInteger(value.character_limit) && Number(value.character_limit) > 0))
