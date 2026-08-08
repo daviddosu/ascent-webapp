@@ -5,7 +5,7 @@ import {
   agentExecutionDateContext,
   agentToolDefinitions,
   internalAgentToolName,
-  openAIToolName,
+  openAIToolDefinition,
   policyForAgentTool,
   validateAgentToolArguments,
 } from '../_shared/agent-tools.ts'
@@ -71,6 +71,10 @@ import {
 } from '../_shared/david-applications.ts'
 import { isApplicationIntent } from '../_shared/application.ts'
 import { renderCanonicalCv, validateCvData, type CvData, type CvPageTarget } from '../_shared/cv.ts'
+import {
+  DAVID_PRODUCTION_MODEL_CONFIG,
+  davidAgentInstructions,
+} from '../_shared/david-agent-config.ts'
 
 type RequestBody = {
   action?: 'start' | 'resume' | 'poll' | 'approve' | 'reject' | 'edit_email_approval' | 'edit_calendar_approval' | 'cancel' | 'select_flight' | 'select_recipient' | 'simulate_reply' | 'plan_tasks' | 'deliver_application_otp'
@@ -4666,6 +4670,12 @@ function roonAgentInstructions() {
 function agentInstructions(run?: AgentRunRow) {
   const specialist = getSpecialist(run?.active_specialist_id ?? 'roon')
   if (!run || !specialist || specialist.id === 'roon') return roonAgentInstructions()
+  if (specialist.id === 'david') {
+    return davidAgentInstructions({
+      displayName: specialist.displayName,
+      roleDescription: specialist.roleDescription,
+    })
+  }
   const shared = [
     `You are ${specialist.displayName}, the ${specialist.roleDescription} specialist inside ShotCount.`,
     'You are a specialised execution context around GPT-5.6 Luna, not a separate model or chat product.',
@@ -4689,20 +4699,6 @@ function agentInstructions(run?: AgentRunRow) {
       'If the user requests flexible dates, baggage or fare-brand guarantees, seat selection, accessibility or pet handling, mixed cabins, stopovers, or another constraint the structured worker cannot verify, stop with an explicit recoverable explanation instead of silently ignoring it.',
       'You do not have Gmail or Calendar access. If the canonical task needs communication or scheduling, return the typed handoff to the orchestrator; do not improvise those tools.',
     )
-  } else {
-    shared.push(
-      'Build application-oriented checklist, deadline, missing-information, and document state only from authorised task context and verified official sources.',
-      'Never invent applicant facts, eligibility, grades, deadlines, documents, or submission status. Prefer official programme sources over screenshots or untrusted page claims.',
-      'Before any portal entry, create or reuse a typed section contract and map every entered value to a grounded ApplicantProfile fact, approved artifact, or explicit user response. Ambiguous fields require one focused user question.',
-      'For graduate and scholarship applications, verify the official programme page, capture the source URL, excerpt, retrieval time, deadline timezone, requirements, funding, tests, essays, references, and supervisor-contact expectations. Revalidate consequential requirements shortly before submission.',
-      'Persist verified opportunities with application.record_opportunity, create one ApplicationCase per approved opportunity with application.create_case, and persist every meaningful browser section with application.record_portal_checkpoint. Use application.record_evidence for source, screenshot, approval, and provider evidence.',
-      'Use application.generate_document for grounded PDF derivatives. Preserve original assets, template and prompt versions, checksums, revision history, authorship, and approval status. Reject unsupported claims, placeholders, cross-application names, contradictions, and limits exceeded.',
-      'For narrative work, create a detailed application.create_human_assignment brief with source materials, limits, factual constraints, deadline, and revision expectations; have Roon send the assignment and monitor the thread.',
-      'Delegate Gmail, contacts, Calendar, professor outreach, referee coordination, writer communication, application-reply monitoring, and email OTP retrieval through application.request_roon. Never call Gmail or Calendar directly as David and never place a raw OTP, password, payment value, or security key in a handoff payload.',
-      'Call application.build_readiness_report before final review. It must include completed requirements, unresolved warnings, grounded entered facts, approved final artifact IDs, essay versions, referee status, fee, declarations, and portal validation evidence. Call application.submit only after the user approves that exact package and pass its returned package_checksum; the tool is idempotent and the browser result must include provider confirmation evidence.',
-      'After a verified submission, capture screenshots, confirmation IDs, receipts, and the matching confirmation email through Roon, mark the ApplicationCase submitted, and continue monitoring missing documents, interviews, offers, rejections, scholarship updates, payment requests, and visa or enrolment steps.',
-      'You do not have direct Gmail or Calendar access. Roon owns those provider actions and returns a typed result to the same ApplicationCase and AgentRun.',
-    )
   }
   return shared.join(' ')
 }
@@ -4712,15 +4708,12 @@ async function callOpenAI(
   run: AgentRunRow,
   history: OpenAIOutputItem[],
 ) {
-  const model = 'gpt-5.6-luna'
+  const model = DAVID_PRODUCTION_MODEL_CONFIG.model
   const specialist = getSpecialist(run.active_specialist_id)
   if (!specialist) throw new Error('The task has no valid active specialist contract.')
   const tools: Array<Record<string, unknown>> = agentToolDefinitions
     .filter(tool => specialistCanUseTool(specialist.id, tool.name))
-    .map(tool => ({
-    ...tool,
-    name: openAIToolName(tool.name),
-    }))
+    .map(openAIToolDefinition)
   const screenshotApplication = /\bapply\b/i.test(run.objective) &&
     Array.isArray(run.context?.attachments) &&
     (run.context.attachments as Array<Record<string, unknown>>).some(asset =>
@@ -4737,14 +4730,14 @@ async function callOpenAI(
     },
     body: JSON.stringify({
       model,
-      reasoning: { effort: 'low' },
-      store: false,
+      reasoning: DAVID_PRODUCTION_MODEL_CONFIG.reasoning,
+      store: DAVID_PRODUCTION_MODEL_CONFIG.store,
       // Email and scheduling turns are short, tool-led decisions. Keeping
       // their response budget tight removes avoidable approval latency while
       // research and application work retain the larger budget.
-      max_output_tokens: ['gmail', 'scheduling'].includes(run.capability) ? 1_100 : 2400,
-      parallel_tool_calls: false,
-      tool_choice: 'auto',
+      max_output_tokens: ['gmail', 'scheduling'].includes(run.capability) ? 1_100 : DAVID_PRODUCTION_MODEL_CONFIG.maxOutputTokens,
+      parallel_tool_calls: DAVID_PRODUCTION_MODEL_CONFIG.parallelToolCalls,
+      tool_choice: DAVID_PRODUCTION_MODEL_CONFIG.toolChoice,
       tools,
       instructions: agentInstructions(run),
       input: history,

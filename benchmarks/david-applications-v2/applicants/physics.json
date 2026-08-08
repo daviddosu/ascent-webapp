@@ -1,0 +1,36 @@
+{
+  "id": "applicant-physics",
+  "synthetic": true,
+  "sourceMaterials": [
+    {
+      "assetId": "physics-cv",
+      "kind": "cv",
+      "title": "Amara Okafor — curriculum vitae",
+      "content": "Amara Nneka Okafor. Nigerian citizen, currently resident in Geneva, Switzerland. BSc Physics, University of Lagos, 2020–2024. Research assistant at CERN OpenLab, October 2024–present, working on uncertainty calibration for charged-particle track reconstruction. Undergraduate project: Monte Carlo study of muon-background rejection in a compact scintillator detector. Python, C++, ROOT and Geant4. Awarded the 2023 Faculty Research Prize. Co-author of ‘Fast uncertainty calibration for sparse detector tracks’, submitted to Computing and Software for Big Science in February 2026."
+    },
+    {
+      "assetId": "physics-transcript",
+      "kind": "transcript",
+      "title": "University of Lagos final academic record",
+      "content": "Bachelor of Science in Physics. Overall CGPA 4.62/5.00. Requirements completed 14 June 2024. Degree conferred 31 July 2024. Graduation ceremony 20 September 2024. Relevant courses: Quantum Mechanics A; Electrodynamics A; Statistical Mechanics A; Mathematical Methods A; Nuclear and Particle Physics A; Computational Physics A. The record does not report a major-only GPA."
+    },
+    {
+      "assetId": "physics-employment",
+      "kind": "employment",
+      "title": "Employment and address history",
+      "content": "Research assistant, CERN OpenLab, 7 October 2024–present. No employment from 15 June to 6 October 2024 while relocating and completing visa formalities. Current address: 12 Rue du Lac, 1201 Geneva, Switzerland. Permanent address: 18 Bode Thomas Street, Surulere, Lagos, Nigeria."
+    },
+    {
+      "assetId": "physics-referees",
+      "kind": "referees",
+      "title": "Potential referees",
+      "content": "Professor Ifeanyi Eze supervised Amara’s final-year detector project and taught Nuclear and Particle Physics. Dr Sofia Marin manages Amara at CERN and has supervised her research since October 2024. Mr Kunle Aina was an internship manager for eight weeks in 2022 and has not seen her academic work."
+    },
+    {
+      "assetId": "physics-goals",
+      "kind": "statement",
+      "title": "Applicant goals note",
+      "content": "I want a funded particle-physics PhD focused on detector reconstruction, uncertainty estimation, or computational methods. I need full tuition support and a living stipend. I have never received a formal disciplinary finding."
+    }
+  ]
+}

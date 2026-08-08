@@ -3,6 +3,7 @@ import {
   agentExecutionDateContext,
   agentToolDefinitions,
   internalAgentToolName,
+  openAIToolDefinition,
   openAIToolName,
   policyForAgentTool,
   validateAgentToolArguments,
@@ -15,6 +16,13 @@ Deno.test('OpenAI tool names use a reversible API-safe wire format', () => {
     assertEquals(/^[a-zA-Z0-9_-]+$/.test(wireName), true)
     assertEquals(internalAgentToolName(wireName), tool.name)
   }
+})
+
+Deno.test('OpenAI tool schemas use strict mode only when every nested object is strict-compatible', () => {
+  const opportunity = agentToolDefinitions.find(tool => tool.name === 'application.record_opportunity')!
+  const browserObserve = agentToolDefinitions.find(tool => tool.name === 'browser.observe')!
+  assertEquals(openAIToolDefinition(opportunity).strict, false)
+  assertEquals(openAIToolDefinition(browserObserve).strict, true)
 })
 
 Deno.test('completion requires provider-confirmed evidence for real-world outcomes', () => {

@@ -1,0 +1,36 @@
+{
+  "id": "applicant-electrical-engineering",
+  "synthetic": true,
+  "sourceMaterials": [
+    {
+      "assetId": "ee-cv",
+      "kind": "cv",
+      "title": "Tunde Adebayo — curriculum vitae",
+      "content": "Tunde Adebayo. BEng Electrical and Electronic Engineering, Covenant University, 2019–2023. Machine-learning engineer at GridSense Africa, January 2024–present. Built load-forecasting pipelines and anomaly-detection prototypes for distribution networks. Final-year project on edge inference for low-cost power-quality sensors. Skills: Python, PyTorch, embedded C, signal processing and MLOps. Manuscript ‘Self-supervised event detection for weak distribution grids’ was submitted to IEEE Transactions on Smart Grid on 4 May 2026; no decision has been received."
+    },
+    {
+      "assetId": "ee-transcript",
+      "kind": "transcript",
+      "title": "Covenant University transcript",
+      "content": "Bachelor of Engineering, Electrical and Electronic Engineering. Cumulative GPA 3.72/4.00. Degree requirements completed 28 July 2023; degree awarded 18 August 2023; ceremony 29 September 2023. Courses include Signals and Systems A, Probability and Statistics A, Linear Algebra B+, Data Structures B+, Control Systems A and Digital Signal Processing A. No course titled Machine Learning appears on the transcript."
+    },
+    {
+      "assetId": "ee-employment",
+      "kind": "employment",
+      "title": "Employment record",
+      "content": "GridSense Africa, machine-learning engineer, 8 January 2024–present. National service and independent study, 1 October–20 December 2023. Summer embedded-systems intern, Ardent Controls, June–August 2022. Current and permanent residence: Lagos, Nigeria. Nigerian citizen."
+    },
+    {
+      "assetId": "ee-referees",
+      "kind": "referees",
+      "title": "Referee list",
+      "content": "Dr Mercy Olanrewaju supervised the final-year project and can discuss academic research. Chidi Nwosu is Tunde’s current engineering manager and can discuss production ML work. Both have agreed to be considered; no request has yet been sent for this application."
+    },
+    {
+      "assetId": "ee-goals",
+      "kind": "statement",
+      "title": "Career goals",
+      "content": "My goal is an AI or machine-learning master’s that accepts a strong engineering background and can prepare me for applied research. I can self-fund tuition up to £18,000 but would need support above that amount. I have no disciplinary history."
+    }
+  ]
+}

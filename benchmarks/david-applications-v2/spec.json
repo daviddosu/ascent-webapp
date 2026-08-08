@@ -1,0 +1,367 @@
+{
+  "benchmarkVersion": "david_application_eval_v2",
+  "v1BenchmarkVersion": "david_application_eval_v1",
+  "title": "David Intelligence + Execution",
+  "defaultRepetitions": 3,
+  "minimumEndToEndCases": 10,
+  "dimensions": [
+    "research_correctness",
+    "requirement_extraction",
+    "applicant_fact_correctness",
+    "tool_selection",
+    "primitive_routing",
+    "harness_escalation",
+    "browser_execution",
+    "email_interpretation",
+    "document_correctness",
+    "recovery",
+    "evidence_quality",
+    "final_task_completion"
+  ],
+  "rootCauseCategories": [
+    "model_reasoning",
+    "prompt",
+    "primitive",
+    "harness",
+    "browser",
+    "data_retrieval",
+    "orchestration",
+    "external_service"
+  ],
+  "programmes": {
+    "ucl-computer-science-msc": {
+      "name": "UCL Computer Science MSc",
+      "institution": "University College London",
+      "officialUrls": [
+        "https://www.ucl.ac.uk/prospective-students/graduate/taught/degrees/computer-science-msc",
+        "https://www.ucl.ac.uk/study/prospective-students/graduate/funding-your-masters/paying-your-degree"
+      ]
+    },
+    "eth-data-science-msc": {
+      "name": "ETH Zürich MSc Data Science",
+      "institution": "ETH Zürich",
+      "officialUrls": [
+        "https://ethz.ch/en/studies/master/degree-programmes/engineering-sciences/data-science.html"
+      ]
+    },
+    "lse-public-policy-mpp": {
+      "name": "LSE Master of Public Policy",
+      "institution": "London School of Economics and Political Science",
+      "officialUrls": [
+        "https://www.lse.ac.uk/study-at-lse/graduate/master-of-public-policy"
+      ]
+    },
+    "embl-phd": {
+      "name": "EMBL International PhD Programme",
+      "institution": "European Molecular Biology Laboratory",
+      "officialUrls": [
+        "https://www.embl.org/about/info/embl-international-phd-programme/"
+      ]
+    },
+    "ucl-particle-physics-phd": {
+      "name": "UCL Physics and Astronomy MPhil/PhD — particle physics pathway",
+      "institution": "University College London",
+      "officialUrls": [
+        "https://www.ucl.ac.uk/prospective-students/graduate/research-degrees/physics-and-astronomy-mphil-phd"
+      ]
+    }
+  },
+  "atomicCases": [
+    {
+      "id": "research-unusual-prerequisite",
+      "category": "research",
+      "applicantId": "applicant-physics",
+      "programmeId": "ucl-particle-physics-phd",
+      "enableWebSearch": true,
+      "objective": "Determine whether this applicant satisfies the programme's current academic and subject prerequisites. Reconcile any programme and department pages, reject stale requirements, cite official sources, and say what cannot be verified.",
+      "terminalPolicy": "source_backed_answer"
+    },
+    {
+      "id": "research-work-experience-counts",
+      "category": "research",
+      "applicantId": "applicant-economics",
+      "programmeId": "lse-public-policy-mpp",
+      "enableWebSearch": true,
+      "objective": "Establish whether the applicant's two policy-research roles satisfy any current work-experience expectation. Distinguish an eligibility rule from a competitive preference and cite official sources.",
+      "terminalPolicy": "source_backed_answer"
+    },
+    {
+      "id": "research-gre-required-optional-waived",
+      "category": "research",
+      "applicantId": "applicant-electrical-engineering",
+      "programmeId": "eth-data-science-msc",
+      "enableWebSearch": true,
+      "objective": "Determine whether the GRE is required, optional, waived, or not verifiable for this applicant and intake. Prefer current official admissions material and do not infer a waiver from silence.",
+      "terminalPolicy": "source_backed_answer"
+    },
+    {
+      "id": "research-deadline-and-funding-scope",
+      "category": "research",
+      "applicantId": "applicant-electrical-engineering",
+      "programmeId": "ucl-computer-science-msc",
+      "enableWebSearch": true,
+      "objective": "Identify the relevant programme application deadline, its timezone if published, and any distinct university-wide funding deadlines. Keep programme funding and general UCL funding separate and flag anything that cannot be verified.",
+      "terminalPolicy": "source_backed_answer"
+    },
+    {
+      "id": "research-faculty-fit-and-mobility",
+      "category": "research",
+      "applicantId": "applicant-biology",
+      "programmeId": "embl-phd",
+      "enableWebSearch": true,
+      "objective": "Identify up to three current group leaders whose work genuinely fits the applicant's single-cell host–pathogen interests. Verify current affiliation and distinguish evidence of fit from evidence that a person is accepting students.",
+      "terminalPolicy": "source_backed_answer"
+    },
+    {
+      "id": "form-degree-requirements-versus-ceremony",
+      "category": "form",
+      "applicantId": "applicant-physics",
+      "programmeId": "ucl-particle-physics-phd",
+      "portalStartSection": "education",
+      "objective": "Complete and verify the controlled portal education section. Interpret every date label from the source materials; do not substitute the graduation ceremony date for the degree-requirements completion date.",
+      "terminalPolicy": "verified_section"
+    },
+    {
+      "id": "form-citizenship-versus-residence",
+      "category": "form",
+      "applicantId": "applicant-biology",
+      "programmeId": "embl-phd",
+      "portalStartSection": "identity",
+      "objective": "Complete and verify the controlled portal identity section. Keep citizenship, current residence, current address and permanent address semantically distinct.",
+      "terminalPolicy": "verified_section"
+    },
+    {
+      "id": "form-missing-major-gpa",
+      "category": "form",
+      "applicantId": "applicant-physics",
+      "programmeId": "ucl-particle-physics-phd",
+      "portalStartSection": "education",
+      "objective": "Complete the controlled education section using the record. If a requested value is not reported and cannot be derived reliably, ask one focused question or leave an optional field blank rather than guessing.",
+      "terminalPolicy": "verified_section"
+    },
+    {
+      "id": "form-submitted-versus-accepted-paper",
+      "category": "form",
+      "applicantId": "applicant-electrical-engineering",
+      "programmeId": "eth-data-science-msc",
+      "portalStartSection": "publications",
+      "objective": "Complete and verify the controlled publications section. Preserve the manuscript's actual status and do not upgrade a submission into an acceptance or publication.",
+      "terminalPolicy": "verified_section"
+    },
+    {
+      "id": "document-programme-specific-cv",
+      "category": "document",
+      "applicantId": "applicant-electrical-engineering",
+      "programmeId": "ucl-computer-science-msc",
+      "objective": "Prepare a two-page programme-specific CV for this application. Select the most relevant experience while preserving every factual claim and its source provenance.",
+      "terminalPolicy": "verified_document"
+    },
+    {
+      "id": "document-cross-programme-factual-invariance",
+      "category": "document",
+      "applicantId": "applicant-biology",
+      "programmeId": "embl-phd",
+      "objective": "Prepare an academic CV emphasizing computational biology and single-cell research. Keep publication status, dates and metrics identical to the source materials and avoid fabricated impact claims.",
+      "terminalPolicy": "verified_document"
+    },
+    {
+      "id": "writer-detect-wrong-university-and-claim",
+      "category": "writer",
+      "applicantId": "applicant-economics",
+      "programmeId": "lse-public-policy-mpp",
+      "objective": "Review the writer's returned statement. The draft names Oxford, claims a peer-reviewed journal article, and omits the required public-service component. Detect each issue and choose the appropriate revision action without asking for facts already in the applicant materials.",
+      "terminalPolicy": "correct_orchestration",
+      "inboundMessages": [
+        {
+          "caseId": "case-writer-lse",
+          "threadId": "thread-writer-lse",
+          "from": "writer@example.test",
+          "subject": "LSE statement draft",
+          "body": "Attached is the Oxford statement. I described your peer-reviewed journal article and quantitative background. I was not sure what public-service example to include, so I left that part out."
+        }
+      ]
+    },
+    {
+      "id": "referee-academic-requirement",
+      "category": "referee",
+      "applicantId": "applicant-interdisciplinary-incomplete",
+      "programmeId": "ucl-computer-science-msc",
+      "objective": "The programme requires an academic referee, but the applicant has supplied only professional referees. Update the plan safely and ask only for the genuinely missing academic-referee information.",
+      "terminalPolicy": "necessary_user_question"
+    },
+    {
+      "id": "email-wrong-thread-and-delayed-reply",
+      "category": "email",
+      "applicantId": "applicant-physics",
+      "programmeId": "ucl-particle-physics-phd",
+      "objective": "Interpret the new writer reply and associate it with the correct application. One message arrived in the wrong thread after another case had already reached final review. Do not move or revise the wrong case.",
+      "terminalPolicy": "correct_orchestration",
+      "inboundMessages": [
+        {
+          "caseId": "case-physics-ucl",
+          "threadId": "thread-ee-ucl",
+          "from": "writer@example.test",
+          "subject": "Re: AI MSc statement",
+          "body": "Sure, send it over. Also, the detector-reconstruction paragraph belongs in Amara's particle-physics application, not Tunde's AI application."
+        }
+      ]
+    },
+    {
+      "id": "adversarial-late-upload-rejection",
+      "category": "adversarial",
+      "applicantId": "applicant-biology",
+      "programmeId": "embl-phd",
+      "portalStartSection": "documents",
+      "portalFailure": "rejected_file",
+      "objective": "Upload and verify the approved CV, statement and transcript in the controlled portal. The server may reject a file after it first appears selected; rely on resulting state and recover without duplicate uploads.",
+      "terminalPolicy": "verified_section"
+    },
+    {
+      "id": "adversarial-two-otps-and-stale-confirmation",
+      "category": "adversarial",
+      "applicantId": "applicant-economics",
+      "programmeId": "lse-public-policy-mpp",
+      "objective": "Resolve the current portal verification event. Two OTP messages and an old confirmation from another run are present. Request Roon to retrieve only the newest code for this case and do not claim completion from the stale confirmation.",
+      "terminalPolicy": "correct_orchestration",
+      "inboundMessages": [
+        {
+          "caseId": "case-econ-lse-old",
+          "threadId": "thread-otp-old",
+          "from": "admissions@example.test",
+          "subject": "Your verification code",
+          "body": "Code 184201. Generated 40 minutes ago."
+        },
+        {
+          "caseId": "case-econ-lse",
+          "threadId": "thread-otp-current",
+          "from": "admissions@example.test",
+          "subject": "Your verification code",
+          "body": "Code 771904. Generated now."
+        },
+        {
+          "caseId": "case-econ-lse-old",
+          "threadId": "thread-confirm-old",
+          "from": "admissions@example.test",
+          "subject": "Application received",
+          "body": "Confirmation for a previous benchmark run."
+        }
+      ]
+    }
+  ],
+  "endToEndCases": [
+    {
+      "id": "e2e-funded-particle-physics",
+      "applicantId": "applicant-physics",
+      "programmeId": "ucl-particle-physics-phd",
+      "enableWebSearch": true,
+      "objective": "Prepare this synthetic applicant's UCL particle-physics PhD application in the controlled portal through verified final review. Verify current requirements and funding, select grounded materials, use the approved academic referee, and stop before submission.",
+      "portalFailure": "changed_dom_structure"
+    },
+    {
+      "id": "e2e-engineering-to-ai",
+      "applicantId": "applicant-electrical-engineering",
+      "programmeId": "ucl-computer-science-msc",
+      "enableWebSearch": true,
+      "objective": "Prepare this synthetic electrical-engineering applicant's UCL Computer Science MSc application through verified final review. Resolve prerequisite uncertainty, preserve the submitted manuscript status, generate a relevant two-page CV, and stop before submission.",
+      "portalFailure": "renamed_label"
+    },
+    {
+      "id": "e2e-economics-public-policy",
+      "applicantId": "applicant-economics",
+      "programmeId": "lse-public-policy-mpp",
+      "enableWebSearch": true,
+      "objective": "Prepare this synthetic economics applicant's LSE public-policy application through verified final review. Verify how work experience is treated, separate funding sources, preserve address semantics, and stop before submission.",
+      "portalFailure": "changed_section_order"
+    },
+    {
+      "id": "e2e-computational-biology-phd",
+      "applicantId": "applicant-biology",
+      "programmeId": "embl-phd",
+      "enableWebSearch": true,
+      "objective": "Prepare this synthetic computational-biology PhD application through verified final review. Research current fit, distinguish faculty fit from confirmed availability, preserve the in-press publication status, and stop before submission.",
+      "portalFailure": "validation_warning"
+    },
+    {
+      "id": "e2e-incomplete-records-recovery",
+      "applicantId": "applicant-interdisciplinary-incomplete",
+      "programmeId": "ucl-computer-science-msc",
+      "enableWebSearch": true,
+      "objective": "Prepare this synthetic interdisciplinary applicant's application through verified final review. Resolve the conflicting GPA and missing completion date by asking one focused question, obtain an academic-referee next step, and never guess.",
+      "portalFailure": "save_failure",
+      "simulatedUserAnswers": {
+        "final_cgpa": "The registrar confirmed the final CGPA is 4.12/5.00.",
+        "requirements_completed_date": "The registrar confirmed all degree requirements were completed on 18 July 2025.",
+        "academic_referee": "Use Dr Bisi Ogunleye, Senior Lecturer in GIS, who supervised the final project; b.ogunleye@example.test."
+      }
+    },
+    {
+      "id": "e2e-writer-revision-recovery",
+      "applicantId": "applicant-economics",
+      "programmeId": "lse-public-policy-mpp",
+      "enableWebSearch": true,
+      "objective": "Prepare the application through verified final review. A writer draft names the wrong university, adds an unsupported publication claim and misses a required component; diagnose and route a precise revision before accepting the artifact.",
+      "portalFailure": "moved_button",
+      "inboundMessages": [
+        {
+          "caseId": "case-e2e-writer-lse",
+          "threadId": "thread-e2e-writer-lse",
+          "from": "writer@example.test",
+          "subject": "Statement draft",
+          "body": "Oxford is my ideal programme. My peer-reviewed article proves my research record. [Public-service component omitted.]"
+        }
+      ]
+    },
+    {
+      "id": "e2e-referee-decline-and-replan",
+      "applicantId": "applicant-physics",
+      "programmeId": "ucl-particle-physics-phd",
+      "enableWebSearch": true,
+      "objective": "Prepare the application through verified final review. The first academic referee has declined; update the plan, choose the strongest grounded replacement, prepare a support pack and stop before submission.",
+      "portalFailure": "conditional_section",
+      "inboundMessages": [
+        {
+          "caseId": "case-e2e-referee-physics",
+          "threadId": "thread-referee-decline",
+          "from": "ifeanyi.eze@example.test",
+          "subject": "Recommendation request",
+          "body": "I am sorry, but I cannot provide a letter by this deadline."
+        }
+      ]
+    },
+    {
+      "id": "e2e-faculty-moved-institution",
+      "applicantId": "applicant-biology",
+      "programmeId": "embl-phd",
+      "enableWebSearch": true,
+      "objective": "Prepare the application through verified final review. An indexed old page lists a potential supervisor who has moved institutions; verify current affiliation, select only current fit, and stop before submission.",
+      "portalFailure": "intermittent_500"
+    },
+    {
+      "id": "e2e-session-expiry-and-upload-recovery",
+      "applicantId": "applicant-electrical-engineering",
+      "programmeId": "eth-data-science-msc",
+      "enableWebSearch": true,
+      "objective": "Prepare the application through verified final review. Recover from an expired portal session and a delayed document upload using saved evidence, without losing confirmed fields or repeating completed actions.",
+      "portalFailure": "browser_restart"
+    },
+    {
+      "id": "e2e-five-application-campaign",
+      "applicantId": "applicant-interdisciplinary-incomplete",
+      "programmeId": "ucl-computer-science-msc",
+      "enableWebSearch": true,
+      "objective": "Coordinate five controlled applications with overlapping deadlines, similar filenames, one writer and several referees. Associate every programme, document, contact, deadline, thread and portal state with the correct ApplicationCase, bring each safe case to verified final review, and stop before every submission.",
+      "campaignProgrammeIds": [
+        "ucl-computer-science-msc",
+        "eth-data-science-msc",
+        "lse-public-policy-mpp",
+        "embl-phd",
+        "ucl-particle-physics-phd"
+      ],
+      "simulatedUserAnswers": {
+        "final_cgpa": "The registrar confirmed the final CGPA is 4.12/5.00.",
+        "requirements_completed_date": "The registrar confirmed all degree requirements were completed on 18 July 2025.",
+        "academic_referee": "Use Dr Bisi Ogunleye, Senior Lecturer in GIS, who supervised the final project; b.ogunleye@example.test."
+      }
+    }
+  ]
+}

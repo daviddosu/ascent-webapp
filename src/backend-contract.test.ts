@@ -321,7 +321,7 @@ describe('agent execution security contract', () => {
   })
 
   it('maps internal dotted tool names to the OpenAI-safe wire format', () => {
-    expect(taskAgentFunction).toContain('name: openAIToolName(tool.name)')
+    expect(taskAgentFunction).toContain('.map(openAIToolDefinition)')
     expect(taskAgentFunction).toContain(
       'internalAgentToolName(safeString(call.name, 120))',
     )

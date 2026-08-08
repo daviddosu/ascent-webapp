@@ -1,0 +1,36 @@
+{
+  "id": "applicant-biology",
+  "synthetic": true,
+  "sourceMaterials": [
+    {
+      "assetId": "biology-cv",
+      "kind": "cv",
+      "title": "Priya Nwosu — academic CV",
+      "content": "Priya Chidinma Nwosu. BSc Molecular Biology, University of Ibadan, 2017–2021; MSc Bioinformatics, African Institute for Mathematical Sciences, 2022–2024. Research associate at the West African Centre for Cell Biology of Infectious Pathogens, August 2024–present. Research uses single-cell RNA sequencing and pathogen genomics. First-author paper ‘Cell-state signatures of severe malaria’ accepted by PLOS Computational Biology on 12 June 2026 and listed as in press; DOI has not yet been assigned. Co-author of two published genomic-surveillance papers. Skills: R, Python, Nextflow, scRNA-seq and Bayesian modelling."
+    },
+    {
+      "assetId": "biology-transcript",
+      "kind": "transcript",
+      "title": "Consolidated degree records",
+      "content": "BSc Molecular Biology: CGPA 4.41/5.00, requirements completed 9 July 2021, conferred 31 August 2021. MSc Bioinformatics: final average 82/100, requirements completed 18 June 2024, conferred 30 August 2024. Graduate courses include Statistical Genetics, Algorithms for Bioinformatics, Machine Learning, Genomics and Research Methods."
+    },
+    {
+      "assetId": "biology-employment",
+      "kind": "employment",
+      "title": "Research employment",
+      "content": "West African Centre research associate, 12 August 2024–present. MSc research fellowship, 1 September 2023–18 June 2024, overlapping with full-time study and explicitly part of the degree. Ghanaian permanent residence; Nigerian citizenship. Current address: 17 Boundary Road, East Legon, Accra, Ghana. Permanent address: 42 Adebisi Street, Ibadan, Nigeria."
+    },
+    {
+      "assetId": "biology-referees",
+      "kind": "referees",
+      "title": "Academic referee information",
+      "content": "Professor Amina Bello supervised Priya’s MSc thesis. Dr Kwesi Adu leads Priya’s current single-cell project and holds a university research appointment. Ms Ada Ibekwe is an operations manager and has not supervised scientific work."
+    },
+    {
+      "assetId": "biology-goals",
+      "kind": "statement",
+      "title": "Doctoral research goals",
+      "content": "I seek a computational-biology PhD combining single-cell analysis, host–pathogen interactions and reproducible workflows. I need full funding. I have no formal disciplinary history."
+    }
+  ]
+}

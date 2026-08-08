@@ -1,0 +1,36 @@
+{
+  "id": "applicant-economics",
+  "synthetic": true,
+  "sourceMaterials": [
+    {
+      "assetId": "econ-cv",
+      "kind": "cv",
+      "title": "Lena Mensah — curriculum vitae",
+      "content": "Lena Ama Mensah. Ghanaian citizen and UK resident. BA Economics, University of Ghana, 2018–2022. Policy analyst at Accra Metropolitan Research Unit, September 2022–December 2023. Research assistant at the Institute for Fiscal Studies in London, March 2024–present. Work covers municipal revenue, social-protection targeting and quasi-experimental evaluation. Co-authored a published policy brief on property-rate compliance; no peer-reviewed journal publications. Received the 2022 Dean’s Award for best applied-economics dissertation."
+    },
+    {
+      "assetId": "econ-transcript",
+      "kind": "transcript",
+      "title": "University of Ghana academic transcript",
+      "content": "Bachelor of Arts in Economics, First Class. Final cumulative GPA 3.78/4.00. Requirements completed 24 June 2022. Degree conferred 30 July 2022. Ceremony held 3 September 2022. Econometrics I A, Econometrics II A, Public Finance A, Development Economics A, Calculus B+, Statistics A."
+    },
+    {
+      "assetId": "econ-employment",
+      "kind": "employment",
+      "title": "Employment and residence history",
+      "content": "Accra Metropolitan Research Unit: 5 September 2022–15 December 2023. Relocated to the UK and completed right-to-work processing from 16 December 2023–3 March 2024. Institute for Fiscal Studies: 4 March 2024–present. Current address: 44 Keppel Road, London N1 2AA, United Kingdom. Permanent address: 7 Labone Crescent, Accra, Ghana."
+    },
+    {
+      "assetId": "econ-referees",
+      "kind": "referees",
+      "title": "Referee candidates",
+      "content": "Dr Kojo Asare taught Econometrics II and supervised Lena’s dissertation. Ms Harriet Cole is Lena’s current research manager at IFS. Mr Emmanuel Tetteh was a municipal supervisor and can discuss policy implementation but not academic preparation."
+    },
+    {
+      "assetId": "econ-goals",
+      "kind": "statement",
+      "title": "Public-policy goals",
+      "content": "I am seeking a public-policy master’s with strong quantitative evaluation training. I want to return to West Africa to design local-government finance and social-protection policy. I am applying for scholarships but can contribute £10,000 from savings. I have no disciplinary findings."
+    }
+  ]
+}

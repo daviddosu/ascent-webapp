@@ -76,7 +76,7 @@ function hashSeed(value: string) {
 
 function fixtureUrl(step: string, query: URLSearchParams) {
   const next = new URLSearchParams()
-  for (const name of ['run', 'seed', 'failure']) {
+  for (const name of ['run', 'seed', 'failure', 'version', 'profile']) {
     const value = query.get(name)
     if (value) next.set(name, value)
   }
@@ -85,8 +85,14 @@ function fixtureUrl(step: string, query: URLSearchParams) {
 }
 
 function navigation(query: URLSearchParams) {
-  const steps = ['account', 'verification', 'profile', 'education', 'research', 'documents', 'review']
-  if (query.get('failure') === 'changed_section_order') steps.reverse()
+  const steps = query.get('version') === 'v2'
+    ? ['identity', 'education', 'employment', 'publications', 'research', 'funding', 'conduct', 'documents', 'review']
+    : ['account', 'verification', 'profile', 'education', 'research', 'documents', 'review']
+  if (query.get('failure') === 'changed_section_order') {
+    const review = steps.pop()
+    steps.reverse()
+    if (review) steps.push(review)
+  }
   return `<nav aria-label="Application sections">${steps.map(step => `<a href="${fixtureUrl(step, query)}">${step[0]!.toUpperCase()}${step.slice(1)}</a>`).join('')}</nav>`
 }
 
@@ -170,6 +176,20 @@ export default function handler(request: FixtureRequest, response: FixtureRespon
   const form = (content: string, button: string) => failure === 'changed_dom_structure'
     ? `<section class="portal-card" data-layout-version="2"><form method="post" action="${fixtureUrl(step, query)}"><fieldset><legend>${step} details</legend><div class="field-grid">${content}</div><div class="portal-actions"><button type="submit"><span>${button}</span></button></div></fieldset></form></section>`
     : `<form method="post" action="${fixtureUrl(step, query)}">${content}<button type="submit">${button}</button></form>`
+  const v2Seed = hashSeed(`${query.get('seed') ?? '0'}:${step}`)
+  const v2Label = (values: string[]) => values[v2Seed % values.length]!
+  const v2Button = v2Label(['Save and continue', 'Store this section', 'Continue', 'Review and save'])
+  const v2Bodies: Record<string, string> = {
+    identity: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['About you', 'Personal details', 'Applicant identity'])}</h1>${form(`<label>Full legal name<input name="legal_name" required></label><label>${v2Label(['Country of citizenship', 'Citizenship', 'Nationality held'])}<input name="citizenship" required></label><label>${v2Label(['Country where you currently live', 'Current country of residence', 'Present residence'])}<input name="residence_country" required></label><label>Current address<textarea name="current_address" required></textarea></label><label>Permanent address<textarea name="permanent_address" required></textarea></label>`, v2Button)}`,
+    education: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Academic history', 'Degree record', 'Education'])}</h1>${warning}${form(`<label>Degree title<input name="degree_title" required></label><label>Awarding institution<input name="institution" required></label><label>${v2Label(['Date degree requirements were completed', 'Academic completion date', 'Date all degree work was finished'])}<input name="requirements_completed_date" required></label><label>${v2Label(['Graduation ceremony date', 'Degree conferral ceremony', 'Ceremony date'])}<input name="ceremony_date"></label><label>${v2Label(['Overall cumulative GPA', 'Cumulative grade average', 'Final overall GPA'])}<input name="cumulative_gpa" required></label><label>${v2Label(['Major-only GPA', 'GPA in your principal subject', 'Subject GPA'])}<input name="major_gpa"></label>`, v2Button)}`,
+    employment: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Professional history', 'Employment', 'Work record'])}</h1>${form(`<label>Most recent employer<input name="employer" required></label><label>Employment start date<input name="employment_start" required></label><label>Employment end date<input name="employment_end"></label><label>${v2Label(['Explain any gap longer than three months', 'Career break explanation', 'Unaccounted employment period'])}<textarea name="employment_gap"></textarea></label><label>Concurrent role or study<textarea name="overlap_explanation"></textarea></label>`, v2Button)}`,
+    publications: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Research outputs', 'Publications', 'Scholarly work'])}</h1>${form(`<label>Publication title<input name="publication_title"></label><label>${v2Label(['Current publication status', 'Manuscript stage', 'Publication decision'])}<select name="publication_status"><option value="">Choose</option><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="accepted">Accepted</option><option value="published">Published</option></select></label><label>Journal or venue<input name="publication_venue"></label>`, v2Button)}`,
+    research: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Proposed work', 'Research direction', 'Academic interests'])}</h1>${form(`<label>${v2Label(['Research interests', 'Topics you hope to investigate', 'Proposed area of inquiry'])}<textarea name="research_interests" required></textarea></label><label>Relevant methods<textarea name="research_methods" required></textarea></label><label>Potential supervisor<input name="potential_supervisor"></label>`, v2Button)}`,
+    funding: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Financial support', 'Funding', 'How you will fund your studies'])}</h1>${form(`<label>${v2Label(['Do you require programme funding?', 'Will you need financial support from this programme?', 'Funding requested'])}<select name="funding_requested" required><option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option></select></label><label>Other funding applications<textarea name="other_funding"></textarea></label>`, v2Button)}`,
+    conduct: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Declarations', 'Conduct history', 'Required disclosures'])}</h1>${form(`<label>${v2Label(['Have you ever been subject to formal disciplinary action?', 'Disciplinary history', 'Institutional conduct finding'])}<select name="disciplinary_history" required><option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option></select></label><label>Explanation<textarea name="disciplinary_explanation"></textarea></label>`, v2Button)}`,
+    documents: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Supporting files', 'Documents', 'Upload materials'])}</h1>${uploadNotice}${form('<label>Programme-specific CV<input name="cv" type="file" accept=".pdf" required></label><label>Statement of purpose<input name="statement" type="file" accept=".pdf" required></label><label>Academic transcript<input name="transcript" type="file" accept=".pdf" required></label>', v2Button)}`,
+    review: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${v2Label(['Check before submitting', 'Final review', 'Application review'])}</h1><p class="notice">All required sections currently appear saved. A separate verified readiness report is required before any submission action.</p>${form('', v2Label(['Submit application', 'Send application', 'Confirm and submit']))}`,
+  }
   const bodies: Record<string, string> = {
     account: `${navigation(query)}${fixtureMeta(query, failure)}<h1>${query.get('recovery') ? 'Resume sign in' : 'Create account'}</h1><p>Use the controlled university application portal.</p>${form(`<label>Email<input name="email" type="email" required></label><label>Password<input name="password" type="password" required></label>`, query.get('recovery') ? 'Resume sign in' : 'Create account')}`,
     verification: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Verify email</h1><p id="verification-status" class="notice">A verification code was sent to the applicant email.</p>${form('<label>Verification code<input name="verification_code" inputmode="numeric" autocomplete="one-time-code" required></label>', 'Verify email')}`,
@@ -179,6 +199,9 @@ export default function handler(request: FixtureRequest, response: FixtureRespon
     documents: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Documents</h1>${uploadNotice}${form('<label>Academic CV<input name="cv" type="file" accept=".pdf,.docx" required></label><label>Statement of purpose<input name="statement" type="file" accept=".pdf,.docx" required></label><label>Transcript<input name="transcript" type="file" accept=".pdf" required></label>', saveButton)}`,
     review: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Final review</h1><dl><dt>Programme</dt><dd>Controlled University PhD in Computational Physics</dd><dt>Funding</dt><dd>Full tuition waiver and stipend</dd></dl><p class="notice">All required sections are saved. Submission remains a separate approved action.</p>${form('', 'Submit application')}`,
     expired: `${navigation(query)}${fixtureMeta(query, failure)}<h1>Session expired</h1><p role="alert">The controlled session expired. Resume sign in to recover the saved sections.</p><a href="${fixtureUrl('account', query)}&recovery=1">Resume sign in</a>`,
+  }
+  if (query.get('version') === 'v2') {
+    Object.assign(bodies, v2Bodies)
   }
   const title = failure === 'delayed_page_load' ? 'Application portal · delayed page' : `Application portal · ${sessionExpired ? 'expired' : step}`
   const body = page(title, sessionExpired ? bodies.expired : bodies[step] ?? bodies.account)

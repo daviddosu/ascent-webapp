@@ -5,7 +5,7 @@ export type AgentToolDefinition = {
   name: string
   description: string
   parameters: Record<string, unknown>
-  strict: true
+  strict: boolean
 }
 
 type ToolPolicy = {
@@ -41,6 +41,37 @@ export function openAIToolName(toolName: string) {
 
 export function internalAgentToolName(openAIName: string) {
   return openAIName.replaceAll('__', '.')
+}
+
+function strictSchemaCompatible(value: unknown): boolean {
+  if (Array.isArray(value)) return value.every(strictSchemaCompatible)
+  if (!value || typeof value !== 'object') return true
+  const schema = value as Record<string, unknown>
+  if (schema.type === 'object') {
+    if (schema.additionalProperties !== false) return false
+    const properties = schema.properties && typeof schema.properties === 'object'
+      ? Object.keys(schema.properties as Record<string, unknown>)
+      : []
+    const required = Array.isArray(schema.required) ? schema.required.map(String) : []
+    if (properties.some(name => !required.includes(name))) return false
+  }
+  return Object.values(schema).every(strictSchemaCompatible)
+}
+
+/**
+ * Convert an internal definition to the Responses API wire shape.
+ *
+ * Strict function schemas require every object node to reject unknown keys and
+ * require every declared property. Several application tools deliberately
+ * carry open provider/domain payloads, so those definitions must remain
+ * non-strict and rely on the existing server-side argument validator.
+ */
+export function openAIToolDefinition(tool: AgentToolDefinition) {
+  return {
+    ...tool,
+    name: openAIToolName(tool.name),
+    strict: tool.strict && strictSchemaCompatible(tool.parameters),
+  }
 }
 
 const calendarWriteTools = new Set([
@@ -304,7 +335,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.record_portal_checkpoint',
-    description: 'Persist a typed portal execution contract and read-after-write checkpoint after one meaningful section. Never advance an ambiguous or unverified section.',
+    description: 'Persist a typed portal execution contract and read-after-write checkpoint after one meaningful, reversibly saved section. A non-final section save is preparatory and does not require final-submission approval. Never advance an ambiguous or unverified section, and never use this tool for final application submission.',
     parameters: objectSchema({
       application_case_id: stringValue('Durable ApplicationCase ID.', 64),
       session_id: stringValue('Task-owned browser session ID.', 64),
@@ -857,7 +888,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'browser.act',
-    description: 'Perform a safe preparatory action in the task-owned browser session.',
+    description: 'Perform a safe preparatory action in the task-owned browser session. This tool fills fields and activates safe navigation links, but it does not activate form save or submit controls.',
     parameters: objectSchema({
       session_id: stringValue('Browser execution session ID.', 64),
       action: {

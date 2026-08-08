@@ -1,0 +1,36 @@
+{
+  "id": "applicant-interdisciplinary-incomplete",
+  "synthetic": true,
+  "sourceMaterials": [
+    {
+      "assetId": "inter-cv",
+      "kind": "cv",
+      "title": "Samuel Adeyemi — working CV",
+      "content": "Samuel Adeyemi. BSc Geography and Environmental Science, Obafemi Awolowo University, 2020–2025. The working CV reports a 4.10/5.00 CGPA, but this figure was copied before final moderation. Data fellow at CivicMap Nigeria, February–November 2024, alongside final-year study; freelance geospatial analyst, August 2024–present. Projects combine satellite imagery, public-health access and community interviews. One conference abstract was submitted in May 2026; acceptance has not been announced. Nigerian citizen living in Abuja."
+    },
+    {
+      "assetId": "inter-transcript",
+      "kind": "transcript",
+      "title": "Unofficial incomplete academic record",
+      "content": "Unofficial student copy dated 30 May 2025. Cumulative GPA shown as 4.08/5.00 before final project moderation. Final project grade and degree completion date are blank. The record states ‘not a final transcript’. Courses include GIS, Remote Sensing, Epidemiology for Geographers, Statistics and Qualitative Methods."
+    },
+    {
+      "assetId": "inter-employment",
+      "kind": "employment",
+      "title": "Employment chronology",
+      "content": "CivicMap Nigeria data fellowship, 5 February–30 November 2024, 20 hours per week while enrolled full-time. Freelance geospatial analysis, 1 August 2024–present, variable hours. No employer from December 2024–present besides freelance work. Current address: 21 Gimbiya Street, Abuja, Nigeria. Permanent address: 9 Oke-Ila Road, Ile-Ife, Nigeria."
+    },
+    {
+      "assetId": "inter-referees",
+      "kind": "referees",
+      "title": "Available referees",
+      "content": "Only professional referees are currently confirmed: Fatima Musa, CivicMap programme manager, and Dr Peter Obi, public-health project lead. Samuel has not yet asked an academic lecturer and has not supplied an academic referee’s contact details."
+    },
+    {
+      "assetId": "inter-notes",
+      "kind": "statement",
+      "title": "Applicant clarification notes",
+      "content": "I want an interdisciplinary master’s in geospatial data and public health. I do not know my final CGPA or the official date my degree requirements were completed. I need to request a final transcript. I have not had a disciplinary case. Funding is desirable but I could begin without a full award."
+    }
+  ]
+}

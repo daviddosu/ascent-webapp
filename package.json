@@ -16,6 +16,7 @@
     "benchmark:david": "node benchmarks/david-applications/cli.mjs",
     "benchmark:david:loop": "node benchmarks/david-applications/cli.mjs --loop",
     "benchmark:david:live-web": "node benchmarks/david-applications/live-web.mjs",
+    "benchmark:david:v2": "node benchmarks/david-applications-v2/cli.mjs",
     "check": "pnpm test && pnpm build",
     "check:cloud": "node scripts/verify-cloud.mjs",
     "check:cloud:auth": "node scripts/verify-cloud-auth.mjs"
