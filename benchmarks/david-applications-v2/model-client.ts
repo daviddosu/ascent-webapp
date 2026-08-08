@@ -102,8 +102,22 @@ export function outputText(response: OpenAIResponse) {
     .trim()
 }
 
-function observableResponse(response: OpenAIResponse) {
-  return JSON.parse(JSON.stringify(response, (key, value) =>
+export function observableResponse(response: OpenAIResponse) {
+  const source = response as OpenAIResponse & Record<string, unknown>
+  const compact = {
+    id: source.id,
+    object: source.object,
+    created_at: source.created_at,
+    completed_at: source.completed_at,
+    status: source.status,
+    model: source.model,
+    output: source.output,
+    output_text: source.output_text,
+    error: source.error,
+    usage: source.usage,
+    metadata: source.metadata,
+  }
+  return JSON.parse(JSON.stringify(compact, (key, value) =>
     key === 'encrypted_content' ? undefined : value,
   )) as OpenAIResponse
 }
@@ -192,6 +206,15 @@ export class DavidV2ModelClient {
         if (attempt === maximumAttempts || /Unauthorized|Invalid benchmark request/i.test(lastError)) break
         const delayMs = Math.min(10_000, 500 * (2 ** Math.min(attempt - 1, 4)))
         this.providerRetries += 1
+        this.trace.push({
+          at: new Date().toISOString(),
+          kind: 'harness',
+          name: 'model_provider_backoff',
+          input: { mode, attempt, providerStatus: 'network' },
+          output: { delayMs },
+          elapsedMs: 0,
+          error: lastError,
+        })
         await new Promise(resolve => setTimeout(resolve, delayMs))
       }
     }
