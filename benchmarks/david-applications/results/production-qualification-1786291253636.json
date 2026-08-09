@@ -1,0 +1,742 @@
+{
+  "suiteVersion": "david_application_engine_v3_production_qualification",
+  "qualificationStartedAt": "2026-08-09T15:57:36.463Z",
+  "generatedAt": "2026-08-09T16:00:53.635Z",
+  "implementationCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
+  "evidenceCommit": "8b19141defd769c8a8c96d322246d1913a9e87bd",
+  "production": {
+    "supabaseProjectRef": "bhhutexqrxzbbhatepmh",
+    "supabaseFunctionsEndpoint": "https://bhhutexqrxzbbhatepmh.supabase.co/functions/v1/task-agent",
+    "frontendAlias": "https://app.shotcount.app",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "low",
+    "harnessVersion": "david-application-controller@2.1",
+    "promptVersion": "david-prompt@6",
+    "primitiveVersion": "public-browser@1",
+    "authenticatedUserId": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+    "googleScopesCount": 9,
+    "accountEmailDomain": "gmail.com"
+  },
+  "request": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+  "requestedRuns": 1,
+  "maxMinutesPerRun": 30,
+  "runs": [
+    {
+      "runNumber": 1,
+      "startedAt": "2026-08-09T15:57:45.060Z",
+      "task": {
+        "id": "13046748-ccb8-4c72-b420-905b572a6574",
+        "title": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+        "dueDate": "2026-08-09",
+        "assetEvidence": [
+          {
+            "id": "692e8254-9988-4948-b46e-f39f76d0895c",
+            "kind": "cv",
+            "filename": "nadia-okoye-cv.txt",
+            "sizeBytes": 469,
+            "sha256": "f99209d94030a95a9d9d29a4ec0ec4114bb92a377a4272e417d94893ba81fd29"
+          },
+          {
+            "id": "11698511-550e-41aa-b866-0fa648e3e557",
+            "kind": "transcript",
+            "filename": "nadia-okoye-transcript.txt",
+            "sizeBytes": 285,
+            "sha256": "ab0b950ee317dfdc515cef70cf2d48404e7f959743471803ab77403f9bc2a496"
+          },
+          {
+            "id": "ea2cd3fc-bf32-42ae-b509-2248da22b060",
+            "kind": "degree",
+            "filename": "nadia-okoye-degree.txt",
+            "sizeBytes": 157,
+            "sha256": "6dfc71841562898b1361e7c95cbda4d8f5c8f0208ad31a990b5be07ac31715b1"
+          },
+          {
+            "id": "6e9aa101-2ff0-409e-881c-726bcd6c7091",
+            "kind": "supporting",
+            "filename": "nadia-okoye-supporting.txt",
+            "sizeBytes": 210,
+            "sha256": "caddd899c1ec3477fe8edd3ea5884fc03e0494993c016e260c4cace7428b6752"
+          }
+        ],
+        "profileSeeded": false
+      },
+      "events": [
+        {
+          "at": "2026-08-09T15:57:56.532Z",
+          "event": "started",
+          "runId": "75dbd29b-67d1-454c-ae9a-a6c5d76a2f91",
+          "status": "waiting_external",
+          "model": "gpt-5.6-luna"
+        },
+        {
+          "at": "2026-08-09T16:00:03.386Z",
+          "event": "polled",
+          "status": "failed"
+        },
+        {
+          "at": "2026-08-09T16:00:06.398Z",
+          "event": "resuming_failed_run",
+          "attempt": 1,
+          "errorCode": null
+        },
+        {
+          "at": "2026-08-09T16:00:44.689Z",
+          "event": "resuming_failed_run",
+          "attempt": 2,
+          "errorCode": null
+        },
+        {
+          "at": "2026-08-09T16:00:49.887Z",
+          "event": "failure_resume_failed",
+          "message": "task-agent 502: Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 183541, Requested 23532. Please try again in 2.121s. Visit https://platform.openai.com/account/rate-limits to learn more."
+        },
+        {
+          "at": "2026-08-09T16:00:53.635Z",
+          "event": "finished",
+          "status": "failed",
+          "cases": 0,
+          "modelResponses": 0
+        }
+      ],
+      "contextAnswers": [],
+      "approvals": [],
+      "blockers": [
+        {
+          "kind": "failure_resume_error",
+          "message": "task-agent 502: Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 183541, Requested 23532. Please try again in 2.121s. Visit https://platform.openai.com/account/rate-limits to learn more."
+        }
+      ],
+      "final": {
+        "status": "failed",
+        "errorCode": "agent_execution_error",
+        "currentStep": 11,
+        "reasoningModel": "gpt-5.6-luna",
+        "applicationState": {
+          "status": "researching",
+          "stage": "research",
+          "campaignId": "53419dfc-e466-4a7f-9769-0ab1247877ef",
+          "currentCaseId": null,
+          "progress": {
+            "label": "Verifying programmes",
+            "total": 5,
+            "blockers": [
+              "Official source verification is incomplete."
+            ],
+            "completed": 1,
+            "nextAction": "Verify this opportunity on an official source before recommending it.",
+            "evidenceCount": 1
+          }
+        },
+        "updatedAt": "2026-08-09T16:00:49.768991+00:00",
+        "completedAt": null,
+        "waitingReason": "",
+        "error": "Rate limit reached for gpt-5.6-luna in organization org-OdZJASvumMFQSPr2yzxOFEgB on tokens per min (TPM): Limit 200000, Used 183541, Requested 23532. Please try again in 2.121s. Visit https://platform.openai.com/account/rate-limits to learn more."
+      },
+      "evidence": {
+        "runId": "75dbd29b-67d1-454c-ae9a-a6c5d76a2f91",
+        "taskId": "13046748-ccb8-4c72-b420-905b572a6574",
+        "model": "gpt-5.6-luna",
+        "tables": {
+          "agent_runs": [
+            {
+              "id": "75dbd29b-67d1-454c-ae9a-a6c5d76a2f91",
+              "status": "failed",
+              "reasoning_model": "gpt-5.6-luna",
+              "openai_response_id": "resp_0447538660ab4a7b016a78a3c59bec819595e87905f2dc0744",
+              "current_step": 11,
+              "error_code": "agent_execution_error",
+              "created_at": "2026-08-09T15:57:46.851266+00:00",
+              "updated_at": "2026-08-09T16:00:49.768991+00:00",
+              "completed_at": null,
+              "application_state": {
+                "stage": "research",
+                "status": "researching",
+                "caseIds": [],
+                "blockers": [
+                  "Official source verification is incomplete."
+                ],
+                "progress": {
+                  "label": "Verifying programmes",
+                  "total": 5,
+                  "blockers": [
+                    "Official source verification is incomplete."
+                  ],
+                  "completed": 1,
+                  "nextAction": "Verify this opportunity on an official source before recommending it.",
+                  "evidenceCount": 1
+                },
+                "campaignId": "53419dfc-e466-4a7f-9769-0ab1247877ef",
+                "nextAction": "Verify this opportunity on an official source before recommending it.",
+                "currentCaseId": null,
+                "schemaVersion": 1,
+                "lastEvidenceAt": null,
+                "verifiedOpportunityCount": 0
+              },
+              "result": null
+            }
+          ],
+          "application_campaigns": [
+            {
+              "id": "53419dfc-e466-4a7f-9769-0ab1247877ef",
+              "status": "researching",
+              "target_quantity": null,
+              "objective": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+              "next_action": "Verify this opportunity on an official source before recommending it.",
+              "progress": {
+                "label": "Verifying programmes",
+                "total": 5,
+                "blockers": [
+                  "Official source verification is incomplete."
+                ],
+                "completed": 1,
+                "nextAction": "Verify this opportunity on an official source before recommending it.",
+                "evidenceCount": 1
+              },
+              "created_at": "2026-08-09T15:57:46.941778+00:00",
+              "updated_at": "2026-08-09T15:59:06.670318+00:00"
+            }
+          ],
+          "application_opportunities": [
+            {
+              "id": "396a0c8a-4b88-4ea9-99cd-b5db65ee383a",
+              "campaign_id": "53419dfc-e466-4a7f-9769-0ab1247877ef",
+              "institution": "University of Edinburgh",
+              "programme_title": "Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD",
+              "official_url": "https://study.ed.ac.uk/programmes/postgraduate-research/489-informatics-iml-machine-learning-computational-neuroscience",
+              "verification_status": "partially_verified",
+              "confidence": 0,
+              "fit_score": 0,
+              "retrieved_at": "2026-08-09T15:59:00.663+00:00"
+            },
+            {
+              "id": "6bd61653-dc83-4e23-a1ea-b630e0e55647",
+              "campaign_id": "53419dfc-e466-4a7f-9769-0ab1247877ef",
+              "institution": "University of Toronto",
+              "programme_title": "Doctor of Philosophy (PhD), Department of Computer Science",
+              "official_url": "https://web.cs.toronto.edu/graduate/phd",
+              "verification_status": "partially_verified",
+              "confidence": 0,
+              "fit_score": 0,
+              "retrieved_at": "2026-08-09T15:58:55.499+00:00"
+            },
+            {
+              "id": "772ca753-8328-4afe-8d94-8d0064a921da",
+              "campaign_id": "53419dfc-e466-4a7f-9769-0ab1247877ef",
+              "institution": "Imperial College London",
+              "programme_title": "Computing PhD",
+              "official_url": "https://www.imperial.ac.uk/computing/prospective-students/courses/phd/",
+              "verification_status": "partially_verified",
+              "confidence": 0,
+              "fit_score": 0,
+              "retrieved_at": "2026-08-09T15:59:06.475+00:00"
+            }
+          ],
+          "application_cases": [],
+          "application_requirements": [],
+          "application_artifacts": [],
+          "portal_checkpoints": [],
+          "application_evidence": {
+            "error": "400 column application_evidence.verified does not exist"
+          },
+          "application_communications": {
+            "error": "400 column application_communications.status does not exist"
+          },
+          "application_inter_agent_requests": [],
+          "browser_execution_sessions": [
+            {
+              "id": "027d97dd-2a9a-4e1f-83cf-7f47ea93f0be",
+              "status": "completed",
+              "current_domain": "www.imperial.ac.uk",
+              "current_url": "https://www.imperial.ac.uk/computing/prospective-students/courses/phd/",
+              "worker_session_id": "b00c2fa8-ea54-411e-854a-1dd1c5581988",
+              "payment_boundary_reached": false,
+              "created_at": "2026-08-09T15:57:52.944828+00:00",
+              "updated_at": "2026-08-09T15:59:17.950403+00:00"
+            }
+          ],
+          "agent_actions": [
+            {
+              "id": "4149ec4e-9ac8-4a7e-999d-f5e1e95b8686",
+              "step_index": 0,
+              "tool_name": "browser.start_session",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "027d97dd-2a9a-4e1f-83cf-7f47ea93f0be",
+              "error_code": null,
+              "public_summary": "Started an isolated browser session.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:57:53.053+00:00"
+            },
+            {
+              "id": "7fb4f930-49c0-4e57-9a44-f8b367368a5c",
+              "step_index": 1,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "027d97dd-2a9a-4e1f-83cf-7f47ea93f0be",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:57:57.752+00:00"
+            },
+            {
+              "id": "cb385808-94e3-4a0e-9a02-9c17ecfe09df",
+              "step_index": 2,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "027d97dd-2a9a-4e1f-83cf-7f47ea93f0be",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:58:14.937+00:00"
+            },
+            {
+              "id": "41ae1cc4-a7e6-499f-824b-f8692d55fe89",
+              "step_index": 3,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "027d97dd-2a9a-4e1f-83cf-7f47ea93f0be",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:58:30.499+00:00"
+            },
+            {
+              "id": "534805a9-c9f3-4ec7-9755-a47f97a06deb",
+              "step_index": 4,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "396a0c8a-4b88-4ea9-99cd-b5db65ee383a",
+              "error_code": null,
+              "public_summary": "Saved Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD; official verification is still needed.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:58:36.725+00:00"
+            },
+            {
+              "id": "1781f666-8f87-4d51-b584-c7b9d2d70872",
+              "step_index": 5,
+              "tool_name": "browser.observe",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "027d97dd-2a9a-4e1f-83cf-7f47ea93f0be",
+              "error_code": null,
+              "public_summary": "Observed the isolated browser session.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:58:45.64+00:00"
+            },
+            {
+              "id": "ee2f503e-d6ae-422e-ae19-863982bff218",
+              "step_index": 6,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "6bd61653-dc83-4e23-a1ea-b630e0e55647",
+              "error_code": null,
+              "public_summary": "Saved Doctor of Philosophy (PhD), Department of Computer Science; official verification is still needed.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:58:50.095+00:00"
+            },
+            {
+              "id": "39a19084-458e-47e4-9d27-83d1fe19cbcd",
+              "step_index": 7,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "6bd61653-dc83-4e23-a1ea-b630e0e55647",
+              "error_code": null,
+              "public_summary": "Saved Doctor of Philosophy (PhD), Department of Computer Science; official verification is still needed.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:58:55.707+00:00"
+            },
+            {
+              "id": "c1cbfd17-766d-4bee-95be-f1f18e6b46d7",
+              "step_index": 8,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "396a0c8a-4b88-4ea9-99cd-b5db65ee383a",
+              "error_code": null,
+              "public_summary": "Saved Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD; official verification is still needed.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:59:00.885+00:00"
+            },
+            {
+              "id": "b0861295-361f-4cdd-a64e-5df1bb0d4058",
+              "step_index": 9,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "772ca753-8328-4afe-8d94-8d0064a921da",
+              "error_code": null,
+              "public_summary": "Saved Computing PhD; official verification is still needed.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:59:06.687+00:00"
+            },
+            {
+              "id": "990dde6a-e49a-4f37-b10c-0e277184978b",
+              "step_index": 10,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "027d97dd-2a9a-4e1f-83cf-7f47ea93f0be",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T15:59:28.568+00:00"
+            }
+          ],
+          "agent_approvals": [],
+          "agent_run_events": [
+            {
+              "id": 26795,
+              "eventType": "agent_run_started",
+              "status": "planning",
+              "createdAt": "2026-08-09T15:57:47.292367+00:00",
+              "metadataKeys": [
+                "capability",
+                "reasoning_model",
+                "route_classification",
+                "specialist_id",
+                "specialist_version",
+                "strategy"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26796,
+              "eventType": "task_delegated",
+              "status": "planning",
+              "createdAt": "2026-08-09T15:57:47.374945+00:00",
+              "metadataKeys": [
+                "specialist_id",
+                "specialist_version",
+                "task_contract"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26797,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T15:57:53.357692+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26798,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T15:57:56.506928+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26799,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T15:57:58.121265+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26800,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T15:58:03.574763+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26801,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T15:58:15.46757+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26802,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T15:58:19.190722+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26803,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T15:58:30.848236+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26804,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T15:58:37.000734+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26805,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T15:58:45.919008+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26806,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T15:58:50.361575+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26807,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T15:58:55.987682+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26808,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T15:59:01.247507+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26809,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T15:59:06.962394+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26810,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T15:59:17.043201+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26811,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T15:59:29.061383+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26812,
+              "eventType": "agent_failed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:00:03.324879+00:00",
+              "metadataKeys": [
+                "retryable"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26816,
+              "eventType": "agent_failed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:00:44.526944+00:00",
+              "metadataKeys": [
+                "retryable"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26817,
+              "eventType": "agent_resumed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:00:44.602207+00:00",
+              "metadataKeys": [],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26818,
+              "eventType": "agent_failed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:00:49.842295+00:00",
+              "metadataKeys": [
+                "failure_taxonomy",
+                "recovery_attempt",
+                "retryable"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": "AGENT_EXECUTION_ERROR",
+              "recoveryAttempt": 0
+            }
+          ]
+        },
+        "usage": {},
+        "metrics": {
+          "opportunityCount": 3,
+          "caseCount": 0,
+          "artifactCount": 0,
+          "portalCheckpointCount": 0,
+          "browserSessionCount": 1,
+          "actionCount": 11,
+          "approvalCount": 0,
+          "modelResponseCount": 0,
+          "failureEventCount": 4
+        }
+      },
+      "finishedAt": "2026-08-09T16:00:53.635Z"
+    }
+  ],
+  "aggregate": {
+    "finalStatuses": [
+      "failed"
+    ],
+    "consecutiveCompletedRuns": 0,
+    "totalApplications": 0,
+    "totalModelResponses": 0,
+    "usage": {},
+    "cost": {
+      "inputTokens": 0,
+      "cachedInputTokens": 0,
+      "outputTokens": 0,
+      "estimatedUsd": 0
+    }
+  }
+}

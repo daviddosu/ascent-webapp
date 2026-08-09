@@ -24,16 +24,37 @@ Requested scopes:
 - `calendar.events.freebusy`
 - `contacts.readonly`
 
-The investor-demo OAuth client lives in the dedicated
+## Verification and release status
+
+Google approved the `shotcount-production` OAuth App Verification request for
+brand verification on 7 August 2026. That approval covers the consent-screen
+branding and public URLs; it does not approve new sensitive or restricted
+scopes.
+
+The production Google Auth Platform project contains the `Ascent Shotcount
+Supabase` web client, and the Supabase OAuth start/callback functions are
+deployed. The production Data access configuration now includes the complete
+execution scope set listed above, including Gmail, Calendar, and Contacts. The
+Gmail and Calendar/Contacts execution scopes are still unverified and cannot be
+offered to general users until Google completes data-access verification. The
+scope justifications and demo-video link are retained for resubmission. The
+OAuth audience is temporarily in `Testing` while data-access verification is
+not approved; only explicitly configured test users
+can authorize the sensitive scopes. Returning the audience to `In production`
+withdraws the current verification application, so the verification request
+must be resubmitted before public release. Google’s verification is not
+inherited by newly added scopes or by later consent-screen changes.
+
+The investor-demo OAuth client remains in the dedicated
 `shotcount-agent-staging` Google Cloud project. Its consent screen is External
 and in Testing, the ShotCount development account is an explicit test user,
 and Gmail, Calendar, and People APIs are enabled. The complete execution scope
-set has been granted and the development account is connected.
+set has been granted to that controlled development account.
 
-Do not promote this client as the public production OAuth client. Before a
-general release, create or promote a production client and complete Google’s
-verification for the sensitive/restricted scopes. Keep the same controlled
-callback URL and server-only token handling.
+Keep the staging client out of public production traffic. Keep the same
+controlled callback URL and server-only token handling, and do not claim that
+Gmail, Calendar, or Contacts access is production-verified until the separate
+scope review is approved.
 
 ## Server secrets
 

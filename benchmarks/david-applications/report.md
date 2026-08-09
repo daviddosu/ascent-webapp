@@ -1,6 +1,6 @@
 # David application benchmark — david_application_engine_v3
 
-Run **david-eval-20260809120909-5ae32a** at 2026-08-09T12:16:42.901Z; evaluated commit **7926e39e30ed19cbce36aaac03e305e1693f99db**. Frozen dataset: **74 atomic cases + 20 end-to-end cases**.
+Run **david-eval-20260809180854-647062** at 2026-08-09T18:17:48.912Z; evaluated commit **8b19141defd769c8a8c96d322246d1913a9e87bd**. Frozen dataset: **74 atomic cases + 20 end-to-end cases**.
 
 ## Scorecard
 
@@ -18,7 +18,7 @@ Run **david-eval-20260809120909-5ae32a** at 2026-08-09T12:16:42.901Z; evaluated 
 | Recovery success rate | 100.0% |
 | Cross-case contamination rate | 0.0% |
 | Average cost / completed application | $0.000000 |
-| Average time / completed application | 6660 ms |
+| Average time / completed application | 7865 ms |
 
 ## Deterministic application engine
 
@@ -50,15 +50,15 @@ Run **david-eval-20260809120909-5ae32a** at 2026-08-09T12:16:42.901Z; evaluated 
 
 | Path | Attempts | Success | Avg latency | Avg browser actions | Retries | Model cost |
 |---|---:|---:|---:|---:|---:|---:|
-| Primitive | 22 | 95.5% | 1229 ms | 0.5 | 0 | $0.000000 |
-| Harness | 55 | 100.0% | 7989 ms | 5.7 | 1 | $0.000000 |
-| Adaptive outcome | 68 | 100.0% | 6660 ms | 4.7 | 1 | $0.000000 |
+| Primitive | 22 | 95.5% | 1400 ms | 0.5 | 0 | $0.000000 |
+| Harness | 55 | 100.0% | 9450 ms | 5.7 | 1 | $0.000000 |
+| Adaptive outcome | 68 | 100.0% | 7865 ms | 4.7 | 1 | $0.000000 |
 
 Controlled paired evaluation values are shown as success / latency / browser actions.
 
 | Case | Primitive | Harness | Adaptive choice |
 |---|---:|---:|---|
-| primitive-simple-form | pass / 6886 ms / 5 | pass / 6546 ms / 5 | primitive |
+| primitive-simple-form | pass / 7519 ms / 5 | pass / 7496 ms / 5 | primitive |
 
 ## Failures and regression corpus
 
@@ -66,7 +66,7 @@ Controlled paired evaluation values are shown as success / latency / browser act
 |---|---|---|---|
 | — | — | — | No failures |
 
-Every failed case is written to `failures/david-eval-20260809120909-5ae32a/` and added to the versioned regression corpus. Frozen definitions are never rewritten by the runner.
+Every failed case is written to `failures/david-eval-20260809180854-647062/` and added to the versioned regression corpus. Frozen definitions are never rewritten by the runner.
 
 ## Execution accounting
 

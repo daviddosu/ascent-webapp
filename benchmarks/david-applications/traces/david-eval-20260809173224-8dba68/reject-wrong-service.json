@@ -1,0 +1,58 @@
+[
+  {
+    "at": "2026-08-09T17:32:27.682Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "reject-wrong-service",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T17:32:27.682Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "reject-wrong-service",
+    "data": {
+      "kind": "otp_match",
+      "verified": true,
+      "providerId": "current-otp",
+      "threadId": "current",
+      "details": {
+        "redactedCode": "4•••6"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T17:32:27.682Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "reject-wrong-service",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T17:32:27.682Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "reject-wrong-service",
+    "data": {
+      "value": true
+    }
+  }
+]

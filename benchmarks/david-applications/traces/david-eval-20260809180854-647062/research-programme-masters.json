@@ -1,0 +1,43 @@
+[
+  {
+    "at": "2026-08-09T18:08:54.090Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "research-programme-masters",
+    "data": {
+      "mode": "primitive_then_harness",
+      "reasons": [
+        "Simple, reversible, stateless step with a safe primitive path.",
+        "No history exists; begin with a recoverable primitive attempt."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "not_applicable"
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:54.090Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "research-programme-masters",
+    "data": {
+      "mode": "primitive_then_harness",
+      "reasons": [
+        "Simple, reversible, stateless step with a safe primitive path.",
+        "No history exists; begin with a recoverable primitive attempt."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "not_applicable"
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:54.124Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "research-programme-masters",
+    "data": {
+      "value": true
+    }
+  }
+]

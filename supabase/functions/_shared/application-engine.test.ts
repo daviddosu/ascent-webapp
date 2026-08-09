@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyApplicationObservation,
+  applicationEngineDirective,
   claimApplicationAction,
   createApplicationEngineState,
   planApplicationEngineStep,
@@ -33,6 +34,18 @@ function state(requirements = [requirement()]): ApplicationEngineState {
     observations: [], completedActionKeys: [], approvals: [], browser: { portal: null, section: null, sessionId: null, checkpointObservationId: null }, communication: [],
   })
 }
+
+it('keeps pre-case campaign control active instead of completing an empty graph', () => {
+  const preCase = createApplicationEngineState({
+    caseId: '', objective: 'Find and handle graduate applications', status: 'ACTIVE', requirements: [],
+    facts: [], observations: [], completedActionKeys: [], approvals: [],
+    browser: { portal: null, section: null, sessionId: null, checkpointObservationId: null }, communication: [],
+  })
+  const step = planApplicationEngineStep(preCase)
+  expect(step).toEqual({ kind: 'CONTROLLER', caseId: '', action: 'continue_application_controller' })
+  expect(applicationEngineDirective(preCase, step)).toContain('continue_application_controller')
+  expect(applicationEngineDirective(preCase, step)).not.toContain('"kind":"COMPLETE"')
+})
 
 it('selects one dependency-ready requirement and keeps planning deterministic', () => {
   const first = requirement({ id: 'first', type: 'deadline', requiredFactIds: [], evidenceContract: ['web'] })

@@ -4,6 +4,11 @@ import { isIP } from 'node:net'
 import { chromium as playwright, type Browser, type Locator, type Page } from 'playwright-core'
 import { BrowserExecutionError } from './_flight-browser.js'
 
+// Public browser runs are serverless Chromium invocations. Disable WebGL and
+// avoid the small shared-memory mount so a page renderer cannot take down the
+// whole worker while the durable browser session is being resumed.
+chromium.setGraphicsMode = false
+
 export type PublicBrowserAction = {
   action: 'click' | 'type' | 'select' | 'upload' | 'scroll' | 'wait'
   target: string
@@ -54,6 +59,7 @@ async function launchBrowser() {
     headless: true,
     args: [
       ...(process.platform === 'linux' ? chromium.args : []),
+      ...(process.platform === 'linux' ? ['--disable-dev-shm-usage'] : []),
       ...(benchmark ? ['--ignore-certificate-errors', '--host-resolver-rules=MAP benchmark.test 127.0.0.1'] : []),
     ],
   })

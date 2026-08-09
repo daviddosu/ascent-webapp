@@ -1,0 +1,55 @@
+[
+  {
+    "at": "2026-08-09T18:08:57.418Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:57.418Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "gmail-thread-isolation"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:57.418Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:57.418Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "gmail-thread-isolation",
+    "data": {
+      "value": true
+    }
+  }
+]

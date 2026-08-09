@@ -1,0 +1,195 @@
+{
+  "suiteVersion": "david_application_engine_v3_production_qualification",
+  "qualificationStartedAt": "2026-08-09T15:53:19.068Z",
+  "generatedAt": "2026-08-09T15:54:31.411Z",
+  "implementationCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
+  "evidenceCommit": "8b19141defd769c8a8c96d322246d1913a9e87bd",
+  "production": {
+    "supabaseProjectRef": "bhhutexqrxzbbhatepmh",
+    "supabaseFunctionsEndpoint": "https://bhhutexqrxzbbhatepmh.supabase.co/functions/v1/task-agent",
+    "frontendAlias": "https://app.shotcount.app",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "low",
+    "harnessVersion": "david-application-controller@2.1",
+    "promptVersion": "david-prompt@6",
+    "primitiveVersion": "public-browser@1",
+    "authenticatedUserId": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+    "googleScopesCount": 9,
+    "accountEmailDomain": "gmail.com"
+  },
+  "request": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+  "requestedRuns": 1,
+  "maxMinutesPerRun": 30,
+  "runs": [
+    {
+      "runNumber": 1,
+      "startedAt": "2026-08-09T15:53:26.826Z",
+      "task": {
+        "id": "c8842789-b9b1-475e-9e9d-8b05d5b581d7",
+        "title": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+        "dueDate": "2026-08-09",
+        "assetEvidence": [
+          {
+            "id": "c21b4a96-50b1-4c50-b1da-372b621e1fce",
+            "kind": "cv",
+            "filename": "nadia-okoye-cv.txt",
+            "sizeBytes": 469,
+            "sha256": "f99209d94030a95a9d9d29a4ec0ec4114bb92a377a4272e417d94893ba81fd29"
+          },
+          {
+            "id": "58cc0617-9887-4dd9-8c29-546834d6171c",
+            "kind": "transcript",
+            "filename": "nadia-okoye-transcript.txt",
+            "sizeBytes": 285,
+            "sha256": "ab0b950ee317dfdc515cef70cf2d48404e7f959743471803ab77403f9bc2a496"
+          },
+          {
+            "id": "3f947b62-3b43-4b22-81f4-31ffe0022816",
+            "kind": "degree",
+            "filename": "nadia-okoye-degree.txt",
+            "sizeBytes": 157,
+            "sha256": "6dfc71841562898b1361e7c95cbda4d8f5c8f0208ad31a990b5be07ac31715b1"
+          },
+          {
+            "id": "e68332d7-2c85-40c1-86af-1b7dda025fd0",
+            "kind": "supporting",
+            "filename": "nadia-okoye-supporting.txt",
+            "sizeBytes": 210,
+            "sha256": "caddd899c1ec3477fe8edd3ea5884fc03e0494993c016e260c4cace7428b6752"
+          }
+        ],
+        "profileSeeded": false
+      },
+      "events": [
+        {
+          "at": "2026-08-09T15:53:38.686Z",
+          "event": "started",
+          "runId": "6cd4476b-351c-4911-9c21-98dcd752a5fe",
+          "status": "waiting_external",
+          "model": "gpt-5.6-luna"
+        },
+        {
+          "at": "2026-08-09T15:54:27.409Z",
+          "event": "polled",
+          "status": "waiting_for_user"
+        },
+        {
+          "at": "2026-08-09T15:54:31.202Z",
+          "event": "blocked_on_user",
+          "status": "waiting_for_user",
+          "waitingReason": ""
+        },
+        {
+          "at": "2026-08-09T15:54:31.411Z",
+          "event": "finished",
+          "status": "waiting_for_user",
+          "cases": 0,
+          "modelResponses": 0
+        }
+      ],
+      "contextAnswers": [],
+      "approvals": [],
+      "blockers": [
+        {
+          "kind": "waiting_for_user",
+          "waitingReason": ""
+        }
+      ],
+      "final": {
+        "status": "waiting_for_user",
+        "errorCode": "application_opportunity_invalid",
+        "currentStep": 4,
+        "reasoningModel": "gpt-5.6-luna",
+        "applicationState": {
+          "status": "researching",
+          "stage": "research",
+          "campaignId": "7fdc98d8-73c1-49df-ab82-93925a2e2e69",
+          "currentCaseId": null,
+          "progress": {
+            "label": "Researching programmes",
+            "total": 5,
+            "blockers": [],
+            "completed": 0,
+            "nextAction": "Verify official opportunities and requirements.",
+            "evidenceCount": 0
+          }
+        },
+        "updatedAt": "2026-08-09T15:54:27.275343+00:00",
+        "completedAt": null,
+        "waitingReason": "The opportunity needs a campaign, institution, programme name, and HTTPS official source.",
+        "error": "The opportunity needs a campaign, institution, programme name, and HTTPS official source."
+      },
+      "evidence": {
+        "runId": "6cd4476b-351c-4911-9c21-98dcd752a5fe",
+        "taskId": "c8842789-b9b1-475e-9e9d-8b05d5b581d7",
+        "model": "gpt-5.6-luna",
+        "tables": {
+          "agent_runs": {
+            "error": "keys is not defined"
+          },
+          "application_campaigns": {
+            "error": "keys is not defined"
+          },
+          "application_opportunities": {
+            "error": "keys is not defined"
+          },
+          "application_cases": {
+            "error": "keys is not defined"
+          },
+          "application_requirements": {
+            "error": "keys is not defined"
+          },
+          "application_artifacts": {
+            "error": "keys is not defined"
+          },
+          "portal_checkpoints": {
+            "error": "keys is not defined"
+          },
+          "application_evidence": {
+            "error": "keys is not defined"
+          },
+          "application_communications": {
+            "error": "keys is not defined"
+          },
+          "application_inter_agent_requests": {
+            "error": "keys is not defined"
+          },
+          "browser_execution_sessions": {
+            "error": "keys is not defined"
+          },
+          "agent_actions": {
+            "error": "keys is not defined"
+          },
+          "agent_approvals": {
+            "error": "keys is not defined"
+          },
+          "agent_run_events": []
+        },
+        "usage": {},
+        "metrics": {
+          "opportunityCount": 0,
+          "caseCount": 0,
+          "artifactCount": 0,
+          "modelResponseCount": 0,
+          "failureEventCount": 0
+        }
+      },
+      "finishedAt": "2026-08-09T15:54:31.411Z"
+    }
+  ],
+  "aggregate": {
+    "finalStatuses": [
+      "waiting_for_user"
+    ],
+    "consecutiveCompletedRuns": 0,
+    "totalApplications": 0,
+    "totalModelResponses": 0,
+    "usage": {},
+    "cost": {
+      "inputTokens": 0,
+      "cachedInputTokens": 0,
+      "outputTokens": 0,
+      "estimatedUsd": 0
+    }
+  }
+}

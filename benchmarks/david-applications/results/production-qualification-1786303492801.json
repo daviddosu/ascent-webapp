@@ -1,0 +1,1955 @@
+{
+  "suiteVersion": "david_application_engine_v3_production_qualification",
+  "qualificationStartedAt": "2026-08-09T19:19:29.880Z",
+  "generatedAt": "2026-08-09T19:24:52.801Z",
+  "implementationCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
+  "evidenceCommit": "8b19141defd769c8a8c96d322246d1913a9e87bd",
+  "production": {
+    "supabaseProjectRef": "bhhutexqrxzbbhatepmh",
+    "supabaseFunctionsEndpoint": "https://bhhutexqrxzbbhatepmh.supabase.co/functions/v1/task-agent",
+    "frontendAlias": "https://app.shotcount.app",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "low",
+    "harnessVersion": "david-application-controller@2.1",
+    "promptVersion": "david-prompt@6",
+    "primitiveVersion": "public-browser@1",
+    "authenticatedUserId": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+    "googleScopesCount": 9,
+    "accountEmailDomain": "gmail.com"
+  },
+  "request": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+  "requestedRuns": 1,
+  "maxMinutesPerRun": 15,
+  "runs": [
+    {
+      "runNumber": 1,
+      "startedAt": "2026-08-09T19:19:40.552Z",
+      "task": {
+        "id": "4a41e19d-e037-4610-816c-c3791a76970f",
+        "title": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+        "dueDate": "2026-08-09",
+        "assetEvidence": [
+          {
+            "id": "f0587605-7b73-4e68-ab96-31d3f5afb254",
+            "kind": "cv",
+            "filename": "nadia-okoye-cv.txt",
+            "sizeBytes": 469,
+            "sha256": "f99209d94030a95a9d9d29a4ec0ec4114bb92a377a4272e417d94893ba81fd29"
+          },
+          {
+            "id": "738c4ca4-e8fc-40f7-86fd-8ed0a4a54e3e",
+            "kind": "transcript",
+            "filename": "nadia-okoye-transcript.txt",
+            "sizeBytes": 285,
+            "sha256": "ab0b950ee317dfdc515cef70cf2d48404e7f959743471803ab77403f9bc2a496"
+          },
+          {
+            "id": "0946b26e-7c37-4375-8dd1-ff6c0504b315",
+            "kind": "degree",
+            "filename": "nadia-okoye-degree.txt",
+            "sizeBytes": 157,
+            "sha256": "6dfc71841562898b1361e7c95cbda4d8f5c8f0208ad31a990b5be07ac31715b1"
+          },
+          {
+            "id": "c3bac897-422f-4c57-acc3-fa10e7ddc869",
+            "kind": "supporting",
+            "filename": "nadia-okoye-supporting.txt",
+            "sizeBytes": 210,
+            "sha256": "caddd899c1ec3477fe8edd3ea5884fc03e0494993c016e260c4cace7428b6752"
+          }
+        ],
+        "profileSeeded": false
+      },
+      "events": [
+        {
+          "at": "2026-08-09T19:19:51.059Z",
+          "event": "started",
+          "runId": "4035a2e0-00c0-465d-9590-4a3efeffbdd0",
+          "status": "waiting_external",
+          "model": "gpt-5.6-luna"
+        },
+        {
+          "at": "2026-08-09T19:21:29.913Z",
+          "event": "polled",
+          "status": "needs_context"
+        },
+        {
+          "at": "2026-08-09T19:21:32.915Z",
+          "event": "answered_context",
+          "key": "funding-requirement"
+        },
+        {
+          "at": "2026-08-09T19:21:40.973Z",
+          "event": "state",
+          "status": "waiting_external",
+          "errorCode": null,
+          "currentStep": 11,
+          "reasoningModel": "gpt-5.6-luna",
+          "applicationState": {
+            "status": "researching",
+            "stage": "research",
+            "campaignId": "506213a8-59b0-4c49-affe-de121a81372f",
+            "currentCaseId": null,
+            "progress": {
+              "label": "Verifying programmes",
+              "total": 5,
+              "blockers": [],
+              "completed": 1,
+              "nextAction": "Rank the verified shortlist and request strategy approval.",
+              "evidenceCount": 1
+            }
+          },
+          "updatedAt": "2026-08-09T19:21:40.482692+00:00",
+          "completedAt": null,
+          "waitingReason": "Opening the allowed public webpage.",
+          "error": ""
+        },
+        {
+          "at": "2026-08-09T19:22:44.663Z",
+          "event": "polled",
+          "status": "needs_context"
+        },
+        {
+          "at": "2026-08-09T19:22:47.665Z",
+          "event": "answered_context",
+          "key": "funding-requirement"
+        },
+        {
+          "at": "2026-08-09T19:22:56.873Z",
+          "event": "state",
+          "status": "waiting_external",
+          "errorCode": null,
+          "currentStep": 19,
+          "reasoningModel": "gpt-5.6-luna",
+          "applicationState": {
+            "status": "researching",
+            "stage": "research",
+            "campaignId": "506213a8-59b0-4c49-affe-de121a81372f",
+            "currentCaseId": null,
+            "progress": {
+              "label": "Verifying programmes",
+              "total": 5,
+              "blockers": [],
+              "completed": 1,
+              "nextAction": "Rank the verified shortlist and request strategy approval.",
+              "evidenceCount": 1
+            }
+          },
+          "updatedAt": "2026-08-09T19:22:56.164927+00:00",
+          "completedAt": null,
+          "waitingReason": "Opening the allowed public webpage.",
+          "error": ""
+        },
+        {
+          "at": "2026-08-09T19:24:34.857Z",
+          "event": "polled",
+          "status": "waiting_for_user"
+        },
+        {
+          "at": "2026-08-09T19:24:38.775Z",
+          "event": "resuming_browser_failure",
+          "attempt": 1,
+          "errorCode": "browser_retry_exhausted"
+        },
+        {
+          "at": "2026-08-09T19:24:49.293Z",
+          "event": "blocked_on_user",
+          "status": "waiting_for_user",
+          "waitingReason": "This browser destination is not enabled for the active specialist yet."
+        },
+        {
+          "at": "2026-08-09T19:24:52.800Z",
+          "event": "finished",
+          "status": "waiting_for_user",
+          "cases": 0,
+          "modelResponses": 24
+        }
+      ],
+      "contextAnswers": [
+        {
+          "key": "funding-requirement",
+          "answer": "I can only accept a programme with tuition coverage and a living stipend."
+        },
+        {
+          "key": "funding-requirement",
+          "answer": "I can only accept a programme with tuition coverage and a living stipend."
+        }
+      ],
+      "approvals": [],
+      "blockers": [
+        {
+          "kind": "waiting_for_user",
+          "waitingReason": "This browser destination is not enabled for the active specialist yet."
+        }
+      ],
+      "final": {
+        "status": "waiting_for_user",
+        "errorCode": "browser_domain_not_allowed",
+        "currentStep": 22,
+        "reasoningModel": "gpt-5.6-luna",
+        "applicationState": {
+          "status": "researching",
+          "stage": "research",
+          "campaignId": "506213a8-59b0-4c49-affe-de121a81372f",
+          "currentCaseId": null,
+          "progress": {
+            "label": "Verifying programmes",
+            "total": 5,
+            "blockers": [],
+            "completed": 1,
+            "nextAction": "Rank the verified shortlist and request strategy approval.",
+            "evidenceCount": 1
+          }
+        },
+        "updatedAt": "2026-08-09T19:24:47.483192+00:00",
+        "completedAt": null,
+        "waitingReason": "This browser destination is not enabled for the active specialist yet.",
+        "error": "This browser destination is not enabled for the active specialist yet."
+      },
+      "evidence": {
+        "runId": "4035a2e0-00c0-465d-9590-4a3efeffbdd0",
+        "taskId": "4a41e19d-e037-4610-816c-c3791a76970f",
+        "model": "gpt-5.6-luna",
+        "tables": {
+          "agent_runs": [
+            {
+              "id": "4035a2e0-00c0-465d-9590-4a3efeffbdd0",
+              "status": "waiting_for_user",
+              "reasoning_model": "gpt-5.6-luna",
+              "openai_response_id": "resp_08e6fbc97bd7b6f3016a78d3f9177881a08e0de95db29f0a82",
+              "current_step": 22,
+              "error_code": "browser_domain_not_allowed",
+              "created_at": "2026-08-09T19:19:41.399558+00:00",
+              "updated_at": "2026-08-09T19:24:47.483192+00:00",
+              "completed_at": null,
+              "application_state": {
+                "stage": "research",
+                "status": "researching",
+                "caseIds": [],
+                "blockers": [],
+                "progress": {
+                  "label": "Verifying programmes",
+                  "total": 5,
+                  "blockers": [],
+                  "completed": 1,
+                  "nextAction": "Rank the verified shortlist and request strategy approval.",
+                  "evidenceCount": 1
+                },
+                "campaignId": "506213a8-59b0-4c49-affe-de121a81372f",
+                "nextAction": "Rank the verified shortlist and request strategy approval.",
+                "currentCaseId": null,
+                "schemaVersion": 1,
+                "lastEvidenceAt": null,
+                "verifiedOpportunityCount": 3
+              },
+              "result": null
+            }
+          ],
+          "application_campaigns": [
+            {
+              "id": "506213a8-59b0-4c49-affe-de121a81372f",
+              "status": "researching",
+              "target_quantity": null,
+              "objective": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+              "next_action": "Rank the verified shortlist and request strategy approval.",
+              "progress": {
+                "label": "Verifying programmes",
+                "total": 5,
+                "blockers": [],
+                "completed": 1,
+                "nextAction": "Rank the verified shortlist and request strategy approval.",
+                "evidenceCount": 1
+              },
+              "created_at": "2026-08-09T19:19:41.495241+00:00",
+              "updated_at": "2026-08-09T19:22:41.144988+00:00"
+            }
+          ],
+          "application_opportunities": [
+            {
+              "id": "cec374c1-feb8-4e63-bdef-b8e2028859fd",
+              "campaign_id": "506213a8-59b0-4c49-affe-de121a81372f",
+              "institution": "University of Edinburgh",
+              "programme_title": "Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD",
+              "official_url": "https://study.ed.ac.uk/programmes/postgraduate-research/489-informatics-iml-machine-learning-computational-neuroscience",
+              "verification_status": "verified",
+              "confidence": 0,
+              "fit_score": 0,
+              "retrieved_at": "2026-08-09T19:22:40.937+00:00"
+            },
+            {
+              "id": "c4d8ebf5-578d-467c-ab5d-40bce23091c9",
+              "campaign_id": "506213a8-59b0-4c49-affe-de121a81372f",
+              "institution": "University of Toronto",
+              "programme_title": "Doctor of Philosophy (PhD) in Computer Science",
+              "official_url": "https://web.cs.toronto.edu/graduate/phd",
+              "verification_status": "verified",
+              "confidence": 0,
+              "fit_score": 0,
+              "retrieved_at": "2026-08-09T19:22:35.261+00:00"
+            },
+            {
+              "id": "625fbdad-c4df-4198-a944-27ed57985915",
+              "campaign_id": "506213a8-59b0-4c49-affe-de121a81372f",
+              "institution": "University of British Columbia",
+              "programme_title": "Doctor of Philosophy in Computer Science (PhD)",
+              "official_url": "https://www.grad.ubc.ca/prospective-students/graduate-degree-programs/phd-computer-science",
+              "verification_status": "verified",
+              "confidence": 0,
+              "fit_score": 0,
+              "retrieved_at": "2026-08-09T19:22:30.671+00:00"
+            }
+          ],
+          "application_cases": [],
+          "application_requirements": [],
+          "application_artifacts": [],
+          "portal_checkpoints": [],
+          "application_evidence": [],
+          "application_communications": [],
+          "application_inter_agent_requests": [],
+          "browser_execution_sessions": [
+            {
+              "id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "status": "failed",
+              "current_domain": "study.ed.ac.uk",
+              "current_url": null,
+              "worker_session_id": "d9b3d671-30a9-475b-8516-e334bb91176e",
+              "payment_boundary_reached": false,
+              "created_at": "2026-08-09T19:19:47.622108+00:00",
+              "updated_at": "2026-08-09T19:24:23.629388+00:00"
+            }
+          ],
+          "agent_actions": [
+            {
+              "id": "8f27364e-0b8f-4f90-9eac-038c4849bbdb",
+              "step_index": 0,
+              "tool_name": "browser.start_session",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Started an isolated browser session.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:19:47.729+00:00"
+            },
+            {
+              "id": "e1fb54db-216e-49ed-b187-b8ff55f1d52b",
+              "step_index": 1,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:20:03.725+00:00"
+            },
+            {
+              "id": "ba9b96bc-b531-417c-84f0-429d87b45765",
+              "step_index": 2,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:20:21.647+00:00"
+            },
+            {
+              "id": "02d05580-de37-4773-9c99-faf2b5175d1f",
+              "step_index": 3,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:20:37.821+00:00"
+            },
+            {
+              "id": "1d5a7b90-c92d-48ba-a11c-05ee5ac26b33",
+              "step_index": 4,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:20:53.328+00:00"
+            },
+            {
+              "id": "d956f660-ce16-42e7-aef1-5e8827bd8ad8",
+              "step_index": 5,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:21:07.99+00:00"
+            },
+            {
+              "id": "e314dd34-3d27-4dd3-8e2a-ae8abb5c34bc",
+              "step_index": 6,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "625fbdad-c4df-4198-a944-27ed57985915",
+              "error_code": null,
+              "public_summary": "Verified Doctor of Philosophy in Computer Science (PhD) from an official source.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:21:14.472+00:00"
+            },
+            {
+              "id": "51f518c2-f6bc-45c8-af50-6d09ca8487dc",
+              "step_index": 7,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "cec374c1-feb8-4e63-bdef-b8e2028859fd",
+              "error_code": null,
+              "public_summary": "Verified Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD from an official source.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:21:19.762+00:00"
+            },
+            {
+              "id": "a4aae15e-603e-42f5-bb41-5e2dace791c4",
+              "step_index": 8,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "c4d8ebf5-578d-467c-ab5d-40bce23091c9",
+              "error_code": null,
+              "public_summary": "Verified Doctor of Philosophy (PhD) in Computer Science from an official source.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:21:25.169+00:00"
+            },
+            {
+              "id": "25ec96cb-12bd-4e13-960f-fecb57b82862",
+              "step_index": 9,
+              "tool_name": "agent.request_context",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": null,
+              "error_code": "context_required",
+              "public_summary": "I verified exactly three strong options. Approve this shortlist and strategy: (1) UBC Computer Science PhD—strongest funding evidence and fit; (2) University of Toronto Computer Science PhD—full funding, but Fall 2026 closed and Fall 2027 opens October 2026; (3) Edinburgh IML PhD—excellent fit, but the September 2026 funding deadline (18 December 2025) has passed. May I proceed with UBC and the 2-",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:21:29.416+00:00"
+            },
+            {
+              "id": "2e897874-81a4-4527-9d40-ecc22503b84e",
+              "step_index": 10,
+              "tool_name": "browser.start_session",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Reused the task-owned browser session.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:21:37.618+00:00"
+            },
+            {
+              "id": "cc31ad83-57a4-4b83-a943-bd2684d9b46e",
+              "step_index": 11,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:21:53.508+00:00"
+            },
+            {
+              "id": "dc570433-4807-4aa3-a5f0-09e97b95ae29",
+              "step_index": 12,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:22:10.752+00:00"
+            },
+            {
+              "id": "c30d97b3-5547-42de-ace8-354dd6a0770e",
+              "step_index": 13,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:22:25.422+00:00"
+            },
+            {
+              "id": "ec6fa714-5a78-42c9-9c07-14b030743ca2",
+              "step_index": 14,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "625fbdad-c4df-4198-a944-27ed57985915",
+              "error_code": null,
+              "public_summary": "Verified Doctor of Philosophy in Computer Science (PhD) from an official source.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:22:30.891+00:00"
+            },
+            {
+              "id": "a6f65411-781b-4305-9f01-a79db9fe8c30",
+              "step_index": 15,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "c4d8ebf5-578d-467c-ab5d-40bce23091c9",
+              "error_code": null,
+              "public_summary": "Verified Doctor of Philosophy (PhD) in Computer Science from an official source.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:22:35.703+00:00"
+            },
+            {
+              "id": "8755f25d-be15-4654-bdd3-7a72c27cf84b",
+              "step_index": 16,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "cec374c1-feb8-4e63-bdef-b8e2028859fd",
+              "error_code": null,
+              "public_summary": "Verified Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD from an official source.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:22:41.163+00:00"
+            },
+            {
+              "id": "99a1453c-ccdf-4abe-b91c-bd2868a8657b",
+              "step_index": 17,
+              "tool_name": "agent.request_context",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": null,
+              "error_code": "context_required",
+              "public_summary": "Do you approve proceeding with the verified three-programme shortlist, prioritising UBC and preparing the Toronto and Edinburgh applications when their funding/application windows permit?",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:22:44.441+00:00"
+            },
+            {
+              "id": "1f11037d-9cf9-488c-8c81-37eb1ff5bfd3",
+              "step_index": 18,
+              "tool_name": "browser.start_session",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Reused the task-owned browser session.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:22:52.734+00:00"
+            },
+            {
+              "id": "95a98993-f503-47b1-8d6d-e1e42d2bfc0c",
+              "step_index": 19,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:23:09.215+00:00"
+            },
+            {
+              "id": "bc27e9bb-14a0-4119-87ea-340857f410ee",
+              "step_index": 20,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": "2026-08-09T19:23:25.272+00:00",
+              "completed_at": "2026-08-09T19:23:37.562+00:00"
+            },
+            {
+              "id": "010a5245-511e-4771-ac63-92fd58df2b17",
+              "step_index": 21,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "failed",
+              "provider_action_id": null,
+              "error_code": "browser_retry_exhausted",
+              "public_summary": "Opening the allowed public webpage.",
+              "started_at": "2026-08-09T19:24:22.365+00:00",
+              "completed_at": "2026-08-09T19:24:34.587+00:00"
+            },
+            {
+              "id": "943a3d8e-9be0-41a5-81f1-bae00f02218c",
+              "step_index": 21,
+              "tool_name": "browser.start_session",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "d25e5240-e8cd-4c6e-9285-7ffac5938945",
+              "error_code": null,
+              "public_summary": "Reused the task-owned browser session.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:24:44.157+00:00"
+            },
+            {
+              "id": "96759f93-7572-4912-b7ba-ea65ef203a83",
+              "step_index": 22,
+              "tool_name": "browser.start_session",
+              "risk": "read",
+              "status": "failed",
+              "provider_action_id": null,
+              "error_code": "browser_domain_not_allowed",
+              "public_summary": "This browser destination is not enabled for the active specialist yet.",
+              "started_at": null,
+              "completed_at": "2026-08-09T19:24:47.27+00:00"
+            }
+          ],
+          "agent_approvals": [],
+          "agent_run_events": [
+            {
+              "id": 27522,
+              "eventType": "agent_run_started",
+              "status": "planning",
+              "createdAt": "2026-08-09T19:19:41.790767+00:00",
+              "metadataKeys": [
+                "capability",
+                "reasoning_model",
+                "route_classification",
+                "specialist_id",
+                "specialist_version",
+                "strategy"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27523,
+              "eventType": "task_delegated",
+              "status": "planning",
+              "createdAt": "2026-08-09T19:19:41.891946+00:00",
+              "metadataKeys": [
+                "specialist_id",
+                "specialist_version",
+                "task_contract"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27524,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:19:47.165618+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d2d07da8819d97fbbe79d5b542b9",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27525,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:19:48.002205+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27526,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:19:50.421835+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d2d46154819d82ee43a4add41fbc",
+              "model": "gpt-5.6-luna",
+              "iteration": 1,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27527,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:19:51.038817+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27528,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:20:04.202723+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27529,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:20:09.527386+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d2e4dc48819da2b8e3e06965f31a",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27530,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:20:10.191609+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27531,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:20:22.140415+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27532,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:20:25.279389+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d2f6e3b0819dad189039c1a12d5b",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27533,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:20:25.953199+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27534,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:20:38.497318+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27535,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:20:41.340555+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d3073b68819dade00c9b436457fb",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27536,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:20:41.978436+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27537,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:20:53.722659+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27538,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:20:56.165942+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d31646f8819db0930eb9ac854e8f",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27539,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:20:56.781782+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27540,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:21:08.44198+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27541,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:21:13.831004+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d3250d2c819da8a099f34e028b91",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27542,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:21:14.809565+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27543,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:21:19.105318+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d32b31b8819d8a75c2e996a87767",
+              "model": "gpt-5.6-luna",
+              "iteration": 1,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27544,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:21:20.113257+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27545,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:21:24.52126+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d3307bf4819d94f7daffd1753250",
+              "model": "gpt-5.6-luna",
+              "iteration": 2,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27546,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:21:25.49839+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27547,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:21:29.121935+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_06dce7fb83dead76016a78d335e338819d88a829d4b06fd528",
+              "model": "gpt-5.6-luna",
+              "iteration": 3,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27548,
+              "eventType": "agent_context_requested",
+              "status": "needs_context",
+              "createdAt": "2026-08-09T19:21:29.667993+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27549,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:21:37.183174+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d33f2cc0819f9d19720b69524df5",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27550,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:21:37.914431+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27551,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:21:39.978335+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d34240d8819fa0da73b9fdaac6bf",
+              "model": "gpt-5.6-luna",
+              "iteration": 1,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27552,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:21:40.558175+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27553,
+              "eventType": "agent_resumed",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:21:40.633156+00:00",
+              "metadataKeys": [],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27554,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:21:54.026472+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27555,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:21:58.17149+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d3528ffc819f90df5d6b050347b3",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27556,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:21:58.845015+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27557,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:22:11.164209+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27558,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:22:13.334282+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d363b344819fbf5ae992b784093a",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27559,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:22:14.146181+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27560,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:22:25.877922+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27561,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:22:30.279517+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d37287e0819f83f219db1982ac62",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27562,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:22:31.202886+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27563,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:22:34.850422+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d377a168819f8f780d1afff804f2",
+              "model": "gpt-5.6-luna",
+              "iteration": 1,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27564,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:22:36.044134+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27565,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:22:40.545554+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d37c6f48819f9a11718a1ddc4556",
+              "model": "gpt-5.6-luna",
+              "iteration": 2,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27566,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:22:41.465253+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27567,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:22:44.196496+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_0f629eb9636112d8016a78d381d000819fb8c2e12a744b365f",
+              "model": "gpt-5.6-luna",
+              "iteration": 3,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27568,
+              "eventType": "agent_context_requested",
+              "status": "needs_context",
+              "createdAt": "2026-08-09T19:22:44.641804+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27569,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:22:52.31736+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_07f27b4d5906b314016a78d389cdf081a2bb210d5d1cf4d326",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27570,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:22:53.006107+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27571,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:22:55.606411+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_07f27b4d5906b314016a78d38d592c81a2b442c90f8cf00eac",
+              "model": "gpt-5.6-luna",
+              "iteration": 1,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27572,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:22:56.240838+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27573,
+              "eventType": "agent_resumed",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:22:56.316291+00:00",
+              "metadataKeys": [],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27574,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:23:10.099352+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27575,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:23:12.740954+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_07f27b4d5906b314016a78d39f0b8c81a28b1510c2fed23c87",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27576,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:23:13.405338+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27577,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:23:25.138613+00:00",
+              "metadataKeys": [
+                "automatic_retry",
+                "browser_session_id",
+                "operation_type",
+                "retry_not_before",
+                "retryable",
+                "worker_attempt"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27578,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:23:25.9179+00:00",
+              "metadataKeys": [
+                "action_id",
+                "retried",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27579,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T19:23:38.024095+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27580,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:23:44.216176+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_07f27b4d5906b314016a78d3baf37081a2b9f5fb68444666e3",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27581,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:23:45.097418+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27582,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:23:57.535302+00:00",
+              "metadataKeys": [
+                "automatic_retry",
+                "browser_session_id",
+                "operation_type",
+                "retry_not_before",
+                "retryable",
+                "worker_attempt"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27583,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:23:58.300978+00:00",
+              "metadataKeys": [
+                "action_id",
+                "retried",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27584,
+              "eventType": "agent_browser_session_recycled",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:24:09.825309+00:00",
+              "metadataKeys": [
+                "canonical_search",
+                "failure_class",
+                "non_luna_reasoning_calls",
+                "recovery_count"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27585,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:24:10.025938+00:00",
+              "metadataKeys": [
+                "automatic_retry",
+                "browser_session_id",
+                "operation_type",
+                "retry_not_before",
+                "retryable",
+                "worker_attempt"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27586,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:24:21.844399+00:00",
+              "metadataKeys": [
+                "automatic_retry",
+                "browser_session_id",
+                "operation_type",
+                "retry_not_before",
+                "retryable",
+                "worker_attempt"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27587,
+              "eventType": "agent_browser_session_recycled",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:24:22.347034+00:00",
+              "metadataKeys": [
+                "operation_tool",
+                "previous_browser_session_id",
+                "recovery_attempt"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": 0
+            },
+            {
+              "id": 27588,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:24:22.851185+00:00",
+              "metadataKeys": [
+                "action_id",
+                "retried",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27589,
+              "eventType": "agent_recovery_exhausted",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T19:24:34.470299+00:00",
+              "metadataKeys": [
+                "canonical_search",
+                "failure_class",
+                "non_luna_reasoning_calls",
+                "operation_type",
+                "recoverable"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27590,
+              "eventType": "agent_provider_retry_exhausted",
+              "status": "waiting_for_user",
+              "createdAt": "2026-08-09T19:24:34.83266+00:00",
+              "metadataKeys": [
+                "action_id",
+                "max_recovery_attempts",
+                "recovery_attempt",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": 3
+            },
+            {
+              "id": 27591,
+              "eventType": "application_browser_history_recovered",
+              "status": "planning",
+              "createdAt": "2026-08-09T19:24:39.529008+00:00",
+              "metadataKeys": [],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27592,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:24:43.717919+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_08e6fbc97bd7b6f3016a78d3f9177881a08e0de95db29f0a82",
+              "model": "gpt-5.6-luna",
+              "iteration": 0,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27593,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T19:24:44.463421+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27594,
+              "eventType": "agent_model_response",
+              "status": "completed",
+              "createdAt": "2026-08-09T19:24:47.00573+00:00",
+              "metadataKeys": [
+                "benchmark_run_id",
+                "iteration",
+                "model",
+                "non_luna_reasoning_calls",
+                "reasoning_effort",
+                "reasoning_model",
+                "response_id",
+                "usage"
+              ],
+              "responseId": "resp_08e6fbc97bd7b6f3016a78d3fcccbc81a083ee7e737ab5ab06",
+              "model": "gpt-5.6-luna",
+              "iteration": 1,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27595,
+              "eventType": "agent_waiting_for_user",
+              "status": "waiting_for_user",
+              "createdAt": "2026-08-09T19:24:47.557084+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 27596,
+              "eventType": "agent_resumed",
+              "status": "waiting_for_user",
+              "createdAt": "2026-08-09T19:24:47.627671+00:00",
+              "metadataKeys": [],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            }
+          ]
+        },
+        "usage": {
+          "input_tokens": 357565,
+          "total_tokens": 362140,
+          "output_tokens": 4575,
+          "input_tokens_details": {
+            "cached_tokens": 171695,
+            "cache_write_tokens": 185798
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 770
+          }
+        },
+        "metrics": {
+          "opportunityCount": 3,
+          "caseCount": 0,
+          "artifactCount": 0,
+          "portalCheckpointCount": 0,
+          "evidenceCount": 0,
+          "communicationCount": 0,
+          "browserSessionCount": 1,
+          "actionCount": 24,
+          "approvalCount": 0,
+          "modelResponseCount": 24,
+          "failureEventCount": 0
+        }
+      },
+      "finishedAt": "2026-08-09T19:24:52.800Z"
+    }
+  ],
+  "aggregate": {
+    "finalStatuses": [
+      "waiting_for_user"
+    ],
+    "consecutiveCompletedRuns": 0,
+    "totalApplications": 0,
+    "totalModelResponses": 24,
+    "usage": {
+      "input_tokens": 357565,
+      "total_tokens": 362140,
+      "output_tokens": 4575,
+      "input_tokens_details": {
+        "cached_tokens": 171695,
+        "cache_write_tokens": 185798
+      },
+      "output_tokens_details": {
+        "reasoning_tokens": 770
+      }
+    },
+    "cost": {
+      "inputTokens": 357565,
+      "cachedInputTokens": 171695,
+      "outputTokens": 4575,
+      "estimatedUsd": 0.046097900000000004
+    }
+  }
+}

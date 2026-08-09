@@ -698,7 +698,11 @@ async function gmailCreateDraft(
       draft_id: existingDraft.id,
       message_id: existingDraft.message.id ?? '',
       thread_id: existingDraft.message.threadId ?? threadId ?? '',
-      message_id_header: messageIdHeader,
+      // Gmail may replace a caller-supplied Message-ID while persisting a
+      // draft. Keep the canonical header Gmail returned so the later send
+      // verification does not mistake that normal provider behavior for a
+      // user edit.
+      message_id_header: headerValue(existingDraft.message, 'Message-ID') || messageIdHeader,
       to: normalizedEmails(existingMessage.to),
       cc: normalizedEmails(existingMessage.cc),
       bcc: normalizedEmails(existingMessage.bcc),
@@ -789,7 +793,7 @@ async function gmailCreateDraft(
     draft_id: draft.id,
     message_id: draft.message?.id ?? '',
     thread_id: draft.message?.threadId ?? threadId ?? '',
-    message_id_header: messageIdHeader,
+    message_id_header: (draft.message ? headerValue(draft.message, 'Message-ID') : '') || messageIdHeader,
     to,
     cc,
     bcc,
@@ -906,7 +910,7 @@ export async function updatePreparedGmailDraft(
     draft_id: updated.id,
     message_id: updated.message.id ?? '',
     thread_id: updated.message.threadId ?? threadId ?? '',
-    message_id_header: messageIdHeader,
+    message_id_header: headerValue(updated.message, 'Message-ID') || messageIdHeader,
     to,
     cc,
     bcc,
@@ -1029,10 +1033,11 @@ async function gmailSendDraft(
     bcc: Array.isArray(argumentsValue.expected_bcc) ? argumentsValue.expected_bcc.map(value => String(value)) : [],
     subject: String(argumentsValue.expected_subject ?? ''),
   }
-  const messageIdHeader = headerValue(draft.message, 'Message-ID')
-  const expectedMessageIdHeader = safeHeader(draftRecord.output.message_id_header)
+  // Gmail assigns or rewrites Message-ID headers when it persists a draft.
+  // The exact Gmail draft ID plus the approved payload are the authoritative
+  // identity checks; comparing the provider's rewritten header would reject a
+  // valid send as if the draft had been edited.
   if (
-    (expectedMessageIdHeader && messageIdHeader !== expectedMessageIdHeader) ||
     !emailPayloadMatches(expectedPayload, draftPayload) ||
     !emailPayloadMatches(approvedPayload, draftPayload)
   ) {
@@ -1097,11 +1102,6 @@ export async function deletePreparedGmailDraft(
       userId,
       `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}?format=full`,
     )
-    const expectedMessageId = safeHeader(draftRecord.output.message_id_header)
-    const actualMessageId = draft.message ? headerValue(draft.message, 'Message-ID') : ''
-    if (expectedMessageId && actualMessageId && expectedMessageId !== actualMessageId) {
-      throw new GoogleIntegrationError('gmail_draft_identity_mismatch', 'The Gmail draft identity no longer matches ShotCount. It was left untouched for safety.', false)
-    }
     await googleRequest<Record<string, unknown>>(
       admin,
       userId,

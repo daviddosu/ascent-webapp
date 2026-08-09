@@ -1,0 +1,41 @@
+{
+  "check": "authenticated_rls_isolation",
+  "temporaryUser": {
+    "created": true,
+    "rowCounts": {
+      "applicant_profiles": 0,
+      "file_assets": 0,
+      "agent_runs": 0,
+      "application_campaigns": 0,
+      "application_opportunities": 0,
+      "application_cases": 0,
+      "application_artifacts": 0,
+      "application_communications": 0,
+      "portal_checkpoints": 0,
+      "application_evidence": 0,
+      "browser_execution_sessions": 0
+    },
+    "deletedAfterValidation": true
+  },
+  "connectedUser": {
+    "rowCountsAtCheck": {
+      "applicant_profiles": 1,
+      "file_assets": 51,
+      "agent_runs": 776,
+      "application_campaigns": 6,
+      "application_opportunities": 7,
+      "application_cases": 0,
+      "application_artifacts": 0,
+      "application_communications": 0,
+      "portal_checkpoints": 0,
+      "application_evidence": 0,
+      "browser_execution_sessions": 202
+    },
+    "positiveDataChecks": [
+      "agent_runs",
+      "application_campaigns",
+      "application_opportunities"
+    ]
+  },
+  "secretsOrIdentityValuesRecorded": false
+}

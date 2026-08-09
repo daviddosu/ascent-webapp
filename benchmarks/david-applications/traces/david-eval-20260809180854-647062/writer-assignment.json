@@ -1,0 +1,57 @@
+[
+  {
+    "at": "2026-08-09T18:08:57.417Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "writer-assignment",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step coordinates more than one provider."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:57.417Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "writer-assignment",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "writer-assignment"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:57.417Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "writer-assignment",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required.",
+        "The step coordinates more than one provider."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T18:08:57.417Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "writer-assignment",
+    "data": {
+      "value": true
+    }
+  }
+]

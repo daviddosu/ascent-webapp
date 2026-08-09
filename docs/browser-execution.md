@@ -69,10 +69,15 @@ The Chromium process may be fresh after a serverless restart, but the task-owned
 Supabase Edge Function secrets:
 
 ```text
-SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=www.google.com,app.shotcount.app
+SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=www.google.com,app.shotcount.app,www.imperial.ac.uk,study.ed.ac.uk,web.cs.toronto.edu,www.grad.ubc.ca,www.cs.ubc.ca
 SHOTCOUNT_BROWSER_WORKER_URL=https://<deployment>/api/browser-worker
 SHOTCOUNT_BROWSER_WORKER_TOKEN=<random shared token>
 ```
+
+The additional hosts are the official programme sources used by the synthetic
+David production qualification, including the UBC fallback used when the
+Imperial page is access-blocked. Any other application campaign must append
+only the exact HTTPS hosts required by its verified official sources.
 
 Vercel server environment:
 

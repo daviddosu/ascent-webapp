@@ -1,0 +1,462 @@
+{
+  "suiteVersion": "david_application_engine_v3_production_qualification",
+  "qualificationStartedAt": "2026-08-09T16:07:40.196Z",
+  "generatedAt": "2026-08-09T16:10:13.815Z",
+  "implementationCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
+  "evidenceCommit": "8b19141defd769c8a8c96d322246d1913a9e87bd",
+  "production": {
+    "supabaseProjectRef": "bhhutexqrxzbbhatepmh",
+    "supabaseFunctionsEndpoint": "https://bhhutexqrxzbbhatepmh.supabase.co/functions/v1/task-agent",
+    "frontendAlias": "https://app.shotcount.app",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "low",
+    "harnessVersion": "david-application-controller@2.1",
+    "promptVersion": "david-prompt@6",
+    "primitiveVersion": "public-browser@1",
+    "authenticatedUserId": "053e1d7a-e9b5-45cb-80ad-2fd5e6d4fc93",
+    "googleScopesCount": 9,
+    "accountEmailDomain": "gmail.com"
+  },
+  "request": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+  "requestedRuns": 1,
+  "maxMinutesPerRun": 45,
+  "runs": [
+    {
+      "runNumber": 1,
+      "startedAt": "2026-08-09T16:07:48.662Z",
+      "task": {
+        "id": "be276331-2228-4c9f-a912-0a86276904b3",
+        "title": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+        "dueDate": "2026-08-09",
+        "assetEvidence": [
+          {
+            "id": "ddd089c5-7a92-4470-a5d8-f90ba60f0928",
+            "kind": "cv",
+            "filename": "nadia-okoye-cv.txt",
+            "sizeBytes": 469,
+            "sha256": "f99209d94030a95a9d9d29a4ec0ec4114bb92a377a4272e417d94893ba81fd29"
+          },
+          {
+            "id": "1d20b1c9-7d7a-4522-94c3-f33985e19c3b",
+            "kind": "transcript",
+            "filename": "nadia-okoye-transcript.txt",
+            "sizeBytes": 285,
+            "sha256": "ab0b950ee317dfdc515cef70cf2d48404e7f959743471803ab77403f9bc2a496"
+          },
+          {
+            "id": "27062acf-b88b-4486-bd1a-3756aa6896ab",
+            "kind": "degree",
+            "filename": "nadia-okoye-degree.txt",
+            "sizeBytes": 157,
+            "sha256": "6dfc71841562898b1361e7c95cbda4d8f5c8f0208ad31a990b5be07ac31715b1"
+          },
+          {
+            "id": "a418854e-1cab-4a56-87a1-373b23cdaefa",
+            "kind": "supporting",
+            "filename": "nadia-okoye-supporting.txt",
+            "sizeBytes": 210,
+            "sha256": "caddd899c1ec3477fe8edd3ea5884fc03e0494993c016e260c4cace7428b6752"
+          }
+        ],
+        "profileSeeded": false
+      },
+      "events": [
+        {
+          "at": "2026-08-09T16:08:08.476Z",
+          "event": "started",
+          "runId": "a196bfad-868b-4985-8978-d940f9c423ff",
+          "status": "waiting_external",
+          "model": "gpt-5.6-luna"
+        },
+        {
+          "at": "2026-08-09T16:08:57.012Z",
+          "event": "polled",
+          "status": "failed"
+        },
+        {
+          "at": "2026-08-09T16:09:00.015Z",
+          "event": "resuming_failed_run",
+          "attempt": 1,
+          "errorCode": null
+        },
+        {
+          "at": "2026-08-09T16:09:33.700Z",
+          "event": "resuming_failed_run",
+          "attempt": 2,
+          "errorCode": null
+        },
+        {
+          "at": "2026-08-09T16:10:09.813Z",
+          "event": "failed_after_recovery_budget",
+          "errorCode": null
+        },
+        {
+          "at": "2026-08-09T16:10:13.814Z",
+          "event": "finished",
+          "status": "failed",
+          "cases": 0,
+          "modelResponses": 0
+        }
+      ],
+      "contextAnswers": [],
+      "approvals": [],
+      "blockers": [
+        {
+          "kind": "production_failure",
+          "errorCode": null,
+          "message": "David paused after reaching its safe step limit."
+        }
+      ],
+      "final": {
+        "status": "failed",
+        "errorCode": "step_limit_reached",
+        "currentStep": 3,
+        "reasoningModel": "gpt-5.6-luna",
+        "applicationState": {
+          "status": "researching",
+          "stage": "research",
+          "campaignId": "60fa069c-9261-4419-9321-92e07ebcaff5",
+          "currentCaseId": null,
+          "progress": {
+            "label": "Verifying programmes",
+            "total": 5,
+            "blockers": [],
+            "completed": 1,
+            "nextAction": "Rank the verified shortlist and request strategy approval.",
+            "evidenceCount": 1
+          }
+        },
+        "updatedAt": "2026-08-09T16:10:09.630995+00:00",
+        "completedAt": null,
+        "waitingReason": "",
+        "error": "David paused after reaching its safe step limit."
+      },
+      "evidence": {
+        "runId": "a196bfad-868b-4985-8978-d940f9c423ff",
+        "taskId": "be276331-2228-4c9f-a912-0a86276904b3",
+        "model": "gpt-5.6-luna",
+        "tables": {
+          "agent_runs": [
+            {
+              "id": "a196bfad-868b-4985-8978-d940f9c423ff",
+              "status": "failed",
+              "reasoning_model": "gpt-5.6-luna",
+              "openai_response_id": "resp_0eab2876a5b295a8016a78a5f5bd4881979a317927f50e8aa6",
+              "current_step": 3,
+              "error_code": "step_limit_reached",
+              "created_at": "2026-08-09T16:07:50.80058+00:00",
+              "updated_at": "2026-08-09T16:10:09.630995+00:00",
+              "completed_at": null,
+              "application_state": {
+                "stage": "research",
+                "status": "researching",
+                "caseIds": [],
+                "blockers": [],
+                "progress": {
+                  "label": "Verifying programmes",
+                  "total": 5,
+                  "blockers": [],
+                  "completed": 1,
+                  "nextAction": "Rank the verified shortlist and request strategy approval.",
+                  "evidenceCount": 1
+                },
+                "campaignId": "60fa069c-9261-4419-9321-92e07ebcaff5",
+                "nextAction": "Rank the verified shortlist and request strategy approval.",
+                "currentCaseId": null,
+                "schemaVersion": 1,
+                "lastEvidenceAt": null,
+                "verifiedOpportunityCount": 1
+              },
+              "result": null
+            }
+          ],
+          "application_campaigns": [
+            {
+              "id": "60fa069c-9261-4419-9321-92e07ebcaff5",
+              "status": "researching",
+              "target_quantity": null,
+              "objective": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+              "next_action": "Rank the verified shortlist and request strategy approval.",
+              "progress": {
+                "label": "Verifying programmes",
+                "total": 5,
+                "blockers": [],
+                "completed": 1,
+                "nextAction": "Rank the verified shortlist and request strategy approval.",
+                "evidenceCount": 1
+              },
+              "created_at": "2026-08-09T16:07:50.892302+00:00",
+              "updated_at": "2026-08-09T16:08:27.596715+00:00"
+            }
+          ],
+          "application_opportunities": [
+            {
+              "id": "2bdc2448-bfe3-4bd1-807a-c7b31d90e54b",
+              "campaign_id": "60fa069c-9261-4419-9321-92e07ebcaff5",
+              "institution": "The University of Edinburgh",
+              "programme_title": "Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD",
+              "official_url": "https://study.ed.ac.uk/programmes/postgraduate-research/489-informatics-iml-machine-learning-computational-neuroscience",
+              "verification_status": "verified",
+              "confidence": 0,
+              "fit_score": 0,
+              "retrieved_at": "2026-08-09T16:08:27.391+00:00"
+            }
+          ],
+          "application_cases": [],
+          "application_requirements": [],
+          "application_artifacts": [],
+          "portal_checkpoints": [],
+          "application_evidence": {
+            "error": "400 column application_evidence.verified does not exist"
+          },
+          "application_communications": {
+            "error": "400 column application_communications.status does not exist"
+          },
+          "application_inter_agent_requests": [],
+          "browser_execution_sessions": [
+            {
+              "id": "c90ff07a-b7b7-4cc8-a887-2a72f208b4c8",
+              "status": "completed",
+              "current_domain": "study.ed.ac.uk",
+              "current_url": "https://study.ed.ac.uk/programmes/postgraduate-research/489-informatics-iml-machine-learning-computational-neuroscience",
+              "worker_session_id": "dd4681ef-9b24-4172-9393-f7e22e3dbb41",
+              "payment_boundary_reached": false,
+              "created_at": "2026-08-09T16:08:04.371159+00:00",
+              "updated_at": "2026-08-09T16:08:10.204539+00:00"
+            }
+          ],
+          "agent_actions": [
+            {
+              "id": "c540e5d2-bfd4-4053-9439-6997ae44c5c9",
+              "step_index": 0,
+              "tool_name": "browser.start_session",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "c90ff07a-b7b7-4cc8-a887-2a72f208b4c8",
+              "error_code": null,
+              "public_summary": "Started an isolated browser session.",
+              "started_at": null,
+              "completed_at": "2026-08-09T16:08:04.515+00:00"
+            },
+            {
+              "id": "4c148223-17b2-4956-b2a6-f6ea62bb1430",
+              "step_index": 1,
+              "tool_name": "browser.navigate",
+              "risk": "read",
+              "status": "succeeded",
+              "provider_action_id": "c90ff07a-b7b7-4cc8-a887-2a72f208b4c8",
+              "error_code": null,
+              "public_summary": "Opened the allowed public webpage.",
+              "started_at": null,
+              "completed_at": "2026-08-09T16:08:20.819+00:00"
+            },
+            {
+              "id": "ab0292c0-c5e6-465e-a122-f93b995d05d5",
+              "step_index": 2,
+              "tool_name": "application.record_opportunity",
+              "risk": "prepare",
+              "status": "succeeded",
+              "provider_action_id": "2bdc2448-bfe3-4bd1-807a-c7b31d90e54b",
+              "error_code": null,
+              "public_summary": "Verified Informatics: IML: Machine Learning, Computational Neuroscience, Computational Biology PhD from an official source.",
+              "started_at": null,
+              "completed_at": "2026-08-09T16:08:27.615+00:00"
+            }
+          ],
+          "agent_approvals": [],
+          "agent_run_events": [
+            {
+              "id": 26822,
+              "eventType": "agent_run_started",
+              "status": "planning",
+              "createdAt": "2026-08-09T16:07:51.203062+00:00",
+              "metadataKeys": [
+                "capability",
+                "reasoning_model",
+                "route_classification",
+                "specialist_id",
+                "specialist_version",
+                "strategy"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26823,
+              "eventType": "task_delegated",
+              "status": "planning",
+              "createdAt": "2026-08-09T16:07:51.279296+00:00",
+              "metadataKeys": [
+                "specialist_id",
+                "specialist_version",
+                "task_contract"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26824,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T16:08:04.798892+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26825,
+              "eventType": "agent_waiting_external",
+              "status": "waiting_external",
+              "createdAt": "2026-08-09T16:08:08.171028+00:00",
+              "metadataKeys": [
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26826,
+              "eventType": "agent_resumed",
+              "status": "running",
+              "createdAt": "2026-08-09T16:08:21.197141+00:00",
+              "metadataKeys": [
+                "action_id",
+                "browser_session_id",
+                "operation_type"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26827,
+              "eventType": "agent_tool_called",
+              "status": "running",
+              "createdAt": "2026-08-09T16:08:27.893629+00:00",
+              "metadataKeys": [
+                "action_id",
+                "tool_name"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26828,
+              "eventType": "agent_failed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:08:56.895239+00:00",
+              "metadataKeys": [
+                "retryable"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26829,
+              "eventType": "agent_failed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:09:33.569692+00:00",
+              "metadataKeys": [
+                "retryable"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26830,
+              "eventType": "agent_resumed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:09:33.643161+00:00",
+              "metadataKeys": [],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26834,
+              "eventType": "agent_failed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:10:09.71092+00:00",
+              "metadataKeys": [
+                "retryable"
+              ],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            },
+            {
+              "id": 26835,
+              "eventType": "agent_resumed",
+              "status": "failed",
+              "createdAt": "2026-08-09T16:10:09.789346+00:00",
+              "metadataKeys": [],
+              "responseId": null,
+              "model": null,
+              "iteration": null,
+              "failureTaxonomy": null,
+              "recoveryAttempt": null
+            }
+          ]
+        },
+        "usage": {},
+        "metrics": {
+          "opportunityCount": 1,
+          "caseCount": 0,
+          "artifactCount": 0,
+          "portalCheckpointCount": 0,
+          "browserSessionCount": 1,
+          "actionCount": 3,
+          "approvalCount": 0,
+          "modelResponseCount": 0,
+          "failureEventCount": 5
+        }
+      },
+      "finishedAt": "2026-08-09T16:10:13.814Z"
+    }
+  ],
+  "aggregate": {
+    "finalStatuses": [
+      "failed"
+    ],
+    "consecutiveCompletedRuns": 0,
+    "totalApplications": 0,
+    "totalModelResponses": 0,
+    "usage": {},
+    "cost": {
+      "inputTokens": 0,
+      "cachedInputTokens": 0,
+      "outputTokens": 0,
+      "estimatedUsd": 0
+    }
+  }
+}

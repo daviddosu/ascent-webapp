@@ -259,7 +259,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.record_opportunity',
-    description: 'Persist one source-backed opportunity in the current David campaign. Use official citations and never mark an opportunity verified without an official or government source.',
+    description: 'Persist one source-backed opportunity in the current David campaign. The opportunity object must include institution, programme_title, and official_url (programme is accepted as a compatibility alias); each citation should include url, excerpt, retrievedAt, and sourceType such as official, official_programme_page, government, or secondary. Use official citations and never mark an opportunity verified without an official or government source.',
     parameters: objectSchema({
       campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
       opportunity: { type: 'object', description: 'Normalized opportunity fields and fit evidence.', additionalProperties: true },

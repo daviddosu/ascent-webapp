@@ -166,6 +166,7 @@ export type ApplicationEngineState = {
 }
 
 export type EngineStep =
+  | { kind: 'CONTROLLER'; caseId: string; action: 'continue_application_controller' }
   | { kind: 'COMPLETE'; caseId: string }
   | { kind: 'WAIT'; caseId: string; requirementId: string; until: string | null }
   | { kind: 'USER_HANDOFF'; caseId: string; requirementId: string; missingFactIds: string[]; tier: 5 }
@@ -248,6 +249,13 @@ export function semanticRequestFor(state: ApplicationEngineState, requirement: E
 }
 
 export function planApplicationEngineStep(state: ApplicationEngineState, now = new Date().toISOString()): EngineStep {
+  // Before a case exists, the application controller owns campaign research,
+  // shortlist approval, and case creation. An empty case requirement graph is
+  // therefore an active controller step, never a vacuous completion.
+  if (!state.caseId) {
+    if (state.status === 'BLOCKED') return { kind: 'BLOCKED', caseId: '', reason: 'Application controller is blocked before case creation.' }
+    return { kind: 'CONTROLLER', caseId: '', action: 'continue_application_controller' }
+  }
   if (state.status === 'COMPLETE') return { kind: 'COMPLETE', caseId: state.caseId }
   const selected = selectNextUnresolvedRequirement(state, now)
   if (selected.blocked) return { kind: 'BLOCKED', caseId: state.caseId, reason: selected.blocked }
@@ -360,5 +368,12 @@ export function verifyPortalExecutionContract(contract: PortalExecutionContract,
 }
 
 export function applicationEngineDirective(state: ApplicationEngineState, step = planApplicationEngineStep(state)) {
+  if (step.kind === 'CONTROLLER') {
+    return [
+      'APPLICATION_ENGINE_DIRECTIVE_V3',
+      'The application controller owns pre-case campaign progress. This is an active controller step, not completion. Continue with the exposed campaign research, approval, or case-creation tool; never call agent.complete for an empty case requirement graph.',
+      JSON.stringify({ engineVersion: state.version, caseId: state.caseId, step }),
+    ].join('\n')
+  }
   return ['APPLICATION_ENGINE_DIRECTIVE_V3', 'The engine owns progress. Execute only this step; never create a long-horizon plan.', JSON.stringify({ engineVersion: state.version, caseId: state.caseId, step })].join('\n')
 }

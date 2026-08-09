@@ -809,6 +809,7 @@ async function runCase(runtime: CaseRuntime, truth: SyntheticGroundTruth, world:
     lastStep = step
     event(trialRuntime, 'engine', 'step_selected', runtime.state.caseId, { kind: step.kind, requirementId: 'requirementId' in step ? step.requirementId : null, tier: 'tier' in step ? step.tier : null })
     if (step.kind === 'COMPLETE') break
+    if (step.kind === 'CONTROLLER') throw new Error(`${runtime.state.caseId}: pre-case controller step is not valid inside a case simulation.`)
     if (step.kind === 'BLOCKED') throw new Error(`${runtime.state.caseId}: ${step.reason}`)
     if (step.kind === 'WAIT') { runtime.state = { ...runtime.state, requirements: runtime.state.requirements.map(item => item.id === step.requirementId ? { ...item, waitUntil: null, status: 'UNRESOLVED' as const } : item) }; continue }
     if (step.kind === 'USER_HANDOFF') {

@@ -1775,6 +1775,18 @@ function configuredBrowserDomains() {
   return new Set(normalizeBrowserDomains(Deno.env.get('SHOTCOUNT_BROWSER_ALLOWED_DOMAINS') ?? ''))
 }
 
+function canonicalConfiguredBrowserDomain(domain: string, configured: Set<string>) {
+  if (configured.has(domain)) return domain
+  const explicitAlias: Record<string, string> = {
+    'ed.ac.uk': 'study.ed.ac.uk',
+    'www.ed.ac.uk': 'study.ed.ac.uk',
+  }
+  const alias = explicitAlias[domain]
+  if (alias && configured.has(alias)) return alias
+  const wwwAlias = `www.${domain}`
+  return configured.has(wwwAlias) ? wwwAlias : domain
+}
+
 function configuredFlightProviderDomains() {
   const configured = configuredBrowserDomains()
   return normalizeBrowserDomains(Deno.env.get('SHOTCOUNT_FLIGHT_PROVIDER_BASE_URL') ?? '')
@@ -1905,12 +1917,23 @@ async function queueBrowserOperation(
     }
   }
   const sessionId = safeString(operation.arguments.session_id, 64)
-  const session = await loadOwnedBrowserSession(admin, run, sessionId)
+  // The model may repeat a stale session id after a context handoff. The run's
+  // persisted browser_session_id is authoritative and remains scoped to the
+  // same user/run, so recover the safe operation against that session instead
+  // of treating a model typo as a cross-task ownership failure.
+  let session = await loadOwnedBrowserSession(admin, run, sessionId)
+  if (!session && run.browser_session_id && run.browser_session_id !== sessionId) {
+    session = await loadOwnedBrowserSession(admin, run, safeString(run.browser_session_id, 64))
+  }
   if (!session) {
     return {
       kind: 'unavailable' as const,
       message: 'This browser session is unavailable or belongs to another task.',
     }
+  }
+  const canonicalSessionId = session.id
+  if (safeString(operation.arguments.session_id, 64) !== canonicalSessionId) {
+    operation.arguments = { ...operation.arguments, session_id: canonicalSessionId }
   }
   let allowedDomains = Array.isArray(session.allowed_domains)
     ? session.allowed_domains.map((domain: unknown) => safeString(domain, 253).toLocaleLowerCase())
@@ -1974,7 +1997,7 @@ async function queueBrowserOperation(
     return {
       kind: 'complete' as const,
       output: completedOperation.output,
-      sessionId,
+      sessionId: canonicalSessionId,
     }
   }
   if (
@@ -1990,7 +2013,7 @@ async function queueBrowserOperation(
   // operation again. Keep the existing worker claim instead of dispatching a
   // second browser action.
   if (checkpoint.pendingOperation?.id === operation.id) {
-    return { kind: 'queued' as const, sessionId }
+    return { kind: 'queued' as const, sessionId: canonicalSessionId }
   }
 
   const nextCheckpoint: BrowserCheckpoint = {
@@ -2014,10 +2037,10 @@ async function queueBrowserOperation(
     resumable: true,
     worker_session_id: null,
     last_observed_at: new Date().toISOString(),
-  }).eq('id', sessionId).eq('run_id', run.id).eq('user_id', run.user_id)
+  }).eq('id', canonicalSessionId).eq('run_id', run.id).eq('user_id', run.user_id)
   if (error) throw new Error(error.message)
-  await dispatchBrowserWorker(admin, sessionId, operation, config)
-  return { kind: 'queued' as const, sessionId }
+  await dispatchBrowserWorker(admin, canonicalSessionId, operation, config)
+  return { kind: 'queued' as const, sessionId: canonicalSessionId }
 }
 
 function flightSearchArgumentsFromCheckpoint(sessionId: string, checkpoint: BrowserCheckpoint) {
@@ -2345,6 +2368,86 @@ function citationMatchesOfficialDomain(officialUrl: string, citationUrl: string)
   }
 }
 
+type OfficialRequirementEvidence = {
+  rows: Array<Record<string, unknown>>
+  evidenceIdsByRequirement: Map<string, string[]>
+}
+
+async function ensureOfficialRequirementEvidence(
+  admin: AdminClient,
+  run: AgentRunRow,
+  caseId: string,
+  campaignId: string | null,
+  rawRequirements: Array<Record<string, unknown>>,
+  opportunity: Record<string, unknown> | null,
+): Promise<OfficialRequirementEvidence> {
+  if (!opportunity || !rawRequirements.length) return { rows: [], evidenceIdsByRequirement: new Map() }
+  const opportunityData = recordValue(opportunity.data)
+  const officialUrl = safeString(opportunity.official_url ?? opportunityData.officialUrl ?? opportunityData.official_url, 2_000)
+  const rawCitations = Array.isArray(opportunity.citations)
+    ? opportunity.citations
+    : Array.isArray(opportunityData.citations) ? opportunityData.citations : []
+  const citations = rawCitations.map(recordValue).map(citation => ({
+    url: safeString(citation.url, 2_000),
+    excerpt: safeString(citation.excerpt, 2_000),
+    sourceType: safeString(citation.sourceType ?? citation.source_type, 40).toLocaleLowerCase(),
+    retrievedAt: safeString(citation.retrievedAt ?? citation.retrieved_at, 80) || new Date().toISOString(),
+  })).filter(citation =>
+    ['official', 'government'].includes(citation.sourceType) &&
+    verifyOfficialSource(citation.url) &&
+    citationMatchesOfficialDomain(officialUrl, citation.url),
+  )
+  const sources = citations.length
+    ? citations
+    : verifyOfficialSource(officialUrl)
+      ? [{ url: officialUrl, excerpt: 'Verified official programme source.', sourceType: 'official', retrievedAt: new Date().toISOString() }]
+      : []
+  if (!sources.length) return { rows: [], evidenceIdsByRequirement: new Map() }
+
+  const evidenceRows = rawRequirements.map(requirement => {
+    const source = recordValue(requirement.source)
+    const requirementUrls = stringArray(source.url ?? source.urls ?? requirement.source_id, 2_000)
+    const targetUrl = safeString(source.url, 2_000) || requirementUrls[0] || safeString(requirement.source_id, 2_000)
+    const citation = sources.find(item => canonicalOpportunityReference(item.url) === canonicalOpportunityReference(targetUrl)) ?? sources[0]!
+    const requirementId = safeString(requirement.id, 80)
+    return {
+      user_id: run.user_id,
+      application_case_id: caseId,
+      task_id: run.task_id,
+      campaign_id: campaignId,
+      agent_run_id: run.id,
+      kind: 'official_requirement_source',
+      source_url: citation.url,
+      excerpt: redactApplicationExcerpt(citation.excerpt) || null,
+      metadata: {
+        requirement_id: requirementId,
+        opportunity_id: safeString(opportunity.id, 80),
+        source_type: citation.sourceType,
+        retrieved_at: citation.retrievedAt,
+      },
+      idempotency_key: `official-requirement:${requirementId}:${canonicalOpportunityReference(citation.url)}`,
+    }
+  }).filter(row => safeString(recordValue(row.metadata).requirement_id, 80))
+  if (!evidenceRows.length) return { rows: [], evidenceIdsByRequirement: new Map() }
+  const persisted = await admin.from('application_evidence').upsert(evidenceRows, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id,application_case_id,kind,source_url,provider_message_id,provider_thread_id,asset_id,metadata,captured_at')
+  if (persisted.error) throw new Error(persisted.error.message)
+  const evidenceIdsByRequirement = new Map<string, string[]>()
+  for (const row of persisted.data ?? []) {
+    const metadata = recordValue(row.metadata)
+    const requirementId = safeString(metadata.requirement_id, 80)
+    const evidenceId = safeString(row.id, 80)
+    if (!requirementId || !evidenceId) continue
+    evidenceIdsByRequirement.set(requirementId, [...(evidenceIdsByRequirement.get(requirementId) ?? []), evidenceId])
+  }
+  await Promise.all([...evidenceIdsByRequirement.entries()].map(async ([requirementId, evidenceIds]) => {
+    const existing = rawRequirements.find(requirement => safeString(requirement.id, 80) === requirementId)
+    const currentEvidenceIds = stringArray(existing?.verification_evidence_ids, 120)
+    const updated = await admin.from('application_requirements').update({ verification_evidence_ids: [...new Set([...currentEvidenceIds, ...evidenceIds])] }).eq('id', requirementId).eq('user_id', run.user_id)
+    if (updated.error) throw new Error(updated.error.message)
+  }))
+  return { rows: (persisted.data ?? []) as Array<Record<string, unknown>>, evidenceIdsByRequirement }
+}
+
 type ApplicationStatePatch = Omit<Partial<DavidApplicationState>, 'progress'> & {
   progress?: Partial<DavidApplicationState['progress']>
 }
@@ -2380,6 +2483,8 @@ function nextApplicationState(run: AgentRunRow, patch: ApplicationStatePatch): D
 function normalizeRequirementPayload(value: unknown, applicationCaseId: string) {
   const input = recordValue(value)
   const source = recordValue(input.source)
+  const sourceUrls = stringArray(input.source_urls ?? input.sourceUrls, 2_000)
+  const normalizedSource = Object.keys(source).length ? source : (sourceUrls.length ? { url: sourceUrls[0], urls: sourceUrls } : {})
   const allowedCategories = new Set(['identity', 'academic', 'test', 'essay', 'reference', 'financial', 'portfolio', 'portal', 'other'])
   const allowedResponsibleParties = new Set(['applicant', 'david', 'writer', 'referee', 'roon', 'institution'])
   const statusValues = new Set(['unknown', 'verified', 'missing', 'in_progress', 'awaiting_user', 'awaiting_writer', 'awaiting_referee', 'awaiting_institution', 'ready', 'approved', 'submitted', 'rejected', 'waived', 'expired'])
@@ -2388,7 +2493,7 @@ function normalizeRequirementPayload(value: unknown, applicationCaseId: string) 
   return {
     application_case_id: applicationCaseId,
     user_id: '',
-    name: safeString(input.name, 500),
+    name: safeString(input.name ?? input.label ?? input.title, 500),
     category: allowedCategories.has(safeString(input.category, 80)) ? safeString(input.category, 80) : 'other',
     required: input.required !== false,
     exact_instructions: safeString(input.exact_instructions ?? input.exactInstructions, 4_000),
@@ -2398,8 +2503,8 @@ function normalizeRequirementPayload(value: unknown, applicationCaseId: string) 
     responsible_party: allowedResponsibleParties.has(safeString(input.responsible_party ?? input.responsibleParty, 80)) ? safeString(input.responsible_party ?? input.responsibleParty, 80) : 'applicant',
     linked_artifact_id: safeString(input.linked_artifact_id ?? input.linkedArtifactId, 80) || null,
     verification_evidence_ids: stringArray(input.verification_evidence_ids ?? input.verificationEvidenceIds, 120),
-    source,
-    source_id: safeString(input.source_id ?? input.sourceId ?? source.id ?? source.url, 2_000) || null,
+    source: normalizedSource,
+    source_id: safeString(input.source_id ?? input.sourceId ?? source.id ?? source.url ?? sourceUrls[0], 2_000) || null,
     dependency_ids: stringArray(input.dependency_ids ?? input.dependencyIds ?? input.dependencies, 500),
     evidence_contract: recordValue(input.evidence_contract ?? input.evidenceContract),
     blocker_reason: safeString(input.blocker_reason ?? input.blockerReason, 1_000) || null,
@@ -2613,6 +2718,48 @@ function controllerEvidenceType(kind: string): ControllerEvidenceType | null {
   }
 }
 
+function canonicalOpportunityReference(value: unknown) {
+  const reference = safeString(value, 2_000).trim()
+  if (!reference) return ''
+  try {
+    const url = new URL(reference)
+    url.hash = ''
+    url.search = ''
+    url.pathname = url.pathname.replace(/\/+$/, '') || '/'
+    return url.toString().replace(/\/$/, '').toLocaleLowerCase()
+  } catch {
+    return reference.replace(/\/+$/, '').toLocaleLowerCase()
+  }
+}
+
+async function normalizeApplicationCreateCaseArguments(
+  admin: AdminClient,
+  run: AgentRunRow,
+  argumentsValue: Record<string, unknown>,
+) {
+  const candidate = safeString(argumentsValue.opportunity_id, 2_000)
+  if (!candidate || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate)) return argumentsValue
+  const campaignId = safeString(argumentsValue.campaign_id, 80) ||
+    safeString(run.context?.application_campaign_id, 80) ||
+    safeString(run.application_state?.campaignId, 80)
+  if (!campaignId) return argumentsValue
+  const opportunities = await admin.from('application_opportunities')
+    .select('id,official_url,application_url')
+    .eq('campaign_id', campaignId)
+    .eq('user_id', run.user_id)
+  if (opportunities.error) throw new Error(opportunities.error.message)
+  const normalizedCandidate = canonicalOpportunityReference(candidate)
+  const matched = (opportunities.data ?? []).find(opportunity =>
+    [opportunity.official_url, opportunity.application_url]
+      .map(canonicalOpportunityReference)
+      .filter(Boolean)
+      .includes(normalizedCandidate),
+  )
+  return matched?.id
+    ? { ...argumentsValue, opportunity_id: matched.id }
+    : argumentsValue
+}
+
 async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentRunRow): Promise<ApplicationControllerSnapshot | null> {
   if (run.active_specialist_id !== 'david' || !run.application_state) return null
   const caseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state.currentCaseId, 80) || null
@@ -2620,7 +2767,7 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   const [profileResult, campaignResult, caseResult, requirementsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult] = await Promise.all([
     admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle(),
     campaignId ? admin.from('application_campaigns').select('id,status,data,next_action').eq('id', campaignId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-    caseId ? admin.from('application_cases').select('id,current_stage,status,data,next_action,application_id').eq('id', caseId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    caseId ? admin.from('application_cases').select('id,current_stage,status,data,next_action,application_id,opportunity_id,campaign_id').eq('id', caseId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     caseId ? admin.from('application_requirements').select('id,application_case_id,name,required,status,source,source_id,dependency_ids,evidence_contract,responsible_party,deadline_at,verification_evidence_ids,linked_artifact_id,blocker_reason').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_artifacts').select('id,application_case_id,checksum,approval_status,kind').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_contacts').select('id,kind,provider_contact_id,gmail_thread_id,last_provider_message_id,data').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
@@ -2634,6 +2781,11 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   const results = [profileResult, campaignResult, caseResult, requirementsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult]
   const fatal = results.find(result => result.error && result.error.code !== '42P01')?.error
   if (fatal) throw new Error(fatal.message)
+  const opportunityId = safeString(caseResult.data?.opportunity_id, 80)
+  const opportunityResult = opportunityId
+    ? await admin.from('application_opportunities').select('id,official_url,citations,data').eq('id', opportunityId).eq('user_id', run.user_id).maybeSingle()
+    : { data: null, error: null }
+  if (opportunityResult.error && opportunityResult.error.code !== '42P01') throw new Error(opportunityResult.error.message)
   const facts = profileFactResolutions(profileResult.data?.profile)
   const rawRequirements = requirementsResult.data ?? []
   const requirementIdsByName = new Map(rawRequirements.map(requirement => [safeString(requirement.name, 500).toLocaleLowerCase(), safeString(requirement.id, 80)]))
@@ -2658,6 +2810,19 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
       blocker: safeString(requirement.blocker_reason, 1_000) || null,
     }
   })
+  const officialRequirementEvidence = caseId
+    ? await ensureOfficialRequirementEvidence(
+      admin,
+      run,
+      caseId,
+      safeString(caseResult.data?.campaign_id, 80) || campaignId,
+      rawRequirements as Array<Record<string, unknown>>,
+      opportunityResult.data as Record<string, unknown> | null,
+    )
+    : { rows: [], evidenceIdsByRequirement: new Map<string, string[]>() }
+  for (const requirement of requirements) {
+    requirement.evidenceIds = [...new Set([...requirement.evidenceIds, ...(officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? [])])]
+  }
   const checkpoints = checkpointsResult.data ?? []
   const latestCheckpoint = checkpoints[0] ?? null
   const caseData = recordValue(caseResult.data?.data)
@@ -2674,10 +2839,22 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     submissionConfirmed: Boolean(caseResult.data?.application_id),
   })
   const verifiedOpportunityCount = Number(recordValue(campaignResult.data?.data).verified_opportunity_count ?? run.application_state.verifiedOpportunityCount ?? 0)
-  if (!caseId && verifiedOpportunityCount > 0 && /\b(?:prepare|apply|application)\b/i.test(run.objective) && !/\b(?:find|research|shortlist|recommend|compare)\b/i.test(run.objective)) state = 'CASE_CREATION'
+  const applicationContextText = [
+    safeString(run.context?.user_context, 10_000),
+    ...(Array.isArray(run.context?.application_context_answers)
+      ? run.context.application_context_answers.map(item => safeString(recordValue(item).answer, 2_000))
+      : []),
+  ].filter(Boolean).join(' ')
+  const shortlistApproved = /\b(?:I|we)\s+(?:approve|approved|confirm|confirmed|authorize|authorise|accept|accepted)\b/i.test(applicationContextText) &&
+    /\b(?:shortlist|three|applications?|programmes?|strategy)\b/i.test(applicationContextText)
+  // A natural request can contain both research language ("Find ...") and
+  // application intent. Once the applicant has explicitly approved the
+  // verified shortlist, move the durable research snapshot into the legal
+  // CASE_CREATION state; otherwise the approval gate remains intact.
+  if (!caseId && verifiedOpportunityCount > 0 && isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) && shortlistApproved) state = 'CASE_CREATION'
   if (state === 'PORTAL_EXECUTION' && latestCheckpoint?.verified === true && /review|final/i.test(safeString(latestCheckpoint.section, 160))) state = 'READINESS_REVIEW'
   const evidence: ControllerEvidence[] = []
-  for (const item of evidenceResult.data ?? []) {
+  for (const item of [...(evidenceResult.data ?? []), ...officialRequirementEvidence.rows]) {
     const metadata = recordValue(item.metadata)
     const type = safeString(item.kind, 80) === 'uploaded_file_verification' && safeString(metadata.checksum, 128)
       ? 'DOCUMENT_CHECKSUM'
@@ -2788,6 +2965,19 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     communication: (communicationsResult.data ?? []).map(item => ({ requirementId: '', providerMessageId: safeString(item.provider_message_id, 256), providerThreadId: safeString(item.provider_thread_id, 256), state: safeString(item.classification, 80) })),
   })
   const engineStep = planApplicationEngineStep(engineState)
+  const applicationContextAnswers = Array.isArray(run.context?.application_context_answers)
+    ? run.context.application_context_answers
+      .filter(item => item && typeof item === 'object' && !Array.isArray(item))
+      .map(item => ({
+        question: safeString((item as Record<string, unknown>).question, 600),
+        answer: safeString((item as Record<string, unknown>).answer, 2_000),
+      }))
+      .filter(item => item.question && item.answer)
+      .slice(-20)
+    : []
+  const applicationContextAnswerDirective = applicationContextAnswers.length
+    ? `\nAUTHORITATIVE_APPLICATION_CONTEXT_USER_ANSWERS_V1\nThese are applicant-provided answers from this run. Treat them as authoritative user statements, use them for the current controller step, and do not ask the same answered question again.\n${JSON.stringify(applicationContextAnswers)}`
+    : ''
   return {
     state,
     caseId,
@@ -2799,7 +2989,7 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     submissionApproved,
     engineState,
     engineStep,
-    serializedContext: `${serializeAuthoritativeApplicationContext(authoritativeContext)}\n${applicationEngineDirective(engineState, engineStep)}`,
+    serializedContext: `${serializeAuthoritativeApplicationContext(authoritativeContext)}${applicationContextAnswerDirective}\n${applicationEngineDirective(engineState, engineStep)}`,
   }
 }
 
@@ -2878,6 +3068,7 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
 
 function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) {
   const step = snapshot.engineStep
+  if (step.kind === 'CONTROLLER') return new Set(['application.record_opportunity', 'application.record_evidence', 'application.create_case', 'agent.request_context', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'])
   if (step.kind === 'SEMANTIC_DECISION') return new Set([`application.${step.request.function}`])
   if (step.kind === 'COMPLETE') return new Set(['agent.complete'])
   if (step.kind === 'USER_HANDOFF') return new Set(['agent.request_context'])
@@ -3077,14 +3268,23 @@ async function executeProviderTool(
   }
 
   if (toolName === 'application.record_opportunity') {
-    const campaignId = safeString(argumentsValue.campaign_id, 80) || safeString(run.context?.application_campaign_id, 80)
+    // The campaign created for this AgentRun is authoritative. Models may
+    // reproduce a visually similar UUID from their transcript; never let that
+    // stale or hallucinated identifier fork or hide production evidence.
+    const campaignId = safeString(run.context?.application_campaign_id, 80) ||
+      safeString(run.application_state?.campaignId, 80) ||
+      safeString(argumentsValue.campaign_id, 80)
     const opportunityInput = recordValue(argumentsValue.opportunity)
     const citations = Array.isArray(argumentsValue.citations)
       ? argumentsValue.citations
           .map(recordValue)
           .map(citation => {
             const sourceTypeValue = safeString(citation.sourceType ?? citation.source_type, 40).toLowerCase()
-            const sourceType = ['official', 'government', 'secondary'].includes(sourceTypeValue) ? sourceTypeValue : 'secondary'
+            const sourceType = ['official', 'official_programme_page', 'official_page', 'official_source'].includes(sourceTypeValue)
+              ? 'official'
+              : sourceTypeValue === 'government'
+                ? 'government'
+                : 'secondary'
             return {
               url: safeString(citation.url, 2_000),
               excerpt: safeString(citation.excerpt, 2_000),
@@ -3095,8 +3295,15 @@ async function executeProviderTool(
           .filter(citation => citation.url)
       : []
     const institution = safeString(opportunityInput.institution, 500)
-    const programmeTitle = safeString(opportunityInput.programme_title ?? opportunityInput.programmeTitle ?? opportunityInput.title, 800)
-    const officialUrl = safeString(opportunityInput.official_url ?? opportunityInput.officialUrl ?? opportunityInput.url, 2_000)
+    // Models commonly use the shorter human-facing `programme` label even
+    // though the tool contract calls the field `programme_title`. Accept that
+    // safe alias, and use an explicitly supplied citation as the URL fallback
+    // when the model has already provided one. The citation still controls
+    // verification status; this only prevents a valid source-backed candidate
+    // from being dropped because of harmless field naming drift.
+    const programmeTitle = safeString(opportunityInput.programme_title ?? opportunityInput.programmeTitle ?? opportunityInput.title ?? opportunityInput.programme, 800)
+    const citationUrlFallback = citations.find(citation => verifyOfficialSource(citation.url))?.url ?? ''
+    const officialUrl = safeString(opportunityInput.official_url ?? opportunityInput.officialUrl ?? opportunityInput.url, 2_000) || citationUrlFallback
     if (!campaignId || !institution || !programmeTitle || !verifyOfficialSource(officialUrl)) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_opportunity_invalid', message: 'The opportunity needs a campaign, institution, programme name, and HTTPS official source.', value: { valid: false }, actionStatus: 'failed' }
     }
@@ -3108,9 +3315,17 @@ async function executeProviderTool(
     const deadline = recordValue(opportunityInput.deadline)
     const deadlineAt = safeString(opportunityInput.deadline_at ?? opportunityInput.deadlineAt ?? deadline.dateTime, 80) || null
     const deadlineTimezone = safeString(opportunityInput.deadline_timezone ?? opportunityInput.deadlineTimezone ?? deadline.timezone, 120) || null
-    const requestedVerification = safeString(opportunityInput.verification_status ?? opportunityInput.verificationStatus, 40)
+    const requestedVerification = safeString(opportunityInput.verification_status ?? opportunityInput.verificationStatus, 40) ||
+      (opportunityInput.verified === true ? 'verified' : opportunityInput.verified === false ? 'unverified' : '')
     const hasOfficialCitation = citations.some(citation => ['official', 'government'].includes(citation.sourceType) && verifyOfficialSource(citation.url) && citationMatchesOfficialDomain(officialUrl, citation.url))
-    const verificationStatus = requestedVerification === 'verified' && hasOfficialCitation ? 'verified' : hasOfficialCitation ? 'partially_verified' : 'unverified'
+    // An official, domain-matching citation is the durable verification
+    // evidence. Models often omit a redundant `verified: true` flag; accept
+    // that source-backed shape, but preserve an explicit contradictory claim.
+    const verificationStatus = hasOfficialCitation && ['verified', ''].includes(requestedVerification)
+      ? 'verified'
+      : hasOfficialCitation
+        ? 'partially_verified'
+        : 'unverified'
     const data = {
       ...opportunityInput,
       institution,
@@ -3172,7 +3387,9 @@ async function executeProviderTool(
   }
 
   if (toolName === 'application.create_case') {
-    const campaignId = safeString(argumentsValue.campaign_id, 80)
+    const campaignId = safeString(run.context?.application_campaign_id, 80) ||
+      safeString(run.application_state?.campaignId, 80) ||
+      safeString(argumentsValue.campaign_id, 80)
     const opportunityId = safeString(argumentsValue.opportunity_id, 80)
     const portalAccount = recordValue(argumentsValue.portal_account)
     if (!campaignId || !opportunityId || Object.keys(portalAccount).some(key => /password|passcode|secret|card|cvv|otp|verification/i.test(key))) {
@@ -4034,6 +4251,18 @@ async function executeProviderTool(
       ? argumentsValue.payload as Record<string, unknown>
       : {}
     const payloadKeys = JSON.stringify(requestPayload).match(/"(?:password|passcode|card_number|cvv|cvc|bank_account|verification_code|otp|security_key)"\s*:/i)
+    const humanAssignmentId = safeString(requestPayload.human_assignment_id ?? requestPayload.humanAssignmentId, 80)
+    const deadlineMonitorRequest = ['monitor_writer_deadline', 'monitor_referee_deadline'].includes(requestKind)
+    if (deadlineMonitorRequest && !humanAssignmentId) {
+      return {
+        kind: 'pause',
+        status: 'waiting_for_user',
+        code: 'application_assignment_required',
+        message: 'Create an explicit human assignment before asking Roon to monitor its deadline. Continue the application preparation step or create the assignment first.',
+        value: { valid: false, requires_human_assignment: true },
+        actionStatus: 'failed',
+      }
+    }
     if (!applicationCaseId || !isRoonRequestAllowed(requestKind) || payloadKeys) {
       return {
         kind: 'pause',
@@ -4111,6 +4340,7 @@ async function executeProviderTool(
   if (toolName === 'browser.start_session') {
     const configured = configuredBrowserDomains()
     const requestedDomains = normalizeBrowserDomains(argumentsValue.allowed_domains)
+      .map(domain => canonicalConfiguredBrowserDomain(domain, configured))
     const caspianFlightSession = run.active_specialist_id === 'caspian' && run.task_contract === 'travel.flight_search'
     const providerDomains = configuredFlightProviderDomains()
     // Caspian owns one provider-specific browser contract. Normalize any
@@ -4140,13 +4370,18 @@ async function executeProviderTool(
       .select('id,status,resumable,allowed_domains')
       .eq('run_id', run.id)
       .eq('user_id', run.user_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
     if (existing.error) throw new Error(existing.error.message)
     if (existing.data) {
       const existingDomains = normalizeBrowserDomains(existing.data.allowed_domains)
-      if (caspianFlightSession && requested.some(domain => !existingDomains.includes(domain))) {
+        .map(domain => canonicalConfiguredBrowserDomain(domain, configured))
+        .filter(domain => configured.has(domain))
+      const repairedDomains = [...new Set([...existingDomains, ...requested])]
+      if (repairedDomains.some((domain, index) => domain !== existingDomains[index]) || repairedDomains.length !== existingDomains.length) {
         const repaired = await admin.from('browser_execution_sessions').update({
-          allowed_domains: requested,
+          allowed_domains: repairedDomains,
         }).eq('id', existing.data.id).eq('run_id', run.id).eq('user_id', run.user_id)
         if (repaired.error) throw new Error(repaired.error.message)
       }
@@ -5401,6 +5636,10 @@ async function resumeWithContext(
     context: {
       ...(run.context ?? {}),
       user_context: value,
+      application_context_answers: [
+        ...(Array.isArray(run.context?.application_context_answers) ? run.context.application_context_answers : []),
+        { question: safeString(run.waiting_reason, 600), answer: value, answeredAt: new Date().toISOString() },
+      ].slice(-20),
       scheduling_options: [],
       last_context_question: null,
       answered_context_questions: [
@@ -5437,6 +5676,18 @@ async function resumeWithContext(
     lease_owner: null,
     lease_expires_at: null,
   })
+  if (isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) {
+    const clearedHistory = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+    if (clearedHistory.error) throw new Error(clearedHistory.error.message)
+    history = await loadModelHistory(admin, updated)
+    history.push({
+      role: 'user',
+      content: [{
+        type: 'input_text',
+        text: `Authoritative applicant continuation: ${value}. Use this answer in the current application controller step and do not ask the same question again.`,
+      }],
+    })
+  }
   if (run.capability === 'flight_search') {
     history = [...history, {
       role: 'user',
@@ -6301,6 +6552,14 @@ async function pollBrowserExecutionRun(
         failure_class: 'PROVIDER_OR_BROWSER_INFRA', operation_type: operation.type,
         canonical_search: checkpoint.canonicalFlightSearch ?? null, recoverable: true, non_luna_reasoning_calls: 0,
       })
+      // At the retry ceiling, a poisoned browser session must be replaced
+      // before the same safe operation is retried. Returning the exhausted
+      // session unchanged would leave a permanently closed target in
+      // waiting_external even though the action is still recoverable.
+      if (openaiKey) {
+        const replacementRetry = await retryWaitingProviderAction(admin, waiting, openaiKey)
+        if (replacementRetry) return replacementRetry
+      }
       return waiting
     }
     if (operation.type === 'select_flight' || operation.type === 'submit') {
@@ -7105,12 +7364,50 @@ async function retryWaitingProviderAction(
     if (!approval.data) return null
   }
 
-  const recoveryAttempt = Number(action.recovery_attempt ?? 0)
+  let recoveryAttempt = Number(action.recovery_attempt ?? 0)
+  let retryRun = run
+  let retryArguments = action.arguments as Record<string, unknown>
+  const browserInfrastructureRetry = toolName.startsWith('browser.') &&
+    toolName !== 'browser.submit' &&
+    browserFailureClass(safeString(action.error_code, 120)) === 'PROVIDER_OR_BROWSER_INFRA'
+  const browserSessionAlreadyRecycled = safeString(run.context?.application_browser_recycled_action_id, 80) === action.id
+  let browserSessionRecycled = false
+  if (browserInfrastructureRetry && recoveryAttempt >= 2 && !browserSessionAlreadyRecycled) {
+    const previousSessionId = safeString(retryArguments.session_id ?? run.browser_session_id, 80)
+    const previousSession = previousSessionId
+      ? await loadOwnedBrowserSession(admin, run, previousSessionId)
+      : null
+    if (previousSession) {
+      const resetCheckpoint = { ...(previousSession.checkpoint ?? {}), pendingOperation: null }
+      const resetSession = await admin.from('browser_execution_sessions').update({
+        status: 'planning',
+        worker_session_id: null,
+        current_url: null,
+        checkpoint: resetCheckpoint,
+        last_observed_at: new Date().toISOString(),
+      }).eq('id', previousSession.id).eq('run_id', run.id).eq('user_id', run.user_id)
+      if (resetSession.error) throw new Error(resetSession.error.message)
+      const actionArguments = await admin.from('agent_actions').update({ recovery_attempt: 0, retryable: true })
+        .eq('id', action.id).eq('run_id', run.id).eq('user_id', run.user_id)
+      if (actionArguments.error) throw new Error(actionArguments.error.message)
+      recoveryAttempt = 0
+      retryRun = await updateRun(admin, run, {
+        browser_session_id: previousSession.id,
+        context: { ...(run.context ?? {}), application_browser_recycled_action_id: action.id },
+      })
+      browserSessionRecycled = true
+      await addEvent(admin, retryRun, 'agent_browser_session_recycled', 'waiting_external', 'Reset the failed task-owned browser session before retrying the safe operation.', {
+        previous_browser_session_id: previousSession.id,
+        operation_tool: toolName,
+        recovery_attempt: recoveryAttempt,
+      })
+    }
+  }
   const providerFallbackRecoveryAllowed = toolName === 'browser.select_flight' &&
     safeString(action.error_code, 120) === 'flight_provider_handoff_unavailable' &&
     Boolean(browserWorkerConfig()) &&
     Number(run.context?.flight_provider_fallback_recovery_attempts ?? 0) < 1
-  if (!retryAttemptAllowed(recoveryAttempt, maxProviderRecoveryAttempts) && !providerFallbackRecoveryAllowed) {
+  if (!retryAttemptAllowed(recoveryAttempt, maxProviderRecoveryAttempts) && !providerFallbackRecoveryAllowed && !browserSessionRecycled) {
     const checkoutRetry = toolName === 'browser.prepare_flight_checkout'
     const message = checkoutRetry
       ? 'The provider checkout could not finish after the bounded recovery attempts. Review the open booking page and continue manually.'
@@ -7144,7 +7441,6 @@ async function retryWaitingProviderAction(
     return waiting
   }
 
-  let retryRun = run
   if (providerFallbackRecoveryAllowed) {
     retryRun = await updateRun(admin, run, {
       context: {
@@ -7184,7 +7480,7 @@ async function retryWaitingProviderAction(
     admin,
     retryRun,
     toolName,
-    action.arguments as Record<string, unknown>,
+    retryArguments,
     String(action.idempotency_key),
   )
   if (execution.kind === 'pause') {
@@ -7251,7 +7547,7 @@ async function retryWaitingProviderAction(
     return waiting
   }
 
-  const persistedArguments = redactEphemeralSecrets(persistedEmailArguments(action.tool_name, action.arguments as Record<string, unknown>, execution.value), run.id)
+  const persistedArguments = redactEphemeralSecrets(persistedEmailArguments(action.tool_name, retryArguments, execution.value), run.id)
   const persistedAction = await admin.from('agent_actions').update({
     status: 'succeeded',
     arguments: persistedArguments,
@@ -8009,9 +8305,12 @@ async function advanceRun(
       : history
     const response = await callOpenAI(openaiKey, current, modelHistory, applicationController, semanticRepairAttempts > 0)
     const benchmarkRunId = safeString(current.context?.benchmark_run_id, 160)
-    const applicationRun = /\bapply\b/i.test(current.objective) &&
+    const applicationRun = isApplicationIntent(current.objective, safeString(current.context?.description, 4_000)) &&
       Array.isArray(current.context?.attachments) &&
-      (current.context.attachments as Array<Record<string, unknown>>).some(asset => ['image/png', 'image/jpeg'].includes(safeString(asset.mime_type, 120)))
+      // Production application qualifications also use text/plain source
+      // documents; model usage must be observable for every attached run, not
+      // only screenshot-based application tasks.
+      (current.context.attachments as Array<Record<string, unknown>>).length > 0
     if (benchmarkRunId.startsWith('shotcount-eval-live-v1/') || applicationRun) {
       await addEvent(
         admin,
@@ -8054,6 +8353,9 @@ async function advanceRun(
       argumentsValue = JSON.parse(safeString(call.arguments, 100_000)) as Record<string, unknown>
     } catch {
       throw new Error(`The agent produced malformed arguments for ${toolName}.`)
+    }
+    if (toolName === 'application.create_case') {
+      argumentsValue = await normalizeApplicationCreateCaseArguments(admin, current, argumentsValue)
     }
     if (!validateAgentToolArguments(toolName, argumentsValue)) {
       throw new Error(`The agent produced invalid arguments for ${toolName}.`)
@@ -9491,9 +9793,12 @@ Deno.serve(async request => {
         }
       } else if (action === 'resume') {
         if (!run) throw new Error('Agent run not found.')
-        let recoverSavedAction = false
-        let approvalReopened = false
-        let applicationAttachmentsRefreshed = false
+         let recoverSavedAction = false
+         let approvalReopened = false
+         let applicationAttachmentsRefreshed = false
+         let applicationHistoryReset = false
+        const applicationBrowserRecovery = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
+          ['browser_worker_unavailable', 'browser_retry_exhausted', 'browser_target_closed', 'browser_target_ambiguous'].includes(safeString(run.error_code, 120))
         if (run.status === 'failed' && /new email cannot reuse an existing thread/i.test(run.error ?? '')) {
           await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
         }
@@ -9524,9 +9829,28 @@ Deno.serve(async request => {
           })
           await addEvent(admin, run, 'agent_email_draft_sequence_recovered', run.status, 'Roon is preparing the email draft before asking to send it.')
         }
-        if (run.status === 'failed' && /\bapply\b/i.test(run.objective) && /call_id|function call output|no tool output found/i.test(run.error ?? '')) {
-          await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
-          applicationAttachmentsRefreshed = true
+         if (run.status === 'failed' && /\bapply\b/i.test(run.objective) && /call_id|function call output|no tool output found/i.test(run.error ?? '')) {
+           await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+           applicationAttachmentsRefreshed = true
+         }
+        if (run.status === 'failed' && isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) {
+           const clearedApplicationHistory = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+           if (clearedApplicationHistory.error) throw new Error(clearedApplicationHistory.error.message)
+           applicationHistoryReset = true
+         }
+        if (run.status === 'waiting_for_user' && applicationBrowserRecovery) {
+          const clearedBrowserHistory = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+          if (clearedBrowserHistory.error) throw new Error(clearedBrowserHistory.error.message)
+          run = await updateRun(admin, run, {
+            status: 'planning',
+            waiting_reason: '',
+            error: null,
+            error_code: null,
+            retryable: true,
+          })
+          applicationHistoryReset = true
+          recoverSavedAction = true
+          await addEvent(admin, run, 'application_browser_history_recovered', run.status, 'Reset the application model turn before retrying the saved browser step.')
         }
         if (/\bapply\b/i.test(run.objective)) {
           const latestAssets = await admin.from('file_assets')
@@ -9640,7 +9964,7 @@ Deno.serve(async request => {
             error_code: null,
             retryable: true,
           })
-          recoverSavedAction = !applicationAttachmentsRefreshed
+           recoverSavedAction = !applicationAttachmentsRefreshed && !applicationHistoryReset
         }
         if (!approvalReopened) {
           run = recoverSavedAction

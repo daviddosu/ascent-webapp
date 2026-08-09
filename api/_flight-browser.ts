@@ -4,6 +4,10 @@ import { access } from 'node:fs/promises'
 import { isIP } from 'node:net'
 import { chromium as playwright, type Browser, type Locator, type Page } from 'playwright-core'
 
+// Keep the serverless Chromium process stable under the same bounded worker
+// lifecycle used by the public application browser.
+chromium.setGraphicsMode = false
+
 export type FlightSearchInput = {
   originCode: string
   destinationCode: string
@@ -790,7 +794,7 @@ async function launchBrowser() {
   return playwright.launch({
     executablePath: await executablePath(),
     headless: true,
-    args: linux ? chromium.args : [],
+    args: linux ? [...chromium.args, '--disable-dev-shm-usage'] : [],
   })
 }
 

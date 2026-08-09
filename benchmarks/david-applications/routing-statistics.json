@@ -1,8 +1,8 @@
 {
   "benchmarkVersion": "david_application_engine_v3",
-  "runId": "david-eval-20260809120909-5ae32a",
-  "codeCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
-  "generatedAt": "2026-08-09T12:16:42.901Z",
+  "runId": "david-eval-20260809180854-647062",
+  "codeCommit": "8b19141defd769c8a8c96d322246d1913a9e87bd",
+  "generatedAt": "2026-08-09T18:17:48.912Z",
   "policyVersion": "application-execution-router-v1",
   "modes": {
     "primitive": 13,
@@ -19,14 +19,14 @@
       "taskClass": "simple_reversible_form",
       "primitive": {
         "success": true,
-        "latencyMs": 6886,
+        "latencyMs": 7519,
         "browserActions": 5,
         "retries": 0,
         "estimatedCostUsd": 0
       },
       "harness": {
         "success": true,
-        "latencyMs": 6546,
+        "latencyMs": 7496,
         "browserActions": 5,
         "retries": 0,
         "estimatedCostUsd": 0
