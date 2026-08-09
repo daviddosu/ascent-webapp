@@ -88,6 +88,8 @@ describe('production application completion contract', () => {
     expect(agent).toContain('ensureOfficialRequirementEvidence')
     expect(agent).toContain("kind: 'official_requirement_source'")
     expect(agent).toContain("code: 'application_assignment_required'")
+    expect(agent).toContain('const applicationContextRecovery = run.status === \'waiting_for_user\'')
+    expect(agent).toContain('applicationContextResumed = true')
   })
 
   it('keeps the synthetic David qualification hosts in the documented browser allowlist', () => {

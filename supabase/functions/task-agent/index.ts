@@ -9793,10 +9793,11 @@ Deno.serve(async request => {
         }
       } else if (action === 'resume') {
         if (!run) throw new Error('Agent run not found.')
-         let recoverSavedAction = false
-         let approvalReopened = false
-         let applicationAttachmentsRefreshed = false
-         let applicationHistoryReset = false
+        let recoverSavedAction = false
+        let approvalReopened = false
+        let applicationAttachmentsRefreshed = false
+        let applicationHistoryReset = false
+        let applicationContextResumed = false
         const applicationBrowserRecovery = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
           ['browser_worker_unavailable', 'browser_retry_exhausted', 'browser_target_closed', 'browser_target_ambiguous'].includes(safeString(run.error_code, 120))
         if (run.status === 'failed' && /new email cannot reuse an existing thread/i.test(run.error ?? '')) {
@@ -9872,7 +9873,21 @@ Deno.serve(async request => {
             applicationAttachmentsRefreshed = true
           }
         }
-        if (run.status === 'needs_context') {
+        const applicationContextRecovery = run.status === 'waiting_for_user' &&
+          isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
+          Boolean(safeString(body.context, 10_000).trim()) &&
+          /application_assignment_required|call_id|function call output|no tool output found/i.test(
+            `${safeString(run.error_code, 160)} ${safeString(run.error, 1_200)} ${safeString(run.waiting_reason, 1_200)}`,
+          )
+        if (applicationContextRecovery) {
+          // Application recoveries must start from a clean controller turn. A
+          // worker failure can leave the saved Responses transcript ending in
+          // an unmatched function call; replaying it would make the API reject
+          // the user’s otherwise valid recovery answer before David can act.
+          run = await resumeWithContext(admin, run, body.context ?? '')
+          applicationContextResumed = true
+          applicationHistoryReset = true
+        } else if (run.status === 'needs_context') {
           const hasReadableApplicationDocument = /\bapply\b/i.test(run.objective) &&
             Array.isArray(run.context?.attachments) &&
             (run.context.attachments as Array<Record<string, unknown>>).some(asset =>
@@ -9967,7 +9982,7 @@ Deno.serve(async request => {
            recoverSavedAction = !applicationAttachmentsRefreshed && !applicationHistoryReset
         }
         if (!approvalReopened) {
-          run = recoverSavedAction
+          run = !applicationContextResumed && recoverSavedAction
             ? await recoverStalledRun(admin, run, openaiKey)
             : await advanceRun(admin, run!, openaiKey)
         }
