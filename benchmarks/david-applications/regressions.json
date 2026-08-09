@@ -260,5 +260,291 @@
     "reproduction": {
       "command": "pnpm benchmark:david -- --case duplicate-submission"
     }
+  },
+  {
+    "key": "david_application_engine_v3:research-unusual-prerequisite:coverage",
+    "caseId": "research-unusual-prerequisite",
+    "title": "research unusual prerequisite",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "required_vs_recommended_prerequisite",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case research-unusual-prerequisite"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:research-work-experience-counts:coverage",
+    "caseId": "research-work-experience-counts",
+    "title": "research work experience counts",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "eligibility",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case research-work-experience-counts"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:research-gre-required-optional-waived:coverage",
+    "caseId": "research-gre-required-optional-waived",
+    "title": "research gre required optional waived",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "conflicting_official_sources",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case research-gre-required-optional-waived"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:research-deadline-and-funding-scope:coverage",
+    "caseId": "research-deadline-and-funding-scope",
+    "title": "research deadline and funding scope",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "deadline_precedence,funding_interpretation",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case research-deadline-and-funding-scope"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:research-faculty-fit-and-mobility:coverage",
+    "caseId": "research-faculty-fit-and-mobility",
+    "title": "research faculty fit and mobility",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "professor_affiliation_change",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case research-faculty-fit-and-mobility"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:form-degree-requirements-versus-ceremony:coverage",
+    "caseId": "form-degree-requirements-versus-ceremony",
+    "title": "form degree requirements versus ceremony",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "ambiguous_degree_dates",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case form-degree-requirements-versus-ceremony"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:form-citizenship-versus-residence:coverage",
+    "caseId": "form-citizenship-versus-residence",
+    "title": "form citizenship versus residence",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "citizenship_vs_residence",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case form-citizenship-versus-residence"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:form-missing-major-gpa:coverage",
+    "caseId": "form-missing-major-gpa",
+    "title": "form missing major gpa",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "gpa_interpretation,missing_fact_search",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case form-missing-major-gpa"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:form-submitted-versus-accepted-paper:coverage",
+    "caseId": "form-submitted-versus-accepted-paper",
+    "title": "form submitted versus accepted paper",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "publication_status",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case form-submitted-versus-accepted-paper"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:document-programme-specific-cv:coverage",
+    "caseId": "document-programme-specific-cv",
+    "title": "document programme specific cv",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "approved_artifact_integrity",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case document-programme-specific-cv"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:document-cross-programme-factual-invariance:coverage",
+    "caseId": "document-cross-programme-factual-invariance",
+    "title": "document cross programme factual invariance",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "unsupported_claims,multi_application_isolation",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case document-cross-programme-factual-invariance"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:writer-detect-wrong-university-and-claim:coverage",
+    "caseId": "writer-detect-wrong-university-and-claim",
+    "title": "writer detect wrong university and claim",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "wrong_university_writer_draft,unsupported_writer_claims",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case writer-detect-wrong-university-and-claim"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:referee-academic-requirement:coverage",
+    "caseId": "referee-academic-requirement",
+    "title": "referee academic requirement",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "reference_requirement",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case referee-academic-requirement"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:email-wrong-thread-and-delayed-reply:coverage",
+    "caseId": "email-wrong-thread-and-delayed-reply",
+    "title": "email wrong thread and delayed reply",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "ambiguous_email_reply,delayed_reply",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case email-wrong-thread-and-delayed-reply"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:adversarial-late-upload-rejection:coverage",
+    "caseId": "adversarial-late-upload-rejection",
+    "title": "adversarial late upload rejection",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "wrong_upload,harness_recovery",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case adversarial-late-upload-rejection"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:adversarial-two-otps-and-stale-confirmation:coverage",
+    "caseId": "adversarial-two-otps-and-stale-confirmation",
+    "title": "adversarial two otps and stale confirmation",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "otp,stale_message,duplicate_prevention",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case adversarial-two-otps-and-stale-confirmation"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-funded-particle-physics:coverage",
+    "caseId": "e2e-funded-particle-physics",
+    "title": "e2e funded particle physics",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "gpa_interpretation,session_expiry",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-funded-particle-physics"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-engineering-to-ai:coverage",
+    "caseId": "e2e-engineering-to-ai",
+    "title": "e2e engineering to ai",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "ambiguous_degree_dates,unsupported_claims",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-engineering-to-ai"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-economics-public-policy:coverage",
+    "caseId": "e2e-economics-public-policy",
+    "title": "e2e economics public policy",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "funding_interpretation,deadline_precedence",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-economics-public-policy"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-computational-biology-phd:coverage",
+    "caseId": "e2e-computational-biology-phd",
+    "title": "e2e computational biology phd",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "professor_fit,browser_crash",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-computational-biology-phd"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-incomplete-records-recovery:coverage",
+    "caseId": "e2e-incomplete-records-recovery",
+    "title": "e2e incomplete records recovery",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "missing_fact_search,referee_delay",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-incomplete-records-recovery"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-writer-revision-recovery:coverage",
+    "caseId": "e2e-writer-revision-recovery",
+    "title": "e2e writer revision recovery",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "wrong_university_writer_draft,delayed_writer",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-writer-revision-recovery"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-referee-decline-and-replan:coverage",
+    "caseId": "e2e-referee-decline-and-replan",
+    "title": "e2e referee decline and replan",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "referee_decline,duplicate_prevention",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-referee-decline-and-replan"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-faculty-moved-institution:coverage",
+    "caseId": "e2e-faculty-moved-institution",
+    "title": "e2e faculty moved institution",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "professor_affiliation_change",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-faculty-moved-institution"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-session-expiry-and-upload-recovery:coverage",
+    "caseId": "e2e-session-expiry-and-upload-recovery",
+    "title": "e2e session expiry and upload recovery",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "otp,session_expiry,wrong_upload",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-session-expiry-and-upload-recovery"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-five-application-campaign:coverage",
+    "caseId": "e2e-five-application-campaign",
+    "title": "e2e five application campaign",
+    "source": "david_application_eval_v2 consolidated into canonical engine corpus",
+    "failureClass": "multi_application_isolation,case_rotation",
+    "status": "covered",
+    "reproduction": {
+      "command": "npm run benchmark:david -- --case e2e-five-application-campaign"
+    }
   }
 ]

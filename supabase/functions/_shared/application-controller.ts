@@ -31,7 +31,7 @@ export const applicationControllerStates = [
 ] as const
 export type ApplicationControllerState = typeof applicationControllerStates[number]
 
-export type FactVerification = 'VERIFIED' | 'UNRESOLVED'
+export type FactVerification = 'VERIFIED' | 'UNRESOLVED' | 'CONFLICTING'
 export type FactConfidence = 'high' | 'medium' | 'low'
 export type FactProvenanceKind =
   | 'user_statement'
@@ -71,8 +71,8 @@ function stableValue(value: unknown) {
 
 /**
  * A fact is usable only when one confirmed, non-inferred value wins without a
- * contradictory confirmed value. Missing and conflicting facts are both
- * UNRESOLVED; downstream callers never receive a placeholder as a value.
+ * contradictory confirmed value. Missing facts are UNRESOLVED and conflicting
+ * facts are CONFLICTING; downstream callers never receive either as a value.
  */
 export function resolveApplicationFact<T>(factId: string, candidates: FactCandidate<T>[]): FactResolution<T> {
   const admissible = candidates.filter(candidate =>
@@ -103,7 +103,7 @@ export function resolveApplicationFact<T>(factId: string, candidates: FactCandid
     return {
       factId,
       value: null,
-      verification: 'UNRESOLVED',
+      verification: 'CONFLICTING',
       provenance: null,
       confidence: 'low',
       conflict: true,

@@ -29,7 +29,7 @@ const requirements: RequirementNode[] = [
 describe('David application controller v2.1', () => {
   it('returns only VERIFIED or UNRESOLVED typed facts and blocks conflicts', () => {
     expect(resolveApplicationFact('degree', [source('BEng')])).toMatchObject({ verification: 'VERIFIED', value: 'BEng', conflict: false })
-    expect(resolveApplicationFact('degree', [source('BEng'), source('BSc', 'asset-2')])).toMatchObject({ verification: 'UNRESOLVED', value: null, conflict: true })
+    expect(resolveApplicationFact('degree', [source('BEng'), source('BSc', 'asset-2')])).toMatchObject({ verification: 'CONFLICTING', value: null, conflict: true })
     expect(resolveApplicationFact('major_gpa', [{ value: 'Not reported', provenance: { kind: 'generated_inference', sourceId: null, confirmed: true }, confidence: 'low' }])).toMatchObject({ verification: 'UNRESOLVED', value: null })
   })
 

@@ -1,5 +1,9 @@
 # David application benchmark methodology
 
+The active benchmark version is `david_application_engine_v3`. The deterministic engine owns requirement selection, dependencies, retries, waits, approvals, browser checkpoints, evidence, and completion. Model calls are limited to one strict semantic function for one requirement, then validated by code against case identity, allowed decisions, VERIFIED facts, and supplied evidence IDs.
+
+The canonical corpus combines the original 68 controlled cases with 26 hard v2 regressions. Ten of the imported cases are complete E2E workflows. Qualification requires every controlled case to pass, then three production-model repetitions of each imported E2E semantic decision. Safe live checks and production deployment remain separate gates.
+
 `david_application_eval_v1` is a frozen deterministic benchmark for David's graduate-application execution path. Its definitions and expected outcomes live in `spec.json`; the runner never rewrites them. Live university pages and connected Gmail checks are separate because those systems can change independently of the application executor.
 
 ## Isolation and safety
@@ -19,7 +23,7 @@ Primitive escalation records the task, step, input, URL, browser state, DOM repr
 
 ## Improvement loop
 
-`pnpm benchmark:david` runs the frozen suite. `--case <id>`, `--seed <number>`, and `--level atomic|end_to_end|all` focus a run without changing the frozen definitions. `pnpm benchmark:david:loop` assigns a fresh run ID to every iteration and writes a root-cause-ranked report to `loop-failure-ranking.json`.
+`npm run benchmark:david` runs the canonical suite. `--case <id>`, `--seed <number>`, and `--level atomic|end_to_end|all` focus a run without changing the frozen definitions. `--stochastic --repetitions 3` runs the production-model stability gate through the temporary isolated eval endpoint.
 
 Every run writes immutable run JSON, per-case traces, latest JSON/CSV, a scorecard, routing statistics, and concise failure reports. Genuine failures are appended to `regressions.json` and stay there after the implementation turns green.
 

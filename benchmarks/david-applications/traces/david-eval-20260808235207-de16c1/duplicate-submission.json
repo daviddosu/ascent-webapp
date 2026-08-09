@@ -1,0 +1,301 @@
+[
+  {
+    "at": "2026-08-08T23:54:23.394Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "duplicate-submission",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:25.421Z",
+    "component": "browser",
+    "event": "navigation_observed",
+    "caseId": "duplicate-submission",
+    "data": {
+      "url": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=account",
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=account",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260808235207-de16c1 Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:26.725Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "duplicate-submission",
+    "data": {
+      "action": {
+        "action": "click",
+        "target": "text:Review",
+        "value": null
+      },
+      "observation": {
+        "title": "Application portal · review",
+        "url": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=review",
+        "headings": [
+          "Final review"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260808235207-de16c1 Final review Programme Controlled University PhD in Computational Physics Funding Full tuition waiver and stipend All required sections are saved. Submission remains a separate approved action. Submit application",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Submit application",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:26.726Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "duplicate-submission",
+    "data": {
+      "kind": "page_observation",
+      "verified": true,
+      "details": {
+        "step": "review",
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260808235207-de16c1 Final review Programme Controlled University PhD in Computational Physics Funding Full tuition waiver and stipend All required sections are saved. Submission remains a separate approved action. Submit application"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:26.726Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "duplicate-submission",
+    "data": {
+      "action": "browser.submit_application",
+      "key": "portal-submit:duplicate-submission",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:30.773Z",
+    "component": "browser",
+    "event": "submission_confirmation_observed",
+    "caseId": "duplicate-submission",
+    "data": {
+      "confirmationObserved": true,
+      "observation": {
+        "title": "Application submitted",
+        "url": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=review",
+        "headings": [
+          "Application submitted"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260808235207-de16c1 Application submitted Application ID: SC-TEST-2027-001 A confirmation email was sent by the controlled admissions system. Submission confirmed once. This controlled fixture stores no applicant values.",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:54840/api/application-portal-fixture?run=david-eval-20260808235207-de16c1&seed=57&step=review"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:30.774Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "duplicate-submission",
+    "data": {
+      "kind": "submission_confirmation",
+      "verified": true,
+      "id": "SC-TEST-2027-001",
+      "details": {
+        "applicationId": "SC-TEST-2027-001"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:30.774Z",
+    "component": "persistence",
+    "event": "duplicate_action_blocked",
+    "caseId": "duplicate-submission",
+    "data": {
+      "action": "browser.submit_application",
+      "key": "portal-submit:duplicate-submission",
+      "providerId": "SC-TEST-2027-001"
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:23.394Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "duplicate-submission",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:30.775Z",
+    "component": "verification",
+    "event": "duplicate_submission_prevented",
+    "caseId": "duplicate-submission",
+    "data": {
+      "error": {
+        "code": "duplicate_action",
+        "message": "The application submission was already confirmed and will not be repeated.",
+        "retryable": false,
+        "details": null
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:54:30.775Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "duplicate-submission",
+    "data": {
+      "value": true
+    }
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "writer-question",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "writer-question",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "writer-question"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "gmail",
+    "event": "provider_reply_received",
+    "caseId": "writer-question",
+    "data": {
+      "messageId": "benchmark-reply-david-eval-20260808235207-de16c1-1",
+      "threadId": "thread-writer-question-writer_question",
+      "purpose": "writer_question"
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "writer-question",
+    "data": {
+      "kind": "provider_reply",
+      "verified": true,
+      "providerId": "benchmark-reply-david-eval-20260808235207-de16c1-1",
+      "threadId": "thread-writer-question-writer_question",
+      "details": {
+        "from": "daviddosuu@gmail.com",
+        "purpose": "writer_question"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "writer-question",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "writer-question",
+    "data": {
+      "value": true
+    }
+  }
+]

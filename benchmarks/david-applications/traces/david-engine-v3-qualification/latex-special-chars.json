@@ -1,0 +1,79 @@
+[
+  {
+    "at": "2026-08-09T00:08:29.612Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "latex-special-chars",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:30.117Z",
+    "component": "documents",
+    "event": "artifact_compiled_and_verified",
+    "caseId": "latex-special-chars",
+    "data": {
+      "templateId": "graduate_application_cv_v1",
+      "pageTarget": "one_page",
+      "pageCount": 1,
+      "checksum": "683bffdef238e0f7c01f5ef859ed8781b8b57a2a9d1d164d96dd9d0f46ab3ea4"
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:30.117Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "latex-special-chars",
+    "data": {
+      "kind": "artifact_checksum",
+      "verified": true,
+      "checksum": "683bffdef238e0f7c01f5ef859ed8781b8b57a2a9d1d164d96dd9d0f46ab3ea4",
+      "details": {
+        "pageCount": 1,
+        "atsIdentity": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:29.612Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "latex-special-chars",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:30.117Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "latex-special-chars",
+    "data": {
+      "value": true
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:30.117Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "latex-special-chars",
+    "data": {
+      "value": true
+    }
+  }
+]

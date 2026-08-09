@@ -1,0 +1,55 @@
+[
+  {
+    "at": "2026-08-09T00:08:30.720Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "replace-referee",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:30.720Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "replace-referee",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "replace-referee"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:30.720Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "replace-referee",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T00:08:30.721Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "replace-referee",
+    "data": {
+      "value": true
+    }
+  }
+]

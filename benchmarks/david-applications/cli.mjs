@@ -9,6 +9,18 @@ const valueAfter = name => {
   const index = args.indexOf(name)
   return index >= 0 ? args[index + 1] ?? '' : ''
 }
+if (args.includes('--stochastic')) {
+  const endpoint = process.env.DAVID_EVAL_ENDPOINT || ''
+  const token = process.env.DAVID_EVAL_TOKEN || ''
+  if (!endpoint || !token) {
+    console.error('DAVID_EVAL_ENDPOINT and DAVID_EVAL_TOKEN are required for stochastic qualification.')
+    process.exit(2)
+  }
+  const { runCanonicalStochastic } = await import('./stochastic-runner.ts')
+  const report = await runCanonicalStochastic({ endpoint, token, repetitions: Number(valueAfter('--repetitions') || 3), runId: valueAfter('--run-id') || undefined })
+  console.log(JSON.stringify({ runId: report.runId, qualified: report.qualified, passed: report.passed, samples: report.samples, totalCostUsd: report.totalCostUsd }, null, 2))
+  process.exit(report.qualified ? 0 : 1)
+}
 const caseId = valueAfter('--case')
 const seed = valueAfter('--seed')
 const level = valueAfter('--level')

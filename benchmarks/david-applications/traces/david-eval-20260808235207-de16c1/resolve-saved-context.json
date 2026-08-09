@@ -1,0 +1,108 @@
+[
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "resolve-saved-context"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:resolve-saved-context",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "gmail",
+    "event": "provider_send_confirmed",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "messageId": "benchmark-msg-david-eval-20260808235207-de16c1-1",
+      "threadId": "thread-resolve-saved-context-writer_question",
+      "purpose": "writer_answer",
+      "to": "daviddosuu@gmail.com"
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "kind": "provider_message",
+      "verified": true,
+      "providerId": "benchmark-msg-david-eval-20260808235207-de16c1-1",
+      "threadId": "thread-resolve-saved-context-writer_question",
+      "details": {
+        "purpose": "writer_answer",
+        "to": "daviddosuu@gmail.com"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "kind": "provider_thread",
+      "verified": true,
+      "threadId": "thread-resolve-saved-context-writer_question",
+      "details": {
+        "caseId": "resolve-saved-context"
+      }
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-08T23:52:10.879Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "resolve-saved-context",
+    "data": {
+      "value": true
+    }
+  }
+]

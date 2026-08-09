@@ -63,6 +63,7 @@ export type FrozenSpec = {
   atomicCases: FrozenCase[]
   endToEndCases: FrozenCase[]
   liveReadOnlyWebCases: FrozenCase[]
+  engineCases?: Array<{ id: string; level: 'semantic' | 'system' | 'end_to_end'; semanticFunction?: string; features: string[] }>
 }
 
 export type TraceEvent = {
@@ -141,6 +142,18 @@ export type BenchmarkRun = {
   liveEmail: Record<string, unknown>
   liveReadOnlyWeb: Record<string, unknown>
   blockers: string[]
+  engine?: {
+    version: string
+    metrics: Record<string, number>
+    results: Array<Record<string, unknown>>
+  }
+  productionReadiness?: {
+    qualified: boolean
+    deterministicGatePassed: boolean
+    stochasticGatePassed: boolean
+    liveGatePassed: boolean
+    deploymentGatePassed: boolean
+  }
 }
 
 function now() {

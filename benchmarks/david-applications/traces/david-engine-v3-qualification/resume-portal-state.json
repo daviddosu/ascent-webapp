@@ -1,0 +1,702 @@
+[
+  {
+    "at": "2026-08-09T00:10:19.614Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "resume-portal-state",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:20.794Z",
+    "component": "browser",
+    "event": "navigation_observed",
+    "caseId": "resume-portal-state",
+    "data": {
+      "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account",
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-engine-v3-qualification Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:22.254Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "resume-portal-state",
+    "data": {
+      "action": {
+        "action": "click",
+        "target": "text:Profile",
+        "value": null
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-engine-v3-qualification Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:23.512Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "resume-portal-state",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Legal name",
+        "value": "David Dosu"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-engine-v3-qualification Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:24.744Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "resume-portal-state",
+    "data": {
+      "action": {
+        "action": "select",
+        "target": "css:select[name=\"nationality\"]",
+        "value": "Nigeria"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-engine-v3-qualification Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:26.098Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "resume-portal-state",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Research interests",
+        "value": "Computational physics"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-engine-v3-qualification Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "Computational physics",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:27.467Z",
+    "component": "browser",
+    "event": "section_save_observed",
+    "caseId": "resume-portal-state",
+    "data": {
+      "step": "profile",
+      "target": "role:button:Save section",
+      "confirmationObserved": true,
+      "observation": {
+        "title": "Section saved",
+        "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile",
+        "headings": [
+          "Section saved"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-engine-v3-qualification Section saved profile section saved and checkpointed. Continue editing profile",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=review"
+          },
+          {
+            "text": "Continue editing profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:27.467Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "resume-portal-state",
+    "data": {
+      "kind": "saved_section",
+      "verified": true,
+      "details": {
+        "step": "profile",
+        "fields": []
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:27.467Z",
+    "component": "persistence",
+    "event": "checkpoint_saved",
+    "caseId": "resume-portal-state",
+    "data": {
+      "section": "profile",
+      "applicationCaseId": "resume-portal-state"
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:33.995Z",
+    "component": "harness",
+    "event": "resumed_from_preserved_state",
+    "caseId": "resume-portal-state",
+    "data": {
+      "cleanUrl": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account",
+      "replayedActions": 4,
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-engine-v3-qualification Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:59156/api/application-portal-fixture?run=david-engine-v3-qualification&seed=54&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "Computational physics",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:33.996Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "resume-portal-state",
+    "data": {
+      "kind": "checkpoint",
+      "verified": true,
+      "details": {
+        "replayedActions": 4,
+        "resumeFrom": "confirmedState"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:19.614Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "resume-portal-state",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T00:10:33.996Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "resume-portal-state",
+    "data": {
+      "value": true
+    }
+  }
+]

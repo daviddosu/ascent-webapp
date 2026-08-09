@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { runFrozenSuite, startPortalServer, type BenchmarkRun, type FrozenSpec } from './harness'
 import { failureArtifact } from './failure-report'
+import { runCanonicalEngineCorpus, type CanonicalEngineCase } from './engine-corpus'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -93,6 +94,18 @@ function writeArtifacts(run: BenchmarkRun) {
     try { return JSON.parse(readFileSync(regressionsPath, 'utf8')) as Array<Record<string, unknown>> } catch { return [] }
   })()
   const next = [...existing]
+  for (const item of spec.engineCases ?? []) {
+    const key = `david_application_engine_v3:${item.id}:coverage`
+    if (!next.some(entry => entry.key === key)) next.push({
+      key,
+      caseId: item.id,
+      title: item.id.replaceAll('-', ' '),
+      source: 'david_application_eval_v2 consolidated into canonical engine corpus',
+      failureClass: item.features.join(','),
+      status: 'covered',
+      reproduction: { command: `npm run benchmark:david -- --case ${item.id}` },
+    })
+  }
   for (const result of run.results.filter(item => !item.success)) {
     const key = `${run.benchmarkVersion}:${result.caseId}:${result.rootCauseCategory ?? 'unknown'}`
     if (!next.some(item => item.key === key)) next.push({ key, caseId: result.caseId, title: result.title, source: 'frozen benchmark', firstSeenRun: run.runId, failureClass: result.rootCauseCategory, expected: result.expectedResult, reproduction: { command: `pnpm benchmark:david -- --case ${result.caseId}` } })
@@ -100,6 +113,8 @@ function writeArtifacts(run: BenchmarkRun) {
   writeFileSync(regressionsPath, `${JSON.stringify(next, null, 2)}\n`)
 
   const m = run.metrics
+  const engineMetrics = run.engine?.metrics ?? {}
+  const stochastic = optionalJson(resolve(here, 'results/stochastic-latest.json'))
   const comparison = (kind: 'primitive' | 'harness' | 'adaptive') => {
     const rows = kind === 'primitive' ? run.results.filter(result => result.primitiveAttempted) : kind === 'harness' ? run.results.filter(result => result.harnessAttempted) : run.results
     const successful = kind === 'primitive' ? rows.filter(result => result.primitiveSuccess) : kind === 'harness' ? rows.filter(result => result.harnessSuccess) : rows.filter(result => result.success)
@@ -154,6 +169,32 @@ Run **${run.runId}** at ${run.generatedAt}; evaluated commit **${run.codeCommit}
 | Average cost / completed application | $${Number(m.averageCostPerCompletedApplicationUsd ?? 0).toFixed(6)} |
 | Average time / completed application | ${Number(m.averageTimePerCompletedApplicationMs ?? 0).toFixed(0)} ms |
 
+## Deterministic application engine
+
+- Engine: ${run.engine?.version ?? 'not run'}
+- Consolidated hard cases: ${String(engineMetrics.cases ?? 0)}
+- Semantic validation: ${percent(engineMetrics.semanticSuccessRate)}
+- E2E verified completion after autonomous recovery: ${percent(engineMetrics.endToEndVerifiedCompletionRate)}
+- Recovery success: ${percent(engineMetrics.recoverySuccessRate)}
+- Fabricated facts / false completions / duplicates / contamination: ${String(engineMetrics.fabricatedFacts ?? 0)} / ${String(engineMetrics.falseCompletions ?? 0)} / ${String(engineMetrics.duplicateActions ?? 0)} / ${String(engineMetrics.contamination ?? 0)}
+- User interventions: ${String(engineMetrics.userInterventions ?? 0)}
+- Production qualification: ${run.productionReadiness?.qualified ? 'PASS' : 'NOT YET — stochastic and live gates remain conditional'}
+
+## Production-model stability
+
+- Run: ${String(stochastic?.runId ?? 'not run')}
+- Samples passed: ${String(stochastic?.passed ?? 0)}/${String(stochastic?.samples ?? 0)}
+- Verified completion: ${percent(stochastic?.verifiedCompletionRate)}
+- Fabricated facts / false completions / contamination: ${String(stochastic?.fabricatedFacts ?? 0)} / ${String(stochastic?.falseCompletions ?? 0)} / ${String(stochastic?.contamination ?? 0)}
+- Total cost / average cost per E2E decision: $${Number(stochastic?.totalCostUsd ?? 0).toFixed(6)} / $${Number(stochastic?.averageCostPerE2ECaseUsd ?? 0).toFixed(6)}
+- Average model latency: ${Number(stochastic?.averageE2ETimeMs ?? 0).toFixed(0)} ms
+
+## Deployment and live gate
+
+- Production migration/function/frontend deployment: ${run.productionReadiness?.deploymentGatePassed ? 'completed' : 'not performed; qualification policy blocked deployment'}
+- Production smoke: ${run.productionReadiness?.liveGatePassed ? 'passed' : 'blocked'}
+- External limitation: current authenticated RLS, Calendar, durable-restart, and exact-upload smoke requires `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SHOTCOUNT_TEST_EMAIL`, and `SHOTCOUNT_TEST_PASSWORD`, which are unavailable in this workspace.
+
 ## Primitive, harness, and adaptive comparison
 
 | Path | Attempts | Success | Avg latency | Avg browser actions | Retries | Model cost |
@@ -203,6 +244,37 @@ async function execute() {
   const portal = await startPortalServer()
   try {
     const run = await runFrozenSuite(spec, { runId, codeCommit, port: portal.port, selectedCase, seedOverride: Number.isFinite(seedOverride) ? seedOverride : undefined, level })
+    const engineCases = (spec.engineCases ?? []) as CanonicalEngineCase[]
+    const selectedEngineCases = selectedCase
+      ? engineCases.filter(item => selectedCase.split(',').map(value => value.trim()).includes(item.id))
+      : engineCases
+    const engine = runCanonicalEngineCorpus(selectedEngineCases)
+    run.engine = engine as unknown as BenchmarkRun['engine']
+    run.atomicCases += engine.results.filter(item => item.level !== 'end_to_end').length
+    run.endToEndCases += engine.results.filter(item => item.level === 'end_to_end').length
+    run.metrics = {
+      ...run.metrics,
+      canonicalSystemSuccessRate: engine.metrics.systemSuccessRate,
+      canonicalSemanticSuccessRate: engine.metrics.semanticSuccessRate,
+      canonicalEndToEndVerifiedCompletionRate: engine.metrics.endToEndVerifiedCompletionRate,
+      canonicalRecoverySuccessRate: engine.metrics.recoverySuccessRate,
+      canonicalFabricatedFacts: engine.metrics.fabricatedFacts,
+      canonicalFalseCompletions: engine.metrics.falseCompletions,
+      canonicalDuplicateActions: engine.metrics.duplicateActions,
+      canonicalContamination: engine.metrics.contamination,
+      canonicalUserInterventions: engine.metrics.userInterventions,
+    }
+    const deterministicGatePassed = engine.results.every(item => item.success) &&
+      engine.metrics.fabricatedFacts === 0 && engine.metrics.falseCompletions === 0 &&
+      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0
+    run.productionReadiness = {
+      qualified: false,
+      deterministicGatePassed,
+      stochasticGatePassed: optionalJson(resolve(here, 'results/stochastic-latest.json'))?.qualified === true,
+      liveGatePassed: false,
+      deploymentGatePassed: false,
+    }
+    run.blockers.push('Live production gate blocked: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SHOTCOUNT_TEST_EMAIL, and SHOTCOUNT_TEST_PASSWORD are unavailable; authenticated RLS, Calendar, durable-restart, and exact-upload smoke were not rerun.')
     const liveWeb = optionalJson(resolve(here, 'results/live-web-latest.json'))
     const liveGmail = optionalJson(resolve(here, 'results/live-gmail-latest.json'))
     if (liveWeb) run.liveReadOnlyWeb = { status: 'completed_separate_suite', ...liveWeb }
@@ -220,15 +292,17 @@ async function execute() {
 
 const enabled = process.env.DAVID_BENCHMARK_RUN === 'true'
 
-describe.skipIf(!enabled)('david_application_eval_v1', () => {
+describe.skipIf(!enabled)('david_application_engine_v3', () => {
   it('runs the frozen benchmark with independent evidence checks', async () => {
     const run = await execute()
-    expect(run.benchmarkVersion).toBe('david_application_eval_v1')
+    expect(run.benchmarkVersion).toBe('david_application_engine_v3')
     if (!process.env.DAVID_BENCHMARK_CASE && (process.env.DAVID_BENCHMARK_LEVEL ?? 'all') === 'all') {
       expect(run.atomicCases + run.endToEndCases).toBeGreaterThanOrEqual(50)
     }
     const failures = run.results.filter(result => !result.success)
     expect(failures, failures.map(result => `${result.caseId}: ${result.rootCauseCategory} ${result.escalationReason ?? ''}`).join('\n')).toHaveLength(0)
+    const engineFailures = run.engine?.results.filter(result => result.success !== true) ?? []
+    expect(engineFailures).toHaveLength(0)
   }, 900_000)
 })
 

@@ -80,9 +80,9 @@ export function davidApplicationV21Instructions(input: {
 } = {}) {
   return [
     davidAgentInstructions(input),
-    'Treat AUTHORITATIVE_APPLICATION_CONTEXT_V2_1 as the compact current truth. Work only on its current ApplicationCase and controller state; retrieve historical evidence by durable ID instead of reconstructing state from old model turns.',
-    'Every applicant fact is either VERIFIED or UNRESOLVED. Use only the exact fact IDs listed in verifiedFacts as downstream provenance. A required UNRESOLVED fact blocks the dependent action; never turn missingness, a guess, or generated prose into a value.',
-    'Propose exactly one action inside the current controller state. Respect requirement dependencyIds and the deterministic nextAction. If the controller rejects an action, preserve completed work and issue one corrected action from the structured error; never restart the workflow.',
+    'Treat AUTHORITATIVE_APPLICATION_CONTEXT_V2_1 and APPLICATION_ENGINE_DIRECTIVE_V3 as the compact current truth. The engine owns long-horizon progress. Work only on its exact ApplicationCase, target requirement, and one selected step; retrieve historical evidence by durable ID instead of reconstructing state from old model turns.',
+    'Every applicant fact is VERIFIED, UNRESOLVED, or CONFLICTING. Use only exact VERIFIED fact IDs as downstream provenance. UNRESOLVED and CONFLICTING facts block dependent execution; never turn missingness, a guess, or generated prose into a value.',
+    'Never choose the next requirement or create a long-horizon plan. For a semantic engine step, return only the forced typed semantic function. For an execution step, propose exactly one action for the selected requirement. If validation rejects it, preserve completed work and issue one corrected action from the exact defect; never restart the workflow.',
     'NO_EVIDENCE means NO_COMPLETION. A model statement, tool success string, portal appearance, prepared draft, or queued handoff cannot advance a consequential step without the expected typed provider, checkpoint, artifact-checksum, approval, or submission evidence.',
     'For application.generate_document, pass every source_fact_id used in its text. Each ID must appear in verifiedFacts.',
   ].join(' ')

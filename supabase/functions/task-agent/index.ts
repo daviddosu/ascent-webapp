@@ -71,6 +71,20 @@ import {
 } from '../_shared/david-applications.ts'
 import { isApplicationIntent } from '../_shared/application.ts'
 import {
+  applicationEngineDirective,
+  applicationSemanticFunctions,
+  createApplicationEngineState,
+  planApplicationEngineStep,
+  validateSemanticDecision,
+  type ApplicationEngineState,
+  type ApplicationObservation,
+  type EngineRequirement,
+  type EngineStep,
+  type ObservationKind,
+  type RequirementType,
+  type SemanticDecision,
+} from '../_shared/application-engine.ts'
+import {
   applicationControllerStateFromLegacy,
   buildAuthoritativeApplicationContext,
   recoverInvalidApplicationAction,
@@ -2492,7 +2506,43 @@ type ApplicationControllerSnapshot = {
   completedIdempotencyKeys: string[]
   readinessVerified: boolean
   submissionApproved: boolean
+  engineState: ApplicationEngineState
+  engineStep: EngineStep
   serializedContext: string
+}
+
+function engineRequirementType(name: string, responsible: string): RequirementType {
+  const value = name.toLocaleLowerCase()
+  if (/eligib|prerequisite|admission requirement/.test(value)) return 'eligibility'
+  if (/deadline/.test(value)) return 'deadline'
+  if (/funding|scholarship|fee/.test(value)) return 'funding'
+  if (/professor|supervisor|faculty/.test(value) || responsible === 'institution') return 'professor'
+  if (/referee|reference|recommendation/.test(value) || responsible === 'referee') return 'referee'
+  if (/writer|statement|essay|draft/.test(value) || responsible === 'writer') return 'writer'
+  if (/upload/.test(value)) return 'artifact_upload'
+  if (/document|cv|résumé|resume|transcript/.test(value)) return 'document'
+  if (/submit/.test(value)) return 'submission'
+  if (/approval|declaration/.test(value)) return 'approval'
+  if (/email|message|reply|contact/.test(value)) return 'communication'
+  if (/field/.test(value)) return 'portal_field'
+  if (/portal|section|form/.test(value)) return 'portal_section'
+  return 'official_requirement'
+}
+
+function defaultEngineEvidenceContract(type: RequirementType): ObservationKind[] {
+  if (['eligibility', 'official_requirement', 'deadline', 'funding', 'professor', 'profile_fact'].includes(type)) return ['web']
+  if (['document', 'writer', 'artifact_upload'].includes(type)) return ['artifact']
+  if (['referee', 'communication', 'post_submission'].includes(type)) return ['gmail']
+  if (type === 'submission') return ['submission']
+  return ['portal']
+}
+
+function engineObservationKind(type: ControllerEvidenceType): ApplicationObservation['kind'] {
+  if (['OFFICIAL_SOURCE', 'PROFILE_FACT'].includes(type)) return 'web'
+  if (['PROVIDER_MESSAGE', 'PROVIDER_THREAD', 'REFEREE_STATUS'].includes(type)) return 'gmail'
+  if (['DOCUMENT_CHECKSUM', 'WRITER_ARTIFACT', 'UPLOAD_PRESENCE'].includes(type)) return 'artifact'
+  if (['SUBMISSION_CONFIRMATION', 'APPLICATION_ID'].includes(type)) return 'submission'
+  return 'portal'
 }
 
 function controllerRequirementStatus(value: string): RequirementNode['status'] {
@@ -2574,7 +2624,7 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     caseId ? admin.from('application_contacts').select('id,kind,provider_contact_id,gmail_thread_id,last_provider_message_id,data').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('human_assignments').select('id,status,deadline_at,final_artifact_id').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_communications').select('id,direction,classification,provider_message_id,provider_thread_id,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
-    caseId ? admin.from('portal_checkpoints').select('id,application_case_id,verified,section,save_confirmation,session_information,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('portal_checkpoints').select('id,application_case_id,verified,portal,section,entered_values,save_confirmation,session_information,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_evidence').select('id,application_case_id,kind,source_url,provider_message_id,provider_thread_id,asset_id,metadata,captured_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('captured_at', { ascending: false }).limit(80) : Promise.resolve({ data: [], error: null }),
     admin.from('agent_approvals').select('id,kind,status,updated_at').eq('run_id', run.id).eq('user_id', run.user_id).order('updated_at', { ascending: false }).limit(20),
     admin.from('agent_actions').select('idempotency_key,status,provider_action_id,tool_name').eq('run_id', run.id).eq('user_id', run.user_id).eq('status', 'succeeded').not('provider_action_id', 'is', null).limit(200),
@@ -2684,9 +2734,58 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
       controller_state: state,
       controller_version: 'david-application-controller@2.1',
       controller_updated_at: new Date().toISOString(),
+      engine_version: 'david-application-engine@3',
+      engine_status: state === 'COMPLETE' ? 'COMPLETE' : state === 'BLOCKED' ? 'BLOCKED' : 'ACTIVE',
+      engine_updated_at: new Date().toISOString(),
     }).eq('id', caseId).eq('user_id', run.user_id)
     if (persistedController.error && !['42703', 'PGRST204'].includes(persistedController.error.code ?? '')) throw new Error(persistedController.error.message)
   }
+  const engineRequirements: EngineRequirement[] = requirements.map(requirement => {
+    const raw = rawRequirements.find(item => safeString(item.id, 80) === requirement.id)
+    const contract = recordValue(raw?.evidence_contract)
+    const contractKinds = stringArray(contract.kinds ?? contract.requiredKinds, 40)
+      .filter(kind => ['web', 'gmail', 'portal', 'artifact', 'calendar', 'submission'].includes(kind)) as EngineRequirement['evidenceContract']
+    const type = engineRequirementType(requirement.name, requirement.responsible)
+    return {
+      ...requirement,
+      type,
+      source: { id: requirement.sourceId ?? `requirement:${requirement.id}`, url: safeString(recordValue(raw?.source).url, 2_000) || null, authority: requirement.sourceId ? 'official' : 'generated' },
+      evidenceContract: contractKinds.length ? contractKinds : defaultEngineEvidenceContract(type),
+      retry: { attempts: Number(recordValue(raw?.source).retry_attempts ?? 0), maximumAttempts: 3, lastFailure: requirement.blocker, nextAttemptAt: null, escalated: false },
+      requiredFactIds: stringArray(contract.required_fact_ids ?? contract.requiredFactIds, 500),
+      resolutionTier: null,
+      waitUntil: safeString(recordValue(raw?.source).wait_until, 80) || null,
+    }
+  })
+  const semanticDecisions = Array.isArray(run.context?.application_semantic_decisions)
+    ? run.context.application_semantic_decisions as Array<Record<string, unknown>>
+    : []
+  const engineObservations: ApplicationObservation[] = evidence.map(item => {
+    const kind = engineObservationKind(item.type)
+    const base = { id: item.id, caseId: item.caseId, requirementId: requirements.find(requirement => requirement.evidenceIds.includes(item.id))?.id ?? '', kind, verified: item.verified, evidenceIds: [item.id], observedAt: item.capturedAt ?? new Date().toISOString() }
+    if (kind === 'gmail') return { ...base, kind, providerMessageId: item.providerId ?? '', providerThreadId: item.threadId ?? '', expectedRecipient: null, actualRecipients: [], direction: 'outbound' }
+    if (kind === 'artifact') return { ...base, kind, artifactId: item.artifactId ?? '', checksum: item.checksum ?? '', approved: true, sourceFactIds: [] }
+    if (kind === 'submission') return { ...base, kind, applicationId: item.providerId ?? safeString(caseResult.data?.application_id, 160), confirmation: item.sourceId ?? item.id }
+    if (kind === 'web') return { ...base, kind, sourceUrl: item.sourceId ?? '', authoritative: true, excerpts: [{ evidenceId: item.id, text: 'Persisted source evidence' }] }
+    return { ...base, kind: 'portal', portal: '', section: '', persistedValues: {}, readBackValues: {}, saveConfirmation: item.id, sessionId: item.sourceId ?? '' }
+  })
+  for (const decision of semanticDecisions) {
+    const requirementId = safeString(decision.requirementId, 80)
+    const requirement = engineRequirements.find(item => item.id === requirementId)
+    const functionName = safeString(decision.function, 120)
+    if (!requirement || !applicationSemanticFunctions.includes(functionName as typeof applicationSemanticFunctions[number])) continue
+    engineObservations.push({ id: safeString(decision.id, 160) || `semantic:${requirementId}:${functionName}`, caseId: caseId ?? '', requirementId, kind: 'web', verified: true, evidenceIds: [`semantic:${functionName}`, ...stringArray(decision.evidenceIds, 160)], observedAt: safeString(decision.observedAt, 80) || new Date().toISOString(), sourceUrl: requirement.source.url ?? 'https://semantic.invalid', authoritative: false, excerpts: [] })
+  }
+  const engineState = createApplicationEngineState({
+    caseId: caseId ?? '', objective: run.objective,
+    status: state === 'COMPLETE' ? 'COMPLETE' : state === 'BLOCKED' ? 'BLOCKED' : state === 'POST_SUBMISSION' ? 'SUBMITTED' : 'ACTIVE',
+    requirements: engineRequirements, facts, observations: engineObservations,
+    completedActionKeys: (actionsResult.data ?? []).map(action => safeString(action.idempotency_key, 300)).filter(Boolean),
+    approvals: (approvalsResult.data ?? []).map(approval => ({ id: safeString(approval.id, 80), kind: safeString(approval.kind, 80), status: ['approved', 'rejected'].includes(safeString(approval.status, 40)) ? safeString(approval.status, 40) as 'approved' | 'rejected' : 'pending', artifactIds: [] })),
+    browser: { portal: safeString(latestCheckpoint?.portal, 200) || null, section: safeString(latestCheckpoint?.section, 160) || null, sessionId: safeString(recordValue(latestCheckpoint?.session_information).sessionId, 80) || null, checkpointObservationId: safeString(latestCheckpoint?.id, 80) || null },
+    communication: (communicationsResult.data ?? []).map(item => ({ requirementId: '', providerMessageId: safeString(item.provider_message_id, 256), providerThreadId: safeString(item.provider_thread_id, 256), state: safeString(item.classification, 80) })),
+  })
+  const engineStep = planApplicationEngineStep(engineState)
   return {
     state,
     caseId,
@@ -2696,7 +2795,9 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     completedIdempotencyKeys: (actionsResult.data ?? []).map(action => safeString(action.idempotency_key, 300)).filter(Boolean),
     readinessVerified,
     submissionApproved,
-    serializedContext: serializeAuthoritativeApplicationContext(authoritativeContext),
+    engineState,
+    engineStep,
+    serializedContext: `${serializeAuthoritativeApplicationContext(authoritativeContext)}\n${applicationEngineDirective(engineState, engineStep)}`,
   }
 }
 
@@ -2771,6 +2872,36 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     consequential,
     idempotencyKey,
   }
+}
+
+function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) {
+  const step = snapshot.engineStep
+  if (step.kind === 'SEMANTIC_DECISION') return new Set([`application.${step.request.function}`])
+  if (step.kind === 'COMPLETE') return new Set(['agent.complete'])
+  if (step.kind === 'USER_HANDOFF') return new Set(['agent.request_context'])
+  if (step.kind === 'WAIT') return new Set(['application.request_roon'])
+  if (step.kind === 'BLOCKED') return new Set(['agent.request_context'])
+  if (step.kind === 'VERIFY') return new Set(['application.update_requirement', 'application.build_readiness_report', 'application.record_evidence'])
+  const requirement = snapshot.engineState.requirements.find(item => item.id === step.requirementId)
+  const byType: Partial<Record<RequirementType, string[]>> = {
+    profile_fact: ['application.record_evidence', 'agent.request_context'],
+    eligibility: ['application.record_evidence', 'application.update_requirement'],
+    official_requirement: ['application.record_evidence', 'application.update_requirement'],
+    deadline: ['application.record_evidence', 'application.update_requirement'],
+    funding: ['application.record_evidence', 'application.update_requirement'],
+    document: ['application.generate_document', 'application.generate_cv', 'application.update_requirement'],
+    writer: ['application.create_human_assignment', 'application.request_roon', 'application.update_requirement'],
+    referee: ['application.build_referee_support_pack', 'application.request_roon', 'application.update_requirement'],
+    professor: ['application.record_contact', 'application.request_roon', 'application.update_requirement'],
+    communication: ['application.request_roon', 'application.record_communication', 'application.update_requirement'],
+    portal_field: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint'],
+    portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint'],
+    artifact_upload: ['browser.observe', 'browser.act', 'application.record_portal_checkpoint', 'application.record_evidence'],
+    approval: ['application.build_readiness_report', 'application.update_requirement'],
+    submission: ['application.submit'],
+    post_submission: ['application.request_roon', 'application.record_evidence', 'application.update_requirement'],
+  }
+  return new Set(byType[requirement?.type ?? 'official_requirement'] ?? ['application.update_requirement'])
 }
 
 async function executeProviderTool(
@@ -5071,12 +5202,16 @@ async function callOpenAI(
   openaiKey: string,
   run: AgentRunRow,
   history: OpenAIOutputItem[],
+  applicationController?: ApplicationControllerSnapshot | null,
+  semanticRepair = false,
 ) {
   const model = 'gpt-5.6-luna'
   const specialist = getSpecialist(run.active_specialist_id)
   if (!specialist) throw new Error('The task has no valid active specialist contract.')
+  const engineTools = applicationController?.caseId ? toolsForApplicationEngineStep(applicationController) : null
   const tools: Array<Record<string, unknown>> = agentToolDefinitions
     .filter(tool => specialistCanUseTool(specialist.id, tool.name))
+    .filter(tool => !engineTools || engineTools.has(tool.name))
     .map(tool => {
       if (specialist.id !== 'david' || tool.name !== 'application.generate_document') return tool
       const parameters = recordValue(tool.parameters)
@@ -5117,7 +5252,9 @@ async function callOpenAI(
     },
     body: JSON.stringify({
       model,
-      reasoning: DAVID_APPLICATION_V21_MODEL_CONFIG.reasoning,
+      reasoning: semanticRepair && applicationController?.engineStep.kind === 'SEMANTIC_DECISION'
+        ? { effort: 'high' }
+        : DAVID_APPLICATION_V21_MODEL_CONFIG.reasoning,
       store: DAVID_APPLICATION_V21_MODEL_CONFIG.store,
       // Email and scheduling turns are short, tool-led decisions. Keeping
       // their response budget tight removes avoidable approval latency while
@@ -7858,6 +7995,7 @@ async function advanceRun(
   let history = ephemeralHistoryByRun.get(current.id)
     ? [...ephemeralHistoryByRun.get(current.id)!]
     : await loadModelHistory(admin, current)
+  let semanticRepairAttempts = 0
 
   for (let iteration = 0; iteration < maximumModelSteps; iteration += 1) {
     const applicationController = await loadApplicationControllerSnapshot(admin, current)
@@ -7867,7 +8005,7 @@ async function advanceRun(
           content: [{ type: 'input_text', text: applicationController.serializedContext }],
         }]
       : history
-    const response = await callOpenAI(openaiKey, current, modelHistory)
+    const response = await callOpenAI(openaiKey, current, modelHistory, applicationController, semanticRepairAttempts > 0)
     const benchmarkRunId = safeString(current.context?.benchmark_run_id, 160)
     const applicationRun = /\bapply\b/i.test(current.objective) &&
       Array.isArray(current.context?.attachments) &&
@@ -7917,6 +8055,42 @@ async function advanceRun(
     }
     if (!validateAgentToolArguments(toolName, argumentsValue)) {
       throw new Error(`The agent produced invalid arguments for ${toolName}.`)
+    }
+
+    if (applicationController?.engineStep.kind === 'SEMANTIC_DECISION' && toolName.startsWith('application.')) {
+      const decision: SemanticDecision = {
+        schemaVersion: Number(argumentsValue.schema_version) as 1,
+        function: toolName.slice('application.'.length) as SemanticDecision['function'],
+        caseId: safeString(argumentsValue.application_case_id, 80),
+        requirementId: safeString(argumentsValue.requirement_id, 80),
+        decision: safeString(argumentsValue.decision, 120),
+        confidence: safeString(argumentsValue.confidence, 20) as SemanticDecision['confidence'],
+        evidenceIds: stringArray(argumentsValue.evidence_ids, 160),
+        factIds: stringArray(argumentsValue.fact_ids, 300),
+        rationale: safeString(argumentsValue.rationale, 2_000),
+      }
+      const validation = validateSemanticDecision(applicationController.engineState, applicationController.engineStep.request, decision)
+      if (!validation.valid) {
+        semanticRepairAttempts += 1
+        history.push({ type: 'function_call_output', call_id: safeString(call.call_id, 256), output: JSON.stringify({ ok: false, error_code: 'semantic_decision_invalid', defects: validation.defects, preserve_state: true, retry_once: true }) })
+        await saveModelHistory(admin, current, history, response.id)
+        if (semanticRepairAttempts > 1) {
+          const message = `The bounded semantic decision remained invalid after one stronger repair: ${validation.defects.join(', ')}.`
+          current = await updateRun(admin, current, { status: 'waiting_for_user', waiting_reason: message, error: message, error_code: 'application_semantic_handoff', retryable: true, lease_owner: null, lease_expires_at: null })
+          await addEvent(admin, current, 'application_semantic_decision_escalated', current.status, message, { function: decision.function, requirement_id: decision.requirementId, defects: validation.defects, tier: 5 })
+          return current
+        }
+        continue
+      }
+      const persisted = { id: `semantic:${crypto.randomUUID()}`, ...decision, observedAt: new Date().toISOString() }
+      const existing = Array.isArray(current.context?.application_semantic_decisions) ? current.context.application_semantic_decisions : []
+      current = await updateRun(admin, current, { context: { ...(current.context ?? {}), application_semantic_decisions: [...existing, persisted].slice(-100) } })
+      const durableDecision = await admin.from('application_semantic_decisions').insert({ user_id: current.user_id, agent_run_id: current.id, application_case_id: decision.caseId, requirement_id: decision.requirementId, function_name: decision.function, decision: decision.decision, confidence: decision.confidence, evidence_ids: decision.evidenceIds, fact_ids: decision.factIds, rationale: decision.rationale, validated: true, defects: [] })
+      if (durableDecision.error && !['42P01', 'PGRST205'].includes(durableDecision.error.code ?? '')) throw new Error(durableDecision.error.message)
+      history.push({ type: 'function_call_output', call_id: safeString(call.call_id, 256), output: JSON.stringify({ ok: true, observation_id: persisted.id, case_id: decision.caseId, requirement_id: decision.requirementId, evidence_ids: decision.evidenceIds, state_advanced: false }) })
+      await saveModelHistory(admin, current, history, response.id)
+      await addEvent(admin, current, 'application_semantic_decision_validated', current.status, `Validated ${decision.function} for one requirement.`, persisted)
+      continue
     }
 
     if (!specialistCanUseTool(current.active_specialist_id, toolName)) {

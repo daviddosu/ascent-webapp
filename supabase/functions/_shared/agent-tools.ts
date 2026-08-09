@@ -1,3 +1,5 @@
+import { applicationSemanticAllowedDecisions, applicationSemanticFunctions } from './application-engine.ts'
+
 export type AgentRisk = 'read' | 'prepare' | 'external_write' | 'financial'
 
 export type AgentToolDefinition = {
@@ -235,7 +237,25 @@ const nullableString = (description: string, maxLength = 500) => ({
   maxLength,
 })
 
+const applicationSemanticToolDefinitions: AgentToolDefinition[] = applicationSemanticFunctions.map(name => ({
+  type: 'function',
+  name: `application.${name}`,
+  description: `Return one bounded ${name} decision for the exact ApplicationCase and requirement supplied by the application engine. This function cannot advance workflow state.`,
+  parameters: objectSchema({
+    schema_version: { type: 'integer', enum: [1] },
+    application_case_id: stringValue('Exact ApplicationCase ID from the engine request.', 64),
+    requirement_id: stringValue('Exact target requirement ID from the engine request.', 64),
+    decision: { type: 'string', enum: applicationSemanticAllowedDecisions[name] },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+    evidence_ids: { type: 'array', items: stringValue('Evidence ID supplied by the engine.', 160), minItems: 1, maxItems: 40 },
+    fact_ids: { type: 'array', items: stringValue('VERIFIED fact ID supplied by the engine.', 300), maxItems: 80 },
+    rationale: stringValue('Short rationale limited to the target requirement.', 2000),
+  }, ['schema_version', 'application_case_id', 'requirement_id', 'decision', 'confidence', 'evidence_ids', 'fact_ids', 'rationale']),
+  strict: true,
+}))
+
 export const agentToolDefinitions: AgentToolDefinition[] = [
+  ...applicationSemanticToolDefinitions,
   {
     type: 'function',
     name: 'application.record_opportunity',
@@ -941,6 +961,7 @@ const policies: Record<string, ToolPolicy> = {
   'application.generate_cv': { risk: 'prepare', approvalKind: null },
   'application.submit': { risk: 'external_write', approvalKind: 'browser_submit' },
   'application.request_roon': { risk: 'prepare', approvalKind: null },
+  ...Object.fromEntries(applicationSemanticFunctions.map(name => [`application.${name}`, { risk: 'read' as const, approvalKind: null }])),
   'gmail.search_messages': { risk: 'read', approvalKind: null },
   'gmail.read_message': { risk: 'read', approvalKind: null },
   'gmail.read_thread': { risk: 'read', approvalKind: null },
@@ -1072,6 +1093,17 @@ function validateStringArray(
 
 export function validateAgentToolArguments(toolName: string, value: unknown) {
   if (!isRecord(value)) return false
+  if (toolName.startsWith('application.') && applicationSemanticFunctions.includes(toolName.slice('application.'.length) as typeof applicationSemanticFunctions[number])) {
+    const functionName = toolName.slice('application.'.length) as typeof applicationSemanticFunctions[number]
+    return value.schema_version === 1 &&
+      validateString(value.application_case_id, 64) &&
+      validateString(value.requirement_id, 64) &&
+      applicationSemanticAllowedDecisions[functionName].includes(String(value.decision)) &&
+      ['high', 'medium', 'low'].includes(String(value.confidence)) &&
+      validateStringArray(value.evidence_ids, 40, 160, 1) &&
+      validateStringArray(value.fact_ids, 80, 300) &&
+      validateString(value.rationale, 2000)
+  }
   switch (toolName) {
     case 'application.record_opportunity':
       return validateString(value.campaign_id, 64) && isRecord(value.opportunity) &&
