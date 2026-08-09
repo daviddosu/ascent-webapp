@@ -1,0 +1,46 @@
+{
+  "metric": {
+    "Sol": {
+      "success": 0.9833333333333333,
+      "cost": 1.6665330000000003,
+      "precision": 1,
+      "distance": 4.933333333333334,
+      "cats": {
+        "Email": 1,
+        "Calendar": 1,
+        "Cross-tool": 1,
+        "Browser": 0.9333333333333333
+      }
+    },
+    "Terra": {
+      "success": 0.9166666666666666,
+      "cost": 0.8804550000000001,
+      "precision": 1,
+      "distance": 4.85,
+      "cats": {
+        "Email": 1,
+        "Calendar": 1,
+        "Cross-tool": 0.8,
+        "Browser": 0.8666666666666667
+      }
+    },
+    "Luna": {
+      "success": 0.9166666666666666,
+      "cost": 0.6195580000000002,
+      "precision": 1,
+      "distance": 4.816666666666666,
+      "cats": {
+        "Email": 0.9333333333333333,
+        "Calendar": 1,
+        "Cross-tool": 0.8,
+        "Browser": 0.9333333333333333
+      }
+    }
+  },
+  "primitiveCategory": {
+    "Email": 1,
+    "Calendar": 1,
+    "Cross-tool": 0.8,
+    "Browser": 0.8
+  }
+}

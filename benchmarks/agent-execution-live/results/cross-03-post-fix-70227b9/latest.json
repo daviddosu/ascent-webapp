@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-27T21:48:28.744Z",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "low",
+  "pricingUsdPerMillionTokens": {
+    "input": 1.25,
+    "cachedInput": 0.125,
+    "cacheWrite": 1.5625,
+    "output": 7.5
+  },
+  "costGateUsd": 31.25,
+  "taskCount": 20,
+  "intendedRuns": 60,
+  "executionMode": "live-production-path",
+  "resultSet": "cross-03-post-fix-70227b9",
+  "runs": [
+    {
+      "benchmark_version": "SHOTCOUNT-EVAL LIVE v1",
+      "system": "ShotCount production agent harness",
+      "evaluated_commit": "70227b96459ba547f3560a0f5f94e621ceb01d77",
+      "benchmark_commit": "70227b96459ba547f3560a0f5f94e621ceb01d77",
+      "openai_model": "gpt-5.6-luna",
+      "reasoning_effort": "low",
+      "task_id": "cross-03",
+      "category": "cross_tool",
+      "run_number": 1,
+      "run_nonce": "8f619be182",
+      "agent_run_id": "ba10f379-f5d7-4f49-9248-dbc7a712c422",
+      "success": 1,
+      "execution_precision": 1,
+      "first_attempt_success": 1,
+      "retry_count": 0,
+      "non_approval_human_interventions": 0,
+      "clarifications": 0,
+      "corrections": 0,
+      "required_approvals": 2,
+      "active_execution_time_seconds": 57.845,
+      "external_wait_time_seconds": 0,
+      "distance_to_done": 5,
+      "failure_reason": "",
+      "final_state": "completed",
+      "live_provider_failure": 0,
+      "model_decision_failure": 0,
+      "harness_failure": 0,
+      "model_calls": 10,
+      "input_tokens": 50128,
+      "cached_input_tokens": 43558,
+      "cache_write_tokens": 6540,
+      "output_tokens": 1131,
+      "inference_cost_usd": 0.024184,
+      "started_at": "2026-07-27T21:47:30.073Z",
+      "finished_at": "2026-07-27T21:48:27.918Z",
+      "actions": [
+        {
+          "tool": "calendar.list_events",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.search_messages",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_message",
+          "status": "succeeded",
+          "provider_action_id": "19fa549774827ad9",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.read_thread",
+          "status": "succeeded",
+          "provider_action_id": "19fa5496fbae146b",
+          "error_code": null
+        },
+        {
+          "tool": "calendar.update_event",
+          "status": "succeeded",
+          "provider_action_id": "ssneecv960crse0q80b6pp0tak",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.create_draft",
+          "status": "succeeded",
+          "provider_action_id": "r-8827623131045031774",
+          "error_code": null
+        },
+        {
+          "tool": "gmail.send_message",
+          "status": "succeeded",
+          "provider_action_id": "19fa58ccbe59098d",
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        },
+        {
+          "tool": "agent.complete",
+          "status": "succeeded",
+          "provider_action_id": null,
+          "error_code": null
+        }
+      ],
+      "provider_verification": {
+        "calendarEvents": [
+          {
+            "id": "ssneecv960crse0q80b6pp0tak",
+            "status": "confirmed",
+            "summary": "Team Sync",
+            "start": {
+              "dateTime": "2026-08-05T11:00:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "end": {
+              "dateTime": "2026-08-05T11:45:00+01:00",
+              "timeZone": "Africa/Lagos"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    }
+  ]
+}
