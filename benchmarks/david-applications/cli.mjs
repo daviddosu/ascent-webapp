@@ -9,6 +9,22 @@ const valueAfter = name => {
   const index = args.indexOf(name)
   return index >= 0 ? args[index + 1] ?? '' : ''
 }
+if (args.includes('--applicant-trial')) {
+  const env = {
+    ...process.env,
+    DAVID_APPLICANT_TRIAL: 'true',
+    DAVID_APPLICANT_RUN_ID: valueAfter('--run-id') || `david-applicant-${Date.now()}`,
+    DAVID_APPLICANT_OUTPUT_ROOT: valueAfter('--output-root'),
+    DAVID_APPLICANT_FAILURE_ONLY: args.includes('--failure-only') ? 'true' : 'false',
+    SHOTCOUNT_BENCHMARK_MODE: 'true',
+  }
+  const result = spawnSync('pnpm', ['exec', 'vitest', 'run', 'benchmarks/david-applications/applicant-trial.test.ts', '--reporter=verbose'], {
+    cwd: resolve(here, '../..'),
+    env,
+    stdio: 'inherit',
+  })
+  process.exit(result.status ?? 1)
+}
 if (args.includes('--stochastic')) {
   const endpoint = process.env.DAVID_EVAL_ENDPOINT || ''
   const token = process.env.DAVID_EVAL_TOKEN || ''

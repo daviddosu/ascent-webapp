@@ -5,6 +5,7 @@ import {
   canTransitionApplicationState,
   recoverInvalidApplicationAction,
   resolveApplicationFact,
+  resolveChosenApplicationFact,
   selectNextApplicationAction,
   validateApplicationAction,
   validateApplicationPlan,
@@ -31,6 +32,13 @@ describe('David application controller v2.1', () => {
     expect(resolveApplicationFact('degree', [source('BEng')])).toMatchObject({ verification: 'VERIFIED', value: 'BEng', conflict: false })
     expect(resolveApplicationFact('degree', [source('BEng'), source('BSc', 'asset-2')])).toMatchObject({ verification: 'CONFLICTING', value: null, conflict: true })
     expect(resolveApplicationFact('major_gpa', [{ value: 'Not reported', provenance: { kind: 'generated_inference', sourceId: null, confirmed: true }, confidence: 'low' }])).toMatchObject({ verification: 'UNRESOLVED', value: null })
+  })
+
+  it('resolves a preserved conflict only after an explicit candidate choice', () => {
+    const conflicted = resolveApplicationFact('degree_completion', [source('2024-06-28', 'transcript'), source('2024-07-12', 'profile')])
+    const resolved = resolveChosenApplicationFact('degree_completion', conflicted, '2024-06-28', { kind: 'user_statement', sourceId: 'applicant-choice', confirmed: true })
+    expect(resolved).toMatchObject({ verification: 'VERIFIED', value: '2024-06-28', conflict: false })
+    expect(resolved.candidates).toHaveLength(1)
   })
 
   it('rejects malformed or cross-case requirement graphs', () => {

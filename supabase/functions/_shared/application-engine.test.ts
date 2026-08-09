@@ -4,13 +4,16 @@ import {
   claimApplicationAction,
   createApplicationEngineState,
   planApplicationEngineStep,
+  verifyApplicationRequirement,
   recordApplicationFailure,
   validateSemanticDecision,
   verifyPortalExecutionContract,
   type ApplicationEngineState,
   type ArtifactObservation,
+  type CalendarObservation,
   type EngineRequirement,
   type PortalObservation,
+  type WebObservation,
 } from './application-engine'
 
 function requirement(overrides: Partial<EngineRequirement> = {}): EngineRequirement {
@@ -100,4 +103,23 @@ it('verifies portal read-after-write and exact approved artifacts', () => {
   const portal: PortalObservation = { id: 'p1', caseId: 'case-1', requirementId: 'req-1', kind: 'portal', verified: true, evidenceIds: ['save'], observedAt: new Date().toISOString(), portal: 'graduate', section: 'documents', persistedValues: { name: 'Ada Doe' }, readBackValues: { name: 'Ada Doe' }, saveConfirmation: 'saved', sessionId: 's1' }
   const artifact: ArtifactObservation = { id: 'a1', caseId: 'case-1', requirementId: 'req-1', kind: 'artifact', verified: true, evidenceIds: ['upload'], observedAt: new Date().toISOString(), artifactId: 'cv-1', checksum: 'sha256', approved: true, sourceFactIds: ['profile:name'], portalConfirmation: 'present' }
   expect(verifyPortalExecutionContract({ caseId: 'case-1', requirementId: 'req-1', portal: 'graduate', section: 'documents', fields: [{ name: 'name', factId: 'profile:name', expectedValue: 'Ada Doe' }], artifacts: [{ artifactId: 'cv-1', checksum: 'sha256' }], successConditions: [], saveConditions: [], evidenceConditions: [] }, portal, state().facts, [artifact])).toBe(true)
+})
+
+it('treats calendar coordination as a first-class resulting-state requirement', () => {
+  const calendarRequirement = requirement({ id: 'calendar-1', type: 'calendar', name: 'Schedule supervisor interview', evidenceContract: ['calendar'], requiredFactIds: [] })
+  const input = state([calendarRequirement])
+  expect(planApplicationEngineStep(input)).toMatchObject({ kind: 'EXECUTE', action: 'execute_primitive', evidenceContract: ['calendar'] })
+  const observation: CalendarObservation = { id: 'event-1', caseId: 'case-1', requirementId: 'calendar-1', kind: 'calendar', verified: true, evidenceIds: ['google:event-1'], observedAt: new Date().toISOString(), providerEventId: 'google-event-1', expectedAttendees: ['professor@example.edu'], actualAttendees: ['professor@example.edu'] }
+  const completed = applyApplicationObservation(input, observation, 1)
+  expect(completed.requirements[0]!.status).toBe('VERIFIED')
+})
+
+it('commits a VERIFY step only after the evidence contract is rechecked', () => {
+  const verifyNode = requirement({ id: 'verify-1', type: 'deadline', name: 'Verify official deadline', evidenceContract: ['web'], requiredFactIds: [] })
+  const input = state([verifyNode])
+  const observation: WebObservation = { id: 'web-verify-1', caseId: 'case-1', requirementId: 'verify-1', kind: 'web', verified: true, evidenceIds: ['official:deadline'], observedAt: new Date().toISOString(), sourceUrl: 'https://official.example.edu', authoritative: true, excerpts: [{ evidenceId: 'official:deadline', text: 'Deadline verified.' }] }
+  const applied = applyApplicationObservation(input, observation, 0)
+  const withEvidence = { ...applied, requirements: applied.requirements.map(item => item.id === 'verify-1' ? { ...item, status: 'IN_PROGRESS' as const } : item) }
+  expect(planApplicationEngineStep(withEvidence)).toMatchObject({ kind: 'VERIFY', requirementId: 'verify-1' })
+  expect(verifyApplicationRequirement(withEvidence, 'verify-1').requirements[0]?.status).toBe('VERIFIED')
 })

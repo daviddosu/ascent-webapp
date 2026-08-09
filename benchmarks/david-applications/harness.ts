@@ -265,8 +265,9 @@ class ControlledGmail {
 
   receive(input: { caseId: string; purpose: string; from: string; to: string; subject: string; body: string; threadId?: string; receivedAt?: string }) {
     const threadId = input.threadId ?? `thread-${input.caseId}-${input.purpose}`
+    this.sequence += 1
     const message = {
-      messageId: `benchmark-reply-${this.world.runId}-${this.sequence + 1}`,
+      messageId: `benchmark-reply-${this.world.runId}-${this.sequence}`,
       threadId,
       caseId: input.caseId,
       purpose: input.purpose,

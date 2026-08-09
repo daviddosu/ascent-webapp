@@ -127,6 +127,25 @@ export function resolveApplicationFact<T>(factId: string, candidates: FactCandid
   }
 }
 
+/**
+ * Resolve an existing conflict only after an applicant or an authoritative
+ * source explicitly selects the winning candidate. The discarded candidates
+ * remain in the audit trail, but cannot keep a fact blocked after the choice.
+ */
+export function resolveChosenApplicationFact<T>(
+  factId: string,
+  fact: FactResolution<T>,
+  selectedValue: T,
+  provenance: FactCandidate<T>['provenance'],
+  confidence: FactConfidence = 'high',
+): FactResolution<T> {
+  const selected = fact.candidates.filter(candidate => stableValue(candidate.value) === stableValue(selectedValue))
+  const candidates = selected.length
+    ? selected
+    : [{ value: selectedValue, provenance, confidence }]
+  return resolveApplicationFact(factId, candidates)
+}
+
 export type RequirementNodeStatus =
   | 'UNRESOLVED'
   | 'IN_PROGRESS'

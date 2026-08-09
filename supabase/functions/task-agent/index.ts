@@ -2516,6 +2516,7 @@ function engineRequirementType(name: string, responsible: string): RequirementTy
   if (/eligib|prerequisite|admission requirement/.test(value)) return 'eligibility'
   if (/deadline/.test(value)) return 'deadline'
   if (/funding|scholarship|fee/.test(value)) return 'funding'
+  if (/calendar|meeting|interview|slot/.test(value)) return 'calendar'
   if (/professor|supervisor|faculty/.test(value) || responsible === 'institution') return 'professor'
   if (/referee|reference|recommendation/.test(value) || responsible === 'referee') return 'referee'
   if (/writer|statement|essay|draft/.test(value) || responsible === 'writer') return 'writer'
@@ -2534,6 +2535,7 @@ function defaultEngineEvidenceContract(type: RequirementType): ObservationKind[]
   if (['document', 'writer', 'artifact_upload'].includes(type)) return ['artifact']
   if (['referee', 'communication', 'post_submission'].includes(type)) return ['gmail']
   if (type === 'submission') return ['submission']
+  if (type === 'calendar') return ['calendar']
   return ['portal']
 }
 

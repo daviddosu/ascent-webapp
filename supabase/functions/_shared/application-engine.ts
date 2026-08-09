@@ -31,7 +31,7 @@ export type ApplicationSemanticFunction = typeof applicationSemanticFunctions[nu
 export type RequirementType =
   | 'profile_fact' | 'eligibility' | 'official_requirement' | 'deadline' | 'funding'
   | 'document' | 'writer' | 'referee' | 'professor' | 'communication' | 'portal_field'
-  | 'portal_section' | 'artifact_upload' | 'approval' | 'submission' | 'post_submission'
+  | 'portal_section' | 'artifact_upload' | 'approval' | 'submission' | 'post_submission' | 'calendar'
 
 export type ResolutionTier = 0 | 1 | 2 | 3 | 4 | 5
 
@@ -315,6 +315,24 @@ export function applyApplicationObservation(state: ApplicationEngineState, obser
     ? { ...item, status: complete ? 'VERIFIED' as const : 'IN_PROGRESS' as const, evidenceIds: [...new Set([...item.evidenceIds, ...observation.evidenceIds])], resolutionTier: tier }
     : item)
   return { ...state, observations, requirements, tierCounts: { ...state.tierCounts, [tier]: state.tierCounts[tier] + 1 } }
+}
+
+/**
+ * Commit a VERIFY step after the engine has independently checked every
+ * resulting-state observation in the requirement's evidence contract.
+ * Observation ingestion and verification are separate so a provider response
+ * cannot mark a requirement complete merely by existing in the event log.
+ */
+export function verifyApplicationRequirement(state: ApplicationEngineState, requirementId: string): ApplicationEngineState {
+  const requirement = state.requirements.find(item => item.id === requirementId)
+  if (!requirement || requirement.caseId !== state.caseId) return state
+  const scoped = state.observations.filter(item => item.requirementId === requirement.id && observationMatches(item, requirement))
+  const complete = requirement.evidenceContract.length > 0 && requirement.evidenceContract.every(kind => scoped.some(item => item.kind === kind))
+  if (!complete) return state
+  return {
+    ...state,
+    requirements: state.requirements.map(item => item.id === requirement.id ? { ...item, status: 'VERIFIED' as const, evidenceIds: [...new Set(scoped.flatMap(observation => observation.evidenceIds))] } : item),
+  }
 }
 
 export function recordApplicationFailure(state: ApplicationEngineState, requirementId: string, failure: string, now = new Date().toISOString()) {

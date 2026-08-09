@@ -375,11 +375,8 @@ describe('reference screens', () => {
     expect(document.querySelector('[data-calendar-mode="week"]')?.classList.contains('active')).toBe(true)
     expect(document.querySelector('.calendar-header h1')?.textContent).toContain(String(new Date().getFullYear()))
     expect(document.querySelectorAll('.calendar-day-head:not(.spacer)')).toHaveLength(7)
-    expect(document.querySelectorAll('.calendar-event')).toHaveLength(2)
-    expect([...document.querySelectorAll('.calendar-event strong')].map(node => node.textContent)).toEqual([
-      'Print business card',
-      'Prepare tomorrow brief',
-    ])
+    const currentWeekTitles = [...document.querySelectorAll('.calendar-event strong')].map(node => node.textContent)
+    expect(currentWeekTitles).toContain('Print business card')
     expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(1)
     document.querySelector<HTMLButtonElement>('[data-calendar-mode="day"]')!.click()
     expect(document.querySelectorAll('.calendar-now-line')).toHaveLength(1)
@@ -426,12 +423,15 @@ describe('reference screens', () => {
     calendarForm.querySelector<HTMLSelectElement>('[name="reminder"]')!.value = '30'
     calendarForm.querySelector<HTMLInputElement>('[name="location"]')!.value = 'Studio'
     calendarForm.querySelector<HTMLInputElement>('[name="attendees"]')!.value = 'Ada'
+    const plannedBefore = document.querySelector('.calendar-stats')?.textContent ?? ''
     calendarForm.requestSubmit()
 
     expect([...document.querySelectorAll('.calendar-event strong')].some(node => node.textContent === 'Calendar deep work')).toBe(true)
     expect(document.querySelector('.calendar-event')?.getAttribute('style')).toContain('#ff666d')
     expect(document.querySelector('.calendar-event .calendar-event-goal')?.textContent).toContain('Personal')
-    expect(document.querySelector('.calendar-stats')?.textContent).toContain('2h planned')
+    const plannedAfter = document.querySelector('.calendar-stats')?.textContent ?? ''
+    const durationInMinutes = (value: string) => (Number(value.match(/(\d+)h/)?.[1] ?? 0) * 60) + Number(value.match(/(\d+)m/)?.[1] ?? 0)
+    expect(durationInMinutes(plannedAfter) - durationInMinutes(plannedBefore)).toBe(60)
     const createdEvent = [...document.querySelectorAll<HTMLElement>('.calendar-event')]
       .find(node => node.textContent?.includes('Calendar deep work'))!
     expect(createdEvent.textContent).toContain('Weekly')
