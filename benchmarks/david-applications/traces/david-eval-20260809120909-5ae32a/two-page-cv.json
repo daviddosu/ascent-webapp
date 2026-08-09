@@ -1,0 +1,79 @@
+[
+  {
+    "at": "2026-08-09T12:09:12.543Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "two-page-cv",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.109Z",
+    "component": "documents",
+    "event": "artifact_compiled_and_verified",
+    "caseId": "two-page-cv",
+    "data": {
+      "templateId": "graduate_application_cv_v1",
+      "pageTarget": "two_page",
+      "pageCount": 2,
+      "checksum": "b08fa11de80d5c486eddaca230b3c9b52bd0e55d1eb61497f76b2d4f1c49158a"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.109Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "two-page-cv",
+    "data": {
+      "kind": "artifact_checksum",
+      "verified": true,
+      "checksum": "b08fa11de80d5c486eddaca230b3c9b52bd0e55d1eb61497f76b2d4f1c49158a",
+      "details": {
+        "pageCount": 2,
+        "atsIdentity": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:12.543Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "two-page-cv",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.110Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "two-page-cv",
+    "data": {
+      "value": true
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.110Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "two-page-cv",
+    "data": {
+      "value": true
+    }
+  }
+]

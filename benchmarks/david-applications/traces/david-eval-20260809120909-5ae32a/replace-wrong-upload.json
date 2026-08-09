@@ -1,0 +1,828 @@
+[
+  {
+    "at": "2026-08-09T12:09:58.090Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Recovery or restart handling is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:59.018Z",
+    "component": "browser",
+    "event": "navigation_observed",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account&failure=rejected_file",
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account&failure=rejected_file",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:59.704Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "action": {
+        "action": "click",
+        "target": "text:Documents",
+        "value": null
+      },
+      "observation": {
+        "title": "Application portal · documents",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=documents",
+        "headings": [
+          "Documents"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Documents This fixture rejects the first artifact; use the approved PDF. Academic CV Statement of purpose Transcript Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Academic CV",
+            "kind": "input:file"
+          },
+          {
+            "label": "Statement of purpose",
+            "kind": "input:file"
+          },
+          {
+            "label": "Transcript",
+            "kind": "input:file"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "cv",
+            "label": "Academic CV",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "statement",
+            "label": "Statement of purpose",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "transcript",
+            "label": "Transcript",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:00.792Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "action": {
+        "action": "upload",
+        "target": "label:Academic CV",
+        "value": "cv-wrong"
+      },
+      "observation": {
+        "title": "Application portal · documents",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=documents",
+        "headings": [
+          "Documents"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Documents This fixture rejects the first artifact; use the approved PDF. Academic CV Statement of purpose Transcript Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&failure=rejected_file&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Academic CV",
+            "kind": "input:file"
+          },
+          {
+            "label": "Statement of purpose",
+            "kind": "input:file"
+          },
+          {
+            "label": "Transcript",
+            "kind": "input:file"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "cv",
+            "label": "Academic CV",
+            "type": "file",
+            "value": "C:\\fakepath\\cv-old.pdf",
+            "checked": false,
+            "fileName": "cv-old.pdf"
+          },
+          {
+            "name": "statement",
+            "label": "Statement of purpose",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "transcript",
+            "label": "Transcript",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": {
+        "kind": "file_upload",
+        "asset_id": "cv-wrong",
+        "checksum": "c98ab35fde68d50a9ab0b9e6dfcbb64b3e49a3d7f3bd0873272e70cc8f49d831",
+        "filename": "cv-old.pdf",
+        "size": 23,
+        "populated": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:00.792Z",
+    "component": "primitive",
+    "event": "wrong_artifact_detected",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "filename": "cv-old.pdf"
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:03.820Z",
+    "component": "harness",
+    "event": "resumed_from_preserved_state",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "cleanUrl": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account",
+      "replayedActions": 2,
+      "observation": {
+        "title": "Application portal · documents",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents",
+        "headings": [
+          "Documents"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Documents Academic CV Statement of purpose Transcript Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Academic CV",
+            "kind": "input:file"
+          },
+          {
+            "label": "Statement of purpose",
+            "kind": "input:file"
+          },
+          {
+            "label": "Transcript",
+            "kind": "input:file"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "cv",
+            "label": "Academic CV",
+            "type": "file",
+            "value": "C:\\fakepath\\cv-old.pdf",
+            "checked": false,
+            "fileName": "cv-old.pdf"
+          },
+          {
+            "name": "statement",
+            "label": "Statement of purpose",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "transcript",
+            "label": "Transcript",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:03.820Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "kind": "checkpoint",
+      "verified": true,
+      "details": {
+        "replayedActions": 2,
+        "resumeFrom": "confirmedState"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:04.920Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "action": {
+        "action": "upload",
+        "target": "label:Academic CV",
+        "value": "cv-approved"
+      },
+      "observation": {
+        "title": "Application portal · documents",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents",
+        "headings": [
+          "Documents"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Documents Academic CV Statement of purpose Transcript Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Academic CV",
+            "kind": "input:file"
+          },
+          {
+            "label": "Statement of purpose",
+            "kind": "input:file"
+          },
+          {
+            "label": "Transcript",
+            "kind": "input:file"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "cv",
+            "label": "Academic CV",
+            "type": "file",
+            "value": "C:\\fakepath\\cv-controlled-phd.pdf",
+            "checked": false,
+            "fileName": "cv-controlled-phd.pdf"
+          },
+          {
+            "name": "statement",
+            "label": "Statement of purpose",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "transcript",
+            "label": "Transcript",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": {
+        "kind": "file_upload",
+        "asset_id": "cv-approved",
+        "checksum": "970906f5243ef697beac71ab74ef0fe2c6636f4ff711883ce660665c78aac303",
+        "filename": "cv-controlled-phd.pdf",
+        "size": 31,
+        "populated": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:05.974Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "action": {
+        "action": "upload",
+        "target": "label:Statement of purpose",
+        "value": "sop-approved"
+      },
+      "observation": {
+        "title": "Application portal · documents",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents",
+        "headings": [
+          "Documents"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Documents Academic CV Statement of purpose Transcript Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Academic CV",
+            "kind": "input:file"
+          },
+          {
+            "label": "Statement of purpose",
+            "kind": "input:file"
+          },
+          {
+            "label": "Transcript",
+            "kind": "input:file"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "cv",
+            "label": "Academic CV",
+            "type": "file",
+            "value": "C:\\fakepath\\cv-controlled-phd.pdf",
+            "checked": false,
+            "fileName": "cv-controlled-phd.pdf"
+          },
+          {
+            "name": "statement",
+            "label": "Statement of purpose",
+            "type": "file",
+            "value": "C:\\fakepath\\statement-controlled.pdf",
+            "checked": false,
+            "fileName": "statement-controlled.pdf"
+          },
+          {
+            "name": "transcript",
+            "label": "Transcript",
+            "type": "file",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": {
+        "kind": "file_upload",
+        "asset_id": "sop-approved",
+        "checksum": "c8f81ff68f581b30b6aa385f26464f85d976d547dc5deb338cde11103bf11c3d",
+        "filename": "statement-controlled.pdf",
+        "size": 12,
+        "populated": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:07.042Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "action": {
+        "action": "upload",
+        "target": "label:Transcript",
+        "value": "transcript-approved"
+      },
+      "observation": {
+        "title": "Application portal · documents",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents",
+        "headings": [
+          "Documents"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Documents Academic CV Statement of purpose Transcript Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Academic CV",
+            "kind": "input:file"
+          },
+          {
+            "label": "Statement of purpose",
+            "kind": "input:file"
+          },
+          {
+            "label": "Transcript",
+            "kind": "input:file"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "cv",
+            "label": "Academic CV",
+            "type": "file",
+            "value": "C:\\fakepath\\cv-controlled-phd.pdf",
+            "checked": false,
+            "fileName": "cv-controlled-phd.pdf"
+          },
+          {
+            "name": "statement",
+            "label": "Statement of purpose",
+            "type": "file",
+            "value": "C:\\fakepath\\statement-controlled.pdf",
+            "checked": false,
+            "fileName": "statement-controlled.pdf"
+          },
+          {
+            "name": "transcript",
+            "label": "Transcript",
+            "type": "file",
+            "value": "C:\\fakepath\\transcript-controlled.pdf",
+            "checked": false,
+            "fileName": "transcript-controlled.pdf"
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": {
+        "kind": "file_upload",
+        "asset_id": "transcript-approved",
+        "checksum": "d3d4fd8c6dd4628838f1cfa3580434d0b7743e49cc1603f058aa7b13102ddd62",
+        "filename": "transcript-controlled.pdf",
+        "size": 19,
+        "populated": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:08.154Z",
+    "component": "browser",
+    "event": "section_save_observed",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "step": "documents",
+      "target": "role:button:Save section",
+      "confirmationObserved": true,
+      "observation": {
+        "title": "Section saved",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents",
+        "headings": [
+          "Section saved"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Section saved documents section saved and checkpointed. Continue editing documents",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=review"
+          },
+          {
+            "text": "Continue editing documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=51&step=documents"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:08.154Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "kind": "saved_section",
+      "verified": true,
+      "details": {
+        "step": "documents",
+        "fields": []
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:58.090Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Recovery or restart handling is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:08.154Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "replace-wrong-upload",
+    "data": {
+      "value": true
+    }
+  }
+]

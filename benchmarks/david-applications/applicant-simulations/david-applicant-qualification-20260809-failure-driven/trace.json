@@ -1,0 +1,1675 @@
+[
+  {
+    "at": "2026-08-09T11:59:03.201Z",
+    "component": "applicant",
+    "event": "natural_language_request_started_with_uploaded_documents",
+    "data": {
+      "request": "Find strong fully funded graduate programmes for me in my field and handle the applications end to end.",
+      "documents": [
+        "asset:cv",
+        "asset:transcript",
+        "asset:degree",
+        "asset:supporting"
+      ]
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.201Z",
+    "component": "applicant",
+    "event": "shortlist_approved",
+    "data": {
+      "programmes": [
+        "imperial-computing-phd",
+        "edinburgh-informatics-phd",
+        "toronto-cs-direct-entry-phd"
+      ]
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.313Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:source",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.314Z",
+    "component": "web",
+    "event": "official_requirement_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:source",
+      "sourceUrl": "https://www.imperial.ac.uk/computing/prospective-students/courses/phd/"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:conflict",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:conflict"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:eligibility",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:eligibility"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:eligibility",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "factId": "degree:requirements-completed",
+      "verification": "VERIFIED",
+      "provenance": "asset:transcript"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:eligibility",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:eligibility"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:cv",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:cv"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.332Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:cv",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.333Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "factId": "profile:phone",
+      "verification": "VERIFIED",
+      "provenance": "applicant-context-answer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:03.333Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:cv",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.017Z",
+    "component": "artifact",
+    "event": "programme_specific_cv_compiled_approved",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "artifactId": "cv:imperial-computing-phd",
+      "templateId": "graduate_application_cv_v1",
+      "checksum": "87a5e148f97903bf95b02543de0b2708d633f4d838f817909671f5caf51064e8",
+      "pageCount": 2,
+      "atsReadable": true,
+      "linksVerified": true
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.017Z",
+    "component": "artifact",
+    "event": "exact_approved_artifact_observed",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "artifactId": "cv:imperial-computing-phd",
+      "checksum": "87a5e148f97903bf95b02543de0b2708d633f4d838f817909671f5caf51064e8"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.017Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:funding",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.017Z",
+    "component": "web",
+    "event": "official_requirement_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:funding",
+      "sourceUrl": "https://www.imperial.ac.uk/computing/prospective-students/courses/phd/"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.017Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:professor-fit",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.017Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:professor-fit"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.017Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:professor-outreach",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:professor-outreach"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:professor-outreach",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "professor",
+    "event": "approved_outreach_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-msg-david-applicant-qualification-20260809-failure-driven-1",
+      "recipient": "m.stein@simulated.imperial.test"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "professor",
+    "event": "professor_requested_post_application_follow_up",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-2"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "repair",
+    "event": "professor_follow_up_completed",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-4"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:calendar",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "calendar",
+    "event": "provider_event_and_attendees_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerEventId": "google-event:david-applicant-qualification-20260809-failure-driven:imperial-computing-phd"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:referee",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:referee"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:referee",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "referee",
+    "event": "reference_request_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-msg-david-applicant-qualification-20260809-failure-driven-5",
+      "recipient": "amina.bello@simulated.test"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "referee",
+    "event": "referee_accepted",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-6"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "engine",
+    "event": "bounded_semantic_decision_validated_and_applied",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "function": "evaluate_reference_requirement",
+      "decision": "satisfied",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:referee",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:writer",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.018Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:writer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:writer",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "factId": "profile:career-goal",
+      "verification": "VERIFIED",
+      "provenance": "applicant-context-answer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:writer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "writer",
+    "event": "writer_assignment_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "threadId": "thread-david-applicant-qualification-20260809-failure-driven:imperial-computing-phd-writer_assignment"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "writer",
+    "event": "writer_question_received",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-8"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "applicant",
+    "event": "stored_context_answered_writer_question",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "factId": "profile:career-goal",
+      "value": "Lead an applied research group building reliable computational tools for climate and physical science."
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "writer",
+    "event": "unsupported_wrong_institution_draft_received",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-10"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "repair",
+    "event": "writer_revision_requested_and_corrected_draft_received",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-11"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:04.019Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:portal",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:11.196Z",
+    "component": "verification",
+    "event": "current_otp_matched_stale_and_unrelated_rejected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "messageId": "current-otp",
+      "redactedCode": "4•••6"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:18.914Z",
+    "component": "repair",
+    "event": "renamed_portal_label_recovered_with_semantic_selector",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {}
+  },
+  {
+    "at": "2026-08-09T11:59:46.173Z",
+    "component": "browser",
+    "event": "final_review_reached_with_saved_sections",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "actions": 27
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:46.173Z",
+    "component": "browser",
+    "event": "portal_act_read_verify_checkpoint_complete",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "browserActions": 27,
+      "recoveries": 1,
+      "exactArtifact": "87a5e148f97903bf95b02543de0b2708d633f4d838f817909671f5caf51064e8"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:46.173Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:submission",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.291Z",
+    "component": "verification",
+    "event": "fixture_submission_confirmed_once",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "applicationId": "SC-TEST-2027-001"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.291Z",
+    "component": "verification",
+    "event": "duplicate_submission_blocked",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "error": "The application submission was already confirmed and will not be repeated."
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.291Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd:post-submission",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.291Z",
+    "component": "gmail",
+    "event": "submission_confirmation_email_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-12",
+      "applicationId": "SC-TEST-2027-001"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.292Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:imperial-computing-phd",
+    "data": {
+      "kind": "COMPLETE",
+      "requirementId": null,
+      "tier": null
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.293Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:source",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.293Z",
+    "component": "web",
+    "event": "official_requirement_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:source",
+      "sourceUrl": "https://study.ed.ac.uk/programmes/postgraduate-research/489-informatics-iml-machine-learning-computational-neuroscience"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:conflict",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:conflict"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:eligibility",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:eligibility"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:eligibility",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "factId": "degree:requirements-completed",
+      "verification": "VERIFIED",
+      "provenance": "asset:transcript"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:eligibility",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:eligibility"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:cv",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:cv"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:cv",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "factId": "profile:phone",
+      "verification": "VERIFIED",
+      "provenance": "applicant-context-answer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:48.294Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:cv",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "artifact",
+    "event": "programme_specific_cv_compiled_approved",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "artifactId": "cv:edinburgh-informatics-phd",
+      "templateId": "graduate_application_cv_v1",
+      "checksum": "af43b50543df4d43b436ff22ef4663a35a8ade16e724ade3bb600d13ac0b9279",
+      "pageCount": 2,
+      "atsReadable": true,
+      "linksVerified": true
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "artifact",
+    "event": "exact_approved_artifact_observed",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "artifactId": "cv:edinburgh-informatics-phd",
+      "checksum": "af43b50543df4d43b436ff22ef4663a35a8ade16e724ade3bb600d13ac0b9279"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:funding",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "web",
+    "event": "official_requirement_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:funding",
+      "sourceUrl": "https://study.ed.ac.uk/programmes/postgraduate-research/489-informatics-iml-machine-learning-computational-neuroscience"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:professor-fit",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:professor-fit"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:referee",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:referee"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:referee",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "referee",
+    "event": "reference_request_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "providerMessageId": "benchmark-msg-david-applicant-qualification-20260809-failure-driven-13",
+      "recipient": "amina.bello@simulated.test"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.000Z",
+    "component": "referee",
+    "event": "referee_declined",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-14"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "repair",
+    "event": "referee_replacement_approved_and_replanned",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "replacement": "samuel.adeyemi@simulated.test"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:writer",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:writer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:writer",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "factId": "profile:career-goal",
+      "verification": "VERIFIED",
+      "provenance": "applicant-context-answer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:writer"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "writer",
+    "event": "writer_assignment_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "threadId": "thread-david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd-writer_assignment"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "writer",
+    "event": "writer_question_received",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-16"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "applicant",
+    "event": "stored_context_answered_writer_question",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "factId": "profile:career-goal",
+      "value": "Lead an applied research group building reliable computational tools for climate and physical science."
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "writer",
+    "event": "writer_draft_received",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-18"
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "engine",
+    "event": "bounded_semantic_decision_validated_and_applied",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "function": "evaluate_writer_draft",
+      "decision": "accepted",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:49.001Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:portal",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T11:59:54.797Z",
+    "component": "verification",
+    "event": "current_otp_matched_stale_and_unrelated_rejected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "messageId": "current-otp",
+      "redactedCode": "4•••6"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:28.387Z",
+    "component": "browser",
+    "event": "final_review_reached_with_saved_sections",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "actions": 27
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:28.387Z",
+    "component": "browser",
+    "event": "portal_act_read_verify_checkpoint_complete",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "browserActions": 27,
+      "recoveries": 1,
+      "exactArtifact": "af43b50543df4d43b436ff22ef4663a35a8ade16e724ade3bb600d13ac0b9279"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:28.387Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:submission",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.294Z",
+    "component": "verification",
+    "event": "fixture_submission_confirmed_once",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "applicationId": "SC-TEST-2027-001"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.294Z",
+    "component": "verification",
+    "event": "duplicate_submission_blocked",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "error": "The application submission was already confirmed and will not be repeated."
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.295Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:post-submission",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.295Z",
+    "component": "gmail",
+    "event": "submission_confirmation_email_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-19",
+      "applicationId": "SC-TEST-2027-001"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.295Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:professor-outreach",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.295Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:professor-outreach"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.295Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:professor-outreach",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.297Z",
+    "component": "professor",
+    "event": "approved_outreach_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "providerMessageId": "benchmark-msg-david-applicant-qualification-20260809-failure-driven-20",
+      "recipient": "l.macdonald@simulated.ed.ac.test"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.297Z",
+    "component": "professor",
+    "event": "professor_confirmed_fit",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-21"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.297Z",
+    "component": "engine",
+    "event": "bounded_semantic_decision_validated_and_applied",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "function": "interpret_email_reply",
+      "decision": "accepted",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd:professor-outreach",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.297Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:edinburgh-informatics-phd",
+    "data": {
+      "kind": "COMPLETE",
+      "requirementId": null,
+      "tier": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:source",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "web",
+    "event": "official_requirement_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:source",
+      "sourceUrl": "https://web.cs.toronto.edu/graduate/phd"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:conflict",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:conflict"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:eligibility",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:eligibility"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:eligibility",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "factId": "degree:requirements-completed",
+      "verification": "VERIFIED",
+      "provenance": "asset:transcript"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:eligibility",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:eligibility"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:cv",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:cv"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:cv",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "factId": "profile:phone",
+      "verification": "VERIFIED",
+      "provenance": "applicant-context-answer"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.299Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:cv",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.994Z",
+    "component": "artifact",
+    "event": "programme_specific_cv_compiled_approved",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "artifactId": "cv:toronto-cs-direct-entry-phd",
+      "templateId": "graduate_application_cv_v1",
+      "checksum": "798fc11f3be156ef65674afa7d1984669a94157bad7bbab1ce6d8b45e6599db2",
+      "pageCount": 2,
+      "atsReadable": true,
+      "linksVerified": true
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "artifact",
+    "event": "exact_approved_artifact_observed",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "artifactId": "cv:toronto-cs-direct-entry-phd",
+      "checksum": "798fc11f3be156ef65674afa7d1984669a94157bad7bbab1ce6d8b45e6599db2"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:funding",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "web",
+    "event": "official_requirement_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:funding",
+      "sourceUrl": "https://web.cs.toronto.edu/graduate/phd"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:referee",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:referee"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:referee",
+      "tier": 2
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "referee",
+    "event": "reference_request_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "providerMessageId": "benchmark-msg-david-applicant-qualification-20260809-failure-driven-22",
+      "recipient": "amina.bello@simulated.test"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "referee",
+    "event": "referee_delayed",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-23"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "repair",
+    "event": "delayed_referee_follow_up_replanned",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {}
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:writer",
+      "tier": 0
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "verified_context_search_exhausted_user_question_required",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:writer"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "USER_HANDOFF",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:writer",
+      "tier": 5
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "applicant",
+    "event": "context_request_answered_through_user_contract",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "factId": "profile:career-goal",
+      "verification": "VERIFIED",
+      "provenance": "applicant-context-answer"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "web",
+    "event": "semantic_context_official_source_attached",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:writer"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "SEMANTIC_DECISION",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "writer",
+    "event": "writer_assignment_sent",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "threadId": "thread-david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd-writer_assignment"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "writer",
+    "event": "writer_question_received",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-25"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "applicant",
+    "event": "stored_context_answered_writer_question",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "factId": "profile:career-goal",
+      "value": "Lead an applied research group building reliable computational tools for climate and physical science."
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "writer",
+    "event": "writer_draft_received",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-27"
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "bounded_semantic_decision_validated_and_applied",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "function": "evaluate_writer_draft",
+      "decision": "accepted",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:writer",
+      "tier": 4
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:30.995Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:portal",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T12:00:36.006Z",
+    "component": "verification",
+    "event": "current_otp_matched_stale_and_unrelated_rejected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "messageId": "current-otp",
+      "redactedCode": "4•••6"
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:04.832Z",
+    "component": "repair",
+    "event": "wrong_upload_replaced_with_exact_approved_artifact",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "approvedChecksum": "798fc11f3be156ef65674afa7d1984669a94157bad7bbab1ce6d8b45e6599db2"
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:11.746Z",
+    "component": "browser",
+    "event": "final_review_reached_with_saved_sections",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "actions": 28
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:11.746Z",
+    "component": "browser",
+    "event": "portal_act_read_verify_checkpoint_complete",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "browserActions": 28,
+      "recoveries": 1,
+      "exactArtifact": "798fc11f3be156ef65674afa7d1984669a94157bad7bbab1ce6d8b45e6599db2"
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:11.746Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:submission",
+      "tier": 3
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:13.546Z",
+    "component": "verification",
+    "event": "fixture_submission_confirmed_once",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "applicationId": "SC-TEST-2027-001"
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:13.546Z",
+    "component": "verification",
+    "event": "duplicate_submission_blocked",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "error": "The application submission was already confirmed and will not be repeated."
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:13.546Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "EXECUTE",
+      "requirementId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd:post-submission",
+      "tier": 1
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:13.546Z",
+    "component": "gmail",
+    "event": "submission_confirmation_email_verified",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "providerMessageId": "benchmark-reply-david-applicant-qualification-20260809-failure-driven-28",
+      "applicationId": "SC-TEST-2027-001"
+    }
+  },
+  {
+    "at": "2026-08-09T12:01:13.548Z",
+    "component": "engine",
+    "event": "step_selected",
+    "caseId": "david-applicant-qualification-20260809-failure-driven:toronto-cs-direct-entry-phd",
+    "data": {
+      "kind": "COMPLETE",
+      "requirementId": null,
+      "tier": null
+    }
+  }
+]

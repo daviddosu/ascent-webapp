@@ -1,0 +1,1231 @@
+[
+  {
+    "at": "2026-08-09T12:10:08.154Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Recovery or restart handling is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:09.575Z",
+    "component": "browser",
+    "event": "navigation_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account&failure=expired_session",
+      "observation": {
+        "title": "Application portal · expired",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account&failure=expired_session",
+        "headings": [
+          "Session expired"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Session expired The controlled session expired. Resume sign in to recover the saved sections. Resume sign in",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=review"
+          },
+          {
+            "text": "Resume sign in",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&failure=expired_session&step=account&recovery=1"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:10.452Z",
+    "component": "harness",
+    "event": "resumed_from_preserved_state",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "cleanUrl": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account",
+      "replayedActions": 0,
+      "observation": {
+        "title": "Application portal · account",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account",
+        "headings": [
+          "Create account"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Create account Use the controlled university application portal. Email Password Create account",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Email",
+            "kind": "input:email"
+          },
+          {
+            "label": "Password",
+            "kind": "input:password"
+          },
+          {
+            "label": "Create account",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "password",
+            "label": "Password",
+            "type": "password",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:10.452Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "kind": "checkpoint",
+      "verified": true,
+      "details": {
+        "replayedActions": 0,
+        "resumeFrom": "confirmedState"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:11.459Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "click",
+        "target": "text:Profile",
+        "value": null
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:12.643Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Legal name",
+        "value": "David Dosu"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:13.839Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "select",
+        "target": "css:select[name=\"nationality\"]",
+        "value": "Nigeria"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:15.022Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Research interests",
+        "value": "Computational physics"
+      },
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "Computational physics",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:16.173Z",
+    "component": "browser",
+    "event": "section_save_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "step": "profile",
+      "target": "role:button:Save section",
+      "confirmationObserved": true,
+      "observation": {
+        "title": "Section saved",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile",
+        "headings": [
+          "Section saved"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Section saved profile section saved and checkpointed. Continue editing profile",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          },
+          {
+            "text": "Continue editing profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:16.173Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "kind": "saved_section",
+      "verified": true,
+      "details": {
+        "step": "profile",
+        "fields": []
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:16.173Z",
+    "component": "persistence",
+    "event": "checkpoint_saved",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "section": "profile",
+      "applicationCaseId": "portal-session-expiry"
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:21.501Z",
+    "component": "harness",
+    "event": "resumed_from_preserved_state",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "cleanUrl": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account",
+      "replayedActions": 4,
+      "observation": {
+        "title": "Application portal · profile",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile",
+        "headings": [
+          "Applicant profile"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Applicant profile Legal name Nationality Choose Nigeria Ghana Research interests Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Legal name",
+            "kind": "input:text"
+          },
+          {
+            "label": "NationalityChooseNigeriaGhana",
+            "kind": "select:select-one"
+          },
+          {
+            "label": "Research interests",
+            "kind": "textarea:textarea"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "legal_name",
+            "label": "Legal name",
+            "type": "text",
+            "value": "David Dosu",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "nationality",
+            "label": "NationalityChooseNigeriaGhana",
+            "type": "select-one",
+            "value": "Nigeria",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "research_interests",
+            "label": "Research interests",
+            "type": "textarea",
+            "value": "Computational physics",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:21.501Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "kind": "checkpoint",
+      "verified": true,
+      "details": {
+        "replayedActions": 4,
+        "resumeFrom": "confirmedState"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:22.601Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "click",
+        "target": "text:Education",
+        "value": null
+      },
+      "observation": {
+        "title": "Application portal · education",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education",
+        "headings": [
+          "Education history"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Education history Degree Institution Dates Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Degree",
+            "kind": "input:text"
+          },
+          {
+            "label": "Institution",
+            "kind": "input:text"
+          },
+          {
+            "label": "Dates",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "degree",
+            "label": "Degree",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "institution",
+            "label": "Institution",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "dates",
+            "label": "Dates",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:23.707Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Degree",
+        "value": "BSc"
+      },
+      "observation": {
+        "title": "Application portal · education",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education",
+        "headings": [
+          "Education history"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Education history Degree Institution Dates Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Degree",
+            "kind": "input:text"
+          },
+          {
+            "label": "Institution",
+            "kind": "input:text"
+          },
+          {
+            "label": "Dates",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "degree",
+            "label": "Degree",
+            "type": "text",
+            "value": "BSc",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "institution",
+            "label": "Institution",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "dates",
+            "label": "Dates",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:24.842Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Institution",
+        "value": "Controlled University"
+      },
+      "observation": {
+        "title": "Application portal · education",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education",
+        "headings": [
+          "Education history"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Education history Degree Institution Dates Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Degree",
+            "kind": "input:text"
+          },
+          {
+            "label": "Institution",
+            "kind": "input:text"
+          },
+          {
+            "label": "Dates",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "degree",
+            "label": "Degree",
+            "type": "text",
+            "value": "BSc",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "institution",
+            "label": "Institution",
+            "type": "text",
+            "value": "Controlled University",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "dates",
+            "label": "Dates",
+            "type": "text",
+            "value": "",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:26.224Z",
+    "component": "browser",
+    "event": "action_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "action": {
+        "action": "type",
+        "target": "label:Dates",
+        "value": "2020–2024"
+      },
+      "observation": {
+        "title": "Application portal · education",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education",
+        "headings": [
+          "Education history"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Education history Degree Institution Dates Save section",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          }
+        ],
+        "controls": [
+          {
+            "label": "Degree",
+            "kind": "input:text"
+          },
+          {
+            "label": "Institution",
+            "kind": "input:text"
+          },
+          {
+            "label": "Dates",
+            "kind": "input:text"
+          },
+          {
+            "label": "Save section",
+            "kind": "button:submit"
+          }
+        ],
+        "fields": [
+          {
+            "name": "degree",
+            "label": "Degree",
+            "type": "text",
+            "value": "BSc",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "institution",
+            "label": "Institution",
+            "type": "text",
+            "value": "Controlled University",
+            "checked": false,
+            "fileName": null
+          },
+          {
+            "name": "dates",
+            "label": "Dates",
+            "type": "text",
+            "value": "2020–2024",
+            "checked": false,
+            "fileName": null
+          }
+        ],
+        "untrustedExternalContent": true
+      },
+      "evidence": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:27.520Z",
+    "component": "browser",
+    "event": "section_save_observed",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "step": "education",
+      "target": "role:button:Save section",
+      "confirmationObserved": true,
+      "observation": {
+        "title": "Section saved",
+        "url": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education",
+        "headings": [
+          "Section saved"
+        ],
+        "text": "Account Verification Profile Education Research Documents Review Controlled benchmark fixture · run david-eval-20260809120909-5ae32a Section saved education section saved and checkpointed. Continue editing education",
+        "links": [
+          {
+            "text": "Account",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=account"
+          },
+          {
+            "text": "Verification",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=verification"
+          },
+          {
+            "text": "Profile",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=profile"
+          },
+          {
+            "text": "Education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          },
+          {
+            "text": "Research",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=research"
+          },
+          {
+            "text": "Documents",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=documents"
+          },
+          {
+            "text": "Review",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=review"
+          },
+          {
+            "text": "Continue editing education",
+            "href": "https://benchmark.test:56055/api/application-portal-fixture?run=david-eval-20260809120909-5ae32a&seed=52&step=education"
+          }
+        ],
+        "controls": [],
+        "fields": [],
+        "untrustedExternalContent": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:27.520Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "kind": "saved_section",
+      "verified": true,
+      "details": {
+        "step": "education",
+        "fields": []
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:08.154Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Known portal workflow is stateful.",
+        "The step spans multiple pages.",
+        "Durable persistence is required.",
+        "Recovery or restart handling is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:10:27.520Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "portal-session-expiry",
+    "data": {
+      "value": true
+    }
+  }
+]

@@ -1,0 +1,89 @@
+{
+  "fullName": "Nadia Okoye",
+  "email": "nadia.okoye@example.test",
+  "phone": "+234 803 555 0198",
+  "nationality": "Nigeria",
+  "currentLocation": "Lagos, Nigeria",
+  "undergraduate": {
+    "institution": "University of Lagos",
+    "degree": "BSc",
+    "field": "Physics",
+    "graduationDate": "2021-07-30",
+    "grade": "First Class"
+  },
+  "masters": {
+    "institution": "University of Lagos",
+    "degree": "MSc",
+    "field": "Computational Physics",
+    "requirementsCompleted": "2024-06-28",
+    "conferralDate": "2024-07-12",
+    "grade": "Distinction"
+  },
+  "researchExperience": [
+    "Surrogate models for turbulent flow",
+    "Uncertainty-aware numerical simulation",
+    "Climate downscaling benchmark"
+  ],
+  "workExperience": [
+    "Research Engineer, Delta Systems Lab (2022–2025)"
+  ],
+  "projects": [
+    "Open-source finite-volume solver",
+    "Climate downscaling benchmark"
+  ],
+  "awards": [
+    "Faculty prize for computational research, 2024"
+  ],
+  "leadership": [
+    "Coordinated the university open research reading group"
+  ],
+  "technicalSkills": [
+    "Python",
+    "Julia",
+    "PyTorch",
+    "HPC",
+    "numerical methods",
+    "LaTeX"
+  ],
+  "researchInterests": [
+    "scientific machine learning",
+    "uncertainty quantification",
+    "climate and physical systems"
+  ],
+  "careerGoals": "Lead an applied research group building reliable computational tools for climate and physical science.",
+  "geographicPreferences": [
+    "United Kingdom",
+    "Canada"
+  ],
+  "fundingRequirement": "I can only accept a programme with tuition coverage and a living stipend.",
+  "referees": [
+    {
+      "name": "Dr. Amina Bello",
+      "email": "amina.bello@simulated.test",
+      "relationship": "MSc supervisor"
+    },
+    {
+      "name": "Dr. Samuel Adeyemi",
+      "email": "samuel.adeyemi@simulated.test",
+      "relationship": "Research Engineer manager"
+    },
+    {
+      "name": "Professor Grace Nwosu",
+      "email": "grace.nwosu@simulated.test",
+      "relationship": "Undergraduate project supervisor"
+    }
+  ],
+  "answers": {
+    "profile:phone": "+234 803 555 0198",
+    "profile:career-goal": "Lead an applied research group building reliable computational tools for climate and physical science.",
+    "degree:requirements-completed": "2024-06-28",
+    "referee:primary-email": "amina.bello@simulated.test",
+    "professor:preferred-area": "scientific machine learning and uncertainty quantification"
+  },
+  "sourceDocuments": {
+    "cv": "Nadia Okoye\nnadia.okoye@example.test | +234 803 555 0198 | Lagos, Nigeria\nBSc Physics, University of Lagos, First Class, completed 2021-07-30\nMSc Computational Physics, University of Lagos\nResearch: surrogate models for turbulent flow; uncertainty-aware numerical simulation\nWork: Research Engineer at Delta Systems Lab (2022–2025)\nProjects: open-source finite-volume solver; climate downscaling benchmark\nSkills: Python, Julia, PyTorch, HPC, numerical methods, LaTeX",
+    "transcript": "University of Lagos — Official Transcript\nNadia Okoye — MSc Computational Physics\nRequirements for the MSc were completed on 2024-06-28.\nCumulative average: 4.45 / 5.00 (Distinction).\nRelevant courses: numerical methods, statistical mechanics, machine learning, parallel computing.",
+    "degree": "University of Lagos — Degree Certificate\nThis certifies that Nadia Okoye was awarded MSc Computational Physics.\nDegree conferral ceremony date: 2024-07-12.",
+    "supporting": "Delta Systems Lab — Research Engineer confirmation\nNadia Okoye developed uncertainty-aware surrogate models for a climate simulation pipeline.\nThe work was presented internally and has not yet been published."
+  }
+}

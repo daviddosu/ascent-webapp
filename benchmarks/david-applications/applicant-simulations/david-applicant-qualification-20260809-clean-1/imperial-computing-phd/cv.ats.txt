@@ -1,0 +1,96 @@
+Nadia Okoye
+
+nadia.okoye@example.test | +234 803 555 0198 | Lagos, Nigeria
+
+Education
+University of Lagos
+BSc, Physics
+
+University of Lagos
+MSc, Computational Physics
+
+2017 – 2021-07-30
+Nigeria
+
+2022 – 2024-06-28
+Nigeria
+
+Research Experience
+Surrogate models for turbulent flow
+
+2022 – 2025
+
+University of Lagos
+• Surrogate models for turbulent flow
+• Python
+• Julia
+• PyTorch
+• Verified research experience
+
+Uncertainty-aware numerical simulation
+
+2022 – 2025
+
+Delta Systems Lab
+• Uncertainty-aware numerical simulation
+• Python
+• Julia
+• PyTorch
+• Verified research experience
+
+Climate downscaling benchmark
+
+2022 – 2025
+
+Delta Systems Lab
+• Climate downscaling benchmark
+• Python
+• Julia
+• PyTorch
+• Verified research experience
+
+Work Experience
+Delta Systems Lab
+
+2022 – 2025
+
+Research Engineer
+• Research Engineer, Delta Systems Lab (2022–2025)
+
+Research Projects
+
+Research direction: scientific machine learning and reliable simulation $—$ Python, Julia, PyTorch, HPC, nume
+• Investigating scientific machine learning and reliable simulation using reproducible computational experiments.
+• Applicant-reviewed research direction
+
+Projects
+Open-source finite-volume solver $—$ Python, Julia, PyTorch, HPC
+2024
+• Open-source finite-volume solver aligned with reproducible scientific machine learning and high-performance
+simulation.
+Climate downscaling benchmark $—$ Python, Julia, PyTorch, HPC
+2024
+• Climate downscaling benchmark aligned with reproducible scientific machine learning and high-performance
+simulation.
+
+Awards
+Faculty prize for computational research, 2024, University of Lagos (): Faculty prize for computational research,
+2024
+
+Technical Skills
+Python, Julia, PyTorch, HPC, numerical methods, LaTeX
+
+Research Skills
+scientific machine learning, uncertainty quantification, climate and physical systems; scientific machine learning and
+reliable simulation
+
+Languages
+English
+
+Leadership
+Coordinated the university open research reading group
+
+Presentations
+Internal research presentation on uncertainty-aware simulation
+
+

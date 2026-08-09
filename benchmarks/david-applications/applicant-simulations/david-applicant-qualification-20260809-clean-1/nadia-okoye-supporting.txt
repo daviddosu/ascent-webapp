@@ -1,0 +1,3 @@
+Delta Systems Lab — Research Engineer confirmation
+Nadia Okoye developed uncertainty-aware surrogate models for a climate simulation pipeline.
+The work was presented internally and has not yet been published.

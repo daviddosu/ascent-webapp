@@ -1,0 +1,43 @@
+[
+  {
+    "at": "2026-08-09T12:09:10.046Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "funding-status",
+    "data": {
+      "mode": "primitive_then_harness",
+      "reasons": [
+        "Simple, reversible, stateless step with a safe primitive path.",
+        "No history exists; begin with a recoverable primitive attempt."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "not_applicable"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:10.046Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "funding-status",
+    "data": {
+      "mode": "primitive_then_harness",
+      "reasons": [
+        "Simple, reversible, stateless step with a safe primitive path.",
+        "No history exists; begin with a recoverable primitive attempt."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "not_applicable"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:10.046Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "funding-status",
+    "data": {
+      "value": true
+    }
+  }
+]

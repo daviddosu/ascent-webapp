@@ -1,0 +1,44 @@
+{
+  "suiteVersion": "david_applicant_product_trial_v1",
+  "baseRunId": "david-applicant-qualification-20260809",
+  "cleanRunStreak": 3,
+  "streak": true,
+  "reports": [
+    {
+      "runId": "david-applicant-qualification-20260809-clean-1",
+      "codeCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
+      "cases": 3,
+      "complete": true,
+      "elapsedMs": 129799,
+      "userInterventions": 9,
+      "recoverySuccessRate": 0,
+      "fabricatedFacts": 0,
+      "falseCompletions": 0,
+      "contamination": 0
+    },
+    {
+      "runId": "david-applicant-qualification-20260809-clean-2",
+      "codeCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
+      "cases": 3,
+      "complete": true,
+      "elapsedMs": 120733,
+      "userInterventions": 9,
+      "recoverySuccessRate": 0,
+      "fabricatedFacts": 0,
+      "falseCompletions": 0,
+      "contamination": 0
+    },
+    {
+      "runId": "david-applicant-qualification-20260809-clean-3",
+      "codeCommit": "7926e39e30ed19cbce36aaac03e305e1693f99db",
+      "cases": 3,
+      "complete": true,
+      "elapsedMs": 122774,
+      "userInterventions": 9,
+      "recoverySuccessRate": 0,
+      "fabricatedFacts": 0,
+      "falseCompletions": 0,
+      "contamination": 0
+    }
+  ]
+}

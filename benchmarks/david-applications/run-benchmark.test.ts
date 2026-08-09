@@ -193,7 +193,7 @@ Run **${run.runId}** at ${run.generatedAt}; evaluated commit **${run.codeCommit}
 
 - Production migration/function/frontend deployment: ${run.productionReadiness?.deploymentGatePassed ? 'completed' : 'not performed; qualification policy blocked deployment'}
 - Production smoke: ${run.productionReadiness?.liveGatePassed ? 'passed' : 'blocked'}
-- External limitation: current authenticated RLS, Calendar, durable-restart, and exact-upload smoke requires `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SHOTCOUNT_TEST_EMAIL`, and `SHOTCOUNT_TEST_PASSWORD`, which are unavailable in this workspace.
+- External limitation: current authenticated RLS, Calendar, durable-restart, and exact-upload smoke requires \`VITE_SUPABASE_URL\`, \`VITE_SUPABASE_ANON_KEY\`, \`SHOTCOUNT_TEST_EMAIL\`, and \`SHOTCOUNT_TEST_PASSWORD\`, which are unavailable in this workspace.
 
 ## Primitive, harness, and adaptive comparison
 

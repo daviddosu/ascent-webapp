@@ -1,0 +1,108 @@
+[
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "professor-approved-outreach"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "persistence",
+    "event": "action_claimed",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "action": "gmail.send_message",
+      "key": "send:professor-approved-outreach",
+      "providerId": null
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "gmail",
+    "event": "provider_send_confirmed",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "messageId": "benchmark-msg-david-eval-20260809120909-5ae32a-14",
+      "threadId": "thread-professor-approved-outreach-professor_outreach",
+      "purpose": "professor_outreach",
+      "to": "a.okafor@controlled.example.edu"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "kind": "provider_message",
+      "verified": true,
+      "providerId": "benchmark-msg-david-eval-20260809120909-5ae32a-14",
+      "threadId": "thread-professor-approved-outreach-professor_outreach",
+      "details": {
+        "purpose": "professor_outreach",
+        "to": "a.okafor@controlled.example.edu"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "kind": "provider_thread",
+      "verified": true,
+      "threadId": "thread-professor-approved-outreach-professor_outreach",
+      "details": {
+        "caseId": "professor-approved-outreach"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "professor-approved-outreach",
+    "data": {
+      "value": true
+    }
+  }
+]

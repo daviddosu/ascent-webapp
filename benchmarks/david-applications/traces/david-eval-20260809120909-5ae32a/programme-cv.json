@@ -1,0 +1,79 @@
+[
+  {
+    "at": "2026-08-09T12:09:10.048Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "programme-cv",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:10.604Z",
+    "component": "documents",
+    "event": "artifact_compiled_and_verified",
+    "caseId": "programme-cv",
+    "data": {
+      "templateId": "graduate_application_cv_v1",
+      "pageTarget": "one_page",
+      "pageCount": 1,
+      "checksum": "a78bc26fc0549707bcb9d9aa189e8bc36ba407faa7443a1a56a6172a5b6e0be7"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:10.604Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "programme-cv",
+    "data": {
+      "kind": "artifact_checksum",
+      "verified": true,
+      "checksum": "a78bc26fc0549707bcb9d9aa189e8bc36ba407faa7443a1a56a6172a5b6e0be7",
+      "details": {
+        "pageCount": 1,
+        "atsIdentity": true
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:10.048Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "programme-cv",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:10.604Z",
+    "component": "primitive",
+    "event": "primitive_verified",
+    "caseId": "programme-cv",
+    "data": {
+      "value": true
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:10.604Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "programme-cv",
+    "data": {
+      "value": true
+    }
+  }
+]

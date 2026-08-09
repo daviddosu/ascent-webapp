@@ -1,0 +1,82 @@
+[
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-decline",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "persistence",
+    "event": "application_case_created",
+    "caseId": "professor-decline",
+    "data": {
+      "status": "active",
+      "data": {
+        "applicationCaseId": "professor-decline"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "gmail",
+    "event": "provider_reply_received",
+    "caseId": "professor-decline",
+    "data": {
+      "messageId": "benchmark-reply-david-eval-20260809120909-5ae32a-16",
+      "threadId": "thread-professor-decline-professor_reply",
+      "purpose": "professor_reply"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "verification",
+    "event": "evidence_verified",
+    "caseId": "professor-decline",
+    "data": {
+      "kind": "provider_reply",
+      "verified": true,
+      "providerId": "benchmark-reply-david-eval-20260809120909-5ae32a-16",
+      "threadId": "thread-professor-decline-professor_reply",
+      "details": {
+        "from": "a.okafor@controlled.example.edu",
+        "purpose": "professor_reply"
+      }
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "router",
+    "event": "execution_mode_selected",
+    "caseId": "professor-decline",
+    "data": {
+      "mode": "harness",
+      "reasons": [
+        "Durable persistence is required.",
+        "Read-after-write evidence is required."
+      ],
+      "primitiveSuccessRate": null,
+      "harnessSuccessRate": null,
+      "promotion": "harness_preferred"
+    }
+  },
+  {
+    "at": "2026-08-09T12:09:13.111Z",
+    "component": "harness",
+    "event": "harness_verified",
+    "caseId": "professor-decline",
+    "data": {
+      "value": true
+    }
+  }
+]
