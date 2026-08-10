@@ -23,7 +23,10 @@ describe('public browser URL policy', () => {
     for (const url of [
       'http://example.com/path',
       'https://127.0.0.1/path',
+      'https://2130706433/path',
+      'https://0x7f000001/path',
       'https://[::1]/path',
+      'https://[::ffff:127.0.0.1]/path',
       'https://localhost/path',
       'https://service.local/path',
       'https://user:secret@example.com/path',

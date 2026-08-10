@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises'
 import { isIP } from 'node:net'
 import { chromium as playwright, type Browser, type Locator, type Page } from 'playwright-core'
 import { BrowserExecutionError } from './_flight-browser.js'
+import { normalizedIpLiteral, pinnedHostResolverRules, resolvePublicHostname } from './_egress-policy.js'
 
 // Public browser runs are serverless Chromium invocations. Disable WebGL and
 // avoid the small shared-memory mount so a page renderer cannot take down the
@@ -52,8 +53,17 @@ async function executablePath() {
   }
 }
 
-async function launchBrowser() {
+async function launchBrowser(domains: unknown) {
   const benchmark = benchmarkModeEnabled()
+  const allowedDomains = normalizedAllowedDomains(domains)
+  let resolverRules = ''
+  if (!benchmark) {
+    try {
+      resolverRules = await pinnedHostResolverRules(allowedDomains)
+    } catch {
+      throw new BrowserExecutionError('browser_dns_not_public', 'The browser destination did not resolve exclusively to public network addresses.', false)
+    }
+  }
   return playwright.launch({
     executablePath: await executablePath(),
     headless: true,
@@ -61,6 +71,7 @@ async function launchBrowser() {
       ...(process.platform === 'linux' ? chromium.args : []),
       ...(process.platform === 'linux' ? ['--disable-dev-shm-usage'] : []),
       ...(benchmark ? ['--ignore-certificate-errors', '--host-resolver-rules=MAP benchmark.test 127.0.0.1'] : []),
+      ...(!benchmark && resolverRules ? [`--host-resolver-rules=${resolverRules}`] : []),
     ],
   })
 }
@@ -86,7 +97,7 @@ export function allowedPublicUrl(raw: string, domains: unknown) {
     (url.protocol !== 'https:' && !benchmarkFixture) ||
     Boolean(url.username || url.password) ||
     (hostname === 'benchmark.test' && !benchmarkFixture) ||
-    (isIP(hostname) !== 0 && !benchmarkFixture) ||
+    (Boolean(normalizedIpLiteral(hostname)) && !benchmarkFixture) ||
     (hostname === 'localhost' && !benchmarkFixture) ||
     hostname.endsWith('.localhost') ||
     hostname.endsWith('.local') ||
@@ -97,7 +108,7 @@ export function allowedPublicUrl(raw: string, domains: unknown) {
   return url
 }
 
-function safePublicResource(raw: string) {
+async function safePublicResource(raw: string) {
   let url: URL
   try {
     url = new URL(raw)
@@ -108,7 +119,7 @@ function safePublicResource(raw: string) {
   if (url.protocol !== 'https:') return false
   const hostname = url.hostname.toLocaleLowerCase()
   const benchmarkFixture = benchmarkModeEnabled() && hostname === 'benchmark.test'
-  return !url.username &&
+  const structurallySafe = !url.username &&
     !url.password &&
     (hostname !== 'benchmark.test' || benchmarkFixture) &&
     isIP(hostname) === 0 &&
@@ -120,6 +131,13 @@ function safePublicResource(raw: string) {
     !hostname.endsWith('.lan') &&
     !hostname.endsWith('.home') &&
     !hostname.endsWith('.corp')
+  if (!structurallySafe) return false
+  try {
+    await resolvePublicHostname(hostname)
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function installRequestGuard(page: Page, domains: unknown) {
@@ -128,7 +146,7 @@ async function installRequestGuard(page: Page, domains: unknown) {
     const url = request.url()
     try {
       if (request.resourceType() === 'document') allowedPublicUrl(url, domains)
-      else if (!safePublicResource(url)) throw new Error('blocked')
+      else if (!(await safePublicResource(url))) throw new Error('blocked')
       await route.continue()
     } catch {
       await route.abort('blockedbyclient')
@@ -323,7 +341,7 @@ async function restore(page: Page, state: PublicBrowserState, domains: unknown, 
 }
 
 export async function navigatePublicPage(rawUrl: string, domains: unknown) {
-  const browser = await launchBrowser()
+  const browser = await launchBrowser(domains)
   try {
     const page = await browser.newPage()
     await installRequestGuard(page, domains)
@@ -339,7 +357,7 @@ export async function navigatePublicPage(rawUrl: string, domains: unknown) {
 
 export async function actOnPublicPage(state: PublicBrowserState, action: PublicBrowserAction, domains: unknown, materialize?: FileMaterializer) {
   if (state.actions.length >= 30) throw new BrowserExecutionError('browser_action_limit', 'This browser session reached its safe action limit.', false)
-  const browser: Browser = await launchBrowser()
+  const browser: Browser = await launchBrowser(domains)
   try {
     const page = await browser.newPage()
     await installRequestGuard(page, domains)
@@ -359,7 +377,7 @@ export async function actOnPublicPage(state: PublicBrowserState, action: PublicB
 }
 
 export async function submitPublicPage(state: PublicBrowserState, target: string, domains: unknown, materialize?: FileMaterializer) {
-  const browser: Browser = await launchBrowser()
+  const browser: Browser = await launchBrowser(domains)
   try {
     const page = await browser.newPage()
     await installRequestGuard(page, domains)
