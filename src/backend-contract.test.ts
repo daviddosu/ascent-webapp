@@ -22,6 +22,8 @@ const demoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migratio
 const activeDemoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migrations/202607310002_complete_active_demo_flight_handoffs.sql'), 'utf8')
 const taskDescriptionPrivacyMigration = readFileSync(resolve(root, 'supabase/migrations/202607250003_keep_task_descriptions_private.sql'), 'utf8')
 const aiUsageQuotaMigration = readFileSync(resolve(root, 'supabase/migrations/202608100002_secure_ai_usage_quota.sql'), 'utf8')
+const reminderScanMigration = readFileSync(resolve(root, 'supabase/migrations/202608100004_index_scheduled_reminder_scan.sql'), 'utf8')
+const reliablePushMigration = readFileSync(resolve(root, 'supabase/migrations/202608100003_reliable_push_outbox.sql'), 'utf8')
 const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
 const specialistSource = readFileSync(resolve(root, 'supabase/functions/_shared/specialists.ts'), 'utf8')
 const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
@@ -173,10 +175,29 @@ describe('scheduled reminder contract', () => {
     expect(scheduledReminderFunction).toContain("Deno.env.get('REMINDER_CRON_SECRET')")
   })
 
+  it('scans active tasks only for users with push enabled', () => {
+    expect(scheduledReminderFunction).toContain('if (!enabledUsers.size) return Response.json({ sent: 0 })')
+    expect(scheduledReminderFunction).toContain(".in('user_id', userIds).eq('record_type', 'task').is('deleted_at', null)")
+    expect(reminderScanMigration).toContain('planner_records_active_tasks_user_idx')
+    expect(reminderScanMigration).toContain("where record_type = 'task' and deleted_at is null")
+  })
+
+  it('uses a leased outbox and acknowledges only confirmed provider delivery', () => {
+    const completionPush = readFileSync(resolve(root, 'supabase/functions/send-completion-push/index.ts'), 'utf8')
+    expect(reliablePushMigration).toContain('claim_push_delivery')
+    expect(reliablePushMigration).toContain("status in ('pending', 'sending', 'delivered', 'abandoned')")
+    expect(reliablePushMigration).toContain("status = 'sending' and claimed_at <")
+    expect(reliablePushMigration).toContain('finish_push_delivery')
+    expect(scheduledReminderFunction).toContain('deliverPushWithOutbox')
+    expect(completionPush).toContain('deliverPushWithOutbox')
+    expect(scheduledReminderFunction).not.toContain("from('scheduled_push_deliveries').insert")
+    expect(completionPush).not.toContain("from('push_deliveries').insert")
+  })
+
   it('deduplicates closed-app reminders per device', () => {
     expect(scheduledReminderMigration).toContain('primary key (delivery_key, push_subscription_id)')
     expect(scheduledReminderMigration).toContain('enable row level security')
-    expect(scheduledReminderFunction).toContain('scheduled_push_deliveries')
+    expect(scheduledReminderFunction).toContain('deliverPushWithOutbox')
   })
 
   it('uses each profile timezone and skips completed tasks', () => {
@@ -516,7 +537,9 @@ describe('agent execution security contract', () => {
     expect(publicBrowser).toContain('untrustedExternalContent: true')
     expect(publicBrowser).toContain('browser_sensitive_field_blocked')
     expect(publicBrowser).toContain("url.protocol !== 'https:'")
-    expect(publicBrowser).toContain('isIP(hostname) !== 0')
+    expect(publicBrowser).toContain('normalizedIpLiteral(hostname)')
+    expect(publicBrowser).toContain('pinnedHostResolverRules')
+    expect(publicBrowser).toContain('await resolvePublicHostname(hostname)')
     expect(publicBrowser).toContain("request.resourceType() === 'document'")
     expect(flightBrowser).toContain("paymentBoundaryReached: true")
     expect(flightBrowser).toContain('safeExternalProviderHandoffUrl')
@@ -929,6 +952,9 @@ describe('offline application contract', () => {
     expect(headers.get('Content-Security-Policy')).toContain("script-src 'self'")
     expect(headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'")
     expect(headers.get('Content-Security-Policy')).toContain("object-src 'none'")
+    expect(headers.get('Content-Security-Policy')).toContain("style-src-elem 'self'")
+    expect(headers.get('Content-Security-Policy')).toContain("style-src-attr 'unsafe-inline'")
+    expect(headers.get('Content-Security-Policy')).not.toContain("style-src 'self' 'unsafe-inline'")
     expect(headers.get('X-Content-Type-Options')).toBe('nosniff')
   })
 
@@ -955,7 +981,7 @@ describe('web push contract', () => {
     const browser = readFileSync(resolve(root, 'src/data/notifications.ts'), 'utf8')
     expect(sender).toContain("Deno.env.get('VAPID_PRIVATE_KEY')")
     expect(sender).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')")
-    expect(sender).toContain('push_deliveries')
+    expect(sender).toContain('deliverPushWithOutbox')
     expect(browser).not.toContain('VAPID_PRIVATE_KEY')
   })
 })

@@ -42,9 +42,50 @@ create index ai_usage_user_requested_idx on public.ai_usage (user_id, requested_
 grant all on table public.ai_usage to anon, authenticated;
 grant usage, select on sequence public.ai_usage_id_seq to anon, authenticated;
 
+create table public.planner_records (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  record_type text not null,
+  deleted_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+create table public.push_subscriptions (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade
+);
+
+create table public.completion_events (
+  id uuid primary key,
+  creator_id uuid not null references auth.users(id) on delete cascade
+);
+
+create table public.push_deliveries (
+  completion_event_id uuid not null references public.completion_events(id) on delete cascade,
+  push_subscription_id uuid not null references public.push_subscriptions(id) on delete cascade,
+  delivered_at timestamptz not null default now(),
+  primary key (completion_event_id, push_subscription_id)
+);
+
+create table public.scheduled_push_deliveries (
+  delivery_key text not null,
+  push_subscription_id uuid not null references public.push_subscriptions(id) on delete cascade,
+  delivered_at timestamptz not null default now(),
+  primary key (delivery_key, push_subscription_id)
+);
+
 insert into auth.users (id) values
   ('10000000-0000-0000-0000-000000000001'),
   ('10000000-0000-0000-0000-000000000002');
+
+insert into public.push_subscriptions (id, user_id)
+values ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001');
+insert into public.completion_events (id, creator_id)
+values ('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001');
+insert into public.push_deliveries (completion_event_id, push_subscription_id)
+values ('50000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001');
+insert into public.scheduled_push_deliveries (delivery_key, push_subscription_id)
+values ('legacy-scheduled', '40000000-0000-0000-0000-000000000001');
 
 insert into public.application_cases (id, user_id) values
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),

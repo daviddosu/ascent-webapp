@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 import { inNotificationQuietHours } from '../_shared/notification-time.ts'
+import { deliverPushWithOutbox } from '../_shared/push-delivery.ts'
 
 type Preference = {
   user_id: string
@@ -65,21 +66,20 @@ Deno.serve(async request => {
   for (const subscription of subscriptions ?? []) {
     const preference = preferenceByUser.get(subscription.user_id)
     if (mutedIds.has(subscription.user_id) || preference?.completion_alerts === false || preference?.web_push_enabled === false || inNotificationQuietHours(preference)) continue
-    const { error: receiptError } = await admin.from('push_deliveries').insert({
-      completion_event_id: event.id, push_subscription_id: subscription.id,
-    })
-    if (receiptError) continue
-    try {
-      await webpush.sendNotification({
+    const result = await deliverPushWithOutbox({
+      admin,
+      identity: { kind: 'completion', completionEventId: event.id, subscriptionId: subscription.id },
+      send: () => webpush.sendNotification({
         endpoint: subscription.endpoint,
         keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-      }, payload, { TTL: 3600, urgency: 'normal' })
-      sent += 1
-    } catch (error) {
-      const status = Number((error as { statusCode?: number }).statusCode ?? 0)
-      if (status === 404 || status === 410) await admin.from('push_subscriptions').delete().eq('id', subscription.id)
-      else await admin.from('push_deliveries').delete().eq('completion_event_id', event.id).eq('push_subscription_id', subscription.id)
-    }
+      }, payload, { TTL: 3600, urgency: 'normal' }).then(() => undefined),
+      classifyError: error => {
+        const status = Number((error as { statusCode?: number }).statusCode ?? 0)
+        return { retryable: status !== 404 && status !== 410, code: status ? `web_push_${status}` : 'web_push_provider_failure' }
+      },
+    })
+    if (result.outcome === 'delivered') sent += 1
+    if (result.outcome === 'permanent_failure') await admin.from('push_subscriptions').delete().eq('id', subscription.id)
   }
   return Response.json({ sent })
 })

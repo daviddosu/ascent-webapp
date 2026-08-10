@@ -2,11 +2,18 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 import webpush from 'npm:web-push@3.6.7'
 import { notificationLocalParts, validNotificationTimezone } from '../_shared/notification-time.ts'
 import { constantTimeEqual } from '../_shared/crypto.ts'
+import { deliverPushWithOutbox } from '../_shared/push-delivery.ts'
 
 type Subscription = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string }
 type Profile = { id: string; timezone: string | null }
 type Preference = { user_id: string; web_push_enabled: boolean; timezone: string | null }
 type TaskRecord = { user_id: string; record_id: string; data: Record<string, unknown> }
+
+function batches<T>(items: T[], size = 200) {
+  const result: T[][] = []
+  for (let offset = 0; offset < items.length; offset += size) result.push(items.slice(offset, offset + size))
+  return result
+}
 
 function addLocalDays(date: string, amount: number) {
   const next = new Date(`${date}T12:00:00Z`)
@@ -65,28 +72,22 @@ async function sendOnce(
   deliveryKey: string,
   payload: Record<string, unknown>,
 ) {
-  const { error: receiptError } = await admin.from('scheduled_push_deliveries').insert({
-    delivery_key: deliveryKey,
-    push_subscription_id: subscription.id,
-  })
-  if (receiptError) return false
-
-  try {
-    await webpush.sendNotification({
+  const result = await deliverPushWithOutbox({
+    admin,
+    identity: { kind: 'scheduled', deliveryKey, subscriptionId: subscription.id },
+    send: () => webpush.sendNotification({
       endpoint: subscription.endpoint,
       keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-    }, JSON.stringify(payload), { TTL: 3600, urgency: 'high' })
-    return true
-  } catch (error) {
-    const status = Number((error as { statusCode?: number }).statusCode ?? 0)
-    if (status === 404 || status === 410) {
-      await admin.from('push_subscriptions').delete().eq('id', subscription.id)
-    } else {
-      await admin.from('scheduled_push_deliveries').delete()
-        .eq('delivery_key', deliveryKey).eq('push_subscription_id', subscription.id)
-    }
-    return false
+    }, JSON.stringify(payload), { TTL: 3600, urgency: 'high' }).then(() => undefined),
+    classifyError: error => {
+      const status = Number((error as { statusCode?: number }).statusCode ?? 0)
+      return { retryable: status !== 404 && status !== 410, code: status ? `web_push_${status}` : 'web_push_provider_failure' }
+    },
+  })
+  if (result.outcome === 'permanent_failure') {
+    await admin.from('push_subscriptions').delete().eq('id', subscription.id)
   }
+  return result.outcome === 'delivered'
 }
 
 Deno.serve(async request => {
@@ -102,21 +103,28 @@ Deno.serve(async request => {
   if (!url || !serviceKey || !vapidPublic || !vapidPrivate) return new Response('Push is not configured', { status: 503 })
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
-  const [subscriptionsResult, preferencesResult, profilesResult, taskRecordsResult] = await Promise.all([
-    admin.from('push_subscriptions').select('id,user_id,endpoint,p256dh,auth'),
-    admin.from('notification_preferences').select('user_id,web_push_enabled,timezone').eq('web_push_enabled', true),
-    admin.from('profiles').select('id,timezone'),
-    admin.from('planner_records').select('user_id,record_id,data').eq('record_type', 'task').is('deleted_at', null),
-  ])
-  if (subscriptionsResult.error || preferencesResult.error || profilesResult.error || taskRecordsResult.error) {
+  const preferencesResult = await admin.from('notification_preferences')
+    .select('user_id,web_push_enabled,timezone').eq('web_push_enabled', true)
+  if (preferencesResult.error) {
     return new Response('Could not load scheduled reminder data', { status: 502 })
   }
-  const subscriptions = subscriptionsResult.data
   const preferences = preferencesResult.data
-  const profiles = profilesResult.data
-  const taskRecords = taskRecordsResult.data
-
   const enabledUsers = new Set((preferences ?? []).filter(item => item.web_push_enabled).map(item => item.user_id))
+  if (!enabledUsers.size) return Response.json({ sent: 0 })
+  const userBatches = batches([...enabledUsers])
+  const [subscriptionResults, profileResults, taskResults] = await Promise.all([
+    Promise.all(userBatches.map(userIds => admin.from('push_subscriptions').select('id,user_id,endpoint,p256dh,auth').in('user_id', userIds))),
+    Promise.all(userBatches.map(userIds => admin.from('profiles').select('id,timezone').in('id', userIds))),
+    Promise.all(userBatches.map(userIds => admin.from('planner_records').select('user_id,record_id,data')
+      .in('user_id', userIds).eq('record_type', 'task').is('deleted_at', null))),
+  ])
+  if ([...subscriptionResults, ...profileResults, ...taskResults].some(result => result.error)) {
+    return new Response('Could not load scheduled reminder data', { status: 502 })
+  }
+  const subscriptions = subscriptionResults.flatMap(result => result.data ?? [])
+  const profiles = profileResults.flatMap(result => result.data ?? [])
+  const taskRecords = taskResults.flatMap(result => result.data ?? [])
+
   const subscriptionsByUser = new Map<string, Subscription[]>()
   for (const subscription of (subscriptions ?? []) as Subscription[]) {
     if (!enabledUsers.has(subscription.user_id)) continue

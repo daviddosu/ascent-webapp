@@ -2488,19 +2488,34 @@ export type Database = {
       }
       push_deliveries: {
         Row: {
+          attempt_count: number
+          claim_token: string | null
+          claimed_at: string | null
           completion_event_id: string
-          delivered_at: string
+          delivered_at: string | null
+          last_error: string | null
           push_subscription_id: string
+          status: string
         }
         Insert: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
           completion_event_id: string
-          delivered_at?: string
+          delivered_at?: string | null
+          last_error?: string | null
           push_subscription_id: string
+          status?: string
         }
         Update: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
           completion_event_id?: string
-          delivered_at?: string
+          delivered_at?: string | null
+          last_error?: string | null
           push_subscription_id?: string
+          status?: string
         }
         Relationships: [
           {
@@ -2619,19 +2634,34 @@ export type Database = {
       }
       scheduled_push_deliveries: {
         Row: {
-          delivered_at: string
+          attempt_count: number
+          claim_token: string | null
+          claimed_at: string | null
+          delivered_at: string | null
           delivery_key: string
+          last_error: string | null
           push_subscription_id: string
+          status: string
         }
         Insert: {
-          delivered_at?: string
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          delivered_at?: string | null
           delivery_key: string
+          last_error?: string | null
           push_subscription_id: string
+          status?: string
         }
         Update: {
-          delivered_at?: string
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          delivered_at?: string | null
           delivery_key?: string
+          last_error?: string | null
           push_subscription_id?: string
+          status?: string
         }
         Relationships: [
           {
@@ -2881,6 +2911,16 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      claim_push_delivery: {
+        Args: {
+          p_completion_event_id: string | null
+          p_delivery_key: string | null
+          p_kind: string
+          p_lease_seconds?: number
+          p_subscription_id: string
+        }
+        Returns: string | null
+      }
       claim_agent_run: {
         Args: {
           p_lease_seconds?: number
@@ -3097,6 +3137,19 @@ export type Database = {
           title: string
           visibility: string
         }[]
+      }
+      finish_push_delivery: {
+        Args: {
+          p_claim_token: string
+          p_completion_event_id: string | null
+          p_delivered: boolean
+          p_delivery_key: string | null
+          p_error_code?: string | null
+          p_kind: string
+          p_retryable?: boolean
+          p_subscription_id: string
+        }
+        Returns: boolean
       }
       get_creator_today: { Args: { p_username: string }; Returns: Json }
       google_agent_connection_status: {

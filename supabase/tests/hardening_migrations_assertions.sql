@@ -28,6 +28,21 @@ begin
   if not has_function_privilege('service_role', 'public.claim_ai_coach_usage(uuid)', 'execute') then
     raise exception 'service_role cannot execute claim_ai_coach_usage';
   end if;
+  if has_function_privilege('authenticated', 'public.claim_push_delivery(text,text,uuid,uuid,integer)', 'execute') or
+     has_function_privilege('anon', 'public.finish_push_delivery(text,text,uuid,uuid,uuid,boolean,boolean,text)', 'execute') then
+    raise exception 'client role can execute push outbox functions';
+  end if;
+  if not has_function_privilege('service_role', 'public.claim_push_delivery(text,text,uuid,uuid,integer)', 'execute') or
+     not has_function_privilege('service_role', 'public.finish_push_delivery(text,text,uuid,uuid,uuid,boolean,boolean,text)', 'execute') then
+    raise exception 'service role cannot use push outbox functions';
+  end if;
+  if (select status from public.push_deliveries where completion_event_id = '50000000-0000-0000-0000-000000000001') <> 'abandoned' or
+     (select delivered_at from public.push_deliveries where completion_event_id = '50000000-0000-0000-0000-000000000001') is not null then
+    raise exception 'legacy completion receipt was represented as confirmed delivery';
+  end if;
+  if to_regclass('public.planner_records_active_tasks_user_idx') is null then
+    raise exception 'scheduled reminder partial index is missing';
+  end if;
   if to_regclass('public.ai_usage_user_requested_idx') is null then
     raise exception 'AI quota lookup index is missing';
   end if;
@@ -58,6 +73,46 @@ begin
     raise exception 'terminal transition did not decrement writer load';
   end if;
   delete from public.human_assignments where user_id = user_one and idempotency_key = 'state-transition';
+end;
+$$;
+
+do $$
+declare
+  subscription uuid := '40000000-0000-0000-0000-000000000001';
+  first_claim uuid;
+  reclaimed uuid;
+  failure_claim uuid;
+begin
+  delete from public.scheduled_push_deliveries where delivery_key in ('lease-test', 'failure-test');
+  first_claim := public.claim_push_delivery('scheduled', 'lease-test', null, subscription, 30);
+  if first_claim is null then raise exception 'initial push lease was not claimed'; end if;
+  if public.claim_push_delivery('scheduled', 'lease-test', null, subscription, 30) is not null then
+    raise exception 'active push lease was claimed twice';
+  end if;
+  update public.scheduled_push_deliveries set claimed_at = now() - interval '31 seconds'
+  where delivery_key = 'lease-test' and push_subscription_id = subscription;
+  reclaimed := public.claim_push_delivery('scheduled', 'lease-test', null, subscription, 30);
+  if reclaimed is null or reclaimed = first_claim then raise exception 'expired push lease was not safely reclaimed'; end if;
+  if public.finish_push_delivery('scheduled', 'lease-test', null, subscription, first_claim, true, false, null) then
+    raise exception 'stale claim token acknowledged delivery';
+  end if;
+  if not public.finish_push_delivery('scheduled', 'lease-test', null, subscription, reclaimed, true, false, null) then
+    raise exception 'current claim could not acknowledge delivery';
+  end if;
+  if public.claim_push_delivery('scheduled', 'lease-test', null, subscription, 30) is not null then
+    raise exception 'delivered push was claimed again';
+  end if;
+
+  failure_claim := public.claim_push_delivery('scheduled', 'failure-test', null, subscription, 30);
+  if not public.finish_push_delivery('scheduled', 'failure-test', null, subscription, failure_claim, false, true, 'provider_timeout') then
+    raise exception 'retryable push failure was not persisted';
+  end if;
+  if (select status from public.scheduled_push_deliveries where delivery_key = 'failure-test') <> 'pending' then
+    raise exception 'retryable push failure did not return to pending';
+  end if;
+  if public.claim_push_delivery('scheduled', 'failure-test', null, subscription, 30) is null then
+    raise exception 'retryable push failure could not be reclaimed';
+  end if;
 end;
 $$;
 

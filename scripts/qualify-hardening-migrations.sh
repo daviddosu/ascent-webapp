@@ -28,12 +28,16 @@ psql_cmd="$postgres_bin/psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $port -d $dat
 $psql_cmd -f "$repo_root/supabase/tests/hardening_migrations_base.sql" >/dev/null
 $psql_cmd -1 -f "$repo_root/supabase/migrations/202608100001_atomic_writer_assignment_load.sql" >/dev/null
 $psql_cmd -1 -f "$repo_root/supabase/migrations/202608100002_secure_ai_usage_quota.sql" >/dev/null
+$psql_cmd -1 -f "$repo_root/supabase/migrations/202608100003_reliable_push_outbox.sql" >/dev/null
+$psql_cmd -1 -f "$repo_root/supabase/migrations/202608100004_index_scheduled_reminder_scan.sql" >/dev/null
 $psql_cmd -f "$repo_root/supabase/tests/hardening_migrations_assertions.sql" >/dev/null
 
 # Both forward migrations are intentionally safe to reapply during local
 # qualification. This catches trigger duplication and counter repair drift.
 $psql_cmd -1 -f "$repo_root/supabase/migrations/202608100001_atomic_writer_assignment_load.sql" >/dev/null
 $psql_cmd -1 -f "$repo_root/supabase/migrations/202608100002_secure_ai_usage_quota.sql" >/dev/null
+$psql_cmd -1 -f "$repo_root/supabase/migrations/202608100003_reliable_push_outbox.sql" >/dev/null
+$psql_cmd -1 -f "$repo_root/supabase/migrations/202608100004_index_scheduled_reminder_scan.sql" >/dev/null
 $psql_cmd -f "$repo_root/supabase/tests/hardening_migrations_assertions.sql" >/dev/null
 
 $psql_cmd -c "delete from public.ai_usage where user_id = '10000000-0000-0000-0000-000000000001'; insert into public.ai_usage (user_id) select '10000000-0000-0000-0000-000000000001' from generate_series(1, 9);" >/dev/null
