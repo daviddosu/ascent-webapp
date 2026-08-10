@@ -1,0 +1,4 @@
+update public.human_assignments
+set status = 'approved'
+where user_id = '10000000-0000-0000-0000-000000000001'
+  and idempotency_key = 'parallel-load-' || :client_id;

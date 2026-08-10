@@ -17,6 +17,7 @@
     "benchmark:agent:live": "node benchmarks/agent-execution-live/run-live.mjs",
     "benchmark:david": "node benchmarks/david-applications/cli.mjs",
     "check:deno": "npx --yes deno check supabase/functions/*/index.ts",
+    "test:db-hardening": "sh scripts/qualify-hardening-migrations.sh",
     "check": "pnpm test && pnpm test:deno && pnpm check:deno && pnpm build",
     "check:cloud": "node scripts/verify-cloud.mjs",
     "check:cloud:auth": "node scripts/verify-cloud-auth.mjs"

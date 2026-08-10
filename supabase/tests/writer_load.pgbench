@@ -1,0 +1,2 @@
+insert into public.human_assignments (user_id, application_case_id, writer_id, status, idempotency_key)
+values ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 'assigned', 'parallel-load-' || :client_id);
