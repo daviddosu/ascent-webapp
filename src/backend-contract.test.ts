@@ -21,6 +21,7 @@ const agentMutationLockMigration = readFileSync(resolve(root, 'supabase/migratio
 const demoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migrations/202607310001_demo_flight_handoff.sql'), 'utf8')
 const activeDemoFlightHandoffMigration = readFileSync(resolve(root, 'supabase/migrations/202607310002_complete_active_demo_flight_handoffs.sql'), 'utf8')
 const taskDescriptionPrivacyMigration = readFileSync(resolve(root, 'supabase/migrations/202607250003_keep_task_descriptions_private.sql'), 'utf8')
+const aiUsageQuotaMigration = readFileSync(resolve(root, 'supabase/migrations/202608100002_secure_ai_usage_quota.sql'), 'utf8')
 const taskAgentFunction = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
 const specialistSource = readFileSync(resolve(root, 'supabase/functions/_shared/specialists.ts'), 'utf8')
 const googleOAuthStartFunction = readFileSync(resolve(root, 'supabase/functions/google-oauth-start/index.ts'), 'utf8')
@@ -38,6 +39,7 @@ const publicBrowser = readFileSync(resolve(root, 'api/_public-browser.ts'), 'utf
 const agentClient = readFileSync(resolve(root, 'src/data/agent.ts'), 'utf8')
 const mainUi = readFileSync(resolve(root, 'src/main.ts'), 'utf8')
 const transcriptionFunction = readFileSync(resolve(root, 'supabase/functions/transcribe-description/index.ts'), 'utf8')
+const supabaseConfig = readFileSync(resolve(root, 'supabase/config.toml'), 'utf8')
 
 const privateTables = [
   'profiles',
@@ -166,6 +168,11 @@ describe('cloud planner contract', () => {
 })
 
 describe('scheduled reminder contract', () => {
+  it('uses custom cron authentication without an incompatible gateway JWT check', () => {
+    expect(supabaseConfig).toMatch(/\[functions\.send-scheduled-reminders\]\s+verify_jwt = false/)
+    expect(scheduledReminderFunction).toContain("Deno.env.get('REMINDER_CRON_SECRET')")
+  })
+
   it('deduplicates closed-app reminders per device', () => {
     expect(scheduledReminderMigration).toContain('primary key (delivery_key, push_subscription_id)')
     expect(scheduledReminderMigration).toContain('enable row level security')
@@ -173,7 +180,7 @@ describe('scheduled reminder contract', () => {
   })
 
   it('uses each profile timezone and skips completed tasks', () => {
-    expect(scheduledReminderFunction).toContain('validTimezone(profile.timezone)')
+    expect(scheduledReminderFunction).toContain('validNotificationTimezone(profile.timezone)')
     expect(scheduledReminderFunction).toContain('if (!due || !time || task.data.completedAt) return null')
     expect(scheduledReminderFunction).toContain("url: '/app?plan=today'")
     expect(scheduledReminderFunction).toContain("url: '/app?plan=tomorrow'")
@@ -269,6 +276,17 @@ describe('secret isolation', () => {
     const coachFunction = readFileSync(resolve(root, 'supabase/functions/ai-coach/index.ts'), 'utf8')
     expect(deleteFunction).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')")
     expect(coachFunction).toContain("Deno.env.get('OPENAI_API_KEY')")
+    expect(deleteFunction.indexOf("from('private-file-assets').remove")).toBeLessThan(deleteFunction.indexOf('admin.auth.admin.deleteUser'))
+    expect(deleteFunction.indexOf("from('avatars').remove")).toBeLessThan(deleteFunction.indexOf('admin.auth.admin.deleteUser'))
+  })
+
+  it('keeps AI usage server-only and claims the daily quota atomically', () => {
+    const coachFunction = readFileSync(resolve(root, 'supabase/functions/ai-coach/index.ts'), 'utf8')
+    expect(aiUsageQuotaMigration).toContain('alter table public.ai_usage enable row level security')
+    expect(aiUsageQuotaMigration).toContain('pg_advisory_xact_lock')
+    expect(aiUsageQuotaMigration).toContain('grant execute on function public.claim_ai_coach_usage(uuid) to service_role')
+    expect(coachFunction).toContain("admin.rpc('claim_ai_coach_usage'")
+    expect(coachFunction).not.toContain("from('ai_usage').select")
   })
 })
 
@@ -903,6 +921,15 @@ describe('offline application contract', () => {
   it('opens personal creator paths through the same small web app', () => {
     const vercel = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')) as { rewrites: Array<{ destination: string }> }
     expect(vercel.rewrites[0]?.destination).toBe('/index.html')
+  })
+
+  it('ships a restrictive browser security policy', () => {
+    const deployment = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')) as { headers?: Array<{ headers: Array<{ key: string; value: string }> }> }
+    const headers = new Map(deployment.headers?.flatMap(rule => rule.headers).map(header => [header.key, header.value]))
+    expect(headers.get('Content-Security-Policy')).toContain("script-src 'self'")
+    expect(headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'")
+    expect(headers.get('Content-Security-Policy')).toContain("object-src 'none'")
+    expect(headers.get('X-Content-Type-Options')).toBe('nosniff')
   })
 
   it('receives background push and opens the creator page safely', () => {

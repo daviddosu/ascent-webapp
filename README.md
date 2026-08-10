@@ -19,7 +19,7 @@ The production planner loads the signed-in user's Supabase workspace first. It a
 pnpm check
 ```
 
-This runs the domain tests, browser-like interaction journeys, automated accessibility checks, TypeScript checking, and the production build.
+This runs the browser and domain tests, automated accessibility checks, Deno tests and Edge Function type checks, TypeScript checking, and the production build.
 
 ## Enable secure cloud accounts
 
@@ -40,6 +40,9 @@ supabase link --project-ref "$SUPABASE_PROJECT_REF"
 supabase db push
 supabase functions deploy delete-account
 supabase functions deploy ai-coach
+supabase functions deploy transcribe-description
+supabase functions deploy send-completion-push
+supabase functions deploy send-scheduled-reminders
 supabase functions deploy task-agent
 supabase functions deploy agent-watch-sweep
 supabase functions deploy google-oauth-start

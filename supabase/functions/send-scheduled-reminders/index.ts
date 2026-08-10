@@ -1,43 +1,12 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
+import { notificationLocalParts, validNotificationTimezone } from '../_shared/notification-time.ts'
+import { constantTimeEqual } from '../_shared/crypto.ts'
 
 type Subscription = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string }
 type Profile = { id: string; timezone: string | null }
 type Preference = { user_id: string; web_push_enabled: boolean; timezone: string | null }
 type TaskRecord = { user_id: string; record_id: string; data: Record<string, unknown> }
-
-const dateFormatterCache = new Map<string, Intl.DateTimeFormat>()
-
-function formatter(timezone: string) {
-  const cached = dateFormatterCache.get(timezone)
-  if (cached) return cached
-  const next = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  })
-  dateFormatterCache.set(timezone, next)
-  return next
-}
-
-function validTimezone(value: string | null | undefined) {
-  const timezone = value || 'UTC'
-  try {
-    formatter(timezone).format()
-    return timezone
-  } catch {
-    return 'UTC'
-  }
-}
-
-function localParts(reference: Date, timezone: string) {
-  const parts = formatter(timezone).formatToParts(reference)
-  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value ?? ''
-  return {
-    date: `${value('year')}-${value('month')}-${value('day')}`,
-    hour: Number(value('hour')),
-    minute: Number(value('minute')),
-  }
-}
 
 function addLocalDays(date: string, amount: number) {
   const next = new Date(`${date}T12:00:00Z`)
@@ -54,7 +23,7 @@ function localTimeToUtc(date: string, time: string, timezone: string) {
   const intended = Date.UTC(year!, month! - 1, day!, hour!, minute!)
   let result = intended
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const local = localParts(new Date(result), timezone)
+    const local = notificationLocalParts(new Date(result), timezone)
     const observed = Date.UTC(
       Number(local.date.slice(0, 4)), Number(local.date.slice(5, 7)) - 1, Number(local.date.slice(8, 10)), local.hour, local.minute,
     )
@@ -69,7 +38,7 @@ function taskAppearsOnToday(task: TaskRecord, today: string, timezone: string) {
   const completedAt = typeof task.data.completedAt === 'string' ? task.data.completedAt : ''
   if (!completedAt) return true
   const completed = new Date(completedAt)
-  return !Number.isNaN(completed.getTime()) && localParts(completed, timezone).date === today
+  return !Number.isNaN(completed.getTime()) && notificationLocalParts(completed, timezone).date === today
 }
 
 function taskIsIncompleteTomorrow(task: TaskRecord, tomorrow: string) {
@@ -123,22 +92,29 @@ async function sendOnce(
 Deno.serve(async request => {
   if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 })
   const cronSecret = Deno.env.get('REMINDER_CRON_SECRET')
-  if (!cronSecret || request.headers.get('x-shotcount-cron') !== cronSecret) return new Response('Unauthorized', { status: 401 })
+  if (!constantTimeEqual(request.headers.get('x-shotcount-cron') ?? '', cronSecret ?? '')) return new Response('Unauthorized', { status: 401 })
 
-  const url = Deno.env.get('SUPABASE_URL')!
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const url = Deno.env.get('SUPABASE_URL')
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')
   const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')
   const subject = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:hello@shotcount.app'
-  if (!vapidPublic || !vapidPrivate) return new Response('Push is not configured', { status: 503 })
+  if (!url || !serviceKey || !vapidPublic || !vapidPrivate) return new Response('Push is not configured', { status: 503 })
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
-  const [{ data: subscriptions }, { data: preferences }, { data: profiles }, { data: taskRecords }] = await Promise.all([
+  const [subscriptionsResult, preferencesResult, profilesResult, taskRecordsResult] = await Promise.all([
     admin.from('push_subscriptions').select('id,user_id,endpoint,p256dh,auth'),
     admin.from('notification_preferences').select('user_id,web_push_enabled,timezone').eq('web_push_enabled', true),
     admin.from('profiles').select('id,timezone'),
     admin.from('planner_records').select('user_id,record_id,data').eq('record_type', 'task').is('deleted_at', null),
   ])
+  if (subscriptionsResult.error || preferencesResult.error || profilesResult.error || taskRecordsResult.error) {
+    return new Response('Could not load scheduled reminder data', { status: 502 })
+  }
+  const subscriptions = subscriptionsResult.data
+  const preferences = preferencesResult.data
+  const profiles = profilesResult.data
+  const taskRecords = taskRecordsResult.data
 
   const enabledUsers = new Set((preferences ?? []).filter(item => item.web_push_enabled).map(item => item.user_id))
   const subscriptionsByUser = new Map<string, Subscription[]>()
@@ -148,9 +124,9 @@ Deno.serve(async request => {
     current.push(subscription)
     subscriptionsByUser.set(subscription.user_id, current)
   }
-  const timezoneByUser = new Map((profiles ?? []).map((profile: Profile) => [profile.id, validTimezone(profile.timezone)]))
+  const timezoneByUser = new Map((profiles ?? []).map((profile: Profile) => [profile.id, validNotificationTimezone(profile.timezone)]))
   for (const preference of (preferences ?? []) as Preference[]) {
-    if (!timezoneByUser.has(preference.user_id)) timezoneByUser.set(preference.user_id, validTimezone(preference.timezone))
+    if (!timezoneByUser.has(preference.user_id)) timezoneByUser.set(preference.user_id, validNotificationTimezone(preference.timezone))
   }
   const tasksByUser = new Map<string, TaskRecord[]>()
   for (const task of (taskRecords ?? []) as TaskRecord[]) {
@@ -164,7 +140,7 @@ Deno.serve(async request => {
   let sent = 0
   for (const [userId, userSubscriptions] of subscriptionsByUser) {
     const timezone = timezoneByUser.get(userId) ?? 'UTC'
-    const local = localParts(now, timezone)
+    const local = notificationLocalParts(now, timezone)
     const tasks = tasksByUser.get(userId) ?? []
     const deliveries: Array<{ key: string; payload: Record<string, unknown> }> = []
 
