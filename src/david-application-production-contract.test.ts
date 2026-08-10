@@ -6,6 +6,9 @@ const cronMigration = readFileSync('supabase/migrations/202608050002_portable_ag
 const assetMigration = readFileSync('supabase/migrations/202608050003_application_file_case_identity.sql', 'utf8')
 const referenceMigration = readFileSync('supabase/migrations/202608050004_application_reference_artifact.sql', 'utf8')
 const assignmentMigration = readFileSync('supabase/migrations/202608050005_assignment_gmail_thread.sql', 'utf8')
+const writerLoadMigration = readFileSync('supabase/migrations/202608100001_atomic_writer_assignment_load.sql', 'utf8')
+const taskAgent = readFileSync('supabase/functions/task-agent/index.ts', 'utf8')
+const watchSweep = readFileSync('supabase/functions/agent-watch-sweep/index.ts', 'utf8')
 
 describe('David application persistence contract', () => {
   it('defines the durable case graph and private storage controls', () => {
@@ -68,5 +71,13 @@ describe('David application persistence contract', () => {
   it('stores a strict Gmail thread checkpoint per human assignment', () => {
     expect(migration).toContain('gmail_thread_id text')
     expect(assignmentMigration).toContain('last_provider_message_id text')
+  })
+
+  it('claims writer assignments idempotently and maintains load atomically', () => {
+    expect(writerLoadMigration).toContain('after insert or delete or update of writer_id, user_id, status')
+    expect(writerLoadMigration).toContain("assignment.status not in ('approved', 'cancelled')")
+    expect(taskAgent).toContain("persisted.error?.code === '23505'")
+    expect(taskAgent).not.toContain("update({ active_assignments:")
+    expect(watchSweep).not.toContain('releaseWriterLoad')
   })
 })

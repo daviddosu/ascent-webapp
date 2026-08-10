@@ -3,6 +3,7 @@ import { executeGoogleTool, GoogleIntegrationError } from '../_shared/google.ts'
 import { classifyApplicationReply, matchApplicationOtp, nextApplicationCaseState, type OtpMessage, type OtpRequest } from '../_shared/david-applications.ts'
 import { applicationFailureIsRetryable, applicationFollowUpAllowed, applicationMessageQuery, applicationWriteIsApproved, isGenericProfessorOutreach, safeApplicationRequestKind } from '../_shared/application-roon.ts'
 import { persistedEmailArguments } from '../_shared/email-integrity.ts'
+import { constantTimeEqual } from '../_shared/crypto.ts'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -13,15 +14,6 @@ type AdminClient = SupabaseClient<any, 'public', 'public', any, any>
 
 function jsonResponse(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: noStoreHeaders })
-}
-
-function secureStringEqual(left: string, right: string) {
-  if (!left || left.length !== right.length) return false
-  let difference = 0
-  for (let index = 0; index < left.length; index += 1) {
-    difference |= left.charCodeAt(index) ^ right.charCodeAt(index)
-  }
-  return difference === 0
 }
 
 function safeString(value: unknown, maximum = 2_000) {
@@ -385,15 +377,6 @@ async function persistApplicationReplyAttachments(
 async function updateApplicationContact(admin: AdminClient, context: ApplicationRequestContext, contactId: string, threadId: string | null, messageId: string | null) {
   if (!contactId) return
   const updated = await admin.from('application_contacts').update({ gmail_thread_id: threadId, last_provider_message_id: messageId }).eq('id', contactId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id)
-  if (updated.error) throw new Error(updated.error.message)
-}
-
-async function releaseWriterLoad(admin: AdminClient, context: ApplicationRequestContext, writerId: string) {
-  if (!writerId) return
-  const writer = await admin.from('application_writers').select('active_assignments').eq('id', writerId).eq('user_id', context.request.user_id).maybeSingle()
-  if (writer.error && writer.error.code !== '42P01') throw new Error(writer.error.message)
-  if (!writer.data) return
-  const updated = await admin.from('application_writers').update({ active_assignments: Math.max(0, Number(writer.data.active_assignments ?? 0) - 1) }).eq('id', writerId).eq('user_id', context.request.user_id)
   if (updated.error) throw new Error(updated.error.message)
 }
 
@@ -782,9 +765,6 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
     const review = { ...priorReview, received_message_id: messageId, thread_id: threadId, classification, writer_artifact_ids: replyArtifactIds, is_final: isFinal, reviewed_at: new Date().toISOString() }
     const assignmentUpdate = await admin.from('human_assignments').update({ status: assignmentStatus, questions, revisions: Number(context.assignment.revisions ?? 0) + (requestsRevision ? 1 : 0), final_artifact_id: isFinal && replyArtifactIds[0] ? replyArtifactIds[0] : context.assignment.final_artifact_id ?? null, gmail_thread_id: threadId ?? context.assignment.gmail_thread_id ?? null, last_provider_message_id: messageId, quality_review: review }).eq('id', context.assignment.id).eq('user_id', context.request.user_id)
     if (assignmentUpdate.error) throw new Error(assignmentUpdate.error.message)
-    if (assignmentStatus === 'cancelled' && !['cancelled', 'approved'].includes(safeString(context.assignment.status, 80))) {
-      await releaseWriterLoad(admin, context, safeString(context.assignment.writer_id, 160))
-    }
   }
   await recordApplicationWorkerEvent(admin, context, 'application_message_received', 'succeeded', 'Roon attached and classified the application message on the existing case.', { message_id: messageId, thread_id: threadId, classification, evidence_id: evidenceId })
   return { status: 'completed', result: { kind: 'application_reply', classification, message_id: messageId, thread_id: threadId, subject, received_at: safeString(candidate.date, 80), excerpt, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, evidence_id: evidenceId } }
@@ -1190,7 +1170,7 @@ Deno.serve(async request => {
 
   const configuredCronToken = Deno.env.get('SHOTCOUNT_CRON_TOKEN') ?? ''
   const suppliedCronToken = request.headers.get('x-shotcount-cron-token') ?? ''
-  if (!secureStringEqual(suppliedCronToken, configuredCronToken)) {
+  if (!constantTimeEqual(suppliedCronToken, configuredCronToken)) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 

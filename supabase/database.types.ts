@@ -2877,6 +2877,10 @@ export type Database = {
         Args: { p_owner_id: string; p_task_id: string }
         Returns: boolean
       }
+      claim_ai_coach_usage: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       claim_agent_run: {
         Args: {
           p_lease_seconds?: number

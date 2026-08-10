@@ -4,6 +4,17 @@ function base64UrlEncode(bytes: Uint8Array) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
+export function constantTimeEqual(left: string, right: string) {
+  const leftBytes = new TextEncoder().encode(left)
+  const rightBytes = new TextEncoder().encode(right)
+  if (!leftBytes.length || leftBytes.length !== rightBytes.length) return false
+  let difference = 0
+  for (let index = 0; index < leftBytes.length; index += 1) {
+    difference |= leftBytes[index]! ^ rightBytes[index]!
+  }
+  return difference === 0
+}
+
 function base64UrlDecode(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')

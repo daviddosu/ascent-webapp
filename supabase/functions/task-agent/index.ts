@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { unzipSync } from 'https://esm.sh/fflate@0.8.2'
+import { constantTimeEqual } from '../_shared/crypto.ts'
 import {
   agentCompletionEvidenceSatisfied,
   agentExecutionDateContext,
@@ -234,6 +235,8 @@ type ToolOutput = {
   code: string
   message: string
   value: Record<string, unknown>
+  providerActionId?: string
+  publicSummary?: string
   actionSucceeded?: boolean
   actionStatus?: 'running' | 'succeeded' | 'failed'
   advanceStep?: boolean
@@ -601,15 +604,6 @@ async function classifySemanticTask(
         rationale: 'The task was not classified into a supported ShotCount domain.',
         supported: false,
       }
-}
-
-function secureStringEqual(left: string, right: string) {
-  if (!left || left.length !== right.length) return false
-  let difference = 0
-  for (let index = 0; index < left.length; index += 1) {
-    difference |= left.charCodeAt(index) ^ right.charCodeAt(index)
-  }
-  return difference === 0
 }
 
 function validTimezone(value: unknown) {
@@ -1041,7 +1035,10 @@ async function persistApplicationGeneratedAsset(
     metadata: Record<string, unknown>
   },
 ) {
-  const digest = await crypto.subtle.digest('SHA-256', input.bytes)
+  // Copy into an ArrayBuffer-backed view. Blobs may expose a
+  // Uint8Array<ArrayBufferLike>, while Web Crypto intentionally rejects a
+  // SharedArrayBuffer-backed BufferSource.
+  const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from(input.bytes))
   const checksum = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
   const existingAsset = await admin.from('file_assets')
     .select('id,storage_key,original_filename,mime_type,size_bytes,checksum')
@@ -3594,12 +3591,6 @@ async function executeProviderTool(
       if (!['cancelled', 'approved'].includes(safeString(previous.data.status, 80))) {
         const cancelled = await admin.from('human_assignments').update({ status: 'cancelled', quality_review: { replacement_writer_id: selected.id, replaced_at: new Date().toISOString() } }).eq('id', replacementAssignmentId).eq('user_id', run.user_id).eq('status', previous.data.status)
         if (cancelled.error) throw new Error(cancelled.error.message)
-        const oldWriter = await admin.from('application_writers').select('active_assignments').eq('id', safeString(previous.data.writer_id, 160)).eq('user_id', run.user_id).maybeSingle()
-        if (oldWriter.error && oldWriter.error.code !== '42P01') throw new Error(oldWriter.error.message)
-        if (oldWriter.data) {
-          const released = await admin.from('application_writers').update({ active_assignments: Math.max(0, Number(oldWriter.data.active_assignments ?? 0) - 1) }).eq('id', safeString(previous.data.writer_id, 160)).eq('user_id', run.user_id)
-          if (released.error) throw new Error(released.error.message)
-        }
       }
     }
     const selection = { writer_id: selected.id, score: ranked[0]!.score, selected_at: new Date().toISOString(), ...(replacementAssignmentId ? { replacement_assignment_id: replacementAssignmentId } : {}), candidates: ranked.map(item => ({ writer_id: item.writer.id, name: item.writer.name, email: item.writer.email, score: item.score })) }
@@ -3824,8 +3815,14 @@ async function executeProviderTool(
       writerId = safeString(recordValue(caseData.writerSelection).writer_id ?? run.context?.selected_writer_id, 160)
     }
     if (!writerId) return { kind: 'pause', status: 'waiting_for_user', code: 'writer_selection_required', message: 'Select an available writer before creating the assignment.', value: { valid: false }, actionStatus: 'failed' }
-    const writerRecord = await admin.from('application_writers').select('id,active_assignments').eq('id', writerId).eq('user_id', run.user_id).maybeSingle()
-    if (writerRecord.error && writerRecord.error.code !== '42P01') throw new Error(writerRecord.error.message)
+    const writerRecord = await admin.from('application_writers').select('id').eq('id', writerId).eq('user_id', run.user_id).eq('availability', 'available').maybeSingle()
+    if (writerRecord.error?.code === '42P01') {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'application_migration_required', message: 'Writer assignments are not available until the application migration is applied.', value: { available: false }, actionStatus: 'failed' }
+    }
+    if (writerRecord.error) throw new Error(writerRecord.error.message)
+    if (!writerRecord.data) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'writer_not_available', message: 'The selected writer is no longer available. Select another writer before creating the assignment.', value: { available: false }, actionStatus: 'failed' }
+    }
     const assignment = createHumanAssignment({
       id: crypto.randomUUID(),
       applicationCaseId: caseId,
@@ -3839,7 +3836,7 @@ async function executeProviderTool(
       price: typeof argumentsValue.price === 'number' ? { amount: argumentsValue.price, currency: safeString(argumentsValue.price_currency, 3).toUpperCase() || 'USD' } : null,
       finalArtifactId: null,
     })
-    const persisted = await admin.from('human_assignments').upsert({
+    const assignmentRow = {
       id: assignment.id,
       user_id: run.user_id,
       application_case_id: caseId,
@@ -3866,12 +3863,18 @@ async function executeProviderTool(
       sla_breaches: assignment.slaBreaches,
       escalation_level: assignment.escalationLevel,
       idempotency_key: safeString(argumentsValue.idempotency_key, 300),
-    }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id,status,deadline_at').single()
-    if (persisted.error || !persisted.data) throw new Error(persisted.error?.message ?? 'The writer assignment could not be persisted.')
-    if (writerRecord.data && persisted.data.id === assignment.id) {
-      const writerUpdate = await admin.from('application_writers').update({ active_assignments: Number(writerRecord.data.active_assignments ?? 0) + 1 }).eq('id', writerId).eq('user_id', run.user_id)
-      if (writerUpdate.error) throw new Error(writerUpdate.error.message)
     }
+    let persisted = await admin.from('human_assignments').insert(assignmentRow).select('id,status,deadline_at,writer_id').maybeSingle()
+    if (persisted.error?.code === '23505') {
+      // A concurrent or retried tool call owns the same idempotency key. Read
+      // that immutable identity instead of upserting a fresh primary key.
+      persisted = await admin.from('human_assignments').select('id,status,deadline_at,writer_id')
+        .eq('user_id', run.user_id)
+        .eq('application_case_id', caseId)
+        .eq('idempotency_key', assignmentRow.idempotency_key)
+        .maybeSingle()
+    }
+    if (persisted.error || !persisted.data) throw new Error(persisted.error?.message ?? 'The writer assignment could not be persisted.')
     const assignmentIds = Array.isArray(caseData.writerAssignmentIds) ? caseData.writerAssignmentIds.map(value => safeString(value, 80)).filter(Boolean) : []
     if (!assignmentIds.includes(persisted.data.id)) assignmentIds.push(persisted.data.id)
     await admin.from('application_cases').update({ status: 'awaiting_writer', current_stage: 'writer_assignment', next_action: 'Roon should send the approved writer brief and monitor for questions and the draft.', data: { ...caseData, writerAssignmentIds: assignmentIds } }).eq('id', caseId).eq('user_id', run.user_id)
@@ -9523,7 +9526,7 @@ Deno.serve(async request => {
   const openaiKey = Deno.env.get('OPENAI_API_KEY')
   const configuredInternalToken = Deno.env.get('SHOTCOUNT_INTERNAL_WORKER_TOKEN') ?? ''
   const suppliedInternalToken = request.headers.get('X-ShotCount-Internal-Worker') ?? ''
-  const internalPoll = secureStringEqual(suppliedInternalToken, configuredInternalToken)
+  const internalPoll = constantTimeEqual(suppliedInternalToken, configuredInternalToken)
   if (!internalPoll && !authorization) {
     return jsonResponse(request, { error: 'Unauthorized' }, 401)
   }
