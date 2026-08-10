@@ -98,9 +98,9 @@ import {
 } from './data/file-assets'
 import { isApplicationIntent } from './data/application'
 import './style.css'
-import heroCollage from './assets/shotcount-collage.png'
-import peopleCollage from './assets/shotcount-people-collage.png'
-import communityPortraits from './assets/community-portraits.png'
+import heroCollage from './assets/shotcount-collage.webp'
+import peopleCollage from './assets/shotcount-people-collage.webp'
+import communityPortraits from './assets/community-portraits.webp'
 
 type View = 'today' | 'upcoming' | 'calendar' | 'sticky'
 type CountKey = 'today' | 'upcoming'
@@ -738,7 +738,7 @@ function demoCreatorTasks(profile: CommunityProfile): SharedCreatorTask[] {
     ? ['Ship the homepage revision', 'Review creator interviews', 'Write tomorrow’s launch note']
     : ['Review the launch brief', 'Approve the onboarding flow', 'Founder interviews', 'Reply to the design team', 'Read the weekly numbers', 'Plan tomorrow’s focus']
   return names.map((title, index) => ({
-    id: `${profile.id}-shared-${index}`,
+    id: profile.id + '-shared-' + index,
     title,
     due: todayKey,
     time: index < 2 ? `${String(8 + index * 2).padStart(2, '0')}:${index ? '15' : '40'}` : '',
@@ -1896,7 +1896,7 @@ function renderRoonPlanner() {
             <div class="roon-plan-heading"><strong>Your plan</strong><span>Edit or remove anything before creating it.</span></div>
             <div class="roon-plan-list">
               ${roonPlanTasks.map((task, index) => `
-                <article class="roon-plan-item" data-roon-plan-item="${task.id}">
+                <article class="roon-plan-item" data-roon-plan-item="${escapeHtml(task.id)}">
                   <span>${index + 1}</span>
                   <div>
                     <input name="title" aria-label="Task ${index + 1} title" maxlength="90" value="${escapeHtml(task.title)}" required />
@@ -1905,7 +1905,7 @@ function renderRoonPlanner() {
                       <textarea name="description" aria-label="Task ${index + 1} description" maxlength="1200" required>${escapeHtml(task.description)}</textarea>
                     </details>
                   </div>
-                  <button type="button" data-action="remove-roon-plan-task" data-plan-task-id="${task.id}" aria-label="Remove ${escapeHtml(task.title)}">×</button>
+                  <button type="button" data-action="remove-roon-plan-task" data-plan-task-id="${escapeHtml(task.id)}" aria-label="Remove ${escapeHtml(task.title)}">×</button>
                 </article>
               `).join('')}
             </div>
@@ -2024,7 +2024,7 @@ function renderAgentIsland() {
   }
   const state = labels[candidate.status]
   if (!state) return ''
-  return `<button type="button" class="shotcount-island shotcount-agent-island" data-agent-island-task="${task.id}" aria-label="${escapeHtml(state.title)}. Open ${escapeHtml(task.title)}">
+  return `<button type="button" class="shotcount-island shotcount-agent-island" data-agent-island-task="${escapeHtml(task.id)}" aria-label="${escapeHtml(state.title)}. Open ${escapeHtml(task.title)}">
     <span class="island-head">
       <span class="island-portrait agent-island-mark specialist-icon specialist-icon--${owner?.id ?? 'roon'}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span></span>
       <span class="island-identity">
@@ -2057,7 +2057,7 @@ function renderCreatorTodayView(state: CreatorTodayState) {
           <span class="creator-mini-avatar">${profile.avatarUrl ? `<img src="${escapeHtml(profile.avatarUrl)}" alt="" />` : escapeHtml(initial)}</span>
           <span><strong>${escapeHtml(profile.name)}</strong><small>@${escapeHtml(profile.username)} · Back to Community</small></span>
         </button>
-        <button type="button" class="creator-today-mute" data-mute-creator="${profile.id}" aria-pressed="${muted}">${muted ? 'Unmute alerts' : 'Mute alerts'}</button>
+        <button type="button" class="creator-today-mute" data-mute-creator="${escapeHtml(profile.id)}" aria-pressed="${muted}">${muted ? 'Unmute alerts' : 'Mute alerts'}</button>
       </header>
       <div class="task-list">
         ${state.status === 'loading' ? '<div class="planner-empty"><strong>Opening today…</strong><p>This will only take a moment.</p></div>' : ''}
@@ -2077,11 +2077,11 @@ function renderSharedCreatorTask(task: SharedCreatorTask) {
           ? `<path class="completion-seal" d="M12 1.8c1.2 0 1.8 1.3 2.9 1.6 1.1.3 2.2-.6 3.1.1.9.7.4 2.1 1.1 3 .7.9 2.2.8 2.6 1.9.4 1.1-.8 2-.8 3.2s1.2 2.1.8 3.2c-.4 1.1-1.9 1-2.6 1.9-.7.9-.2 2.3-1.1 3-.9.7-2-.2-3.1.1-1.1.3-1.7 1.6-2.9 1.6s-1.8-1.3-2.9-1.6c-1.1-.3-2.2.6-3.1-.1-.9-.7-.4-2.1-1.1-3-.7-.9-2.2-.8-2.6-1.9-.4-1.1.8-2 .8-3.2s-1.2-2.1-.8-3.2c.4-1.1 1.9-1 2.6-1.9.7-.9.2-2.3 1.1-3 .9-.7 2-.2 3.1-.1C10.2 3.1 10.8 1.8 12 1.8Z"/><path class="completion-check" d="m7.4 12.1 3 2.9 6.2-6.2"/>`
           : '<circle class="completion-ring" cx="12" cy="12" r="8.4"/>'}</svg></span>
       </span>
-      <button class="task-text" data-creator-task="${task.id}"><strong>${escapeHtml(task.title)}</strong><small>
+      <button class="task-text" data-creator-task="${escapeHtml(task.id)}"><strong>${escapeHtml(task.title)}</strong><small>
         ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
         ${renderVisibilityIndicator(task.visibility)}
       </small></button>
-      <button class="task-chevron" data-creator-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
+      <button class="task-chevron" data-creator-task="${escapeHtml(task.id)}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>
     </div>`
 }
 
@@ -2790,7 +2790,7 @@ function navButton(target: View, label: string, iconName: string, count = '') {
 function renderGoalRow(goal: Goal) {
   const count = tasks.filter(task => task.goalId === goal.id && !completedTaskIds.has(task.id)).length
   const active = activeGoalId === goal.id
-  return `<button class="side-row goal-row ${active ? 'active' : ''}" data-goal-filter="${goal.id}" aria-pressed="${active}"><i class="list-color" style="--list-color:${goal.color}"></i><span>${escapeHtml(goal.name)}</span><b>${count}</b></button>`
+  return `<button class="side-row goal-row ${active ? 'active' : ''}" data-goal-filter="${escapeHtml(goal.id)}" aria-pressed="${active}"><i class="list-color" style="--list-color:${escapeHtml(goal.color)}"></i><span>${escapeHtml(goal.name)}</span><b>${count}</b></button>`
 }
 
 function renderGoalComposer() {
@@ -2928,7 +2928,7 @@ function captureTodayComposerDraft() {
 }
 
 function renderGoalOptions(selectedId?: string) {
-  return `<option value="" ${selectedId ? '' : 'selected'}>No goal</option>${goals.map(goal => `<option value="${goal.id}" ${goal.id === selectedId ? 'selected' : ''}>${escapeHtml(goal.name)}</option>`).join('')}`
+  return `<option value="" ${selectedId ? '' : 'selected'}>No goal</option>${goals.map(goal => `<option value="${escapeHtml(goal.id)}" ${goal.id === selectedId ? 'selected' : ''}>${escapeHtml(goal.name)}</option>`).join('')}`
 }
 
 const visibilityLabels: Record<TaskVisibility, string> = {
@@ -2956,7 +2956,7 @@ function renderTaskRow(task: Task, selected = false) {
   const subtaskCount = task.subtaskItems?.length ?? task.subtasks ?? 0
   return `
     <div class="task-row ${selected ? 'selected' : ''} ${completed ? 'completed' : ''}">
-      <button class="checkbox" data-complete="${task.id}" aria-label="${completed ? 'Mark as not done' : 'Mark as done'}: ${escapeHtml(task.title)}" aria-pressed="${completed}">
+      <button class="checkbox" data-complete="${escapeHtml(task.id)}" aria-label="${completed ? 'Mark as not done' : 'Mark as done'}: ${escapeHtml(task.title)}" aria-pressed="${completed}">
         <span class="completion-badge" aria-hidden="true">
           <svg viewBox="0 0 24 24">
             ${completed
@@ -2965,12 +2965,12 @@ function renderTaskRow(task: Task, selected = false) {
           </svg>
         </span>
       </button>
-      <button class="task-text" data-task="${task.id}">
+      <button class="task-text" data-task="${escapeHtml(task.id)}">
         <strong>${escapeHtml(task.title)}</strong>
         <small>
           ${task.due ? `<span>${icon('calendar')}${formatTaskDate(task.due)}${task.time ? ` · ${formatTaskTime(task.time)}` : ''}</span>` : ''}
           ${task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
-          ${goal ? `<span><i class="list-color" style="--list-color:${goal.color}"></i>${escapeHtml(goal.name)}</span>` : ''}
+          ${goal ? `<span><i class="list-color" style="--list-color:${escapeHtml(goal.color)}"></i>${escapeHtml(goal.name)}</span>` : ''}
           ${!task.due && subtaskCount ? `<span><b>${subtaskCount}</b> Subtasks</span>` : ''}
           ${renderVisibilityIndicator(task.visibility)}
         </small>
@@ -2983,7 +2983,7 @@ function renderTaskRow(task: Task, selected = false) {
 function renderTaskTrailingAction(task: Task) {
   const agentAction = renderAgentPill(task)
   if (agentAction) return `<div class="task-trailing-action">${agentAction}</div>`
-  return `<button class="task-chevron" data-task="${task.id}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>`
+  return `<button class="task-chevron" data-task="${escapeHtml(task.id)}" aria-label="Open ${escapeHtml(task.title)}">${icon('chevron')}</button>`
 }
 
 function taskIsExecutableToday(task: Task) {
@@ -3012,7 +3012,7 @@ function renderAgentPill(task: Task) {
   const mark = displayStatus === 'planning' || displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
       ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '') ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
       `<span class="agent-icon-wrap">${agentSparkleIcon()}</span>`
-  return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'} specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}" data-agent-task="${task.id}" aria-label="${escapeHtml(ownerName)} — ${label}: ${escapeHtml(task.title)}" title="${escapeHtml(ownerName)} — ${label}">${mark}</button>`
+  return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'} specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}" data-agent-task="${escapeHtml(task.id)}" aria-label="${escapeHtml(ownerName)} — ${label}: ${escapeHtml(task.title)}" title="${escapeHtml(ownerName)} — ${label}">${mark}</button>`
 }
 
 function safeAgentUrl(value: string) {
@@ -3084,7 +3084,7 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
       ${progressLabels.map((label, index) => `<div class="${index < activeIndex ? 'done' : index === activeIndex ? 'active' : ''}"><i>${index < activeIndex ? '✓' : index === activeIndex ? '◔' : ''}</i><span>${escapeHtml(label)}</span></div>`).join('')}
     </div>
     ${renderRoonGeneratedFiles(task)}
-    <footer><button type="button" data-action="view-agent-progress" data-task-id="${task.id}">View progress</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${task.id}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button></footer>
+    <footer><button type="button" data-action="view-agent-progress" data-task-id="${escapeHtml(task.id)}">View progress</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${escapeHtml(task.id)}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button></footer>
   </section>
   <aside class="task-agent-notification">${icon('bell')}<span>You’ll be notified when this is ready.</span></aside>`
 }
@@ -3121,7 +3121,7 @@ function renderAgentErrorPanel(task: Task, error: string) {
       <div><strong>${needsSignIn ? 'Sign in required' : 'Something interrupted the task'}</strong><p>${escapeHtml(error)}</p></div>
     </div>
     ${renderRoonGeneratedFiles(task)}
-    <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Dismiss</button><button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${task.id}">Try again</button></footer>
+    <footer><button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Dismiss</button><button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${escapeHtml(task.id)}">Try again</button></footer>
   </section>
   <aside class="task-agent-notification task-agent-notification--error">${icon('bell')}<span>No task changes were made. You can safely try again.</span></aside>`
 }
@@ -3166,11 +3166,11 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ${approval.kind === 'calendar_write' && Array.isArray(calendarAttendees) && calendarAttendees.length ? `<dl><dt>Attendees</dt><dd>${escapeHtml(calendarAttendees.join(', '))}</dd></dl>` : ''}
       ${approval.kind === 'calendar_write' && typeof notifyAttendees === 'boolean' ? `<dl><dt>Notifications</dt><dd>${notifyAttendees ? 'Attendees will be notified.' : 'No attendee notifications.'}</dd></dl>` : ''}
       ${title || approval.kind === 'calendar_write' ? approval.kind === 'send_email'
-        ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${task.id}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject" ${busy || undoing ? 'disabled' : ''}></label>`
+        ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${escapeHtml(task.id)}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject" ${busy || undoing ? 'disabled' : ''}></label>`
         : approval.kind === 'calendar_write'
-          ? `<label class="task-agent-email-field"><span>Event <strong class="task-agent-review-value">${escapeHtml(String(title))}</strong></span><input type="text" data-agent-calendar-summary="${task.id}" value="${escapeHtml(String(title))}" maxlength="1000" aria-label="Calendar event title" ${busy ? 'disabled' : ''}></label>`
+          ? `<label class="task-agent-email-field"><span>Event <strong class="task-agent-review-value">${escapeHtml(String(title))}</strong></span><input type="text" data-agent-calendar-summary="${escapeHtml(task.id)}" value="${escapeHtml(String(title))}" maxlength="1000" aria-label="Calendar event title" ${busy ? 'disabled' : ''}></label>`
           : `<dl><dt>Event</dt><dd>${escapeHtml(String(title))}</dd></dl>` : ''}
-      ${approval.kind === 'calendar_write' ? `<div class="task-agent-calendar-times"><label class="task-agent-email-field"><span>Starts <small>ISO 8601</small></span><input type="text" data-agent-calendar-start="${task.id}" value="${escapeHtml(String(startsAt ?? ''))}" maxlength="64" aria-label="Calendar event start" ${busy ? 'disabled' : ''}><output class="task-agent-review-value">${escapeHtml(String(startsAt ?? ''))}</output></label><label class="task-agent-email-field"><span>Ends <small>ISO 8601</small></span><input type="text" data-agent-calendar-end="${task.id}" value="${escapeHtml(String(endsAt ?? ''))}" maxlength="64" aria-label="Calendar event end" ${busy ? 'disabled' : ''}><output class="task-agent-review-value">${escapeHtml(String(endsAt ?? ''))}</output></label></div>` : startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
+      ${approval.kind === 'calendar_write' ? `<div class="task-agent-calendar-times"><label class="task-agent-email-field"><span>Starts <small>ISO 8601</small></span><input type="text" data-agent-calendar-start="${escapeHtml(task.id)}" value="${escapeHtml(String(startsAt ?? ''))}" maxlength="64" aria-label="Calendar event start" ${busy ? 'disabled' : ''}><output class="task-agent-review-value">${escapeHtml(String(startsAt ?? ''))}</output></label><label class="task-agent-email-field"><span>Ends <small>ISO 8601</small></span><input type="text" data-agent-calendar-end="${escapeHtml(task.id)}" value="${escapeHtml(String(endsAt ?? ''))}" maxlength="64" aria-label="Calendar event end" ${busy ? 'disabled' : ''}><output class="task-agent-review-value">${escapeHtml(String(endsAt ?? ''))}</output></label></div>` : startsAt ? `<dl><dt>When</dt><dd>${escapeHtml(String(startsAt))}${endsAt ? ` → ${escapeHtml(String(endsAt))}` : ''}</dd></dl>` : ''}
       ${destination ? `<dl><dt>Page</dt><dd>${escapeHtml(String(destination))}</dd></dl>` : ''}
       ${browserTarget ? `<dl><dt>Submit</dt><dd>${escapeHtml(String(browserTarget))}</dd></dl>` : ''}
       ${Array.isArray(preparedValues) ? preparedValues.map(item => {
@@ -3180,15 +3180,15 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       }).join('') : ''}
       ${Array.isArray(safety?.warnings) && safety.warnings.length ? `<div class="task-agent-waiting-detail"><span>${escapeHtml(safety.warnings.join(' '))}</span></div>` : ''}
       ${approval.kind === 'calendar_write'
-        ? `<label class="task-agent-email-field"><span>Description</span><textarea data-agent-calendar-description="${task.id}" rows="5" maxlength="12000" aria-label="Calendar event description" ${busy ? 'disabled' : ''}>${escapeHtml(String(body ?? ''))}</textarea></label>`
+        ? `<label class="task-agent-email-field"><span>Description</span><textarea data-agent-calendar-description="${escapeHtml(task.id)}" rows="5" maxlength="12000" aria-label="Calendar event description" ${busy ? 'disabled' : ''}>${escapeHtml(String(body ?? ''))}</textarea></label>`
         : body ? approval.kind === 'send_email'
-        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${task.id}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label><label class="task-agent-email-field"><span>Attachment <small>${attachment?.name ? 'Choose another to replace it' : 'Optional · from your computer'}</small></span><input type="file" data-agent-email-attachment="${task.id}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`
+        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${escapeHtml(task.id)}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label><label class="task-agent-email-field"><span>Attachment <small>${attachment?.name ? 'Choose another to replace it' : 'Optional · from your computer'}</small></span><input type="file" data-agent-email-attachment="${escapeHtml(task.id)}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`
         : `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
     </div>
     <small>Only this exact action is approved. Any change requires a new review.</small>
     <footer>
-      <button type="button" data-action="reject-agent-approval" data-task-id="${task.id}" ${(busy || undoing) ? 'disabled' : ''}>Not now</button>
-      <button class="agent-primary" type="button" data-action="${undoing ? 'undo-email-send' : 'approve-agent-approval'}" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>${undoing ? 'Undo send' : busy ? 'Working…' : confirmLabel}</button>
+      <button type="button" data-action="reject-agent-approval" data-task-id="${escapeHtml(task.id)}" ${(busy || undoing) ? 'disabled' : ''}>Not now</button>
+      <button class="agent-primary" type="button" data-action="${undoing ? 'undo-email-send' : 'approve-agent-approval'}" data-task-id="${escapeHtml(task.id)}" ${busy ? 'disabled' : ''}>${undoing ? 'Undo send' : busy ? 'Working…' : confirmLabel}</button>
     </footer>
   </section>`
 }
@@ -3228,7 +3228,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ? `<div class="task-agent-reply-simulation">
         <label for="agent-reply-simulation-${escapeHtml(run.id)}">Development reply</label>
         <textarea id="agent-reply-simulation-${escapeHtml(run.id)}" class="task-agent-simulated-reply" rows="2">Thursday at 2:30 PM works for me.</textarea>
-        <button type="button" data-action="simulate-agent-reply" data-task-id="${task.id}" ${busy ? 'disabled' : ''}>${busy ? 'Resuming…' : 'Simulate reply'}</button>
+        <button type="button" data-action="simulate-agent-reply" data-task-id="${escapeHtml(task.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Resuming…' : 'Simulate reply'}</button>
       </div>`
     : ''
   return `<section class="task-agent-card task-agent-card--waiting">
@@ -3236,7 +3236,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     <p>${escapeHtml(userFacingWaitingReason || title)}</p>
     ${awaitingFlightSelection ? `
       <div class="task-agent-flight-options">
-        ${flightOptions.map(option => `<button type="button" data-action="select-agent-flight" data-task-id="${task.id}" data-flight-option-id="${escapeHtml(option.id)}" ${busy ? 'disabled' : ''}>
+        ${flightOptions.map(option => `<button type="button" data-action="select-agent-flight" data-task-id="${escapeHtml(task.id)}" data-flight-option-id="${escapeHtml(option.id)}" ${busy ? 'disabled' : ''}>
           <span><strong>${escapeHtml(option.label)}</strong><em>${escapeHtml(option.price)}</em></span>
           <b>${escapeHtml(option.airline)}</b>
           <small>${escapeHtml(option.route)} · ${escapeHtml(option.stops)} · ${escapeHtml(option.duration)}</small>
@@ -3259,8 +3259,8 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ${replySimulation}
     ${renderRoonGeneratedFiles(task)}
     <footer>
-      <button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>
-     ${paymentHandoffAvailable || manualCheckoutStep ? '' : awaitingFlightSelection && !staleFlightSelection ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${task.id}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Refreshing…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : staleFlightSelection ? 'Refresh options' : 'Try again'}</button>`}
+      <button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button>
+     ${paymentHandoffAvailable || manualCheckoutStep ? '' : awaitingFlightSelection && !staleFlightSelection ? '' : `<button class="agent-primary" type="button" data-action="${needsGoogle ? 'connect-agent-google' : external ? 'poll-agent' : 'retry-agent'}" data-task-id="${escapeHtml(task.id)}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : busy ? 'Refreshing…' : needsGoogle ? 'Connect Google' : external ? 'Check now' : staleFlightSelection ? 'Refresh options' : 'Try again'}</button>`}
     </footer>
   </section>`
 }
@@ -3334,10 +3334,10 @@ function renderAgentPanel(task: Task) {
       <header>${specialistHeader(task, run)}<em>${contextStatus}</em></header>
       ${formattedPrompt}
       ${flightContext ? '<small class="task-agent-context-hint">Roon asks the questions. Caspian continues as soon as you answer.</small>' : ''}
-      ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${task.id}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. ${escapeHtml(ownerName)} will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${task.id}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label.replace(/Roon/gi, ownerName))}</strong><span>${sopAuthoringOptions ? 'Choose this path' : 'Use this option'}</span></button>`).join('')}</div><small>${sopAuthoringOptions ? `${escapeHtml(ownerName)} stays in the driver’s seat—from expert brief to final submission-ready pack.` : tripTypeOptions ? 'Choose your trip type, or add the return date below.' : `Choose an option, or give ${escapeHtml(ownerName)} a different airport or city below.`}</small>` : ''}
-      ${canReplyInPanel ? `<label class="task-agent-context-input"><span>${replyLabel}</span><textarea class="task-agent-context" data-agent-context-input data-run-id="${run.id}" placeholder="${replyPlaceholder}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${escapeHtml(draft)}</textarea></label>` : ''}
+      ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${escapeHtml(task.id)}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. ${escapeHtml(ownerName)} will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${escapeHtml(task.id)}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label.replace(/Roon/gi, ownerName))}</strong><span>${sopAuthoringOptions ? 'Choose this path' : 'Use this option'}</span></button>`).join('')}</div><small>${sopAuthoringOptions ? `${escapeHtml(ownerName)} stays in the driver’s seat—from expert brief to final submission-ready pack.` : tripTypeOptions ? 'Choose your trip type, or add the return date below.' : `Choose an option, or give ${escapeHtml(ownerName)} a different airport or city below.`}</small>` : ''}
+      ${canReplyInPanel ? `<label class="task-agent-context-input"><span>${replyLabel}</span><textarea class="task-agent-context" data-agent-context-input data-run-id="${escapeHtml(run.id)}" placeholder="${replyPlaceholder}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${escapeHtml(draft)}</textarea></label>` : ''}
       ${requestsAttachment ? `<small class="task-agent-attachment-hint">Use the attachment control in Description to add the file. ${escapeHtml(attachmentHint)}</small>` : ''}
-      <footer><button type="button" data-action="cancel-agent" data-task-id="${task.id}">Cancel</button>${candidates.length ? '' : canUseAttachedCv ? '<button class="agent-primary" type="button" data-action="use-attached-cv" data-task-id="' + task.id + '">Use attached CV</button>' : requestsAttachment ? '<button type="button" data-action="focus-task-description" data-task-id="' + task.id + '">Attach file</button><button class="agent-primary" type="button" data-action="check-attached-context" data-task-id="' + task.id + '">Check attachment</button>' : needsFlightDescription ? '<button type="button" data-action="focus-task-description" data-task-id="' + task.id + '">Add details</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + task.id + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>Continue</button>' : '<button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + task.id + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>' + (asksForConfirmation ? 'Confirm' : 'Continue') + '</button>'}</footer>
+      <footer><button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button>${candidates.length ? '' : canUseAttachedCv ? '<button class="agent-primary" type="button" data-action="use-attached-cv" data-task-id="' + escapeHtml(task.id) + '">Use attached CV</button>' : requestsAttachment ? '<button type="button" data-action="focus-task-description" data-task-id="' + escapeHtml(task.id) + '">Attach file</button><button class="agent-primary" type="button" data-action="check-attached-context" data-task-id="' + escapeHtml(task.id) + '">Check attachment</button>' : needsFlightDescription ? '<button type="button" data-action="focus-task-description" data-task-id="' + escapeHtml(task.id) + '">Add details</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + escapeHtml(task.id) + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>Continue</button>' : '<button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + escapeHtml(task.id) + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>' + (asksForConfirmation ? 'Confirm' : 'Continue') + '</button>'}</footer>
     </section>`
   }
 
@@ -3385,7 +3385,7 @@ function renderAgentPanel(task: Task) {
       </div>
       ${renderRoonGeneratedFiles(task)}
       ${run.result.sources.length ? `<div class="agent-sources"><strong>Sources</strong>${run.result.sources.map(source => `<a href="${safeAgentUrl(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)} ↗</a>`).join('')}</div>` : ''}
-      ${run.result.followUps.length ? `<div class="agent-followups"><strong>Suggested next actions</strong>${run.result.followUps.map(title => `<span>＋ ${escapeHtml(title)}</span>`).join('')}</div><button class="agent-add-followups" type="button" data-action="add-agent-followups" data-task-id="${task.id}">Add follow-up tasks</button>` : ''}
+      ${run.result.followUps.length ? `<div class="agent-followups"><strong>Suggested next actions</strong>${run.result.followUps.map(title => `<span>＋ ${escapeHtml(title)}</span>`).join('')}</div><button class="agent-add-followups" type="button" data-action="add-agent-followups" data-task-id="${escapeHtml(task.id)}">Add follow-up tasks</button>` : ''}
       ${run.result.applicationReviewUrl ? `<a class="agent-primary agent-review-application" href="${safeAgentUrl(run.result.applicationReviewUrl)}" target="_blank" rel="noreferrer">Review application</a>` : ''}
       ${flightHandoffUrl ? `<a class="agent-primary agent-review-application" href="${flightHandoffUrl}" target="_blank" rel="noreferrer">${flightHandoffLabel}</a><small>${preparedTravelerCount > 0 ? `${preparedTravelerCount} traveler${preparedTravelerCount === 1 ? '' : 's'} prepared. ` : ''}Payment and any purchase remain entirely yours.</small>` : ''}
       <small>Private to you · Agent context and output never appear in the community feed.</small>
@@ -3423,7 +3423,7 @@ function renderInspector(task: Task) {
     }).finally(() => loadingTaskFileAssets.delete(task.id))
   }
   const subtasks = task.subtaskItems ?? Array.from({ length: task.subtasks ?? 0 }, (_, index) => ({
-    id: `${task.id}-subtask-${index}`,
+    id: task.id + '-subtask-' + index,
     title: index === 0 ? 'Subtask' : `Subtask ${index + 1}`,
     completed: false,
   }))
@@ -3442,7 +3442,7 @@ function renderInspector(task: Task) {
           <textarea class="inspector-description" aria-label="Description" placeholder="Description" rows="3">${escapeHtml(task.description ?? '')}</textarea>
           <div class="description-tools">
             <label class="description-attachment-input ${taskFileAssetBusy.has(task.id) ? 'is-busy' : ''}" aria-label="${taskFileAssetBusy.has(task.id) ? 'Uploading attachment' : 'Add attachment'}">
-              <input type="file" data-task-file-input="${task.id}" accept="${acceptedTaskFileTypes.join(',')}" ${taskFileAssetBusy.has(task.id) ? 'disabled' : ''}>
+              <input type="file" data-task-file-input="${escapeHtml(task.id)}" accept="${acceptedTaskFileTypes.join(',')}" ${taskFileAssetBusy.has(task.id) ? 'disabled' : ''}>
               ${taskFileAssetBusy.has(task.id) ? '<span aria-hidden="true">…</span>' : icon('paperclip')}
             </label>
             <button type="button" class="description-voice-input ${recording ? 'is-recording' : ''}" data-action="toggle-description-voice" aria-label="${recording ? 'Stop voice input' : transcribing ? 'Transcribing description' : 'Add voice input to description'}" aria-pressed="${recording}" ${transcribing ? 'disabled' : ''}>
@@ -3458,14 +3458,14 @@ function renderInspector(task: Task) {
           <label><span>Goal</span><button data-action="cycle-goal">${escapeHtml(goal?.name ?? goals[0]?.name ?? 'No goal')} ${icon('down')}</button></label>
           <label><span>Due date</span><input class="inspector-date" type="date" value="${task.due ?? ''}" aria-label="Due date" /></label>
           <label><span>Due time · reminds 15 min before</span><input class="inspector-time" type="time" value="${task.time ?? ''}" aria-label="Due time, optional; reminder 15 minutes before" /></label>
-          <label><span>Visibility</span><select class="inspector-visibility" data-task-visibility="${task.id}" aria-label="Task visibility" required>${renderVisibilityOptions(task.visibility)}</select></label>
+          <label><span>Visibility</span><select class="inspector-visibility" data-task-visibility="${escapeHtml(task.id)}" aria-label="Task visibility" required>${renderVisibilityOptions(task.visibility)}</select></label>
         </div>
 
         ${renderAgentPanel(task)}
 
         <h3>Subtasks:</h3>
         ${subtaskComposerTaskId === task.id ? `
-          <form class="subtask-composer" data-subtask-form="${task.id}">
+          <form class="subtask-composer" data-subtask-form="${escapeHtml(task.id)}">
             <input name="title" aria-label="Subtask title" placeholder="What needs doing?" autocomplete="off" required />
             <button type="submit">Add</button>
             <button type="button" data-action="cancel-subtask" aria-label="Cancel subtask">Cancel</button>
@@ -3496,9 +3496,9 @@ function renderTaskAttachments(task: Task) {
     <div class="task-attachment-list">
       ${assets.map(asset => `<article class="task-attachment-chip">
         <span class="task-attachment-kind">${icon('paperclip')}</span>
-        <button class="task-attachment-preview" type="button" data-action="preview-task-file" data-task-id="${task.id}" data-file-asset-id="${asset.id}" title="Open ${escapeHtml(asset.originalFilename)}" aria-label="Open ${escapeHtml(asset.originalFilename)}">${escapeHtml(asset.originalFilename)}</button>
-        <label class="task-attachment-reuse" title="Make available to ${escapeHtml(specialistName(task, agentRuns.get(task.id)))} in future tasks"><input type="checkbox" data-action="toggle-file-reusable" data-task-id="${task.id}" data-file-asset-id="${asset.id}" ${asset.reusable ? 'checked' : ''} ${busy ? 'disabled' : ''}><span>Reuse</span></label>
-        <button class="task-attachment-remove" type="button" data-action="remove-task-attachment" data-task-id="${task.id}" data-file-asset-id="${asset.id}" aria-label="Remove ${escapeHtml(asset.originalFilename)}" ${busy ? 'disabled' : ''}>×</button>
+        <button class="task-attachment-preview" type="button" data-action="preview-task-file" data-task-id="${escapeHtml(task.id)}" data-file-asset-id="${escapeHtml(asset.id)}" title="Open ${escapeHtml(asset.originalFilename)}" aria-label="Open ${escapeHtml(asset.originalFilename)}">${escapeHtml(asset.originalFilename)}</button>
+        <label class="task-attachment-reuse" title="Make available to ${escapeHtml(specialistName(task, agentRuns.get(task.id)))} in future tasks"><input type="checkbox" data-action="toggle-file-reusable" data-task-id="${escapeHtml(task.id)}" data-file-asset-id="${escapeHtml(asset.id)}" ${asset.reusable ? 'checked' : ''} ${busy ? 'disabled' : ''}><span>Reuse</span></label>
+        <button class="task-attachment-remove" type="button" data-action="remove-task-attachment" data-task-id="${escapeHtml(task.id)}" data-file-asset-id="${escapeHtml(asset.id)}" aria-label="Remove ${escapeHtml(asset.originalFilename)}" ${busy ? 'disabled' : ''}>×</button>
       </article>`).join('')}
     </div>
   </section>`
@@ -3510,7 +3510,7 @@ function renderRoonGeneratedFiles(task: Task) {
   const ownerName = specialistName(task, agentRuns.get(task.id))
   return `<section class="task-agent-files" aria-label="Files prepared by ${escapeHtml(ownerName)}">
     <header><strong>Prepared files</strong><span>${assets.length} ready</span></header>
-    ${assets.map(asset => `<button type="button" data-action="preview-task-file" data-task-id="${task.id}" data-file-asset-id="${asset.id}" aria-label="Preview ${escapeHtml(asset.originalFilename)}">
+    ${assets.map(asset => `<button type="button" data-action="preview-task-file" data-task-id="${escapeHtml(task.id)}" data-file-asset-id="${escapeHtml(asset.id)}" aria-label="Preview ${escapeHtml(asset.originalFilename)}">
       <span class="task-agent-file-icon">${icon('sticky')}</span>
       <span><b title="${escapeHtml(asset.originalFilename)}">${escapeHtml(asset.originalFilename)}</b><small>${fileKind(asset)}</small></span>
       <em>Ready</em>
@@ -3548,19 +3548,19 @@ function renderInspectorRoonAction(task: Task) {
   if (!route.supported && !roonCapabilityForTask(task)) return ''
   const owner = specialistForTask(task, run)
   const ownerName = owner?.displayName ?? 'ShotCount'
-  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${task.id}"><span class="agent-icon-wrap specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}">${agentSparkleIcon()}</span>Delegate to ${escapeHtml(ownerName)}</button>`
+  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${escapeHtml(task.id)}"><span class="agent-icon-wrap specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}">${agentSparkleIcon()}</span>Delegate to ${escapeHtml(ownerName)}</button>`
 }
 
 function renderSubtask(task: Task, subtask: NonNullable<Task['subtaskItems']>[number]) {
   const editing = editingSubtaskId === subtask.id
   return `<div class="subtask">
-    <input type="checkbox" data-subtask="${subtask.id}" aria-label="Mark ${escapeHtml(subtask.title)} as ${subtask.completed ? 'not done' : 'done'}" ${subtask.completed ? 'checked' : ''}/>
-    ${editing ? `<form class="subtask-edit-form" data-subtask-edit-form="${task.id}" data-subtask-id="${subtask.id}">
+    <input type="checkbox" data-subtask="${escapeHtml(subtask.id)}" aria-label="Mark ${escapeHtml(subtask.title)} as ${subtask.completed ? 'not done' : 'done'}" ${subtask.completed ? 'checked' : ''}/>
+    ${editing ? `<form class="subtask-edit-form" data-subtask-edit-form="${escapeHtml(task.id)}" data-subtask-id="${escapeHtml(subtask.id)}">
       <input name="title" value="${escapeHtml(subtask.title)}" aria-label="Edit subtask" autocomplete="off" required />
       <button type="submit">Save</button>
       <button type="button" data-action="cancel-subtask-edit" aria-label="Cancel editing">Cancel</button>
-    </form>` : `<button type="button" class="subtask-title ${subtask.completed ? 'completed' : ''}" data-action="edit-subtask" data-subtask-id="${subtask.id}" aria-label="Edit ${escapeHtml(subtask.title)}">${escapeHtml(subtask.title)}</button>`}
-    <button type="button" class="subtask-delete" data-action="delete-subtask" data-subtask-id="${subtask.id}" aria-label="Delete ${escapeHtml(subtask.title)}">${icon('trash')}</button>
+    </form>` : `<button type="button" class="subtask-title ${subtask.completed ? 'completed' : ''}" data-action="edit-subtask" data-subtask-id="${escapeHtml(subtask.id)}" aria-label="Edit ${escapeHtml(subtask.title)}">${escapeHtml(subtask.title)}</button>`}
+    <button type="button" class="subtask-delete" data-action="delete-subtask" data-subtask-id="${escapeHtml(subtask.id)}" aria-label="Delete ${escapeHtml(subtask.title)}">${icon('trash')}</button>
   </div>`
 }
 
@@ -3735,7 +3735,7 @@ function renderCalendar() {
       <div class="calendar-toolbar">
         <div class="calendar-nav"><button aria-label="Previous ${calendarMode}" data-action="previous-date">‹</button><button aria-label="Next ${calendarMode}" data-action="next-date">›</button></div>
         <div class="calendar-goal-filters">
-          ${goals.map(goal => `<button class="${hiddenCalendarGoalIds.has(goal.id) ? 'muted' : ''}" data-calendar-goal="${goal.id}" aria-pressed="${!hiddenCalendarGoalIds.has(goal.id)}"><i style="--goal-color:${goal.color}"></i>${escapeHtml(goal.name)}</button>`).join('')}
+          ${goals.map(goal => `<button class="${hiddenCalendarGoalIds.has(goal.id) ? 'muted' : ''}" data-calendar-goal="${escapeHtml(goal.id)}" aria-pressed="${!hiddenCalendarGoalIds.has(goal.id)}"><i style="--goal-color:${escapeHtml(goal.color)}"></i>${escapeHtml(goal.name)}</button>`).join('')}
         </div>
         <span class="calendar-mobile-hint">Swipe to see every goal</span>
         <div class="calendar-stats"><span><b>${formatDuration(plannedMinutes)}</b> planned</span><span class="${conflicts ? 'has-conflict' : ''}"><b>${conflicts}</b> conflicts</span></div>
@@ -3890,8 +3890,8 @@ function renderCalendarBlock(item: CalendarOccurrence, all: CalendarOccurrence[]
     rangesOverlap(start, start + duration, timeToMinutes(calendarOccurrenceTime(other)), timeToMinutes(calendarOccurrenceTime(other)) + calendarOccurrenceDuration(other))
   )
   return `
-    <article class="calendar-event ${conflict ? 'conflict' : ''}" draggable="true" data-calendar-task="${task.id}" data-occurrence-date="${date}" style="--event-color:${goal?.color ?? '#8a9aad'};--event-top:${top}px;--event-height:${height}px">
-      <button data-action="edit-calendar-task" data-task-id="${task.id}">
+    <article class="calendar-event ${conflict ? 'conflict' : ''}" draggable="true" data-calendar-task="${escapeHtml(task.id)}" data-occurrence-date="${escapeHtml(date)}" style="--event-color:${escapeHtml(goal?.color ?? '#8a9aad')};--event-top:${top}px;--event-height:${height}px">
+      <button data-action="edit-calendar-task" data-task-id="${escapeHtml(task.id)}">
         <strong>${escapeHtml(task.title)}</strong>
         <span>${formatTaskTime(task.time!)} · ${formatDuration(duration)}</span>
         ${goal ? `<small class="calendar-event-goal"><i aria-hidden="true"></i>${escapeHtml(goal.name)}</small>` : ''}
@@ -3913,7 +3913,7 @@ function renderGoogleCalendarBlock(item: GoogleCalendarOccurrence, all: Calendar
   )
   const content = `<strong>${escapeHtml(event.title)}</strong><span>${event.allDay ? 'All day' : `${formatTaskTime(time)} · ${formatDuration(duration)}`}</span><small class="google-calendar-name">${escapeHtml(event.calendarName)}</small>${event.location ? `<small>${escapeHtml(event.location)}</small>` : ''}`
   return `
-    <article class="calendar-event google-calendar-event ${conflict ? 'conflict' : ''}" data-google-event="${escapeHtml(event.googleEventId)}" style="--event-color:${event.calendarColor};--event-top:${top}px;--event-height:${height}px">
+    <article class="calendar-event google-calendar-event ${conflict ? 'conflict' : ''}" data-google-event="${escapeHtml(event.googleEventId)}" style="--event-color:${escapeHtml(event.calendarColor)};--event-top:${top}px;--event-height:${height}px">
       ${event.htmlLink ? `<a href="${escapeHtml(event.htmlLink)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtml(event.title)} in Google Calendar">${content}</a>` : `<div>${content}</div>`}
     </article>
   `
@@ -3934,11 +3934,11 @@ function renderCalendarMonth(occurrences: CalendarOccurrence[]) {
             if (item.source === 'google') {
               const content = `${item.event.allDay ? '' : `${formatTaskTime(item.time)} `}${escapeHtml(item.event.title)}`
               return item.event.htmlLink
-                ? `<a class="month-event google-month-event" href="${escapeHtml(item.event.htmlLink)}" target="_blank" rel="noreferrer" style="--event-color:${item.event.calendarColor}">${content}</a>`
-                : `<span class="month-event google-month-event" style="--event-color:${item.event.calendarColor}">${content}</span>`
+                ? `<a class="month-event google-month-event" href="${escapeHtml(item.event.htmlLink)}" target="_blank" rel="noreferrer" style="--event-color:${escapeHtml(item.event.calendarColor)}">${content}</a>`
+                : `<span class="month-event google-month-event" style="--event-color:${escapeHtml(item.event.calendarColor)}">${content}</span>`
             }
             const goal = goals.find(candidate => candidate.id === item.task.goalId)
-            return `<button class="month-event" draggable="true" data-calendar-task="${item.task.id}" data-action="edit-calendar-task" data-task-id="${item.task.id}" style="--event-color:${goal?.color ?? '#8a9aad'}">${escapeHtml(item.task.title)}</button>`
+            return `<button class="month-event" draggable="true" data-calendar-task="${escapeHtml(item.task.id)}" data-action="edit-calendar-task" data-task-id="${escapeHtml(item.task.id)}" style="--event-color:${escapeHtml(goal?.color ?? '#8a9aad')}">${escapeHtml(item.task.title)}</button>`
           }).join('')}
           ${dayItems.length > 3 ? `<span class="month-more">+${dayItems.length - 3} more</span>` : ''}
         </div>`
@@ -3949,7 +3949,7 @@ function renderCalendarMonth(occurrences: CalendarOccurrence[]) {
 
 function renderUnscheduledTask(task: Task) {
   const goal = goals.find(item => item.id === task.goalId)
-  return `<button class="unscheduled-task" draggable="true" data-calendar-task="${task.id}" data-action="schedule-task" data-task-id="${task.id}"><i style="--goal-color:${goal?.color ?? '#8a9aad'}"></i><span>${escapeHtml(task.title)}</span>${task.due ? `<small>${formatTaskDate(task.due)}</small>` : ''}</button>`
+  return `<button class="unscheduled-task" draggable="true" data-calendar-task="${escapeHtml(task.id)}" data-action="schedule-task" data-task-id="${escapeHtml(task.id)}"><i style="--goal-color:${escapeHtml(goal?.color ?? '#8a9aad')}"></i><span>${escapeHtml(task.title)}</span>${task.due ? `<small>${formatTaskDate(task.due)}</small>` : ''}</button>`
 }
 
 function renderCalendarDetailChips(task: Task) {
@@ -4137,8 +4137,8 @@ function renderSpotlight(profile: CommunityProfile) {
           <div><i></i><span>Founder interviews</span><time>14:00</time></div>
         </div>` : `<div class="creator-profile-facts">${followerLabel ? `<strong>${escapeHtml(followerLabel)}</strong>` : ''}<small>Only tasks marked Followers or Public can be shared.</small></div>`}
         <div class="spotlight-actions">
-          <button class="spotlight-open" data-community="${profile.id}">${profile.isDemo ? `Enter ${escapeHtml(firstName)}’s community` : 'Open creator link'} ${icon('chevron')}</button>
-          <button class="spotlight-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
+          <button class="spotlight-open" data-community="${escapeHtml(profile.id)}">${profile.isDemo ? `Enter ${escapeHtml(firstName)}’s community` : 'Open creator link'} ${icon('chevron')}</button>
+          <button class="spotlight-follow ${profile.followed ? 'is-following' : ''}" data-follow="${escapeHtml(profile.id)}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
             ${busy ? 'Saving…' : profile.followed ? 'Following' : 'Follow'}
           </button>
         </div>
@@ -4156,7 +4156,7 @@ function renderCommunityCard(profile: CommunityProfile) {
       <div class="community-portrait portrait-frame" style="--portrait-column:${profile.portraitColumn};--portrait-row:${profile.portraitRow};--community-portrait:url(&quot;${communityPortraits}&quot;)">
         ${renderCommunityPortrait(profile)}
         ${profile.isDemo ? `<span>${profile.members} members</span>` : followerLabel ? `<span>${followerLabel}</span>` : ''}
-        <button class="community-follow ${profile.followed ? 'is-following' : ''}" data-follow="${profile.id}" aria-label="${profile.followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
+        <button class="community-follow ${profile.followed ? 'is-following' : ''}" data-follow="${escapeHtml(profile.id)}" aria-label="${profile.followed ? 'Unfollow' : 'Follow'} ${escapeHtml(profile.name)}" aria-pressed="${profile.followed}" ${busy ? 'disabled' : ''}>
           ${busy ? '…' : profile.followed ? '✓' : icon('plus')}
         </button>
       </div>
@@ -4167,7 +4167,7 @@ function renderCommunityCard(profile: CommunityProfile) {
           ${profile.isDemo ? `<span><b>${profile.tasksToday}</b> tasks today</span><span class="activity-dot"></span><span>Active now</span>` : `${followerLabel ? `<span><b>${escapeHtml(followerLabel)}</b></span><span class="activity-dot"></span>` : ''}<span>Public profile</span>`}
         </div>
         ${profile.latest ? `<p class="community-latest">${profile.isDemo ? '<span>✓</span>' : ''}${escapeHtml(profile.latest)}</p>` : ''}
-        <button class="community-open" data-community="${profile.id}">${profile.isDemo ? 'View community' : 'Open creator link'} ${icon('chevron')}</button>
+        <button class="community-open" data-community="${escapeHtml(profile.id)}">${profile.isDemo ? 'View community' : 'Open creator link'} ${icon('chevron')}</button>
       </div>
     </article>
   `
@@ -4308,6 +4308,7 @@ async function toggleDescriptionVoiceInput(target = 'task') {
     render()
     return
   }
+  let pendingStream: MediaStream | null = null
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -4317,6 +4318,7 @@ async function toggleDescriptionVoiceInput(target = 'task') {
         autoGainControl: true,
       },
     })
+    pendingStream = stream
     const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(type => MediaRecorder.isTypeSupported(type))
     const recorder = mimeType
       ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128_000 })
@@ -4339,6 +4341,8 @@ async function toggleDescriptionVoiceInput(target = 'task') {
     recorder.addEventListener('stop', () => void finishDescriptionVoiceInput(targetId, stream, chunks, recorder.mimeType))
     // Periodic chunks make short dictation reliable across Chromium and WebKit.
     recorder.start(250)
+    // The stop handler now owns the live tracks.
+    pendingStream = null
     void prepareDescriptionTranscription()
     descriptionRecordingTimer = window.setTimeout(() => {
       toast = 'Recording stopped after two minutes.'
@@ -4346,6 +4350,15 @@ async function toggleDescriptionVoiceInput(target = 'task') {
     }, MAX_DESCRIPTION_RECORDING_MS)
     render()
   } catch (error) {
+    pendingStream?.getTracks().forEach(track => track.stop())
+    await finishDescriptionPcmCapture()
+    descriptionPcmChunks = []
+    descriptionPcmSampleRate = 0
+    descriptionPcmPeak = 0
+    descriptionRecorder = null
+    descriptionRecordingTaskId = null
+    descriptionRecordingStartedAt = 0
+    descriptionRecordingStopPending = false
     toast = error instanceof DOMException && error.name === 'NotAllowedError'
       ? 'Microphone access is needed for voice input.'
       : 'We could not start the microphone. Try again or type your description.'
