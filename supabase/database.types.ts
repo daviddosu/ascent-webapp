@@ -1433,6 +1433,107 @@ export type Database = {
           },
         ]
       }
+      application_outreach_packages: {
+        Row: {
+          application_case_id: string
+          approved_cv_artifact_id: string | null
+          approved_cv_checksum: string | null
+          approved_email_version: string | null
+          contact_id: string | null
+          contact_mode: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          opportunity_id: string
+          package_data: Json
+          quality_metadata: Json
+          sent_message_id: string | null
+          sent_thread_id: string | null
+          status: string
+          supervisor_id: string
+          updated_at: string
+          user_approval: boolean
+          user_approved_at: string | null
+          user_id: string
+          verified_email: string
+        }
+        Insert: {
+          application_case_id: string
+          approved_cv_artifact_id?: string | null
+          approved_cv_checksum?: string | null
+          approved_email_version?: string | null
+          contact_id?: string | null
+          contact_mode?: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          opportunity_id: string
+          package_data: Json
+          quality_metadata?: Json
+          sent_message_id?: string | null
+          sent_thread_id?: string | null
+          status?: string
+          supervisor_id: string
+          updated_at?: string
+          user_approval?: boolean
+          user_approved_at?: string | null
+          user_id: string
+          verified_email: string
+        }
+        Update: {
+          application_case_id?: string
+          approved_cv_artifact_id?: string | null
+          approved_cv_checksum?: string | null
+          approved_email_version?: string | null
+          contact_id?: string | null
+          contact_mode?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          opportunity_id?: string
+          package_data?: Json
+          quality_metadata?: Json
+          sent_message_id?: string | null
+          sent_thread_id?: string | null
+          status?: string
+          supervisor_id?: string
+          updated_at?: string
+          user_approval?: boolean
+          user_approved_at?: string | null
+          user_id?: string
+          verified_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_outreach_packages_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_outreach_packages_approved_cv_artifact_id_fkey"
+            columns: ["approved_cv_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "application_artifacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_outreach_packages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "application_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_outreach_packages_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "application_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_otp_events: {
         Row: {
           application_case_id: string

@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "workflow_version": "supervisor-outreach@1.0.0",
+  "contact_mode": "first_contact",
+  "application_case_id": "demo-application-case-001",
+  "opportunity_id": "demo-opportunity-utoronto-csb-phd",
+  "supervisor_id": "uoft:bo-wang",
+  "target_programme": "Cell and Systems Biology PhD",
+  "target_institution": "University of Toronto",
+  "target_intake": "Fall 2026",
+  "policy": {
+    "category": "required",
+    "strategic_usefulness": "high",
+    "rationale": "The official CSB admissions page directs applicants to contact prospective supervisors and states that admission requires potential-supervisor support.",
+    "evidence_ids": [
+      "source:programme"
+    ]
+  },
+  "supervisor_dossier": {
+    "supervisor_id": "uoft:bo-wang",
+    "name": "Bo Wang",
+    "title": "Associate Professor",
+    "institution": "University of Toronto",
+    "department": "Laboratory Medicine and Pathobiology",
+    "lab_or_group": "Wang computational biology group",
+    "verified_email": "bowang.wang@utoronto.ca",
+    "verified_email_source_id": "source:supervisor-profile",
+    "alternate_verified_emails": [
+      {
+        "email": "bwang@cs.toronto.edu",
+        "source_id": "source:cs-directory"
+      }
+    ],
+    "research_themes": [
+      {
+        "text": "Integrative and interpretable machine learning for clinical, genomic, and biomedical data.",
+        "source_ids": [
+          "source:supervisor-profile",
+          "source:medbio-profile"
+        ]
+      },
+      {
+        "text": "Machine learning and computational biology, including graph-based biological modelling.",
+        "source_ids": [
+          "source:cs-directory",
+          "source:bionic"
+        ]
+      }
+    ],
+    "current_projects": [
+      {
+        "text": "GraphComm uses graph-based deep learning to predict cell-cell communication from spatial single-cell RNA sequencing data.",
+        "source_ids": [
+          "source:graphcomm"
+        ]
+      }
+    ],
+    "recent_publications": [
+      {
+        "text": "GraphComm predicts cell-cell communication using a graph-based deep learning method in single-cell RNA sequencing data, Scientific Reports, 2025.",
+        "source_ids": [
+          "source:graphcomm"
+        ]
+      },
+      {
+        "text": "BIONIC integrates multiple biological networks with graph convolutional learning for gene and chemical-genetic interaction prediction.",
+        "source_ids": [
+          "source:bionic"
+        ]
+      }
+    ],
+    "recent_activity": [
+      {
+        "text": "The University of Toronto describes current joint appointments and biomedical AI leadership, including work connected to UHN and Vector.",
+        "source_ids": [
+          "source:news"
+        ]
+      }
+    ],
+    "availability_evidence": [
+      {
+        "text": "The official LMP profile identifies Bo Wang as graduate faculty with a primary appointment.",
+        "source_ids": [
+          "source:supervisor-profile"
+        ]
+      }
+    ],
+    "source_ids": [
+      "source:programme",
+      "source:supervisor-profile",
+      "source:cs-directory",
+      "source:graphcomm",
+      "source:medbio-profile",
+      "source:news",
+      "source:bionic"
+    ],
+    "retrieved_at": "2026-08-12T12:00:00.000Z",
+    "evidence": [
+      {
+        "id": "source:programme",
+        "title": "CSB prospective students admissions",
+        "url": "https://csb.utoronto.ca/graduate-studies/prospective-students/admissions/",
+        "authority": "official",
+        "source_type": "official_programme",
+        "retrieved_at": "2026-08-12T12:00:00.000Z",
+        "excerpt": "The programme advises applicants to contact prospective supervisors and states that admission requires support from a potential supervisor.",
+        "claims": [
+          "contact prospective supervisors",
+          "potential supervisor support"
+        ]
+      },
+      {
+        "id": "source:supervisor-profile",
+        "title": "Bo Wang, LMP faculty profile",
+        "url": "https://lmp.utoronto.ca/faculty/bo-wang",
+        "authority": "official",
+        "source_type": "official_profile",
+        "retrieved_at": "2026-08-12T12:00:00.000Z",
+        "excerpt": "Bo Wang is an Associate Professor and graduate faculty member whose interests include AI, cancer, and genomics.",
+        "claims": [
+          "Associate Professor",
+          "graduate faculty",
+          "AI",
+          "genomics",
+          "computational biology"
+        ]
+      },
+      {
+        "id": "source:cs-directory",
+        "title": "U of T Computer Science faculty directory",
+        "url": "https://web.cs.toronto.edu/people/faculty-directory",
+        "authority": "official",
+        "source_type": "official_profile",
+        "retrieved_at": "2026-08-12T12:00:00.000Z",
+        "excerpt": "The faculty directory lists Bo Wang as an Associate Professor working in machine learning and computational biology.",
+        "claims": [
+          "machine learning",
+          "computational biology"
+        ]
+      },
+      {
+        "id": "source:graphcomm",
+        "title": "GraphComm, Scientific Reports",
+        "url": "https://doi.org/10.1038/s41598-025-20812-1",
+        "authority": "peer_reviewed",
+        "source_type": "publication",
+        "retrieved_at": "2026-08-12T12:00:00.000Z",
+        "publication_date": "2025-10-22",
+        "excerpt": "GraphComm predicts cell-cell communication using a graph-based deep learning method in single-cell RNA sequencing data.",
+        "claims": [
+          "cell-cell communication",
+          "graph-based deep learning",
+          "spatial single-cell RNA sequencing"
+        ]
+      },
+      {
+        "id": "source:medbio-profile",
+        "title": "Bo Wang, MedBio faculty profile",
+        "url": "https://medbio.utoronto.ca/faculty/wang",
+        "authority": "official",
+        "source_type": "official_profile",
+        "retrieved_at": "2026-08-12T12:00:00.000Z",
+        "excerpt": "The profile describes integrative and interpretable machine learning for clinical prediction and genomic traits.",
+        "claims": [
+          "integrative machine learning",
+          "interpretable machine learning",
+          "genomic traits"
+        ]
+      },
+      {
+        "id": "source:news",
+        "title": "Bo Wang named to the Royal Society of Canada college",
+        "url": "https://web.cs.toronto.edu/news-events/news/bo-wang-named-to-royal-society-of-canadas-college-of-new-scholars-artists-and-scientists",
+        "authority": "official",
+        "source_type": "activity",
+        "retrieved_at": "2026-08-12T12:00:00.000Z",
+        "excerpt": "University of Toronto news describes current joint appointments and biomedical AI leadership.",
+        "claims": [
+          "current joint appointment",
+          "biomedical AI",
+          "UHN"
+        ]
+      },
+      {
+        "id": "source:bionic",
+        "title": "BIONIC, Nature Methods",
+        "url": "https://www.nature.com/articles/s41592-022-01616-x",
+        "authority": "peer_reviewed",
+        "source_type": "publication",
+        "retrieved_at": "2026-08-12T12:00:00.000Z",
+        "publication_date": "2022-10-03",
+        "excerpt": "BIONIC integrates multiple biological networks with a graph convolutional network for scalable biological prediction.",
+        "claims": [
+          "graph convolutional network",
+          "biological networks"
+        ]
+      }
+    ]
+  },
+  "research_evidence": [
+    {
+      "id": "source:graphcomm",
+      "source_ids": [
+        "source:graphcomm"
+      ],
+      "claim": "GraphComm predicts cell-cell communication using a graph-based deep learning method in single-cell RNA sequencing data."
+    }
+  ],
+  "applicant_fit_evidence": [
+    {
+      "id": "fit:single-cell",
+      "dimension": "research_experience",
+      "text": "Amara has confirmed experience analysing single-cell RNA sequencing data with Python and reproducible feature pipelines.",
+      "score": 93,
+      "applicant_fact_ids": [
+        "synthetic:research:0"
+      ],
+      "supervisor_evidence_ids": [
+        "source:graphcomm"
+      ]
+    },
+    {
+      "id": "fit:graph-methods",
+      "dimension": "methodological_overlap",
+      "text": "Amara proposes interpretable graph models for spatial cell communication, directly connecting to GraphComm's graph-based deep learning direction.",
+      "score": 91,
+      "applicant_fact_ids": [
+        "synthetic:proposal:0"
+      ],
+      "supervisor_evidence_ids": [
+        "source:graphcomm",
+        "source:medbio-profile"
+      ]
+    },
+    {
+      "id": "fit:programme",
+      "dimension": "programme_fit",
+      "text": "The applicant's confirmed computer science education and computational biology direction fit the CSB PhD context.",
+      "score": 82,
+      "applicant_fact_ids": [
+        "synthetic:education:0"
+      ],
+      "supervisor_evidence_ids": [
+        "source:programme",
+        "source:supervisor-profile"
+      ]
+    }
+  ],
+  "strongest_connection": {
+    "short_area": "graph models for cell communication",
+    "statement": "GraphComm's graph-based deep learning treatment of cell-cell communication is a close match for Amara's confirmed single-cell analysis and proposed spatial modelling direction.",
+    "applicant_fact_ids": [
+      "synthetic:research:0",
+      "synthetic:proposal:0"
+    ],
+    "supervisor_evidence_ids": [
+      "source:graphcomm"
+    ]
+  },
+  "verified_email": "bowang.wang@utoronto.ca",
+  "verified_email_source_id": "source:supervisor-profile",
+  "email": {
+    "to": "bowang.wang@utoronto.ca",
+    "subject": "PhD supervision inquiry - graph models for cell communication",
+    "body_text": "Dear Professor Wang,\n\nI am preparing an application to the Cell and Systems Biology PhD at University of Toronto for Fall 2026, and I am writing to ask about potential PhD supervision.\n\nYour GraphComm work on cell-cell communication using graph-based deep learning and spatial single-cell RNA sequencing is the clearest connection to my proposed direction. I was especially interested in how the method combines neighbourhood information with intracellular signalling rather than treating ligand-receptor pairs in isolation.\n\nMy confirmed research experience includes analysing single-cell RNA sequencing data with Python and building reproducible feature pipelines. I am now developing a proposal around interpretable graph models for spatial cell communication, grounded in the same methodological questions. My current role is research assistant at a synthetic computational biology lab.\n\nWould you be considering new doctoral students for Fall 2026, and would this direction merit a short conversation about fit and supervision?\n\nIf this direction is within your current supervision plans, I would appreciate any guidance on whether you are considering new doctoral students and whether an initial conversation would be useful. I have attached my programme-specific CV for context.\n\nThank you for your time and for your work on graph models for cell communication.\n\nKind regards,\nAmara Okafor",
+    "body_html": "<p>Dear Professor Wang,</p>\n<p>I am preparing an application to the Cell and Systems Biology PhD at University of Toronto for Fall 2026, and I am writing to ask about potential PhD supervision.</p>\n<p>Your GraphComm work on cell-cell communication using graph-based deep learning and spatial single-cell RNA sequencing is the clearest connection to my proposed direction. I was especially interested in how the method combines neighbourhood information with intracellular signalling rather than treating ligand-receptor pairs in isolation.</p>\n<p>My confirmed research experience includes analysing single-cell RNA sequencing data with Python and building reproducible feature pipelines. I am now developing a proposal around interpretable graph models for spatial cell communication, grounded in the same methodological questions. My current role is research assistant at a synthetic computational biology lab.</p>\n<p>Would you be considering new doctoral students for Fall 2026, and would this direction merit a short conversation about fit and supervision?</p>\n<p>If this direction is within your current supervision plans, I would appreciate any guidance on whether you are considering new doctoral students and whether an initial conversation would be useful. I have attached my programme-specific CV for context.</p>\n<p>Thank you for your time and for your work on graph models for cell communication.</p>\n<p>Kind regards,<br>Amara Okafor</p>",
+    "version": "supervisor-outreach-email-v1",
+    "word_count": 204,
+    "evidence_map": {
+      "research_connection": [
+        "source:graphcomm"
+      ],
+      "applicant_fit": [
+        "fit:single-cell",
+        "fit:graph-methods",
+        "fit:programme"
+      ],
+      "programme_policy": [
+        "source:programme"
+      ],
+      "cv": [
+        "demo-cv-artifact-001"
+      ]
+    }
+  },
+  "approved_email_version": "supervisor-outreach-email-v1",
+  "cv": {
+    "artifact_id": "demo-cv-artifact-001",
+    "file_asset_id": "demo-cv-asset-001",
+    "checksum": "015e70f961d08d4d8e219c1a480a6898b1929f49b060e44239e06289160cd11f",
+    "filename": "Amara_Okafor_CV.pdf",
+    "mime_type": "application/pdf",
+    "template_id": "graduate_application_cv_v1",
+    "template_version": "1.0.0",
+    "renderer_version": "1.0.0",
+    "page_count": 1,
+    "ats_text": "                                       Amara Okafor\n                                       amara.okafor@example.test | Lagos, Nigeria\n\nEducation\n University of Lagos                                                                                       2020 – 2024\n B.Sc., Computer Science                                                                                           Nigeria\n\nResearch Experience\n Single-cell transcriptomics research assistant                                                                      2024\n Lagos Computational Biology Lab (synthetic)\n    • Analysed single-cell RNA sequencing data and built reproducible feature tables for cell-state comparisons.\n\n    • Python\n\n    • Scanpy\n\n    • quality control\n\n    • feature engineering\n\n    • Documented a reproducible analysis workflow for a synthetic pilot dataset.\n\n\n\nResearch Projects\n Spatial cell communication models | graph learning                                                         2025-2026\n   • Proposed a study using graph representation learning, single-cell RNA sequencing, and spatial analysis to combine\n\n     neighbourhoods with interpretable cell-cell communication signals.\n   • Synthetic proposal grounded in confirmed research interests; no results are claimed.\n\n\n\nTechnical Skills\n Python\n SQL\n Git\n\nResearch Skills\n Single-cell RNA sequencing analysis\n Graph representation learning\n Reproducible computational workflows\n\nRelevant Coursework\n Algorithms\n Machine Learning\n Database Systems\n\nProjects\n Cell-state analysis toolkit | Python, Scanpy                                                                    2024\n   • Built a small Python and Scanpy workflow for quality control, dimensionality reduction, and annotated cell-state\n\n      comparisons.\n\nLanguages\n English\n\f",
+    "applicant_name": "Amara Okafor",
+    "applicant_email": "amara.okafor@example.test",
+    "latex": "%-------------------------\n% Resume in Latex\n% Author : Jake Gutierrez\n% Based off of: https://github.com/sb2nov/resume\n% License : MIT\n%------------------------\n\n\\documentclass[letterpaper,11pt]{article}\n\n\\usepackage{latexsym}\n\\usepackage[empty]{fullpage}\n\\usepackage{titlesec}\n\\usepackage{marvosym}\n\\usepackage[usenames,dvipsnames]{color}\n\\usepackage{verbatim}\n\\usepackage{enumitem}\n\\usepackage[hidelinks]{hyperref}\n\\usepackage{fancyhdr}\n\\usepackage[english]{babel}\n\\usepackage{tabularx}\n\\input{glyphtounicode}\n\n%----------FONT OPTIONS----------\n% sans-serif\n% \\usepackage[sfdefault]{FiraSans}\n% \\usepackage[sfdefault]{roboto}\n% \\usepackage[sfdefault]{noto-sans}\n% \\usepackage[default]{sourcesanspro}\n\n% serif\n% \\usepackage{CormorantGaramond}\n% \\usepackage{charter}\n\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyfoot{}\n\\renewcommand{\\headrulewidth}{0pt}\n\\renewcommand{\\footrulewidth}{0pt}\n\n\\addtolength{\\oddsidemargin}{-0.5in}\n\\addtolength{\\evensidemargin}{-0.5in}\n\\addtolength{\\textwidth}{1in}\n\\addtolength{\\topmargin}{-.5in}\n\\addtolength{\\textheight}{1.0in}\n\n\\urlstyle{same}\n\n\\raggedbottom\n\\raggedright\n\\setlength{\\tabcolsep}{0in}\n\n\\titleformat{\\section}{\n  \\vspace{-4pt}\\scshape\\raggedright\\large\n}{}{0em}{}[\\color{black}\\titlerule \\vspace{-5pt}]\n\n\\pdfgentounicode=1\n\n%-------------------------\n% Custom commands\n\\newcommand{\\resumeItem}[1]{\n  \\item\\small{\n    {#1 \\vspace{-2pt}}\n  }\n}\n\n\\newcommand{\\resumeSubheading}[4]{\n  \\vspace{-2pt}\\item\n    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}\n      \\textbf{#1} & #2 \\\\\n      \\textit{\\small#3} & \\textit{\\small #4} \\\\\n    \\end{tabular*}\\vspace{-7pt}\n}\n\n\\newcommand{\\resumeSubSubheading}[2]{\n  \\item\n    \\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}\n      \\textit{\\small#1} & \\textit{\\small #2} \\\\\n    \\end{tabular*}\\vspace{-7pt}\n}\n\n\\newcommand{\\resumeProjectHeading}[2]{\n  \\item\n    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}\n      \\small#1 & #2 \\\\\n    \\end{tabular*}\\vspace{-7pt}\n}\n\n\\newcommand{\\resumeSubItem}[1]{\\resumeItem{#1}\\vspace{-4pt}}\n\n\\renewcommand\\labelitemii{$\\vcenter{\\hbox{\\tiny$\\bullet$}}$}\n\n\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.15in, label={}]}\n\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}\n\\newcommand{\\resumeItemListStart}{\\begin{itemize}}\n\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-5pt}}\n\n%-------------------------------------------\n%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\\begin{document}\n\n% Dynamic header rendered from confirmed ApplicantProfile facts.\n% Dynamic sections rendered from the typed CV schema.\n\n\\begin{center}\n    {\\Huge \\scshape \\mbox{Amara Okafor}} \\\\\n    \\small \\href{mailto:amara.okafor@example.test}{amara.okafor@example.test} $|$ Lagos, Nigeria\n\\end{center}\n\n\\section{Education}\n\\resumeSubHeadingListStart\n\\resumeSubheading{University of Lagos}{2020 -- 2024}{B.Sc., Computer Science}{Nigeria}\n\\resumeSubHeadingListEnd\n\n\\section{Research Experience}\n\\resumeSubHeadingListStart\n\\resumeSubheading{Single-cell transcriptomics research assistant}{2024}{Lagos Computational Biology Lab (synthetic)}{}\n\\resumeItemListStart\n\\resumeItem{Analysed single-cell RNA sequencing data and built reproducible feature tables for cell-state comparisons.}\n\\resumeItem{Python}\n\\resumeItem{Scanpy}\n\\resumeItem{quality control}\n\\resumeItem{feature engineering}\n\\resumeItem{Documented a reproducible analysis workflow for a synthetic pilot dataset.}\n\\resumeItemListEnd\n\\resumeSubHeadingListEnd\n\n\\section{Research Projects}\n\\resumeSubHeadingListStart\n\\resumeProjectHeading{\\textbf{Spatial cell communication models $|$ graph learning}}{2025-2026}\n\\resumeItemListStart\n\\resumeItem{Proposed a study using graph representation learning, single-cell RNA sequencing, and spatial analysis to combine neighbourhoods with interpretable cell-cell communication signals.}\n\\resumeItem{Synthetic proposal grounded in confirmed research interests; no results are claimed.}\n\\resumeItemListEnd\n\\resumeSubHeadingListEnd\n\n\\section{Technical Skills}\n\\resumeSubHeadingListStart\n\\resumeItem{Python}\n\\resumeItem{SQL}\n\\resumeItem{Git}\n\\resumeSubHeadingListEnd\n\n\\section{Research Skills}\n\\resumeSubHeadingListStart\n\\resumeItem{Single-cell RNA sequencing analysis}\n\\resumeItem{Graph representation learning}\n\\resumeItem{Reproducible computational workflows}\n\\resumeSubHeadingListEnd\n\n\\section{Relevant Coursework}\n\\resumeSubHeadingListStart\n\\resumeItem{Algorithms}\n\\resumeItem{Machine Learning}\n\\resumeItem{Database Systems}\n\\resumeSubHeadingListEnd\n\n\\section{Projects}\n\\resumeSubHeadingListStart\n\\resumeProjectHeading{\\textbf{Cell-state analysis toolkit $|$ Python, Scanpy}}{2024}\n\\resumeItemListStart\n\\resumeItem{Built a small Python and Scanpy workflow for quality control, dimensionality reduction, and annotated cell-state comparisons.}\n\\resumeItemListEnd\n\\resumeSubHeadingListEnd\n\n\\section{Languages}\n\\resumeSubHeadingListStart\n\\resumeItem{English}\n\\resumeSubHeadingListEnd\n\n\\end{document}\n"
+  },
+  "approved_cv_artifact_id": "demo-cv-artifact-001",
+  "approved_cv_checksum": "015e70f961d08d4d8e219c1a480a6898b1929f49b060e44239e06289160cd11f",
+  "user_approval": {
+    "approved": true,
+    "approved_at": "2026-08-12T12:00:00.000Z"
+  },
+  "quality": {
+    "passed": true,
+    "checked_at": "2026-08-12T12:00:00.000Z",
+    "issues": [],
+    "warnings": [],
+    "checks": {
+      "identity": true,
+      "research": true,
+      "applicant_fit": true,
+      "writing": true,
+      "gmail": true,
+      "attachment": true,
+      "consistency": true
+    }
+  },
+  "idempotency_key": "demo-supervisor-outreach-utoronto-bo-wang-v1",
+  "status": "approved",
+  "created_at": "2026-08-12T12:00:00.000Z"
+}

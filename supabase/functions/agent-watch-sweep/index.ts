@@ -4,6 +4,7 @@ import { classifyApplicationReply, matchApplicationOtp, nextApplicationCaseState
 import { applicationFailureIsRetryable, applicationFollowUpAllowed, applicationMessageQuery, applicationWriteIsApproved, isGenericProfessorOutreach, safeApplicationRequestKind } from '../_shared/application-roon.ts'
 import { persistedEmailArguments } from '../_shared/email-integrity.ts'
 import { constantTimeEqual } from '../_shared/crypto.ts'
+import { validateFirstContactSupervisorOutreachPayload, validateSupervisorOutreachPackage, supervisorFirstContactRequiresPackage, type SupervisorOutreachPackage } from '../_shared/supervisor-outreach.ts'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -128,6 +129,68 @@ async function loadApplicationRequestContext(admin: AdminClient, request: Applic
     assignment = assignmentResult.data as Record<string, unknown>
   }
   return { request, run: runResult.data as Record<string, unknown>, applicationCase: caseResult.data as Record<string, unknown>, campaign: campaignResult.data as Record<string, unknown>, assignment }
+}
+
+async function loadCanonicalSupervisorOutreach(
+  admin: AdminClient,
+  context: ApplicationRequestContext,
+  payload: Record<string, unknown>,
+  requestKind: string,
+  contactId: string | null,
+  recipient: string,
+  requireUserApproval = false,
+) {
+  let contactKind = safeString(payload.contact_kind ?? payload.contactKind, 80).toLocaleLowerCase()
+  if (contactId) {
+    const contact = await admin.from('application_contacts').select('id,kind,email').eq('id', contactId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id).maybeSingle()
+    if (contact.error) throw new Error(contact.error.message)
+    if (contact.data) contactKind = safeString(contact.data.kind, 80).toLocaleLowerCase()
+  }
+  const needsCanonical = supervisorFirstContactRequiresPackage({ ...payload, request_kind: requestKind }, contactKind || null)
+  if (!needsCanonical) return null
+  const packageId = safeString(payload.supervisor_outreach_package_id ?? payload.supervisorOutreachPackageId ?? payload.outreach_package_id, 80)
+  if (!packageId) throw new Error('Prospective-supervisor first contact requires a persisted canonical outreach package.')
+  const packageRow = await admin.from('application_outreach_packages')
+    .select('id,package_data,status,application_case_id,opportunity_id,supervisor_id,verified_email,approved_cv_artifact_id,approved_cv_checksum,user_approval,approved_email_version')
+    .eq('id', packageId)
+    .eq('user_id', context.request.user_id)
+    .eq('application_case_id', context.request.application_case_id)
+    .maybeSingle()
+  if (packageRow.error?.code === '42P01') throw new Error('The canonical supervisor outreach migration is not applied.')
+  if (packageRow.error || !packageRow.data) throw new Error(packageRow.error?.message ?? 'The persisted supervisor outreach package was not found.')
+  const packageValue = recordValue(packageRow.data.package_data) as unknown as SupervisorOutreachPackage
+  const packageValidation = validateFirstContactSupervisorOutreachPayload({
+    ...payload,
+    request_kind: requestKind,
+    supervisor_outreach_package: packageValue,
+  }, {
+    expected_application_case_id: context.request.application_case_id,
+    expected_opportunity_id: safeString(packageRow.data.opportunity_id, 80),
+    expected_supervisor_id: safeString(packageRow.data.supervisor_id, 200),
+    expected_recipient: safeString(packageRow.data.verified_email, 320) || recipient,
+    expected_cv_artifact_id: safeString(packageRow.data.approved_cv_artifact_id, 80),
+    expected_cv_checksum: safeString(packageRow.data.approved_cv_checksum, 128),
+    expected_attachment_asset_id: safeString(recordValue(recordValue(packageValue).cv).file_asset_id, 80),
+    require_user_approval: requireUserApproval,
+  })
+  if (!packageValidation.valid) throw new Error(`The canonical supervisor outreach package failed validation: ${packageValidation.issues.join(' ')}`)
+  const artifactId = safeString(packageValue.approved_cv_artifact_id, 80)
+  const artifact = await admin.from('application_artifacts')
+    .select('id,file_asset_id,checksum,application_case_id,opportunity_id,kind,template_version,approval_status,metadata')
+    .eq('id', artifactId)
+    .eq('user_id', context.request.user_id)
+    .eq('application_case_id', context.request.application_case_id)
+    .maybeSingle()
+  if (artifact.error || !artifact.data) throw new Error(artifact.error?.message ?? 'The approved canonical CV artifact could not be verified.')
+  const metadata = recordValue(artifact.data.metadata)
+  if (safeString(artifact.data.checksum, 128) !== safeString(packageValue.approved_cv_checksum, 128) || safeString(artifact.data.template_version, 120) !== '1.0.0' || safeString(metadata.template_id, 120) !== 'graduate_application_cv_v1' || safeString(artifact.data.kind, 80) !== 'programme_derivative') {
+    throw new Error('The supervisor outreach attachment is not the exact graduate_application_cv_v1 artifact recorded in the package.')
+  }
+  if (requireUserApproval && safeString(artifact.data.approval_status, 80) !== 'approved') throw new Error('The exact supervisor CV artifact must be approved before first contact is sent.')
+  const assetId = safeString(artifact.data.file_asset_id, 80)
+  const requestedAssets = stringArray(payload.attachment_asset_ids ?? payload.attachmentAssetIds, 120)
+  if (!requestedAssets.includes(assetId)) throw new Error('The canonical supervisor outreach request must attach the exact approved CV asset.')
+  return { packageId, packageValue, packageRow: packageRow.data, artifact: artifact.data, assetId, contactKind }
 }
 
 async function claimApplicationRequest(admin: AdminClient, request: ApplicationRequestRow) {
@@ -457,7 +520,7 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     await recordApplicationWorkerEvent(admin, context, 'application_follow_up_stopped', 'succeeded', 'Roon stopped the follow-up cadence because the contact or application is no longer eligible for another message.', {})
     return { status: 'completed', result: { kind: 'follow_up', stopped: true, reason: 'follow_up_limit_or_contact_state' } }
   }
-  if (isGenericProfessorOutreach(payload)) throw new Error('Professor outreach needs evidence from the professor’s official work and a matching personalised passage.')
+  if (!payload.supervisor_outreach_package && !payload.supervisorOutreachPackage && !payload.outreach_package && isGenericProfessorOutreach(payload)) throw new Error('Professor outreach needs evidence from the professor’s official work and a matching personalised passage.')
   const payloadTo = Array.isArray(payload.to) ? payload.to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(payload.to)].filter(Boolean)
   let contactId = safeString(payload.contact_id ?? payload.contactId, 80) || null
   let to = payloadTo
@@ -482,8 +545,11 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     if (!resolvedEmail || resolvedEmail !== to[0]) throw new Error('The application recipient did not match the resolved case contact.')
     contactId = safeString(resolvedContact.id, 80) || null
   }
-  const subject = safeString(payload.subject, 998)
-  const bodyText = safeString(payload.body_text ?? payload.body, 30_000)
+  let supervisorGate = await loadCanonicalSupervisorOutreach(admin, context, payload, requestKind, contactId, to[0] ?? '', false)
+  const canonicalEmail = supervisorGate ? recordValue(supervisorGate.packageValue.email) : {}
+  const subject = supervisorGate ? safeString(canonicalEmail.subject, 998) : safeString(payload.subject, 998)
+  const bodyText = supervisorGate ? safeString(canonicalEmail.body_text, 30_000) : safeString(payload.body_text ?? payload.body, 30_000)
+  const bodyHtml = supervisorGate ? safeString(canonicalEmail.body_html, 30_000) : safeString(payload.body_html, 30_000)
   if (!subject || !bodyText) throw new Error('The application email needs a subject and body.')
   const threadId = safeString(payload.thread_id ?? payload.threadId, 256) || safeString(context.assignment?.gmail_thread_id, 256) || null
   const inReplyTo = safeString(payload.in_reply_to_message_id ?? payload.inReplyToMessageId, 256) || safeString(context.assignment?.last_provider_message_id, 256) || null
@@ -505,7 +571,10 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   }
   const assignmentId = safeString(payload.human_assignment_id ?? payload.humanAssignmentId, 80) || safeString(context.assignment?.id, 80)
   const providedDraftId = safeString(payload.draft_id ?? payload.draftId, 256)
-  const assetIds = stringArray(payload.attachment_asset_ids ?? payload.attachmentAssetIds)
+  const assetIds = [...new Set([
+    ...stringArray(payload.attachment_asset_ids ?? payload.attachmentAssetIds),
+    ...(supervisorGate ? [supervisorGate.assetId] : []),
+  ])]
   const attachments = providedDraftId ? [] : await materializeApplicationAttachments(admin, context, assetIds)
   const draftArguments: Record<string, unknown> = {
     to,
@@ -513,8 +582,14 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     bcc: Array.isArray(payload.bcc) ? payload.bcc.map(normalizeEmail).filter(Boolean) : [],
     subject,
     body_text: bodyText,
+    ...(bodyHtml ? { body_html: bodyHtml } : {}),
     thread_id: threadId,
     in_reply_to_message_id: inReplyTo,
+    ...(supervisorGate ? {
+      contact_kind: 'professor',
+      supervisor_outreach_package_id: supervisorGate.packageId,
+      supervisor_outreach_package: supervisorGate.packageValue,
+    } : {}),
     ...(attachments.length ? { attachments } : {}),
   }
   let draft: Record<string, unknown>
@@ -555,6 +630,26 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     await recordApplicationWorkerEvent(admin, context, 'application_email_approval_needed', 'waiting_user', 'Roon prepared the exact application email and is waiting for the approved send instruction.', { draft_id: safeString(draft.draft_id, 256), contact_id: contactId })
     return { status: 'waiting_user', result: { kind: 'email_send_approval_required', draft_id: safeString(draft.draft_id, 256), message_id: safeString(draft.message_id, 256), thread_id: safeString(draft.thread_id, 256) || threadId, attachment_count: Array.isArray(draft.attachments) ? draft.attachments.length : attachments.length } }
   }
+  if (supervisorGate) {
+    const approvedPackage = {
+      ...supervisorGate.packageValue,
+      approved_email_version: supervisorGate.packageValue.email.version,
+      user_approval: { approved: true, approved_at: new Date().toISOString() },
+      status: 'approved' as const,
+    }
+    const packageUpdate = await admin.from('application_outreach_packages').update({
+      package_data: approvedPackage,
+      quality_metadata: approvedPackage.quality,
+      approved_email_version: approvedPackage.approved_email_version,
+      user_approval: true,
+      user_approved_at: approvedPackage.user_approval.approved_at,
+      status: 'approved',
+    }).eq('id', supervisorGate.packageId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id)
+    if (packageUpdate.error) throw new Error(packageUpdate.error.message)
+    const artifactApproval = await admin.from('application_artifacts').update({ approval_status: 'approved' }).eq('id', supervisorGate.packageValue.approved_cv_artifact_id).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id)
+    if (artifactApproval.error) throw new Error(artifactApproval.error.message)
+    supervisorGate = await loadCanonicalSupervisorOutreach(admin, context, { ...payload, supervisor_outreach_package: approvedPackage, attachment_asset_ids: assetIds }, requestKind, contactId, to[0] ?? '', true)
+  }
   const sendArguments: Record<string, unknown> = {
     draft_id: safeString(draft.draft_id, 256),
     expected_to: to,
@@ -587,12 +682,17 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     idempotencyKey: `application-sent-evidence:${request.id}`,
   })
   await updateApplicationContact(admin, context, contactId ?? '', sentThreadId, sentMessageId)
+  if (supervisorGate) {
+    const sentPackage = { ...supervisorGate.packageValue, status: 'sent' as const, sent_message_id: sentMessageId, sent_thread_id: sentThreadId }
+    const packageSent = await admin.from('application_outreach_packages').update({ package_data: sentPackage, status: 'sent', sent_message_id: sentMessageId, sent_thread_id: sentThreadId }).eq('id', supervisorGate.packageId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id)
+    if (packageSent.error) throw new Error(packageSent.error.message)
+  }
   if (assignmentId) {
     const assignmentUpdate = await admin.from('human_assignments').update({ status: 'assigned', gmail_thread_id: sentThreadId, last_provider_message_id: sentMessageId }).eq('id', assignmentId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id)
     if (assignmentUpdate.error) throw new Error(assignmentUpdate.error.message)
   }
   await recordApplicationWorkerEvent(admin, context, 'application_email_sent', 'succeeded', 'Roon sent the approved application message and attached the provider result to the case.', { message_id: sentMessageId, thread_id: sentThreadId, contact_id: contactId, assignment_id: assignmentId || null })
-  return { status: 'completed', result: { kind: 'email_sent', message_id: sentMessageId, thread_id: sentThreadId, draft_id: safeString(draft.draft_id, 256), recipient_count: to.length, attachment_count: attachments.length } }
+  return { status: 'completed', result: { kind: 'email_sent', message_id: sentMessageId, thread_id: sentThreadId, draft_id: safeString(draft.draft_id, 256), recipient_count: to.length, attachment_count: attachments.length, ...(supervisorGate ? { supervisor_outreach_package_id: supervisorGate.packageId } : {}) } }
 }
 
 async function processApplicationContactRequest(admin: AdminClient, context: ApplicationRequestContext) {

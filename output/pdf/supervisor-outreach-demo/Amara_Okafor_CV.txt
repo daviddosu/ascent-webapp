@@ -1,0 +1,57 @@
+                                       Amara Okafor
+                                       amara.okafor@example.test | Lagos, Nigeria
+
+Education
+ University of Lagos                                                                                       2020 – 2024
+ B.Sc., Computer Science                                                                                           Nigeria
+
+Research Experience
+ Single-cell transcriptomics research assistant                                                                      2024
+ Lagos Computational Biology Lab (synthetic)
+    • Analysed single-cell RNA sequencing data and built reproducible feature tables for cell-state comparisons.
+
+    • Python
+
+    • Scanpy
+
+    • quality control
+
+    • feature engineering
+
+    • Documented a reproducible analysis workflow for a synthetic pilot dataset.
+
+
+
+Research Projects
+ Spatial cell communication models | graph learning                                                         2025-2026
+   • Proposed a study using graph representation learning, single-cell RNA sequencing, and spatial analysis to combine
+
+     neighbourhoods with interpretable cell-cell communication signals.
+   • Synthetic proposal grounded in confirmed research interests; no results are claimed.
+
+
+
+Technical Skills
+ Python
+ SQL
+ Git
+
+Research Skills
+ Single-cell RNA sequencing analysis
+ Graph representation learning
+ Reproducible computational workflows
+
+Relevant Coursework
+ Algorithms
+ Machine Learning
+ Database Systems
+
+Projects
+ Cell-state analysis toolkit | Python, Scanpy                                                                    2024
+   • Built a small Python and Scanpy workflow for quality control, dimensionality reduction, and annotated cell-state
+
+      comparisons.
+
+Languages
+ English
+

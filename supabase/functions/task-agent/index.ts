@@ -104,6 +104,13 @@ import {
 } from '../_shared/application-controller.ts'
 import { renderCanonicalCv, validateCvData, type CvData, type CvPageTarget } from '../_shared/cv.ts'
 import {
+  generateSupervisorOutreach,
+  supervisorFirstContactRequiresPackage,
+  validateFirstContactSupervisorOutreachPayload,
+  type SupervisorCvReference,
+  type SupervisorOutreachPackage,
+} from '../_shared/supervisor-outreach.ts'
+import {
   DAVID_APPLICATION_V21_MODEL_CONFIG,
   davidApplicationV21Instructions,
 } from '../_shared/david-agent-config.ts'
@@ -1101,7 +1108,7 @@ async function actionIdempotencyKey(run: AgentRunRow, toolName: string, argument
   const consequential = new Set([
     'gmail.create_draft', 'gmail.send_message',
     'calendar.create_event', 'calendar.update_event', 'calendar.delete_event',
-    'browser.select_flight', 'browser.submit', 'application.submit', 'application.generate_cv',
+    'browser.select_flight', 'browser.submit', 'application.submit', 'application.generate_cv', 'application.generate_supervisor_outreach',
   ])
   // Consequential writes must retain one identity across approval/resume and
   // same-run continuation. Including current_step lets a stale callback turn
@@ -2997,6 +3004,7 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
   const evidenceByTool: Partial<Record<string, ControllerEvidenceType[]>> = {
     'application.record_opportunity': ['OFFICIAL_SOURCE'],
     'application.record_portal_checkpoint': ['PORTAL_SAVE_CONFIRMATION', 'PORTAL_OBSERVATION'],
+    'application.generate_supervisor_outreach': ['DOCUMENT_CHECKSUM'],
     'application.record_communication': ['PROVIDER_MESSAGE', 'PROVIDER_THREAD'],
     'application.generate_document': ['DOCUMENT_CHECKSUM'],
     'application.generate_cv': ['DOCUMENT_CHECKSUM'],
@@ -3018,6 +3026,7 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     'application.build_readiness_report': 'readiness',
     'application.generate_document': 'document',
     'application.generate_cv': 'document',
+    'application.generate_supervisor_outreach': 'document',
     'application.submit': 'submission',
     'application.request_roon': safeString(argumentsValue.request_kind, 80).includes('professor') ? 'professor' : safeString(argumentsValue.request_kind, 80).includes('referee') ? 'referee' : 'communication',
   }
@@ -3043,7 +3052,7 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
   }
   if (toolName === 'application.generate_document') requiredFactIds.push(...stringArray(argumentsValue.source_fact_ids, 300))
   const completingRequirement = toolName === 'application.update_requirement' && ['verified', 'ready', 'approved', 'submitted'].includes(safeString(argumentsValue.status, 80))
-  const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.submit'].includes(toolName) || completingRequirement
+  const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.generate_supervisor_outreach', 'application.submit'].includes(toolName) || completingRequirement
   if (completingRequirement) {
     if (safeString(argumentsValue.linked_artifact_id, 80)) evidenceByTool[toolName] = ['DOCUMENT_CHECKSUM']
     else if (stringArray(argumentsValue.verification_evidence_ids, 120).length) evidenceByTool[toolName] = ['PORTAL_OBSERVATION']
@@ -3082,7 +3091,7 @@ function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) 
     document: ['application.generate_document', 'application.generate_cv', 'application.update_requirement'],
     writer: ['application.create_human_assignment', 'application.request_roon', 'application.update_requirement'],
     referee: ['application.build_referee_support_pack', 'application.request_roon', 'application.update_requirement'],
-    professor: ['application.record_contact', 'application.request_roon', 'application.update_requirement'],
+    professor: ['application.record_contact', 'application.generate_supervisor_outreach', 'application.request_roon', 'application.update_requirement'],
     communication: ['application.request_roon', 'application.record_communication', 'application.update_requirement'],
     portal_field: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint'],
     portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint'],
@@ -3101,6 +3110,16 @@ async function executeProviderTool(
   argumentsValue: Record<string, unknown>,
   idempotencyKey: string,
 ): Promise<ToolOutput> {
+  if (['gmail.create_draft', 'gmail.send_message'].includes(toolName) && prospectiveSupervisorFirstContactTask(run, argumentsValue)) {
+    return {
+      kind: 'pause',
+      status: 'waiting_for_user',
+      code: 'supervisor_outreach_roon_required',
+      message: 'Prospective-supervisor first contact must be prepared and sent by Roon from the persisted canonical outreach package.',
+      value: { canonical_package_required: true, direct_gmail_blocked: true },
+      actionStatus: 'failed',
+    }
+  }
   if (toolName === 'agent.request_context') {
     let suggestedOptions = Array.isArray(argumentsValue.suggested_options)
       ? argumentsValue.suggested_options
@@ -3942,6 +3961,100 @@ async function executeProviderTool(
     return { kind: 'output', value: { ...report, package_checksum: packageChecksum }, providerActionId: `readiness:${caseId}:${packageChecksum.slice(0, 16)}`, publicSummary: report.ready ? 'Built the exact application readiness package for approval.' : `Readiness report found ${report.blockers.length} blocker(s).`, runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, application_package_checksum: packageChecksum } } }
   }
 
+  if (toolName === 'application.generate_supervisor_outreach') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case and verified opportunity are required before preparing supervisor outreach.', value: { valid: false }, actionStatus: 'failed' }
+    const cvInput = recordValue(argumentsValue.cv)
+    const cvData = cvInput.cv_data
+    const cvFilename = safeString(cvInput.filename, 255)
+    const cvPageTarget = safeString(cvInput.page_target, 30) as CvPageTarget
+    const cvSectionOrder = stringArray(cvInput.section_order, 80)
+    const cvMetaPromptVersion = safeString(cvInput.meta_prompt_version, 80) || 'graduate-cv-selection-v1'
+    if (!cvFilename || !cvData || !['one_page', 'two_page', 'academic'].includes(cvPageTarget)) {
+      return { kind: 'pause', status: 'needs_context', code: 'supervisor_outreach_cv_input_invalid', message: 'A supervisor-specific canonical CV filename, page target, section order, and structured CV data are required.', value: { valid: false }, actionStatus: 'failed' }
+    }
+    const cvResult = await executeProviderTool(admin, run, 'application.generate_cv', {
+      application_case_id: caseId,
+      filename: cvFilename,
+      page_target: cvPageTarget,
+      section_order: cvSectionOrder,
+      cv_data: cvData,
+      meta_prompt_version: cvMetaPromptVersion,
+      idempotency_key: `supervisor-cv:${safeString(argumentsValue.idempotency_key, 300)}`,
+    }, `supervisor-cv:${safeString(argumentsValue.idempotency_key, 300)}`)
+    if (cvResult.kind !== 'output') return cvResult
+    const cvOutput = cvResult.value
+    const cvReference: SupervisorCvReference = {
+      artifact_id: safeString(cvOutput.pdf_artifact_id, 80),
+      file_asset_id: safeString(cvOutput.pdf_asset_id, 80) || null,
+      checksum: safeString(cvOutput.pdf_checksum, 128),
+      filename: cvFilename,
+      mime_type: 'application/pdf',
+      template_id: cvOutput.template_id as SupervisorCvReference['template_id'],
+      template_version: cvOutput.template_version as SupervisorCvReference['template_version'],
+      renderer_version: cvOutput.renderer_version as SupervisorCvReference['renderer_version'],
+      page_count: Number(cvOutput.page_count),
+      ats_text: safeString(cvOutput.ats_text, 200_000),
+      applicant_name: safeString(argumentsValue.applicant_name, 240),
+      applicant_email: safeString(argumentsValue.applicant_email, 320),
+    }
+    const packageValue = generateSupervisorOutreach({
+      application_case_id: caseId,
+      opportunity_id: safeString(argumentsValue.opportunity_id, 80) || safeString(context.opportunity.id, 80),
+      target_programme: safeString(argumentsValue.target_programme, 500),
+      target_institution: safeString(argumentsValue.target_institution, 240),
+      target_intake: safeString(argumentsValue.target_intake, 120),
+      policy: argumentsValue.policy as never,
+      supervisor_dossier: argumentsValue.supervisor_dossier as never,
+      applicant_fit_evidence: Array.isArray(argumentsValue.applicant_fit_evidence) ? argumentsValue.applicant_fit_evidence as never[] : [],
+      strongest_connection: argumentsValue.strongest_connection as never,
+      applicant_name: safeString(argumentsValue.applicant_name, 240),
+      applicant_email: safeString(argumentsValue.applicant_email, 320),
+      applicant_role: safeString(argumentsValue.applicant_role, 240) || null,
+      writing: argumentsValue.writing as never,
+      cv: cvReference,
+      idempotency_key: safeString(argumentsValue.idempotency_key, 300),
+    })
+    const packageRow = await admin.from('application_outreach_packages').upsert({
+      user_id: run.user_id,
+      application_case_id: packageValue.application_case_id,
+      opportunity_id: packageValue.opportunity_id,
+      supervisor_id: packageValue.supervisor_id,
+      contact_mode: packageValue.contact_mode,
+      verified_email: packageValue.verified_email,
+      package_data: packageValue,
+      quality_metadata: packageValue.quality,
+      approved_email_version: packageValue.approved_email_version,
+      approved_cv_artifact_id: packageValue.approved_cv_artifact_id || null,
+      approved_cv_checksum: packageValue.approved_cv_checksum || null,
+      user_approval: packageValue.user_approval.approved,
+      user_approved_at: packageValue.user_approval.approved_at,
+      status: packageValue.status,
+      idempotency_key: packageValue.idempotency_key,
+    }, { onConflict: 'user_id,idempotency_key' }).select('id,status').single()
+    if (packageRow.error?.code === '42P01') return { kind: 'pause', status: 'waiting_for_user', code: 'application_migration_required', message: 'Supervisor outreach packages are not available until the canonical outreach migration is applied.', value: { available: false }, actionStatus: 'failed' }
+    if (packageRow.error || !packageRow.data) throw new Error(packageRow.error?.message ?? 'The supervisor outreach package could not be persisted.')
+    const caseData = recordValue(context.row.data)
+    const packageIds = Array.isArray(caseData.supervisorOutreachPackageIds) ? caseData.supervisorOutreachPackageIds.map(value => safeString(value, 80)).filter(Boolean) : []
+    if (!packageIds.includes(packageRow.data.id)) packageIds.push(packageRow.data.id)
+    await admin.from('application_cases').update({
+      current_stage: 'referee_coordination',
+      status: packageValue.quality.passed ? 'awaiting_user' : 'awaiting_user',
+      next_action: packageValue.quality.passed ? 'Review the research-backed supervisor email and exact tailored CV, then approve the first contact for Roon.' : 'Resolve the supervisor outreach quality blockers before requesting contact approval.',
+      data: { ...caseData, supervisorOutreachPackageIds: packageIds, supervisorOutreachPackageId: packageRow.data.id },
+    }).eq('id', caseId).eq('user_id', run.user_id)
+    const nextState = nextApplicationState(run, {
+      currentCaseId: caseId,
+      status: 'awaiting_user',
+      stage: 'referee_coordination',
+      nextAction: packageValue.quality.passed ? 'Review and approve the exact supervisor outreach package before Roon prepares or sends it.' : 'Resolve the supervisor outreach quality blockers.',
+      progress: { completed: packageValue.quality.passed ? 3 : 2, label: packageValue.quality.passed ? 'Supervisor outreach ready for approval' : 'Supervisor outreach quality blocked', nextAction: packageValue.quality.passed ? 'Review and approve the exact supervisor outreach package before Roon prepares or sends it.' : 'Resolve the supervisor outreach quality blockers.' },
+    })
+    if (!packageValue.quality.passed) return { kind: 'pause', status: 'needs_context', code: 'supervisor_outreach_quality_failed', message: packageValue.quality.issues.join(' ') || 'The supervisor outreach quality gate failed.', value: { ...packageValue, outreach_package_id: packageRow.data.id }, providerActionId: packageRow.data.id, actionStatus: 'failed', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, supervisor_outreach_package_id: packageRow.data.id } } }
+    return { kind: 'output', value: { ...packageValue, outreach_package_id: packageRow.data.id, cv_artifact_id: cvReference.artifact_id, cv_asset_id: cvReference.file_asset_id }, providerActionId: packageRow.data.id, publicSummary: 'Prepared the research-backed supervisor dossier, fit rationale, exact canonical CV, and approval-ready Gmail package; nothing was sent.', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, supervisor_outreach_package_id: packageRow.data.id, supervisor_id: packageValue.supervisor_id } } }
+  }
+
   if (toolName === 'application.generate_cv') {
     const caseId = safeString(argumentsValue.application_case_id, 80)
     const context = await applicationCaseContext(admin, run, caseId)
@@ -4280,6 +4393,34 @@ async function executeProviderTool(
     if (ownedCase.error) throw new Error(ownedCase.error.message)
     if (!ownedCase.data || safeString(ownedCase.data.task_id, 80) !== run.task_id) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_ownership_invalid', message: 'The Roon handoff must belong to the current application task.', value: { valid: false }, actionStatus: 'failed' }
+    }
+    if (['create_draft', 'send_email'].includes(requestKind) && supervisorFirstContactRequiresPackage({ ...requestPayload, request_kind: requestKind }, safeString(requestPayload.contact_kind ?? requestPayload.contactKind, 80) || null)) {
+      const packageId = safeString(requestPayload.supervisor_outreach_package_id ?? requestPayload.supervisorOutreachPackageId ?? requestPayload.outreach_package_id, 80)
+      if (!packageId) {
+        return { kind: 'pause', status: 'waiting_for_user', code: 'supervisor_outreach_package_required', message: 'Prospective-supervisor first contact must use the persisted research-backed outreach package. Generate and review the package before asking Roon to prepare Gmail.', value: { valid: false, canonical_package_required: true }, actionStatus: 'failed' }
+      }
+      const packageRow = await admin.from('application_outreach_packages').select('id,package_data,status,application_case_id,opportunity_id,supervisor_id,verified_email,approved_cv_artifact_id,approved_cv_checksum').eq('id', packageId).eq('user_id', run.user_id).eq('application_case_id', applicationCaseId).maybeSingle()
+      if (packageRow.error?.code === '42P01') return { kind: 'pause', status: 'waiting_for_user', code: 'application_migration_required', message: 'Supervisor outreach packages are not available until the canonical outreach migration is applied.', value: { available: false }, actionStatus: 'failed' }
+      if (packageRow.error || !packageRow.data) return { kind: 'pause', status: 'waiting_for_user', code: 'supervisor_outreach_package_missing', message: 'The persisted supervisor outreach package could not be found for this application case.', value: { valid: false }, actionStatus: 'failed' }
+      const canonicalPackage = recordValue(packageRow.data.package_data)
+      const packageValidation = validateFirstContactSupervisorOutreachPayload({
+        ...requestPayload,
+        request_kind: requestKind,
+        supervisor_outreach_package: canonicalPackage,
+      }, {
+        expected_application_case_id: applicationCaseId,
+        expected_opportunity_id: safeString(packageRow.data.opportunity_id, 80),
+        expected_supervisor_id: safeString(packageRow.data.supervisor_id, 200),
+        expected_recipient: safeString(packageRow.data.verified_email, 320),
+        expected_cv_artifact_id: safeString(packageRow.data.approved_cv_artifact_id, 80),
+        expected_cv_checksum: safeString(packageRow.data.approved_cv_checksum, 128),
+        require_user_approval: false,
+      })
+      if (!packageValidation.valid) return { kind: 'pause', status: 'needs_context', code: 'supervisor_outreach_package_invalid', message: packageValidation.issues.join(' '), value: { valid: false, issues: packageValidation.issues, warnings: packageValidation.warnings }, actionStatus: 'failed' }
+      requestPayload.supervisor_outreach_package = canonicalPackage
+      requestPayload.supervisor_outreach_package_id = packageId
+      const canonicalAssetId = safeString(recordValue(recordValue(canonicalPackage).cv).file_asset_id, 80)
+      if (canonicalAssetId) requestPayload.attachment_asset_ids = [...new Set([canonicalAssetId, ...stringArray(requestPayload.attachment_asset_ids ?? requestPayload.attachmentAssetIds, 120)])]
     }
     const idempotencyKey = safeString(argumentsValue.idempotency_key, 300)
     const request = createInterAgentRequest({
@@ -5955,6 +6096,12 @@ function requestedCommunicationToolGuard(
 ) {
   const text = `${run.objective} ${safeString(run.context?.description, 4_000)}`
   const schedulingContract = run.capability === 'scheduling' || run.task_contract === 'communication.scheduling'
+  if (['gmail.create_draft', 'gmail.send_message'].includes(toolName) && prospectiveSupervisorFirstContactTask(run, argumentsValue)) {
+    return {
+      error_code: 'supervisor_outreach_roon_required',
+      error_message: 'Prospective-supervisor first contact must use the canonical research-backed package and be handed to Roon. David cannot call Gmail directly for this message.',
+    }
+  }
   if (toolName === 'gmail.send_message' && (
     actionIsNegated(text, 'gmail_send') ||
     (!schedulingContract && !actionIsAffirmed(text, 'gmail_send'))
@@ -5976,6 +6123,15 @@ function requestedCommunicationToolGuard(
   const notificationGuard = calendarNotificationGuard(run, toolName, argumentsValue)
   if (notificationGuard) return notificationGuard
   return null
+}
+
+function prospectiveSupervisorFirstContactTask(run: AgentRunRow, argumentsValue: Record<string, unknown> = {}) {
+  const taskText = `${run.objective} ${safeString(run.context?.description, 4_000)}`
+  const applicationContext = /\b(?:application|admission|graduate|phd|doctoral|programme|program)\b/i.test(taskText)
+  const supervisorContext = /\b(?:prospective|potential|supervisor|professor|faculty|principal investigator|lab|research group)\b/i.test(taskText)
+  const firstContactIntent = /\b(?:contact|email|message|outreach|write|send|ask)\b/i.test(taskText)
+  const hasThread = Boolean(safeString(argumentsValue.thread_id ?? argumentsValue.threadId, 256) && safeString(argumentsValue.in_reply_to_message_id ?? argumentsValue.inReplyToMessageId, 256))
+  return applicationContext && supervisorContext && firstContactIntent && !hasThread && !/\b(?:reply|respond|follow[\s-]?up)\b/i.test(taskText)
 }
 
 function calendarMustPrecedeEmail(run: AgentRunRow) {

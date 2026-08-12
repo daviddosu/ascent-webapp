@@ -338,8 +338,11 @@ function renderProjects(items: CvData['projects'] | CvData['researchProjects']) 
   return items.map(item => {
     const record = factValue(item) as { title: string; description: string; technologies?: string[]; methods?: string[]; outcomes?: string[]; date?: string | null } ?? { title: '', description: '' }
     const technologies = Array.isArray(record.technologies) ? record.technologies : Array.isArray(record.methods) ? record.methods : []
-    const heading = [record.title, technologies.length ? technologies.join(', ') : ''].filter(Boolean).join(' $|$ ')
-    return `\\resumeProjectHeading{\\textbf{${escapeLatex(heading, 400)}}}{${escapeLatex(record.date, 80)}}\n\\resumeItemListStart\n\\resumeItem{${escapeLatex(record.description, 3_500)}}${Array.isArray(record.outcomes) ? `\n${record.outcomes.map(value => `\\resumeItem{${escapeLatex(value, 2_000)}}`).join('\n')}` : ''}\n\\resumeItemListEnd`
+    // Escape applicant-controlled text before adding the approved math
+    // separator. Escaping the complete string would turn the `$|$` separator
+    // into literal dollar signs in the rendered PDF.
+    const heading = [escapeLatex(record.title, 300), technologies.length ? technologies.map(value => escapeLatex(value, 120)).join(', ') : ''].filter(Boolean).join(' $|$ ')
+    return `\\resumeProjectHeading{\\textbf{${heading}}}{${escapeLatex(record.date, 80)}}\n\\resumeItemListStart\n\\resumeItem{${escapeLatex(record.description, 3_500)}}${Array.isArray(record.outcomes) ? `\n${record.outcomes.map(value => `\\resumeItem{${escapeLatex(value, 2_000)}}`).join('\n')}` : ''}\n\\resumeItemListEnd`
   }).join('\n')
 }
 

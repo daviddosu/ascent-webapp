@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { calendarEventBlocksTime, calendarQueryTimestamp, classifyGoogleHttpFailure, gmailRecipientHeaderLines, gmailReplyCheckpointMatches, hasConfirmedSentMessage, isValidIanaTimezone } from './google.ts'
+import { calendarEventBlocksTime, calendarQueryTimestamp, classifyGoogleHttpFailure, gmailRecipientHeaderLines, gmailReplyCheckpointMatches, hasConfirmedSentMessage, isValidIanaTimezone, renderGmailMimeMessage } from './google.ts'
 
 Deno.test('calendar conflict checks ignore only transparent, cancelled, or edited events', () => {
   assertEquals(calendarEventBlocksTime({
@@ -49,6 +49,25 @@ Deno.test('Gmail draft updates preserve To, CC, and BCC header intent', () => {
     'Cc: copy@example.com',
     'Bcc: hidden@example.com',
   ])
+})
+
+Deno.test('canonical Gmail MIME contains plain text, HTML, and the exact PDF attachment boundary', () => {
+  const raw = renderGmailMimeMessage({
+    to: ['professor@example.edu'],
+    subject: 'PhD supervision inquiry - single-cell models',
+    bodyText: 'Dear Professor Wang,\n\nA research-backed message.',
+    bodyHtml: '<p>Dear Professor Wang,</p><p>A research-backed message.</p>',
+    messageId: '<canonical@example.com>',
+    idempotencyKey: 'outreach-demo-1',
+    attachments: [{ name: 'Amara_Okafor_CV.pdf', mimeType: 'application/pdf', base64: 'JVBERiQ=' }],
+  })
+  const decoded = atob(raw.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(raw.length / 4) * 4, '='))
+  assertEquals(decoded.includes('multipart/mixed'), true)
+  assertEquals(decoded.includes('multipart/alternative'), true)
+  assertEquals(decoded.includes('Content-Type: text/plain; charset=UTF-8'), true)
+  assertEquals(decoded.includes('Content-Type: text/html; charset=UTF-8'), true)
+  assertEquals(decoded.includes('filename="Amara_Okafor_CV.pdf"'), true)
+  assertEquals(decoded.includes('JVBERiQ='), true)
 })
 
 Deno.test('Google transport classification retries timeouts, quota, and transient HTTP failures', () => {

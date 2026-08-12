@@ -1,0 +1,181 @@
+{
+  "supervisor_id": "uoft:bo-wang",
+  "name": "Bo Wang",
+  "title": "Associate Professor",
+  "institution": "University of Toronto",
+  "department": "Laboratory Medicine and Pathobiology",
+  "lab_or_group": "Wang computational biology group",
+  "verified_email": "bowang.wang@utoronto.ca",
+  "verified_email_source_id": "source:supervisor-profile",
+  "alternate_verified_emails": [
+    {
+      "email": "bwang@cs.toronto.edu",
+      "source_id": "source:cs-directory"
+    }
+  ],
+  "research_themes": [
+    {
+      "text": "Integrative and interpretable machine learning for clinical, genomic, and biomedical data.",
+      "source_ids": [
+        "source:supervisor-profile",
+        "source:medbio-profile"
+      ]
+    },
+    {
+      "text": "Machine learning and computational biology, including graph-based biological modelling.",
+      "source_ids": [
+        "source:cs-directory",
+        "source:bionic"
+      ]
+    }
+  ],
+  "current_projects": [
+    {
+      "text": "GraphComm uses graph-based deep learning to predict cell-cell communication from spatial single-cell RNA sequencing data.",
+      "source_ids": [
+        "source:graphcomm"
+      ]
+    }
+  ],
+  "recent_publications": [
+    {
+      "text": "GraphComm predicts cell-cell communication using a graph-based deep learning method in single-cell RNA sequencing data, Scientific Reports, 2025.",
+      "source_ids": [
+        "source:graphcomm"
+      ]
+    },
+    {
+      "text": "BIONIC integrates multiple biological networks with graph convolutional learning for gene and chemical-genetic interaction prediction.",
+      "source_ids": [
+        "source:bionic"
+      ]
+    }
+  ],
+  "recent_activity": [
+    {
+      "text": "The University of Toronto describes current joint appointments and biomedical AI leadership, including work connected to UHN and Vector.",
+      "source_ids": [
+        "source:news"
+      ]
+    }
+  ],
+  "availability_evidence": [
+    {
+      "text": "The official LMP profile identifies Bo Wang as graduate faculty with a primary appointment.",
+      "source_ids": [
+        "source:supervisor-profile"
+      ]
+    }
+  ],
+  "source_ids": [
+    "source:programme",
+    "source:supervisor-profile",
+    "source:cs-directory",
+    "source:graphcomm",
+    "source:medbio-profile",
+    "source:news",
+    "source:bionic"
+  ],
+  "retrieved_at": "2026-08-12T12:00:00.000Z",
+  "evidence": [
+    {
+      "id": "source:programme",
+      "title": "CSB prospective students admissions",
+      "url": "https://csb.utoronto.ca/graduate-studies/prospective-students/admissions/",
+      "authority": "official",
+      "source_type": "official_programme",
+      "retrieved_at": "2026-08-12T12:00:00.000Z",
+      "excerpt": "The programme advises applicants to contact prospective supervisors and states that admission requires support from a potential supervisor.",
+      "claims": [
+        "contact prospective supervisors",
+        "potential supervisor support"
+      ]
+    },
+    {
+      "id": "source:supervisor-profile",
+      "title": "Bo Wang, LMP faculty profile",
+      "url": "https://lmp.utoronto.ca/faculty/bo-wang",
+      "authority": "official",
+      "source_type": "official_profile",
+      "retrieved_at": "2026-08-12T12:00:00.000Z",
+      "excerpt": "Bo Wang is an Associate Professor and graduate faculty member whose interests include AI, cancer, and genomics.",
+      "claims": [
+        "Associate Professor",
+        "graduate faculty",
+        "AI",
+        "genomics",
+        "computational biology"
+      ]
+    },
+    {
+      "id": "source:cs-directory",
+      "title": "U of T Computer Science faculty directory",
+      "url": "https://web.cs.toronto.edu/people/faculty-directory",
+      "authority": "official",
+      "source_type": "official_profile",
+      "retrieved_at": "2026-08-12T12:00:00.000Z",
+      "excerpt": "The faculty directory lists Bo Wang as an Associate Professor working in machine learning and computational biology.",
+      "claims": [
+        "machine learning",
+        "computational biology"
+      ]
+    },
+    {
+      "id": "source:graphcomm",
+      "title": "GraphComm, Scientific Reports",
+      "url": "https://doi.org/10.1038/s41598-025-20812-1",
+      "authority": "peer_reviewed",
+      "source_type": "publication",
+      "retrieved_at": "2026-08-12T12:00:00.000Z",
+      "publication_date": "2025-10-22",
+      "excerpt": "GraphComm predicts cell-cell communication using a graph-based deep learning method in single-cell RNA sequencing data.",
+      "claims": [
+        "cell-cell communication",
+        "graph-based deep learning",
+        "spatial single-cell RNA sequencing"
+      ]
+    },
+    {
+      "id": "source:medbio-profile",
+      "title": "Bo Wang, MedBio faculty profile",
+      "url": "https://medbio.utoronto.ca/faculty/wang",
+      "authority": "official",
+      "source_type": "official_profile",
+      "retrieved_at": "2026-08-12T12:00:00.000Z",
+      "excerpt": "The profile describes integrative and interpretable machine learning for clinical prediction and genomic traits.",
+      "claims": [
+        "integrative machine learning",
+        "interpretable machine learning",
+        "genomic traits"
+      ]
+    },
+    {
+      "id": "source:news",
+      "title": "Bo Wang named to the Royal Society of Canada college",
+      "url": "https://web.cs.toronto.edu/news-events/news/bo-wang-named-to-royal-society-of-canadas-college-of-new-scholars-artists-and-scientists",
+      "authority": "official",
+      "source_type": "activity",
+      "retrieved_at": "2026-08-12T12:00:00.000Z",
+      "excerpt": "University of Toronto news describes current joint appointments and biomedical AI leadership.",
+      "claims": [
+        "current joint appointment",
+        "biomedical AI",
+        "UHN"
+      ]
+    },
+    {
+      "id": "source:bionic",
+      "title": "BIONIC, Nature Methods",
+      "url": "https://www.nature.com/articles/s41592-022-01616-x",
+      "authority": "peer_reviewed",
+      "source_type": "publication",
+      "retrieved_at": "2026-08-12T12:00:00.000Z",
+      "publication_date": "2022-10-03",
+      "excerpt": "BIONIC integrates multiple biological networks with a graph convolutional network for scalable biological prediction.",
+      "claims": [
+        "graph convolutional network",
+        "biological networks"
+      ]
+    }
+  ]
+}

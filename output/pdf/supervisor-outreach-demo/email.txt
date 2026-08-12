@@ -1,0 +1,16 @@
+Dear Professor Wang,
+
+I am preparing an application to the Cell and Systems Biology PhD at University of Toronto for Fall 2026, and I am writing to ask about potential PhD supervision.
+
+Your GraphComm work on cell-cell communication using graph-based deep learning and spatial single-cell RNA sequencing is the clearest connection to my proposed direction. I was especially interested in how the method combines neighbourhood information with intracellular signalling rather than treating ligand-receptor pairs in isolation.
+
+My confirmed research experience includes analysing single-cell RNA sequencing data with Python and building reproducible feature pipelines. I am now developing a proposal around interpretable graph models for spatial cell communication, grounded in the same methodological questions. My current role is research assistant at a synthetic computational biology lab.
+
+Would you be considering new doctoral students for Fall 2026, and would this direction merit a short conversation about fit and supervision?
+
+If this direction is within your current supervision plans, I would appreciate any guidance on whether you are considering new doctoral students and whether an initial conversation would be useful. I have attached my programme-specific CV for context.
+
+Thank you for your time and for your work on graph models for cell communication.
+
+Kind regards,
+Amara Okafor

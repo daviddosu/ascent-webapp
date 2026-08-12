@@ -1,0 +1,13 @@
+{
+  "synthetic_applicant": true,
+  "no_message_sent": true,
+  "sources": {
+    "programme_admissions": "https://csb.utoronto.ca/graduate-studies/prospective-students/admissions/",
+    "supervisor_profile": "https://lmp.utoronto.ca/faculty/bo-wang",
+    "supervisor_cs_directory": "https://web.cs.toronto.edu/people/faculty-directory",
+    "graphcomm": "https://doi.org/10.1038/s41598-025-20812-1",
+    "medbio_profile": "https://medbio.utoronto.ca/faculty/wang",
+    "supervisor_news": "https://web.cs.toronto.edu/news-events/news/bo-wang-named-to-royal-society-of-canadas-college-of-new-scholars-artists-and-scientists",
+    "bionic": "https://www.nature.com/articles/s41592-022-01616-x"
+  }
+}

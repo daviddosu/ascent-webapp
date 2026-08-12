@@ -1,0 +1,278 @@
+{
+  "fullName": {
+    "value": "Amara Okafor",
+    "provenance": {
+      "confirmed": true,
+      "sourceFactIds": [
+        "synthetic:identity:name"
+      ],
+      "sourceAssetIds": [],
+      "kind": "user_statement",
+      "sourceUrl": "synthetic://applicant-profile"
+    }
+  },
+  "preferredName": null,
+  "email": {
+    "value": "amara.okafor@example.test",
+    "provenance": {
+      "confirmed": true,
+      "sourceFactIds": [
+        "synthetic:identity:email"
+      ],
+      "sourceAssetIds": [],
+      "kind": "user_statement",
+      "sourceUrl": "synthetic://applicant-profile"
+    }
+  },
+  "phone": null,
+  "location": {
+    "value": "Lagos, Nigeria",
+    "provenance": {
+      "confirmed": true,
+      "sourceFactIds": [
+        "synthetic:identity:location"
+      ],
+      "sourceAssetIds": [],
+      "kind": "user_statement",
+      "sourceUrl": "synthetic://applicant-profile"
+    }
+  },
+  "linkedin": null,
+  "github": null,
+  "portfolio": null,
+  "website": null,
+  "education": [
+    {
+      "value": {
+        "institution": "University of Lagos",
+        "degree": "B.Sc.",
+        "field": "Computer Science",
+        "startDate": "2020",
+        "endDate": "2024",
+        "grade": "First Class",
+        "country": "Nigeria"
+      },
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:education:0"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "researchExperience": [
+    {
+      "value": {
+        "title": "Single-cell transcriptomics research assistant",
+        "institution": "Lagos Computational Biology Lab (synthetic)",
+        "summary": "Analysed single-cell RNA sequencing data and built reproducible feature tables for cell-state comparisons.",
+        "methods": [
+          "Python",
+          "Scanpy",
+          "quality control",
+          "feature engineering"
+        ],
+        "outcomes": [
+          "Documented a reproducible analysis workflow for a synthetic pilot dataset."
+        ],
+        "startDate": "2024",
+        "endDate": null
+      },
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:research:0"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "workExperience": [],
+  "teachingExperience": [],
+  "publications": [],
+  "presentations": [],
+  "projects": [
+    {
+      "value": {
+        "title": "Cell-state analysis toolkit",
+        "description": "Built a small Python and Scanpy workflow for quality control, dimensionality reduction, and annotated cell-state comparisons.",
+        "technologies": [
+          "Python",
+          "Scanpy"
+        ],
+        "date": "2024"
+      },
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:project:0"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "researchProjects": [
+    {
+      "value": {
+        "title": "Spatial cell communication models",
+        "description": "Proposed a study using graph representation learning, single-cell RNA sequencing, and spatial analysis to combine neighbourhoods with interpretable cell-cell communication signals.",
+        "methods": [
+          "graph learning"
+        ],
+        "outcomes": [
+          "Synthetic proposal grounded in confirmed research interests; no results are claimed."
+        ],
+        "date": "2025-2026"
+      },
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:proposal:0"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "leadership": [],
+  "awards": [],
+  "scholarships": [],
+  "certifications": [],
+  "technicalSkills": [
+    {
+      "value": "Python",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:skill:python"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    },
+    {
+      "value": "SQL",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:skill:sql"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    },
+    {
+      "value": "Git",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:skill:git"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "researchSkills": [
+    {
+      "value": "Single-cell RNA sequencing analysis",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:research-skill:single-cell"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    },
+    {
+      "value": "Graph representation learning",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:research-skill:graphs"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    },
+    {
+      "value": "Reproducible computational workflows",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:research-skill:reproducibility"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "languages": [
+    {
+      "value": "English",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:language:english"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "coursework": [
+    {
+      "value": "Algorithms",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:coursework:algorithms"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    },
+    {
+      "value": "Machine Learning",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:coursework:ml"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    },
+    {
+      "value": "Database Systems",
+      "provenance": {
+        "confirmed": true,
+        "sourceFactIds": [
+          "synthetic:coursework:databases"
+        ],
+        "sourceAssetIds": [],
+        "kind": "user_statement",
+        "sourceUrl": "synthetic://applicant-profile"
+      }
+    }
+  ],
+  "memberships": []
+}

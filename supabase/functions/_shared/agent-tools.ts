@@ -479,6 +479,34 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'application.generate_supervisor_outreach',
+    description: 'Create the canonical, research-backed first-contact package for one prospective supervisor. The package includes the official programme-contact policy, verified institutional email, current research dossier, scored applicant fit evidence, the exact canonical CV artifact, both Gmail body representations, and a blocking quality result. This prepares only; Roon owns Gmail.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        opportunity_id: stringValue('Durable Opportunity ID.', 64),
+        target_programme: stringValue('Exact graduate programme title.', 500),
+        target_institution: stringValue('Institution name.', 240),
+        target_intake: stringValue('Entry term or intake.', 120),
+        policy: { type: 'object', additionalProperties: true, description: 'Official programme or department supervisor-contact policy and evidence IDs.' },
+        supervisor_dossier: { type: 'object', additionalProperties: true, description: 'Typed research dossier with verified email, current work, availability evidence, and source records.' },
+        applicant_fit_evidence: { type: 'array', items: { type: 'object', additionalProperties: true }, minItems: 1, maxItems: 30 },
+        strongest_connection: { type: 'object', additionalProperties: true, description: 'The best evidenced intellectual overlap to personalize the message.' },
+        applicant_name: stringValue('Applicant legal or preferred name from the profile.', 240),
+        applicant_email: stringValue('Applicant verified email from the profile.', 320),
+        applicant_role: nullableString('Applicant current role, if confirmed.', 240),
+        writing: { type: 'object', additionalProperties: true, description: 'Concise human-readable research connection, applicant fit, request, and closing context.' },
+        cv: { type: 'object', additionalProperties: true, description: 'Exact compiled graduate_application_cv_v1 artifact metadata and checksum.' },
+        idempotency_key: stringValue('Stable key for this canonical outreach package.', 300),
+      },
+      required: ['application_case_id', 'opportunity_id', 'target_programme', 'target_institution', 'target_intake', 'policy', 'supervisor_dossier', 'applicant_fit_evidence', 'strongest_connection', 'applicant_name', 'applicant_email', 'applicant_role', 'writing', 'cv', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
     name: 'application.submit',
     description: 'Submit one application through the verified portal session after a deterministic readiness report and exact user approval. This action is never available to Roon or Caspian and is idempotent per application case.',
     parameters: objectSchema({
@@ -625,10 +653,11 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       bcc: { type: 'array', items: stringValue('BCC recipient email address.', 320), maxItems: 20 },
       subject: stringValue('Email subject.', 998),
       body_text: stringValue('Plain-text email body.', 30000),
+      body_html: nullableString('Optional Gmail-safe HTML representation of the same body.', 30000),
       thread_id: nullableString('Existing Gmail thread ID when replying.', 256),
       in_reply_to_message_id: nullableString('Existing Gmail message ID when replying.', 256),
     }, ['to', 'cc', 'bcc', 'subject', 'body_text', 'thread_id', 'in_reply_to_message_id']),
-    strict: true,
+    strict: false,
   },
   {
     type: 'function',
@@ -959,6 +988,7 @@ const policies: Record<string, ToolPolicy> = {
   'application.build_readiness_report': { risk: 'prepare', approvalKind: null },
   'application.generate_document': { risk: 'prepare', approvalKind: null },
   'application.generate_cv': { risk: 'prepare', approvalKind: null },
+  'application.generate_supervisor_outreach': { risk: 'prepare', approvalKind: null },
   'application.submit': { risk: 'external_write', approvalKind: 'browser_submit' },
   'application.request_roon': { risk: 'prepare', approvalKind: null },
   ...Object.fromEntries(applicationSemanticFunctions.map(name => [`application.${name}`, { risk: 'read' as const, approvalKind: null }])),
@@ -1245,6 +1275,7 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateRecipientBuckets(value.to, value.cc, value.bcc) &&
         validateString(value.subject, 998, true) &&
         validateString(value.body_text, 30000) &&
+        (value.body_html === undefined || value.body_html === null || validateString(value.body_html, 30000)) &&
         (value.thread_id === null || validateString(value.thread_id, 256)) &&
         (value.in_reply_to_message_id === null || validateString(value.in_reply_to_message_id, 256)) &&
         ((value.thread_id === null) === (value.in_reply_to_message_id === null))
@@ -1434,6 +1465,22 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateStringArray(value.section_order, 20, 80) &&
         isRecord(value.cv_data) &&
         validateString(value.meta_prompt_version, 80) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.generate_supervisor_outreach':
+      return validateString(value.application_case_id, 64) &&
+        validateString(value.opportunity_id, 64) &&
+        validateString(value.target_programme, 500, true) &&
+        validateString(value.target_institution, 240, true) &&
+        validateString(value.target_intake, 120, true) &&
+        isRecord(value.policy) &&
+        isRecord(value.supervisor_dossier) &&
+        Array.isArray(value.applicant_fit_evidence) && value.applicant_fit_evidence.length >= 1 && value.applicant_fit_evidence.length <= 30 && value.applicant_fit_evidence.every(isRecord) &&
+        isRecord(value.strongest_connection) &&
+        validateString(value.applicant_name, 240, true) &&
+        validateString(value.applicant_email, 320, true) &&
+        (value.applicant_role === null || validateString(value.applicant_role, 240)) &&
+        isRecord(value.writing) &&
+        isRecord(value.cv) &&
         validateString(value.idempotency_key, 300)
     case 'application.submit':
       return validateString(value.application_case_id, 64) &&

@@ -183,6 +183,80 @@ export function gmailRecipientHeaderLines(to: unknown, cc: unknown = [], bcc: un
   ]
 }
 
+export function renderGmailMimeMessage(input: {
+  to: string[]
+  cc?: string[]
+  bcc?: string[]
+  subject: string
+  bodyText: string
+  bodyHtml?: string
+  messageId: string
+  inReplyTo?: string | null
+  references?: string | null
+  idempotencyKey: string
+  attachments?: Array<{ name: string; mimeType: string; base64: string }>
+}) {
+  const bodyText = String(input.bodyText ?? '').replace(/\r?\n/g, '\r\n')
+  const bodyHtml = String(input.bodyHtml ?? '').replace(/\r?\n/g, '\r\n').trim()
+  const attachments = input.attachments ?? []
+  const hasHtml = Boolean(bodyHtml)
+  const hasAttachments = attachments.length > 0
+  const boundary = `shotcount-${input.idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
+  const alternativeBoundary = `${boundary}-alternative`
+  const alternativeBody = hasHtml
+    ? [
+        `--${alternativeBoundary}`,
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        bodyText,
+        `--${alternativeBoundary}`,
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        bodyHtml,
+        `--${alternativeBoundary}--`,
+      ].join('\r\n')
+    : [
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        bodyText,
+      ].join('\r\n')
+  const headers = [
+    ...gmailRecipientHeaderLines(input.to, input.cc ?? [], input.bcc ?? []),
+    `Subject: ${encodeHeader(safeHeader(input.subject))}`,
+    'MIME-Version: 1.0',
+    hasAttachments
+      ? `Content-Type: multipart/mixed; boundary="${boundary}"`
+      : hasHtml
+        ? `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`
+        : 'Content-Type: text/plain; charset=UTF-8',
+    ...(hasAttachments || hasHtml ? [] : ['Content-Transfer-Encoding: 8bit']),
+    `Message-ID: ${safeHeader(input.messageId)}`,
+    ...(safeHeader(input.inReplyTo) ? [`In-Reply-To: ${safeHeader(input.inReplyTo)}`] : []),
+    ...(safeHeader(input.references) ? [`References: ${safeHeader(input.references)}`] : []),
+  ]
+  const mimeBody = hasAttachments
+    ? [
+        `--${boundary}`,
+        ...(hasHtml
+          ? [`Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`, '', alternativeBody]
+          : alternativeBody.split('\r\n')),
+        ...attachments.flatMap(attachment => [
+          `--${boundary}`,
+          `Content-Type: ${safeHeader(attachment.mimeType).toLocaleLowerCase() || 'application/octet-stream'}`,
+          'Content-Transfer-Encoding: base64',
+          `Content-Disposition: attachment; filename="${safeHeader(attachment.name).replace(/"/g, '')}"`,
+          '',
+          safeString(attachment.base64, 12_000_000).replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'),
+        ]),
+        `--${boundary}--`,
+      ].join('\r\n')
+    : hasHtml ? alternativeBody : bodyText
+  return base64UrlEncode(`${headers.join('\r\n')}\r\n\r\n${mimeBody}`)
+}
+
 async function integrationForUser(admin: AdminClient, userId: string) {
   const { data, error } = await admin
     .from('agent_integrations')
@@ -682,6 +756,7 @@ async function gmailCreateDraft(
   const bcc = (Array.isArray(argumentsValue.bcc) ? argumentsValue.bcc : []).map(safeHeader)
   const subject = safeHeader(argumentsValue.subject)
   const bodyText = String(argumentsValue.body_text ?? '').replace(/\r?\n/g, '\r\n')
+  const bodyHtml = safeString(argumentsValue.body_html, 30_000).replace(/\r?\n/g, '\r\n').trim()
   const threadId = argumentsValue.thread_id as string | null
   const inReplyToMessageId = argumentsValue.in_reply_to_message_id as string | null
   if (Boolean(threadId) !== Boolean(inReplyToMessageId)) {
@@ -742,38 +817,19 @@ async function gmailCreateDraft(
   if (legacyAttachment) attachments.push({ metadata: legacyAttachment, base64: legacyAttachmentBase64 })
   if (attachments.length > 8) throw new GoogleIntegrationError('gmail_attachment_limit', 'An email may include at most eight controlled attachments.', false)
   const hasAttachments = attachments.length > 0
-  const boundary = `shotcount-${idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-32)}`
-  const headers = [
-    ...gmailRecipientHeaderLines(to, cc, bcc),
-    `Subject: ${encodeHeader(subject)}`,
-    'MIME-Version: 1.0',
-    hasAttachments
-      ? `Content-Type: multipart/mixed; boundary="${boundary}"`
-      : 'Content-Type: text/plain; charset=UTF-8',
-    ...(hasAttachments ? [] : ['Content-Transfer-Encoding: 8bit']),
-    `Message-ID: ${messageIdHeader}`,
-    ...(reply.inReplyTo ? [`In-Reply-To: ${reply.inReplyTo}`] : []),
-    ...(reply.references ? [`References: ${reply.references}`] : []),
-  ]
-  const mimeBody = hasAttachments
-    ? [
-        `--${boundary}`,
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: 8bit',
-        '',
-        bodyText,
-        ...attachments.flatMap(attachment => [
-          `--${boundary}`,
-          `Content-Type: ${attachment.metadata.mime_type}`,
-          'Content-Transfer-Encoding: base64',
-          `Content-Disposition: attachment; filename="${attachment.metadata.name}"`,
-          '',
-          attachment.base64.replace(/(.{76})/g, '$1\r\n'),
-        ]),
-        `--${boundary}--`,
-      ].join('\r\n')
-    : bodyText
-  const raw = base64UrlEncode(`${headers.join('\r\n')}\r\n\r\n${mimeBody}`)
+  const raw = renderGmailMimeMessage({
+    to,
+    cc,
+    bcc,
+    subject,
+    bodyText,
+    bodyHtml,
+    messageId: messageIdHeader,
+    inReplyTo: reply.inReplyTo,
+    references: reply.references,
+    idempotencyKey,
+    attachments: attachments.map(attachment => ({ name: attachment.metadata.name, mimeType: attachment.metadata.mime_type, base64: attachment.base64 })),
+  })
   const draft = await googleRequest<{ id?: string; message?: GmailMessage }>(
     admin,
     userId,
@@ -799,6 +855,7 @@ async function gmailCreateDraft(
     bcc,
     subject,
     body_text: bodyText,
+    ...(bodyHtml ? { body_html: bodyHtml } : {}),
     ...(attachments.length ? {
       attachments: attachments.map(attachment => attachment.metadata),
       ...(attachments.length === 1 ? {

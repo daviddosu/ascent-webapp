@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "checked_at": "2026-08-12T12:00:00.000Z",
+  "issues": [],
+  "warnings": [],
+  "checks": {
+    "identity": true,
+    "research": true,
+    "applicant_fit": true,
+    "writing": true,
+    "gmail": true,
+    "attachment": true,
+    "consistency": true
+  }
+}

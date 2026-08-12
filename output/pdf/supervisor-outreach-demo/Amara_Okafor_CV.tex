@@ -1,0 +1,171 @@
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+  \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+  \item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+% Dynamic header rendered from confirmed ApplicantProfile facts.
+% Dynamic sections rendered from the typed CV schema.
+
+\begin{center}
+    {\Huge \scshape \mbox{Amara Okafor}} \\
+    \small \href{mailto:amara.okafor@example.test}{amara.okafor@example.test} $|$ Lagos, Nigeria
+\end{center}
+
+\section{Education}
+\resumeSubHeadingListStart
+\resumeSubheading{University of Lagos}{2020 -- 2024}{B.Sc., Computer Science}{Nigeria}
+\resumeSubHeadingListEnd
+
+\section{Research Experience}
+\resumeSubHeadingListStart
+\resumeSubheading{Single-cell transcriptomics research assistant}{2024}{Lagos Computational Biology Lab (synthetic)}{}
+\resumeItemListStart
+\resumeItem{Analysed single-cell RNA sequencing data and built reproducible feature tables for cell-state comparisons.}
+\resumeItem{Python}
+\resumeItem{Scanpy}
+\resumeItem{quality control}
+\resumeItem{feature engineering}
+\resumeItem{Documented a reproducible analysis workflow for a synthetic pilot dataset.}
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Research Projects}
+\resumeSubHeadingListStart
+\resumeProjectHeading{\textbf{Spatial cell communication models $|$ graph learning}}{2025-2026}
+\resumeItemListStart
+\resumeItem{Proposed a study using graph representation learning, single-cell RNA sequencing, and spatial analysis to combine neighbourhoods with interpretable cell-cell communication signals.}
+\resumeItem{Synthetic proposal grounded in confirmed research interests; no results are claimed.}
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Technical Skills}
+\resumeSubHeadingListStart
+\resumeItem{Python}
+\resumeItem{SQL}
+\resumeItem{Git}
+\resumeSubHeadingListEnd
+
+\section{Research Skills}
+\resumeSubHeadingListStart
+\resumeItem{Single-cell RNA sequencing analysis}
+\resumeItem{Graph representation learning}
+\resumeItem{Reproducible computational workflows}
+\resumeSubHeadingListEnd
+
+\section{Relevant Coursework}
+\resumeSubHeadingListStart
+\resumeItem{Algorithms}
+\resumeItem{Machine Learning}
+\resumeItem{Database Systems}
+\resumeSubHeadingListEnd
+
+\section{Projects}
+\resumeSubHeadingListStart
+\resumeProjectHeading{\textbf{Cell-state analysis toolkit $|$ Python, Scanpy}}{2024}
+\resumeItemListStart
+\resumeItem{Built a small Python and Scanpy workflow for quality control, dimensionality reduction, and annotated cell-state comparisons.}
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+\section{Languages}
+\resumeSubHeadingListStart
+\resumeItem{English}
+\resumeSubHeadingListEnd
+
+\end{document}

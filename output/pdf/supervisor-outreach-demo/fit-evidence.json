@@ -1,0 +1,40 @@
+[
+  {
+    "id": "fit:single-cell",
+    "dimension": "research_experience",
+    "text": "Amara has confirmed experience analysing single-cell RNA sequencing data with Python and reproducible feature pipelines.",
+    "score": 93,
+    "applicant_fact_ids": [
+      "synthetic:research:0"
+    ],
+    "supervisor_evidence_ids": [
+      "source:graphcomm"
+    ]
+  },
+  {
+    "id": "fit:graph-methods",
+    "dimension": "methodological_overlap",
+    "text": "Amara proposes interpretable graph models for spatial cell communication, directly connecting to GraphComm's graph-based deep learning direction.",
+    "score": 91,
+    "applicant_fact_ids": [
+      "synthetic:proposal:0"
+    ],
+    "supervisor_evidence_ids": [
+      "source:graphcomm",
+      "source:medbio-profile"
+    ]
+  },
+  {
+    "id": "fit:programme",
+    "dimension": "programme_fit",
+    "text": "The applicant's confirmed computer science education and computational biology direction fit the CSB PhD context.",
+    "score": 82,
+    "applicant_fact_ids": [
+      "synthetic:education:0"
+    ],
+    "supervisor_evidence_ids": [
+      "source:programme",
+      "source:supervisor-profile"
+    ]
+  }
+]
