@@ -5628,6 +5628,51 @@ body[data-theme='dark'] .profile-popover select option:disabled {
 
 .david-application-status small svg { width: 12px; height: 12px; flex: 0 0 auto; }
 
+.recommendation-progress-detail {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 13px;
+  border: 1px solid #dfe8e6;
+  border-radius: 14px;
+  background: #fbfdfc;
+}
+
+.recommendation-progress-detail header,
+.recommendation-interaction-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recommendation-progress-detail header strong { color: #23615c; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.recommendation-progress-detail header em { color: #7b8987; font-size: 10px; font-style: normal; }
+.recommendation-progress-detail h4 { margin: 0; color: #202525; font-size: 14px; line-height: 1.35; }
+.recommendation-interaction-reason { margin: 0; color: #687574; font-size: 11px; line-height: 1.45; }
+.recommendation-known-context { padding: 9px 10px; border-radius: 10px; background: #f1f7f5; color: #52625f; font-size: 10px; line-height: 1.4; }
+.recommendation-known-context strong { color: #315854; }
+.recommendation-known-context ul { margin: 5px 0 0; padding-left: 17px; }
+.recommendation-interaction-options { display: grid; gap: 7px; }
+.recommendation-choice { display: grid; gap: 3px; width: 100%; padding: 10px 11px; border: 1px solid #dce4e2; border-radius: 10px; background: #fff; color: #27312f; text-align: left; cursor: pointer; }
+.recommendation-choice:hover:not(:disabled), .recommendation-choice:focus-visible { border-color: #4d968c; background: #f2faf8; outline: none; }
+.recommendation-choice strong { font-size: 12px; }
+.recommendation-choice small { color: #71807d; font-size: 10px; line-height: 1.35; }
+.recommendation-choice--multiple { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.recommendation-choice--multiple input { margin-top: 2px; }
+.recommendation-interaction-input, .recommendation-attachment-input { display: grid; gap: 6px; color: #596866; font-size: 10px; }
+.recommendation-interaction-input input, .recommendation-attachment-input input { width: 100%; box-sizing: border-box; padding: 10px 11px; border: 1px solid #dce4e2; border-radius: 9px; background: #fff; color: #27312f; font: inherit; }
+.recommendation-progress-detail > .agent-primary { justify-self: start; }
+
+body[data-theme='dark'] .recommendation-progress-detail { border-color: var(--dark-border); background: var(--dark-raised); }
+body[data-theme='dark'] .recommendation-progress-detail h4 { color: var(--dark-text); }
+body[data-theme='dark'] .recommendation-interaction-reason,
+body[data-theme='dark'] .recommendation-progress-detail header em { color: var(--dark-muted); }
+body[data-theme='dark'] .recommendation-known-context { background: rgb(50 75 72 / 40%); color: #b4c9c5; }
+body[data-theme='dark'] .recommendation-choice,
+body[data-theme='dark'] .recommendation-interaction-input input,
+body[data-theme='dark'] .recommendation-attachment-input input { border-color: var(--dark-border); background: var(--dark-bg); color: var(--dark-text); }
+
 body[data-theme='dark'] .david-application-status {
   border-color: var(--dark-border);
   background: var(--dark-raised);

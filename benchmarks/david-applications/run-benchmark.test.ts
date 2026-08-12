@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { runFrozenSuite, startPortalServer, type BenchmarkRun, type FrozenSpec } from './harness'
 import { failureArtifact } from './failure-report'
 import { runCanonicalEngineCorpus, type CanonicalEngineCase } from './engine-corpus'
+import { runRecommendationQualification } from './recommendation-qualification'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -188,6 +189,19 @@ Run **${run.runId}** at ${run.generatedAt}; evaluated commit **${run.codeCommit}
 - Fabricated facts / false completions / contamination: ${String(stochastic?.fabricatedFacts ?? 0)} / ${String(stochastic?.falseCompletions ?? 0)} / ${String(stochastic?.contamination ?? 0)}
 - Total cost / average cost per E2E decision: $${Number(stochastic?.totalCostUsd ?? 0).toFixed(6)} / $${Number(stochastic?.averageCostPerE2ECaseUsd ?? 0).toFixed(6)}
 - Average model latency: ${Number(stochastic?.averageE2ETimeMs ?? 0).toFixed(0)} ms
+## Canonical recommendation-letter qualification
+
+\${run.recommendation ? \`- Qualification: \${run.recommendation.passed ? 'PASS' : 'FAIL'} (\${run.recommendation.suiteVersion})
+- Auto-resolved facts / typed questions / broad free-text questions: \${String(run.recommendation.metrics.autoResolvedFacts)} / \${String(run.recommendation.metrics.typedQuestions)} / \${String(run.recommendation.metrics.broadFreeTextQuestions)}
+- Candidates discovered / requirement graph nodes: \${String(run.recommendation.metrics.candidatesDiscovered)} / \${String(run.recommendation.metrics.requirementGraphNodes)}
+- Automatic continuation rate: \${percent(run.recommendation.metrics.automaticContinuationRate)}
+- Duplicate request keys / portal invitations / fabricated facts: \${String(run.recommendation.metrics.duplicateRequestKeys)} / \${String(run.recommendation.metrics.duplicatePortalInvitations)} / \${String(run.recommendation.metrics.fabricatedFacts)}
+- Interaction mix: \${Object.entries(run.recommendation.interactionMix).map(([kind, count]) => \\\`\${kind}=\${count}\\\`).join(', ') || 'none'}
+- UI payload kind: \${run.recommendation.uiPayload.interaction && typeof run.recommendation.uiPayload.interaction === 'object' ? String((run.recommendation.uiPayload.interaction as Record<string, unknown>).kind) : 'not generated'}
+- Progress Detail examples: \${Object.keys(run.recommendation.progressDetailExamples).join(', ')}
+- Final recommendation status: \${String(run.recommendation.finalStatus.state ?? 'unknown')} (\${String(run.recommendation.finalStatus.recommender ?? 'unknown')})
+- Email/support-pack/CV examples: \${run.recommendation.cv.pdfPath}, \${run.recommendation.cv.latexPath}, and the qualification report in the same output directory.\` : 'Not run for a selected non-recommendation case.'}
+
 
 ## Deployment and live gate
 
@@ -282,6 +296,10 @@ async function execute() {
       run.liveEmail = { ...run.liveEmail, connectedEvaluation: liveGmail }
       const blockedCases = Array.isArray(liveGmail.blockedCases) ? liveGmail.blockedCases as Array<Record<string, unknown>> : []
       run.blockers.push(...blockedCases.map(item => `${String(item.caseId ?? 'connected Gmail case')}: ${String(item.reason ?? 'external connector limitation')}`))
+    }
+    if (!selectedCase || selectedCase.split(',').map(value => value.trim()).includes('recommendation-canonical-nadia-northbridge')) {
+      run.recommendation = await runRecommendationQualification()
+      if (!run.recommendation.passed) run.blockers.push('Canonical recommendation-letter qualification failed.')
     }
     writeArtifacts(run)
     return run

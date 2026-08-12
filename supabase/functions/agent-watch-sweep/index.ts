@@ -5,6 +5,7 @@ import { applicationFailureIsRetryable, applicationFollowUpAllowed, applicationM
 import { persistedEmailArguments } from '../_shared/email-integrity.ts'
 import { constantTimeEqual } from '../_shared/crypto.ts'
 import { validateFirstContactSupervisorOutreachPayload, validateSupervisorOutreachPackage, supervisorFirstContactRequiresPackage, type SupervisorOutreachPackage } from '../_shared/supervisor-outreach.ts'
+import { classifyRecommendationReply, recommendationStateForReply, recommendationReplyIsPositive } from '../_shared/recommendation-workflow.ts'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -481,9 +482,147 @@ function messageFromUser(value: unknown, accountEmail: string) {
   return normalizeEmail(value).toLocaleLowerCase() === normalizeEmail(accountEmail).toLocaleLowerCase()
 }
 
+function applicationRefereeSupportPack(context: ApplicationRequestContext, payload: Record<string, unknown>) {
+  const caseData = recordValue(context.applicationCase.data)
+  const packs = recordValue(caseData.refereeSupportPacks)
+  const runContext = recordValue(context.run.context)
+  const suppliedId = safeString(payload.support_pack_id ?? payload.supportPackId, 320)
+  const keyCandidates = [
+    suppliedId,
+    suppliedId.split(':').filter(Boolean).pop() ?? '',
+    safeString(runContext.referee_support_pack_key ?? runContext.refereeSupportPackKey, 320),
+  ].filter(Boolean)
+  for (const key of keyCandidates) {
+    const pack = recordValue(packs[key])
+    if (Object.keys(pack).length) return { key, pack }
+  }
+  const campaign = recordValue(caseData.recommendationCampaign)
+  const campaignKey = safeString(campaign.idempotencyKey ?? campaign.id, 320)
+  const campaignSupportPacks = Array.isArray(campaign.supportPacks) ? campaign.supportPacks : []
+  const suppliedCampaignSupportPack = campaignSupportPacks.some(value => safeString(recordValue(value).id, 320) === suppliedId)
+  if (Object.keys(campaign).length && (!suppliedId || suppliedId === campaignKey || suppliedId === safeString(campaign.version, 320) || suppliedCampaignSupportPack)) {
+    const emails = Array.isArray(campaign.requestEmails) ? campaign.requestEmails : []
+    const email = emails[0] && typeof emails[0] === 'object' ? recordValue(emails[0]) : {}
+    const candidates = Array.isArray(campaign.candidates) ? campaign.candidates : []
+    const candidate = candidates[0] && typeof candidates[0] === 'object' ? recordValue(candidates[0]) : {}
+    const supportPacks = Array.isArray(campaign.supportPacks) ? campaign.supportPacks : []
+    const supportPack = supportPacks[0] && typeof supportPacks[0] === 'object' ? recordValue(supportPacks[0]) : {}
+    const supportPackEmail = recordValue(supportPack.requestEmail ?? supportPack.request_email)
+    return {
+      key: campaignKey || 'recommendation-campaign',
+      pack: recordValue({
+        ...campaign,
+        ...supportPack,
+        requestEmail: Object.keys(supportPackEmail).length ? supportPackEmail : email,
+        request_email: Object.keys(supportPackEmail).length ? supportPackEmail : email,
+        referee: Object.keys(recordValue(supportPack.candidate)).length ? recordValue(supportPack.candidate) : candidate,
+        programme: `${safeString(recordValue(recordValue(campaign.requirements).institution).value ?? context.applicationCase.institution, 500)} — ${safeString(recordValue(recordValue(campaign.requirements).programme).value ?? context.applicationCase.programmeTitle, 800)}`,
+        deadline: recordValue(recordValue(campaign.requirements).refereeDeadline).value ?? null,
+        applicantAssetIds: stringArray(campaign.applicantAssetIds),
+      }),
+    }
+  }
+  return null
+}
+
+function applicationRefereeDraftPayload(context: ApplicationRequestContext, input: Record<string, unknown>) {
+  const supportPack = applicationRefereeSupportPack(context, input)
+  if (!supportPack) return input
+  const pack = recordValue(supportPack.pack)
+  const referee = recordValue(pack.referee)
+  const canonicalEmail = recordValue(pack.requestEmail ?? pack.request_email)
+  const refereeEmail = normalizeEmail(input.referee_email ?? input.refereeEmail ?? referee.email)
+  const refereeName = safeString(input.referee_name ?? input.refereeName ?? referee.name, 240)
+  const programme = safeString(pack.programme, 1_000)
+  const deadlineValue = typeof pack.deadline === 'string'
+    ? pack.deadline
+    : safeString(recordValue(pack.deadline).date ?? recordValue(pack.deadline).value, 160)
+  const relationshipContext = safeString(pack.relationshipContext ?? pack.relationship_context, 1_500)
+  const achievements = stringArray(pack.relevantAchievements ?? pack.relevant_achievements, 600).slice(0, 3)
+  const suggestedEvidence = stringArray(pack.suggestedEvidence ?? pack.suggested_evidence, 600).slice(0, 3)
+  const officialRequirementsValue = pack.officialRequirements ?? pack.official_requirements
+  const officialRequirements = Array.isArray(officialRequirementsValue) ? officialRequirementsValue : []
+  const firstOfficialUrl = officialRequirements
+    .map(value => recordValue(value).url ?? recordValue(value).sourceUrl)
+    .map(value => safeString(value, 2_000))
+    .find(Boolean) ?? ''
+  if (!refereeEmail || !refereeName || !programme) return input
+  if (safeString(canonicalEmail.subject, 998) && safeString(canonicalEmail.bodyText ?? canonicalEmail.body_text, 30_000)) {
+    return {
+      ...input,
+      to: Array.isArray(input.to) && input.to.length ? input.to : [refereeEmail],
+      recipient: refereeEmail,
+      email: refereeEmail,
+      name: refereeName,
+      contact_kind: 'referee',
+      contact_idempotency_key: safeString(input.contact_idempotency_key ?? input.contactIdempotencyKey, 300) || `application-referee-contact:${context.request.application_case_id}:${supportPack.key}`,
+      subject: safeString(input.subject, 998) || safeString(canonicalEmail.subject, 998),
+      body_text: safeString(input.body_text ?? input.body, 30_000) || safeString(canonicalEmail.bodyText ?? canonicalEmail.body_text, 30_000),
+      body_html: safeString(input.body_html ?? input.bodyHtml, 30_000) || safeString(canonicalEmail.bodyHtml ?? canonicalEmail.body_html, 30_000),
+      attachment_asset_ids: Array.isArray(input.attachment_asset_ids ?? input.attachmentAssetIds)
+        ? input.attachment_asset_ids ?? input.attachmentAssetIds
+        : stringArray(pack.applicantAssetIds ?? pack.applicant_asset_ids, 80),
+      referee_email: refereeEmail,
+      referee_name: refereeName,
+    }
+  }
+  const bodyLines = [
+    `Dear ${refereeName},`,
+    '',
+    `I am preparing an application for ${programme}. Would you be willing to provide a reference for this application?`,
+    relationshipContext ? `Our relationship: ${relationshipContext}` : '',
+    achievements.length ? `Relevant experience: ${achievements.join('; ')}` : '',
+    suggestedEvidence.length ? `Relevant supporting material: ${suggestedEvidence.join('; ')}` : '',
+    deadlineValue ? `The stated application deadline is ${deadlineValue}.` : '',
+    firstOfficialUrl ? `Programme information: ${firstOfficialUrl}` : '',
+    '',
+    'Please let me know whether you would be able to support this request. I can provide any additional information you need.',
+    '',
+    'Kind regards,',
+  ].filter(Boolean).join('\n')
+  return {
+    ...input,
+    to: Array.isArray(input.to) && input.to.length ? input.to : [refereeEmail],
+    recipient: refereeEmail,
+    email: refereeEmail,
+    name: refereeName,
+    contact_kind: 'referee',
+    contact_idempotency_key: safeString(input.contact_idempotency_key ?? input.contactIdempotencyKey, 300) || `application-referee-contact:${context.request.application_case_id}:${supportPack.key}`,
+    subject: safeString(input.subject, 998) || `Reference request for ${programme}`,
+    body_text: safeString(input.body_text ?? input.body, 30_000) || bodyLines,
+    attachment_asset_ids: Array.isArray(input.attachment_asset_ids ?? input.attachmentAssetIds)
+      ? input.attachment_asset_ids ?? input.attachmentAssetIds
+      : stringArray(pack.applicantAssetIds ?? pack.applicant_asset_ids, 80),
+    referee_email: refereeEmail,
+    referee_name: refereeName,
+  }
+}
+
 async function resolveApplicationContact(admin: AdminClient, context: ApplicationRequestContext, payload: Record<string, unknown>) {
-  const recipient = safeString(payload.recipient ?? payload.email ?? payload.name, 320)
+  const recipient = safeString(payload.recipient ?? payload.email ?? payload.referee_email ?? payload.refereeEmail ?? payload.name, 320)
   if (!recipient) throw new Error('A recipient name or email is required.')
+  const supportPack = applicationRefereeSupportPack(context, payload)
+  const packReferee = recordValue(supportPack?.pack.referee)
+  const explicitRefereeEmail = normalizeEmail(payload.referee_email ?? payload.refereeEmail)
+  const authorisedRefereeEmail = normalizeEmail(packReferee.email)
+  if (supportPack && explicitRefereeEmail && authorisedRefereeEmail && explicitRefereeEmail === authorisedRefereeEmail) {
+    const contact = await admin.from('application_contacts').upsert({
+      user_id: context.request.user_id,
+      application_case_id: context.request.application_case_id,
+      task_id: context.request.task_id,
+      campaign_id: context.campaign.id,
+      agent_run_id: context.request.agent_run_id,
+      kind: 'referee',
+      name: safeString(payload.referee_name ?? payload.refereeName ?? packReferee.name, 240) || authorisedRefereeEmail,
+      email: authorisedRefereeEmail,
+      provider_contact_id: null,
+      consent_to_contact: payload.consent_to_contact === true,
+      data: { resolution_evidence: 'authorised referee in persisted application support pack', support_pack_key: supportPack.key },
+      idempotency_key: safeString(payload.contact_idempotency_key ?? payload.contactIdempotencyKey, 300) || `application-referee-contact:${context.request.application_case_id}:${supportPack.key}`,
+    }, { onConflict: 'user_id,idempotency_key' }).select('id,email,name').single()
+    if (contact.error || !contact.data) throw new Error(contact.error?.message ?? 'The authorised referee contact could not be persisted.')
+    return { result: { value: { state: 'resolved', email: authorisedRefereeEmail, evidence: 'authorised_application_support_pack' } }, waiting: false, contact: contact.data }
+  }
   const result = await executeGoogleTool(admin, context.request.user_id, 'contacts.resolve_recipient', { recipient }, `application-roon-contact:${context.request.id}`)
   const value = result.value
   if (value.state === 'ambiguous' || value.state === 'not_found') return { result, waiting: true }
@@ -512,9 +651,10 @@ async function resolveApplicationContact(admin: AdminClient, context: Applicatio
 
 async function processApplicationEmailRequest(admin: AdminClient, context: ApplicationRequestContext) {
   const request = context.request
-  const payload = recordValue(request.payload)
+  const rawPayload = recordValue(request.payload)
   const requestKind = safeApplicationRequestKind(request.request_kind)
   if (!requestKind || !['create_draft', 'send_email', 'follow_up'].includes(requestKind)) throw new Error('Unsupported application email request.')
+  const payload = ['create_draft', 'send_email'].includes(requestKind) ? applicationRefereeDraftPayload(context, rawPayload) : rawPayload
   if (JSON.stringify(payload).match(/"(?:password|passcode|secret|card_number|cvv|cvc|bank_account|verification_code|otp|security_key)"\s*:/i)) throw new Error('Application email payload contains a sensitive value.')
   if (requestKind === 'follow_up' && !applicationFollowUpAllowed(payload)) {
     await recordApplicationWorkerEvent(admin, context, 'application_follow_up_stopped', 'succeeded', 'Roon stopped the follow-up cadence because the contact or application is no longer eligible for another message.', {})
@@ -704,6 +844,13 @@ async function processApplicationContactRequest(admin: AdminClient, context: App
   return { status: 'completed', result: { kind: 'contact_resolved', contact_id: (resolved.contact as Record<string, unknown>).id, email: (resolved.contact as Record<string, unknown>).email, name: (resolved.contact as Record<string, unknown>).name, evidence: value.evidence ?? null } }
 }
 
+function applicationContactKind(context: ApplicationRequestContext, payload: Record<string, unknown>) {
+  const explicit = safeString(payload.contact_kind ?? payload.contactKind, 80).toLocaleLowerCase()
+  if (['professor', 'admissions', 'referee', 'writer', 'editor', 'administrator'].includes(explicit)) return explicit
+  if (applicationRefereeSupportPack(context, payload)) return 'referee'
+  return context.assignment ? 'writer' : ''
+}
+
 async function processApplicationCalendarRequest(admin: AdminClient, context: ApplicationRequestContext) {
   const payload = recordValue(context.request.payload)
   if (!applicationWriteIsApproved(payload)) return { status: 'waiting_user', result: { kind: 'calendar_approval_required', summary: safeString(payload.summary, 1_000), start: safeString(payload.start, 80), end: safeString(payload.end, 80) } }
@@ -796,8 +943,9 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
   const threadId = safeString(candidate.thread_id ?? candidate.threadId, 256) || null
   const subject = safeString(candidate.subject, 998)
   const excerpt = redactApplicationExcerpt(candidate.body_text ?? candidate.snippet)
-  const contactKind = safeString(payload.contact_kind ?? payload.contactKind, 80) || (context.assignment ? 'writer' : '')
-  const classification = classifyApplicationContactReply(subject, excerpt, contactKind)
+  const contactKind = applicationContactKind(context, payload)
+  const recommendationClassification = contactKind === 'referee' ? classifyRecommendationReply(subject, safeString(candidate.body_text ?? candidate.body, 30_000)) : null
+  const classification = recommendationClassification ?? classifyApplicationContactReply(subject, excerpt, contactKind)
   let replyArtifactIds: string[] = []
   let replyAssetIds: string[] = []
   if (['writer', 'editor', 'referee', 'administrator'].includes(contactKind)) {
@@ -822,7 +970,7 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
     excerpt,
     idempotencyKey: `application-inbound:${context.request.id}:${messageId}`,
     humanAssignmentId: safeString(payload.human_assignment_id ?? payload.humanAssignmentId, 80) || safeString(context.assignment?.id, 80) || null,
-    data: { received_at: safeString(candidate.date, 80), from: safeString(candidate.from, 320), request_kind: kind, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds },
+    data: { received_at: safeString(candidate.date, 80), from: safeString(candidate.from, 320), request_kind: kind, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, ...(recommendationClassification ? { recommendation_classification: recommendationClassification, positive_response: recommendationReplyIsPositive(recommendationClassification) } : {}) },
   })
   const evidenceId = await persistApplicationEvidence(admin, context, {
     kind: 'received_message',
@@ -841,7 +989,17 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
   const contactKey = safeString(payload.contact_id ?? payload.contactId, 80) || safeString(candidate.from, 320)
   outcomes[contactKey] = { classification, messageId, threadId, receivedAt: safeString(candidate.date, 80), evidenceId }
   const priorReferenceArtifacts = stringArray(caseData.refereeArtifactIds)
-  const updatedCase = await admin.from('application_cases').update({ status: stateChange.status, current_stage: stateChange.currentStage, next_action: contactKind === 'professor' && classification === 'meeting_request' ? 'Ask Roon to schedule the approved professor meeting.' : stateChange.nextAction, data: { ...caseData, [outcomeKey]: outcomes, latestReplyClassification: classification, ...(contactKind === 'referee' && replyArtifactIds.length ? { refereeArtifactIds: [...new Set([...priorReferenceArtifacts, ...replyArtifactIds])] } : {}) } }).eq('id', context.request.application_case_id).eq('user_id', context.request.user_id)
+  const recommendationCampaign = recordValue(caseData.recommendationCampaign)
+  if (contactKind === 'referee' && recommendationClassification && Object.keys(recommendationCampaign).length) {
+    recommendationCampaign.state = recommendationReplyIsPositive(recommendationClassification) ? 'support_pack_ready' : recommendationStateForReply(recommendationClassification)
+    recommendationCampaign.latestReply = { classification: recommendationClassification, messageId, threadId, receivedAt: safeString(candidate.date, 80) }
+    recommendationCampaign.nextAction = recommendationReplyIsPositive(recommendationClassification)
+      ? 'Automatically prepare the grounded support pack and portal invitation materials, then keep the same Gmail thread available for Roon follow-up.'
+      : recommendationClassification === 'DECLINE' || recommendationClassification === 'CANNOT_MEET_DEADLINE'
+        ? 'Select the verified backup recommender and prepare a replacement request.'
+        : 'Prepare the requested information or materials and continue the same Gmail thread.'
+  }
+  const updatedCase = await admin.from('application_cases').update({ status: contactKind === 'referee' && recommendationClassification ? (recommendationReplyIsPositive(recommendationClassification) ? 'awaiting_referee' : stateChange.status) : stateChange.status, current_stage: contactKind === 'referee' && recommendationClassification ? 'referee_coordination' : stateChange.currentStage, next_action: contactKind === 'referee' && recommendationCampaign.nextAction ? recommendationCampaign.nextAction : contactKind === 'professor' && classification === 'meeting_request' ? 'Ask Roon to schedule the approved professor meeting.' : stateChange.nextAction, data: { ...caseData, [outcomeKey]: outcomes, latestReplyClassification: classification, ...(Object.keys(recommendationCampaign).length ? { recommendationCampaign } : {}), ...(contactKind === 'referee' && replyArtifactIds.length ? { refereeArtifactIds: [...new Set([...priorReferenceArtifacts, ...replyArtifactIds])] } : {}) } }).eq('id', context.request.application_case_id).eq('user_id', context.request.user_id)
   if (updatedCase.error) throw new Error(updatedCase.error.message)
   if (contactKind === 'referee' && replyArtifactIds.length) {
     const requirement = await admin.from('application_requirements').select('id').eq('application_case_id', context.request.application_case_id).eq('user_id', context.request.user_id).eq('category', 'reference').in('status', ['unknown', 'in_progress', 'awaiting_referee', 'ready']).order('created_at', { ascending: true }).limit(1).maybeSingle()
@@ -867,7 +1025,7 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
     if (assignmentUpdate.error) throw new Error(assignmentUpdate.error.message)
   }
   await recordApplicationWorkerEvent(admin, context, 'application_message_received', 'succeeded', 'Roon attached and classified the application message on the existing case.', { message_id: messageId, thread_id: threadId, classification, evidence_id: evidenceId })
-  return { status: 'completed', result: { kind: 'application_reply', classification, message_id: messageId, thread_id: threadId, subject, received_at: safeString(candidate.date, 80), excerpt, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, evidence_id: evidenceId } }
+  return { status: 'completed', result: { kind: 'application_reply', classification, ...(recommendationClassification ? { recommendation_classification: recommendationClassification, positive_response: recommendationReplyIsPositive(recommendationClassification), continuation: recommendationReplyIsPositive(recommendationClassification) ? 'support_pack_and_portal_preparation' : 'semantic_follow_up' } : {}), message_id: messageId, thread_id: threadId, subject, received_at: safeString(candidate.date, 80), excerpt, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, evidence_id: evidenceId } }
 }
 
 async function processApplicationDeadlineRequest(admin: AdminClient, context: ApplicationRequestContext) {

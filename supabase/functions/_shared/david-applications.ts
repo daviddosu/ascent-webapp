@@ -6,6 +6,13 @@
  * reach an application portal has one small, inspectable source of truth.
  */
 
+import {
+  buildRecommenderSupportPack,
+  extractRecommendationRequirements,
+  generateRecommendationRequestEmail,
+  type RecommenderCandidate,
+} from './recommendation-workflow.ts'
+
 export const DAVID_APPLICATION_SCHEMA_VERSION = 1 as const
 
 export const provenanceKinds = [
@@ -1128,6 +1135,90 @@ export function buildRefereeSupportPack(input: {
   suggestedEvidence: string[]
   recommendationDraft?: string
 }) {
+  const sourceEvidence = input.opportunity.citations.map((citation, index) => ({
+    id: citation.url || `opportunity-citation-${index + 1}`,
+    url: citation.url,
+    excerpt: citation.excerpt,
+    retrievedAt: citation.retrievedAt,
+    sourceType: citation.sourceType,
+    authority: citation.sourceType === 'official' ? 'official' : citation.sourceType === 'government' ? 'government' : 'provider',
+  }))
+  const primarySourceIds = sourceEvidence.map(source => source.id)
+  const recommendationRequirements = extractRecommendationRequirements({
+    opportunity: {
+      programme: { value: input.opportunity.programmeTitle, sourceIds: primarySourceIds },
+      institution: { value: input.opportunity.institution, sourceIds: primarySourceIds },
+      recommendationCount: { value: input.opportunity.recommendationCount, sourceIds: primarySourceIds },
+      requiredDocuments: { value: input.opportunity.requiredDocuments, sourceIds: primarySourceIds },
+      officialUrl: input.opportunity.officialUrl,
+    },
+    sourceEvidence,
+  })
+  const candidate: RecommenderCandidate = {
+    id: `referee:${slug(input.referee.name)}`,
+    name: input.referee.name,
+    email: input.referee.email,
+    currentTitle: null,
+    institution: input.referee.institution,
+    department: null,
+    relationshipType: 'other',
+    relationshipStrength: input.relationshipContext ? 0.8 : 0.4,
+    exactContextOfRelationship: input.relationshipContext,
+    relationshipEvidence: input.relationshipContext ? [{ id: `relationship:${slug(input.referee.name)}`, text: input.relationshipContext, sourceId: `application-case:${input.opportunity.id}:relationship`, sourceKind: 'direct_observation', observedBoundary: 'personally_observed', confidence: 'high', observedAt: null }] : [],
+    relevanceToProgramme: [],
+    eligibility: 'unknown',
+    eligibilityReasons: [],
+    availability: 'unknown',
+    verifiedContactSource: input.referee.providerContactId ? 'contacts' : 'none',
+    contactVerificationStatus: input.referee.email ? input.referee.providerContactId ? 'verified' : 'needs_verification' : 'missing',
+    recommendedProgrammes: [input.opportunity.programmeTitle],
+    fitScore: 0,
+    rankingReasons: [],
+    portfolioRole: 'primary',
+    sourceIds: [`application-case:${input.opportunity.id}:referee`],
+  }
+  const programme = {
+    institution: input.opportunity.institution,
+    title: input.opportunity.programmeTitle,
+    deadline: input.opportunity.deadline?.dateTime ?? null,
+    applicationUrl: input.opportunity.applicationUrl,
+  }
+  const recommendationSupportPack = buildRecommenderSupportPack({
+    id: `support-pack:${input.opportunity.id}:${slug(input.referee.name)}`,
+    candidate,
+    programme,
+    requirements: recommendationRequirements,
+    applicantName: input.profile.preferredName?.value || input.profile.legalName?.value || 'the applicant',
+    applicantGoal: input.opportunity.programmeTitle,
+    relationshipEvidence: candidate.relationshipEvidence,
+    directObservedEvidence: input.relationshipContext ? [{
+      claim: input.relationshipContext,
+      sourceIds: [`application-case:${input.opportunity.id}:relationship`],
+      sourceKind: 'direct_observation',
+      observedBoundary: 'personally_observed',
+      provenance: 'Applicant profile/application relationship context',
+    }] : [],
+    applicantUpdates: input.relevantAchievements.map((achievement, index) => ({
+      claim: achievement,
+      sourceIds: input.applicantAssetIds[index] ? [input.applicantAssetIds[index]] : [`application-case:${input.opportunity.id}:achievement:${index + 1}`],
+      sourceKind: 'applicant_update',
+      observedBoundary: 'reported_after_relationship',
+      provenance: 'Applicant-provided achievement; not presented as firsthand observation.',
+    })),
+    emphasis: input.suggestedEvidence,
+    assetIds: input.applicantAssetIds,
+  })
+  const requestEmail = generateRecommendationRequestEmail({
+    applicantName: input.profile.preferredName?.value || input.profile.legalName?.value || 'the applicant',
+    applicantEmail: input.profile.contactInformation.email?.value,
+    recommender: candidate,
+    programmes: [programme],
+    relationshipEvidence: candidate.relationshipEvidence,
+    reason: input.suggestedEvidence[0] || `Your direct perspective on the applicant's preparation would be valuable to the admissions committee.`,
+    applicantGoal: input.opportunity.programmeTitle,
+    supportPackAvailable: true,
+    programmeRequirements: recommendationRequirements,
+  })
   return {
     referee: input.referee,
     programme: `${input.opportunity.institution} — ${input.opportunity.programmeTitle}`,
@@ -1138,8 +1229,25 @@ export function buildRefereeSupportPack(input: {
     officialRequirements: input.opportunity.citations.filter(citation => citation.sourceType === 'official' || citation.sourceType === 'government'),
     suggestedEvidence: unique(input.suggestedEvidence),
     recommendationDraft: text(input.recommendationDraft, 12_000) || null,
+    workflowVersion: 'recommendation-coordination@1.0.0',
+    campaignState: 'request_ready' as const,
+    recommendationRequirements,
+    recommendationSupportPack,
+    requestEmail,
+    request_email: requestEmail,
+    contactVerification: {
+      status: candidate.contactVerificationStatus,
+      providerContactId: input.referee.providerContactId,
+      email: input.referee.email,
+    },
   }
 }
+
+function slug(value: string) {
+  return value.toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'referee'
+}
+
+export * from './recommendation-workflow.ts'
 
 export function hasOnlyGroundedSubmittedValues(values: SubmittedValue[]) {
   return values.every(value => canUseFactForSubmission({ value: value.value, provenance: value.provenance }))

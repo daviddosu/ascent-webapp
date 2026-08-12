@@ -154,6 +154,20 @@ export type BenchmarkRun = {
     liveGatePassed: boolean
     deploymentGatePassed: boolean
   }
+  recommendation?: {
+    suiteVersion: string
+    caseId: string
+    passed: boolean
+    metrics: Record<string, number | boolean | string>
+    interactionMix: Record<string, number>
+    regressionCases: Array<{ id: string; passed: boolean; detail: string }>
+    progressDetailExamples: Record<string, { kind: string; question: string; reason: string; knownContext: string[]; renderedHtml: string }>
+    finalStatus: Record<string, unknown>
+    uiPayload: Record<string, unknown>
+    emails: Record<string, { subject: string; bodyText: string; bodyHtml: string }>
+    supportPack: Record<string, unknown>
+    cv: { templateId: string; checksum: string; latexPath: string; pdfPath: string; atsPath: string; logPath: string; pageCount: number; compiled: boolean }
+  }
 }
 
 function now() {
