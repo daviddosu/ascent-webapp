@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, '../..')
 const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as { scripts: Record<string, string> }
 const taskAgent = readFileSync(resolve(root, 'supabase/functions/task-agent/index.ts'), 'utf8')
 const migration = readFileSync(resolve(root, 'supabase/migrations/202608090001_david_application_engine_v3.sql'), 'utf8')
-const spec = JSON.parse(readFileSync(resolve(import.meta.dirname, 'spec.json'), 'utf8')) as { engineCases: Array<{ level: string }> }
+const spec = JSON.parse(readFileSync(resolve(import.meta.dirname, 'spec.json'), 'utf8')) as { engineCases: Array<{ level: string }>; workSampleCases: Array<{ class: string }> }
 
 describe('canonical David application production contract', () => {
   it('exposes one active benchmark command and archives older generations', () => {
@@ -18,6 +18,8 @@ describe('canonical David application production contract', () => {
   it('consolidates all hard coverage and ten E2E cases', () => {
     expect(spec.engineCases).toHaveLength(26)
     expect(spec.engineCases.filter(item => item.level === 'end_to_end')).toHaveLength(10)
+    expect(spec.workSampleCases).toHaveLength(3)
+    expect(spec.workSampleCases.map(item => item.class)).toEqual(['academic_writing', 'code_portfolio', 'project_portfolio'])
   })
 
   it('makes the engine select one step and validates bounded semantic answers', () => {

@@ -64,6 +64,7 @@ export type FrozenSpec = {
   endToEndCases: FrozenCase[]
   liveReadOnlyWebCases: FrozenCase[]
   engineCases?: Array<{ id: string; level: 'semantic' | 'system' | 'end_to_end'; semanticFunction?: string; features: string[] }>
+  workSampleCases?: Array<{ id: string; class: 'academic_writing' | 'code_portfolio' | 'project_portfolio'; features: string[] }>
 }
 
 export type TraceEvent = {
@@ -175,6 +176,13 @@ export type BenchmarkRun = {
     regressionCases: Array<{ id: string; passed: boolean; detail: string }>
     progressDetailExamples: Record<string, { kind: string; question: string; reason: string; knownContext: string[] }>
     examples: Record<string, unknown>
+  }
+  workSample?: {
+    version: string
+    generatedAt: string
+    cases: Array<Record<string, unknown>>
+    metrics: Record<string, number | boolean | string>
+    outputRoot: string
   }
 }
 

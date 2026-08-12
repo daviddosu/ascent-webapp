@@ -1312,6 +1312,8 @@ export type Database = {
           resulting_state_evidence: Json
           selected_pages: Json
           selected_projects: Json
+          submission_method: string
+          submission_url: string | null
           size_bytes: number | null
           transformations: Json
           updated_at: string
@@ -1339,6 +1341,8 @@ export type Database = {
           resulting_state_evidence?: Json
           selected_pages?: Json
           selected_projects?: Json
+          submission_method?: string
+          submission_url?: string | null
           size_bytes?: number | null
           transformations?: Json
           updated_at?: string
@@ -1366,6 +1370,8 @@ export type Database = {
           resulting_state_evidence?: Json
           selected_pages?: Json
           selected_projects?: Json
+          submission_method?: string
+          submission_url?: string | null
           size_bytes?: number | null
           transformations?: Json
           updated_at?: string

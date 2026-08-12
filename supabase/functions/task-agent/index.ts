@@ -1183,6 +1183,7 @@ async function persistApplicationGeneratedAsset(
     templateVersion: string
     promptVersion: string
     metadata: Record<string, unknown>
+    forceNewAsset?: boolean
   },
 ) {
   // Copy into an ArrayBuffer-backed view. Blobs may expose a
@@ -1190,11 +1191,17 @@ async function persistApplicationGeneratedAsset(
   // SharedArrayBuffer-backed BufferSource.
   const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from(input.bytes))
   const checksum = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
-  const existingAsset = await admin.from('file_assets')
-    .select('id,storage_key,original_filename,mime_type,size_bytes,checksum')
-    .eq('user_id', run.user_id).eq('task_id', run.task_id).eq('application_case_id', input.applicationCaseId).eq('checksum', checksum).maybeSingle()
-  if (existingAsset.error) throw new Error(existingAsset.error.message)
-  let assetId = safeString(existingAsset.data?.id, 80)
+  const existingArtifact = input.forceNewAsset
+    ? await admin.from('application_artifacts').select('file_asset_id').eq('user_id', run.user_id).eq('application_case_id', input.applicationCaseId).eq('kind', input.kind).eq('checksum', checksum).maybeSingle()
+    : null
+  if (existingArtifact?.error) throw new Error(existingArtifact.error.message)
+  const existingAsset = input.forceNewAsset
+    ? null
+    : await admin.from('file_assets')
+      .select('id,storage_key,original_filename,mime_type,size_bytes,checksum')
+      .eq('user_id', run.user_id).eq('task_id', run.task_id).eq('application_case_id', input.applicationCaseId).eq('checksum', checksum).maybeSingle()
+  if (existingAsset?.error) throw new Error(existingAsset.error.message)
+  let assetId = safeString(existingArtifact?.data?.file_asset_id ?? existingAsset?.data?.id, 80)
   if (!assetId) {
     assetId = crypto.randomUUID()
     const storageKey = `${run.user_id}/${assetId}/${input.filename}`
@@ -2870,9 +2877,13 @@ async function workSampleFileRecords(admin: AdminClient, run: AgentRunRow, caseI
   const records: Array<Record<string, unknown>> = []
   for (const row of rows) {
     let content = ''
+    let bytes: Uint8Array | null = null
     try {
       const downloaded = await admin.storage.from('private-file-assets').download(String(row.storage_key))
-      if (!downloaded.error && downloaded.data) content = decodeWorkSampleAssetText(new Uint8Array(await downloaded.data.arrayBuffer()), safeString(row.mime_type, 160), safeString(row.original_filename, 255))
+      if (!downloaded.error && downloaded.data) {
+        bytes = new Uint8Array(await downloaded.data.arrayBuffer())
+        content = decodeWorkSampleAssetText(bytes, safeString(row.mime_type, 160), safeString(row.original_filename, 255))
+      }
     } catch {
       // Metadata remains useful for a missing or temporarily unreadable asset;
       // the deterministic layer will keep it ineligible until it is inspected.
@@ -2890,6 +2901,7 @@ async function workSampleFileRecords(admin: AdminClient, run: AgentRunRow, caseI
       content,
       contentSource: `private-file-assets:${row.id}`,
       assetAvailable: true,
+      bytes,
       source: row.source,
       createdAt: row.created_at,
       updatedAt: row.created_at,
@@ -5345,7 +5357,9 @@ async function executeProviderTool(
       if (submissionResult.error) throw new Error(submissionResult.error.message)
       if (!submissionResult.data) return { kind: 'pause', status: 'needs_context', code: 'work_sample_submission_missing', message: 'The exact prepared work-sample submission is no longer available. Re-run the coordinator before uploading.', value: { valid: false }, actionStatus: 'failed' }
       const storedSubmission = submissionResult.data
-      if (uploadFilename !== safeString(storedSubmission.filename, 255) || uploadChecksum !== safeString(storedSubmission.checksum, 128)) {
+      const storedSubmissionMethod = safeString(uploadInput.submission_method ?? uploadInput.submissionMethod ?? storedSubmission.submission_method, 40) || 'file_upload'
+      const storedSubmissionUrl = safeString(uploadInput.submission_url ?? uploadInput.submissionUrl ?? storedSubmission.submission_url, 2_000) || null
+      if (storedSubmissionMethod !== 'url' && (uploadFilename !== safeString(storedSubmission.filename, 255) || uploadChecksum !== safeString(storedSubmission.checksum, 128))) {
         return { kind: 'pause', status: 'waiting_for_user', code: 'work_sample_upload_identity_mismatch', message: 'The portal observation does not match the approved filename or checksum. Keep the approved artifact unchanged and retry the browser upload.', value: { valid: false, expected_filename: storedSubmission.filename, expected_checksum: storedSubmission.checksum, observed_filename: uploadFilename, observed_checksum: uploadChecksum }, actionStatus: 'failed' }
       }
       const existingVerified = await admin.from('application_work_sample_submissions').select('id,upload_state').eq('user_id', run.user_id).eq('application_case_id', caseId).eq('checksum', uploadChecksum).eq('filename', uploadFilename).eq('upload_state', 'verified').maybeSingle()
@@ -5360,6 +5374,8 @@ async function executeProviderTool(
         portal: safeString(uploadInput.portal ?? uploadInput.portal_identity, 500),
         section: safeString(uploadInput.section ?? uploadInput.section_identity, 240),
         sessionId: safeString(uploadInput.session_id ?? uploadInput.sessionId, 80),
+        submissionMethod: storedSubmissionMethod === 'url' ? 'url' : 'file_upload',
+        submissionUrl: storedSubmissionUrl,
         persistedValues,
         readBackValues,
         filename: uploadFilename,
@@ -5370,10 +5386,12 @@ async function executeProviderTool(
         confirmation: safeString(uploadInput.confirmation ?? uploadInput.save_confirmation, 1_000) || null,
       })
       if (!verification.verified || !verification.evidence) {
-        await admin.from('application_work_sample_submissions').update({ upload_state: 'blocked', resulting_state_evidence: { ...recordValue(storedSubmission.resulting_state_evidence), portal: safeString(uploadInput.portal, 500) || null, section: safeString(uploadInput.section, 240) || null, sessionId: safeString(uploadInput.session_id ?? uploadInput.sessionId, 80) || null, filename: uploadFilename || null, checksum: uploadChecksum || null, readBackValues, confirmation: safeString(uploadInput.confirmation, 1_000) || null, issues: verification.issues } }).eq('id', storedSubmission.id).eq('user_id', run.user_id)
+        await admin.from('application_work_sample_submissions').update({ upload_state: 'blocked', resulting_state_evidence: { ...recordValue(storedSubmission.resulting_state_evidence), portal: safeString(uploadInput.portal, 500) || null, section: safeString(uploadInput.section, 240) || null, sessionId: safeString(uploadInput.session_id ?? uploadInput.sessionId, 80) || null, url: storedSubmissionMethod === 'url' ? storedSubmissionUrl : null, filename: uploadFilename || null, checksum: uploadChecksum || null, readBackValues, confirmation: safeString(uploadInput.confirmation, 1_000) || null, issues: verification.issues } }).eq('id', storedSubmission.id).eq('user_id', run.user_id)
         return { kind: 'pause', status: 'waiting_for_user', code: 'work_sample_upload_verification_failed', message: `The portal upload was not verified: ${verification.issues.join(' ')}`, value: { verified: false, issues: verification.issues, expected_filename: storedSubmission.filename, expected_checksum: storedSubmission.checksum }, actionStatus: 'failed' }
       }
-      const artifact = await admin.from('application_artifacts').select('file_asset_id').eq('id', storedSubmission.derived_artifact_id).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+      const artifact = storedSubmission.derived_artifact_id
+        ? await admin.from('application_artifacts').select('file_asset_id').eq('id', storedSubmission.derived_artifact_id).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+        : { data: null, error: null }
       if (artifact.error) throw new Error(artifact.error.message)
       const evidence = await admin.from('application_evidence').upsert({
         user_id: run.user_id,
@@ -5384,8 +5402,8 @@ async function executeProviderTool(
         kind: 'uploaded_file_verification',
         provider: 'browser',
         asset_id: artifact.data?.file_asset_id ?? null,
-        excerpt: `${uploadFilename} was accepted in ${safeString(uploadInput.section, 240)} and read back with the exact checksum.`,
-        metadata: { submission_id: storedSubmission.id, checksum: uploadChecksum, filename: uploadFilename, size_bytes: verification.evidence.sizeBytes, portal: verification.evidence.portal, section: verification.evidence.section, session_id: verification.evidence.sessionId, read_back_values: readBackValues, confirmation: verification.evidence.confirmation },
+        excerpt: storedSubmissionMethod === 'url' ? `${storedSubmissionUrl} was accepted in ${safeString(uploadInput.section, 240)} and read back exactly.` : `${uploadFilename} was accepted in ${safeString(uploadInput.section, 240)} and read back with the exact checksum.`,
+        metadata: { submission_id: storedSubmission.id, submission_method: storedSubmissionMethod, submission_url: storedSubmissionUrl, checksum: uploadChecksum, filename: uploadFilename, size_bytes: verification.evidence.sizeBytes, portal: verification.evidence.portal, section: verification.evidence.section, session_id: verification.evidence.sessionId, read_back_values: readBackValues, confirmation: verification.evidence.confirmation },
         idempotency_key: `work-sample-upload:${caseId}:${storedSubmission.id}:${uploadChecksum}`,
       }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
       if (evidence.error || !evidence.data) throw new Error(evidence.error?.message ?? 'The work-sample upload evidence could not be persisted.')
@@ -5403,7 +5421,16 @@ async function executeProviderTool(
       const nextAction = 'Continue the remaining portal sections; keep this exact filename and checksum attached to the application case.'
       await admin.from('application_cases').update({ status: 'active', current_stage: 'portal_preparation', next_action: nextAction, data: { ...caseData, workSampleWorkflow: workflow, workSampleUploadEvidenceId: evidence.data.id } }).eq('id', caseId).eq('user_id', run.user_id)
       const nextState = nextApplicationState(run, { currentCaseId: caseId, status: 'preparing', stage: 'portal_preparation', nextAction, lastEvidenceAt: new Date().toISOString(), progress: { completed: 5, label: 'Work sample upload verified', nextAction, evidenceCount: (run.application_state?.progress.evidenceCount ?? 0) + 1 } })
-      return { kind: 'output', value: { application_case_id: caseId, submission_id: storedSubmission.id, upload_state: 'verified', evidence_id: evidence.data.id, filename: uploadFilename, checksum: uploadChecksum, completion: { complete: true, defects: [] } }, providerActionId: String(evidence.data.id), publicSummary: 'Verified the exact work-sample filename and checksum after portal read-back and persisted the upload evidence.', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, work_sample_workflow: workflow, work_sample_upload_evidence_id: evidence.data.id } } }
+      const selectedCandidateId = safeString(recordValue(previousWorkflow.submission).candidateId ?? recordValue(previousWorkflow.submission).candidate_id, 240)
+      const selectedCandidate = (Array.isArray(previousWorkflow.candidates) ? previousWorkflow.candidates : []).find(candidate => safeString(recordValue(candidate).id, 240) === selectedCandidateId) as unknown as WorkSampleCandidate | undefined
+      const completion = workSampleCompletionEvidence({
+        requirement: targetRequirement,
+        submission: { ...recordValue(previousWorkflow.submission), checksum: safeString(storedSubmission.checksum, 128), qualityGate: recordValue(storedSubmission.quality_gate) } as unknown as WorkSampleSubmission,
+        portalVerification: verification,
+        applicantAuthorshipVerified: selectedCandidate ? verifyCandidateAuthorship(selectedCandidate).verified : true,
+        userResponsesResumed: Boolean(previousWorkflow.responseMetric || previousWorkflow.state === 'approved_for_upload'),
+      })
+      return { kind: 'output', value: { application_case_id: caseId, submission_id: storedSubmission.id, upload_state: 'verified', evidence_id: evidence.data.id, submission_method: storedSubmissionMethod, submission_url: storedSubmissionUrl, filename: uploadFilename, checksum: uploadChecksum, completion }, providerActionId: String(evidence.data.id), publicSummary: storedSubmissionMethod === 'url' ? 'Verified the exact work-sample URL after portal read-back and persisted the link evidence.' : 'Verified the exact work-sample filename and checksum after portal read-back and persisted the upload evidence.', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, work_sample_workflow: workflow, work_sample_upload_evidence_id: evidence.data.id } } }
     }
 
     if (targetRequirement.mode === 'not_applicable') {
@@ -5497,32 +5524,66 @@ async function executeProviderTool(
     if (!leadCandidate || selectedCandidates.some(candidate => !candidate.content?.trim())) {
       return { kind: 'pause', status: 'needs_context', code: 'work_sample_content_missing', message: 'The chosen work sample is known, but its readable source content is not available for a safe derived copy. Attach the exact source file and continue.', value: { requirement: targetRequirement, selected_candidate_ids: strategy.selectedCandidateIds, candidates: selectedCandidates.map(publicWorkSampleCandidate) }, actionStatus: 'failed' }
     }
-    if (targetRequirement.fileFormats.length && !targetRequirement.fileFormats.some(format => /pdf/i.test(format))) {
-      return { kind: 'pause', status: 'needs_context', code: 'work_sample_format_requires_original', message: `This programme specifies ${targetRequirement.fileFormats.join(', ')} and the current deterministic renderer can only produce a normalized PDF derivative. Preserve the original format or attach an accepted PDF export before continuing.`, value: { requirement: targetRequirement, accepted_formats: targetRequirement.fileFormats, selected_candidate_ids: strategy.selectedCandidateIds }, actionStatus: 'failed' }
-    }
     const applicantName = applicantDisplayName(recordValue(profile), contextSources)
-    const preparedBody = workSampleExcerptBody(selectedCandidates, targetRequirement.pageLimit)
-    const security = scanWorkSampleSecurity({ content: preparedBody, filename: leadCandidate.title })
-    const bytes = createPdf(`${safeString(opportunity.programmeTitle, 800)} — ${leadCandidate.title}`, preparedBody)
-    const derivedChecksum = await workSampleSha256(bytes)
     const originalArtifact = context.artifacts.find(artifact => leadCandidate.sourceAssetIds.includes(artifact.fileAssetId))
     const originalAsset = uploadedFiles.find(asset => leadCandidate.sourceAssetIds.includes(String(asset.assetId)))
+    const originalBytes = originalAsset?.bytes instanceof Uint8Array ? originalAsset.bytes : null
+    const sourceMimeType = safeString(originalAsset?.mimeType ?? originalAsset?.mime_type, 160).toLocaleLowerCase()
+    const sourceFormat = safeString(leadCandidate.fileFormat, 160).toLocaleLowerCase()
+    const sourceChecksum = originalBytes ? await workSampleSha256(originalBytes) : null
+    const linkOrFilePreview = prepareWorkSampleSubmission({
+      applicationCaseId: caseId,
+      requirement: targetRequirement,
+      candidate: leadCandidate,
+      applicantName,
+      originalArtifactId: originalArtifact?.id ?? null,
+      originalChecksum: leadCandidate.provenance.checksum ?? (originalAsset ? safeString(originalAsset.checksum, 128) : null),
+      derivedChecksum: sourceChecksum,
+      derivedSizeBytes: originalBytes?.length ?? null,
+      selectedProjects: strategy.selectedCandidateIds,
+      anonymized: !targetRequirement.anonymizationRequired,
+      applicantNameIncluded: !targetRequirement.applicantNameRequired || (leadCandidate.content ?? '').toLocaleLowerCase().includes(applicantName.toLocaleLowerCase()),
+      approvalRequired: true,
+    })
+    const nonPdfSourceRequired = linkOrFilePreview.submissionMethod === 'file_upload' && Boolean(
+      targetRequirement.fileFormats.length &&
+      !targetRequirement.fileFormats.some(format => /pdf|docx|txt/i.test(format)) &&
+      !originalBytes,
+    )
+    if (nonPdfSourceRequired) {
+      return { kind: 'pause', status: 'needs_context', code: 'work_sample_original_format_missing', message: `The programme requires ${targetRequirement.fileFormats.join(', ')} and the authorized source file is not available for a safe copy. Attach the original ${leadCandidate.title} rather than converting it to another format.`, value: { requirement: targetRequirement, accepted_formats: targetRequirement.fileFormats, selected_candidate_ids: strategy.selectedCandidateIds }, actionStatus: 'failed' }
+    }
+    const preparedBody = workSampleExcerptBody(selectedCandidates, targetRequirement.pageLimit)
+    const security = scanWorkSampleSecurity({ content: leadCandidate.content ?? preparedBody, filename: leadCandidate.title })
+    const preserveOriginal = Boolean(originalBytes && linkOrFilePreview.submissionMethod === 'file_upload' && (
+      ['CODE_SAMPLE', 'SOFTWARE_PROJECT', 'DATA_NOTEBOOK'].includes(targetRequirement.requirementType) ||
+      !targetRequirement.fileFormats.some(format => /pdf/i.test(format)) ||
+      !/pdf|docx|txt/i.test(sourceMimeType || sourceFormat)
+    ))
+    const bytes = linkOrFilePreview.submissionMethod === 'url'
+      ? null
+      : preserveOriginal
+        ? originalBytes
+        : createPdf(`${safeString(opportunity.programmeTitle, 800)} — ${leadCandidate.title}`, preparedBody)
+    const derivedChecksum = bytes ? await workSampleSha256(bytes) : linkOrFilePreview.checksum
+    const derivedMimeType = preserveOriginal ? sourceMimeType || 'application/octet-stream' : 'application/pdf'
+    const preparedCandidate = preserveOriginal || linkOrFilePreview.submissionMethod === 'url' ? leadCandidate : { ...leadCandidate, fileFormat: 'application/pdf' }
     const preliminary = prepareWorkSampleSubmission({
       applicationCaseId: caseId,
       requirement: targetRequirement,
-      candidate: { ...leadCandidate, fileFormat: 'application/pdf' },
+      candidate: preparedCandidate,
       applicantName,
       originalArtifactId: originalArtifact?.id ?? null,
       originalChecksum: leadCandidate.provenance.checksum ?? (originalAsset ? safeString(originalAsset.checksum, 128) : null),
       derivedChecksum,
-      derivedSizeBytes: bytes.length,
+      derivedSizeBytes: bytes?.length ?? null,
       selectedProjects: strategy.selectedCandidateIds,
       anonymized: !targetRequirement.anonymizationRequired,
       applicantNameIncluded: !targetRequirement.applicantNameRequired || preparedBody.toLocaleLowerCase().includes(applicantName.toLocaleLowerCase()),
       approvalRequired: true,
     })
-    const pageCount = workSamplePdfPageCount(bytes)
-    const wordCount = preparedBody.split(/\s+/).filter(Boolean).length
+    const pageCount = bytes && /pdf/i.test(derivedMimeType) ? workSamplePdfPageCount(bytes) : null
+    const wordCount = preserveOriginal || linkOrFilePreview.submissionMethod === 'url' ? leadCandidate.wordCount : preparedBody.split(/\s+/).filter(Boolean).length
     const qualityGate = validateWorkSampleSubmission({
       requirement: targetRequirement,
       candidate: leadCandidate,
@@ -5530,7 +5591,7 @@ async function executeProviderTool(
       applicantName,
       originalChecksum: preliminary.originalChecksum,
       checksum: derivedChecksum,
-      sizeBytes: bytes.length,
+      sizeBytes: bytes?.length ?? preliminary.sizeBytes,
       pageCount,
       wordCount,
       selectedPages: preliminary.selectedPages,
@@ -5539,24 +5600,28 @@ async function executeProviderTool(
       substantiveContentChanged: false,
       securityFindings: security.findings,
     })
-    const submission = { ...preliminary, sizeBytes: bytes.length, pageCount, wordCount, qualityGate, uploadState: qualityGate.passed ? 'ready' as const : 'blocked' as const }
+    const submission = { ...preliminary, sizeBytes: bytes?.length ?? preliminary.sizeBytes, pageCount, wordCount, qualityGate, uploadState: qualityGate.passed ? 'ready' as const : 'blocked' as const }
     if (!qualityGate.passed) {
       const workflow = { version: 'work-sample-execution@1.0.0', state: 'blocked_quality_gate', requirementKey: targetRequirement.requirementKey, requirements: requirements.map(requirement => ({ ...requirement })), checkedContext: persistableContext, candidates: ranked.map(publicWorkSampleCandidate), strategy, submission: publicWorkSampleCandidate(leadCandidate), qualityGate, interaction: null, requirementGraph: buildWorkSampleRequirementGraph({ caseId, requirements }) }
       await admin.from('application_cases').update({ status: 'awaiting_user', current_stage: 'document_preparation', next_action: qualityGate.programmatic.issues[0] ?? qualityGate.semantic.issues[0] ?? 'Resolve the work-sample quality gate before continuing.', data: { ...caseData, workSampleWorkflow: workflow } }).eq('id', caseId).eq('user_id', run.user_id)
       return { kind: 'pause', status: 'needs_context', code: 'work_sample_quality_gate_failed', message: qualityGate.programmatic.issues[0] ?? qualityGate.semantic.issues[0] ?? 'The derived work-sample artifact did not pass its quality gate.', value: { requirement: targetRequirement, candidate: publicWorkSampleCandidate(leadCandidate), quality_gate: qualityGate, checksum: derivedChecksum }, actionStatus: 'failed' }
     }
-    const persistedAsset = await persistApplicationGeneratedAsset(admin, run, {
-      bytes,
-      filename: preliminary.filename,
-      mimeType: 'application/pdf',
-      applicationCaseId: caseId,
-      opportunityId: safeString(opportunity.id, 80),
-      kind: 'programme_derivative',
-      sourceAssetIds: leadCandidate.sourceAssetIds,
-      templateVersion: 'work-sample-pdf@1',
-      promptVersion: 'work-sample-execution@1.0.0',
-      metadata: { workflow_version: 'work-sample-execution@1.0.0', requirement_key: targetRequirement.requirementKey, requirement_type: targetRequirement.requirementType, original_checksum: preliminary.originalChecksum, selected_pages: preliminary.selectedPages, selected_projects: strategy.selectedCandidateIds, quality_gate: qualityGate },
-    })
+    const persistedAsset = bytes
+      ? await persistApplicationGeneratedAsset(admin, run, {
+        bytes,
+        filename: preliminary.filename,
+        mimeType: derivedMimeType,
+        applicationCaseId: caseId,
+        opportunityId: safeString(opportunity.id, 80),
+        kind: 'programme_derivative',
+        sourceAssetIds: leadCandidate.sourceAssetIds,
+        templateVersion: preserveOriginal ? 'work-sample-preserved-source@1' : 'work-sample-pdf@1',
+        promptVersion: 'work-sample-execution@1.0.0',
+        forceNewAsset: preserveOriginal,
+        metadata: { workflow_version: 'work-sample-execution@1.0.0', requirement_key: targetRequirement.requirementKey, requirement_type: targetRequirement.requirementType, original_checksum: preliminary.originalChecksum, selected_pages: preliminary.selectedPages, selected_projects: strategy.selectedCandidateIds, submission_method: preliminary.submissionMethod, submission_url: preliminary.submissionUrl, quality_gate: qualityGate },
+      })
+      : null
+    const finalChecksum = persistedAsset?.checksum ?? preliminary.checksum
     const checksumEvidence = await admin.from('application_evidence').upsert({
       user_id: run.user_id,
       application_case_id: caseId,
@@ -5565,29 +5630,31 @@ async function executeProviderTool(
       agent_run_id: run.id,
       kind: 'uploaded_file_verification',
       provider: 'private-file-assets',
-      asset_id: persistedAsset.assetId,
-      excerpt: `${preliminary.filename} derived checksum verified before any portal upload.`,
-      metadata: { artifact_id: persistedAsset.artifactId, checksum: persistedAsset.checksum, original_checksum: preliminary.originalChecksum, work_sample_requirement_key: targetRequirement.requirementKey, quality_gate: qualityGate },
-      idempotency_key: `work-sample-derived-checksum:${caseId}:${persistedAsset.checksum}`,
+      asset_id: persistedAsset?.assetId ?? originalAsset?.assetId ?? null,
+      excerpt: preliminary.submissionMethod === 'url' ? `${preliminary.submissionUrl} was verified as the programme work-sample URL before portal entry.` : `${preliminary.filename} derived checksum verified before any portal upload.`,
+      metadata: { artifact_id: persistedAsset?.artifactId ?? null, checksum: finalChecksum, original_checksum: preliminary.originalChecksum, work_sample_requirement_key: targetRequirement.requirementKey, submission_method: preliminary.submissionMethod, submission_url: preliminary.submissionUrl, quality_gate: qualityGate },
+      idempotency_key: `work-sample-derived-checksum:${caseId}:${finalChecksum}`,
     }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
     if (checksumEvidence.error || !checksumEvidence.data) throw new Error(checksumEvidence.error?.message ?? 'The derived work-sample checksum evidence could not be persisted.')
-    const submissionKey = `work-sample-submission:${caseId}:${targetRequirement.requirementKey}:${persistedAsset.checksum}`
+    const submissionKey = `work-sample-submission:${caseId}:${targetRequirement.requirementKey}:${finalChecksum}`
     const persistedSubmissionResult = await admin.from('application_work_sample_submissions').upsert({
       user_id: run.user_id,
       application_case_id: caseId,
       work_sample_requirement_id: targetRequirementDbId,
       candidate_id: candidateDbIds.get(leadCandidate.id) ?? null,
       original_artifact_id: originalArtifact?.id ?? null,
-      derived_artifact_id: persistedAsset.artifactId,
+      derived_artifact_id: persistedAsset?.artifactId ?? null,
       artifact_type: targetRequirement.requirementType,
       transformations: submission.transformations,
       selected_pages: submission.selectedPages,
       selected_projects: submission.selectedProjects,
+      submission_method: submission.submissionMethod,
+      submission_url: submission.submissionUrl,
       filename: submission.filename,
       size_bytes: submission.sizeBytes,
       page_count: submission.pageCount,
       word_count: submission.wordCount,
-      checksum: persistedAsset.checksum,
+      checksum: finalChecksum,
       original_checksum: submission.originalChecksum,
       approval_state: submission.approvalState,
       upload_state: submission.uploadState,
@@ -5597,11 +5664,11 @@ async function executeProviderTool(
       idempotency_key: submissionKey,
     }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
     if (persistedSubmissionResult.error || !persistedSubmissionResult.data) throw new Error(persistedSubmissionResult.error?.message ?? 'The prepared work-sample submission could not be persisted.')
-    const storedSubmission = { ...submission, derivedArtifactId: persistedAsset.artifactId, checksum: persistedAsset.checksum, databaseId: String(persistedSubmissionResult.data.id), idempotencyKey: submissionKey, resultingStateEvidence: { ...submission.resultingStateEvidence, evidenceIds: [String(checksumEvidence.data.id)] } }
+    const storedSubmission = { ...submission, derivedArtifactId: persistedAsset?.artifactId ?? null, checksum: finalChecksum, databaseId: String(persistedSubmissionResult.data.id), idempotencyKey: submissionKey, resultingStateEvidence: { ...submission.resultingStateEvidence, evidenceIds: [String(checksumEvidence.data.id)] } }
     const legacyRequirement = context.applicationCase.requirements.find(requirement => /writing sample|work sample|paper|publication|portfolio|code|notebook|website/i.test(requirement.name))
     if (legacyRequirement) {
       const evidenceIds = [...new Set([...legacyRequirement.verificationEvidenceIds, String(checksumEvidence.data.id)])]
-      const requirementUpdate = await admin.from('application_requirements').update({ status: 'ready', linked_artifact_id: persistedAsset.artifactId, verification_evidence_ids: evidenceIds, blocker_reason: null }).eq('id', legacyRequirement.id).eq('application_case_id', caseId).eq('user_id', run.user_id)
+      const requirementUpdate = await admin.from('application_requirements').update({ status: 'ready', linked_artifact_id: persistedAsset?.artifactId ?? legacyRequirement.linkedArtifactId ?? null, verification_evidence_ids: evidenceIds, blocker_reason: null }).eq('id', legacyRequirement.id).eq('application_case_id', caseId).eq('user_id', run.user_id)
       if (requirementUpdate.error) throw new Error(requirementUpdate.error.message)
     }
     const approvalInteraction = workSampleApprovalInteraction({ requirement: targetRequirement, submission: storedSubmission, candidateTitles: selectedCandidates.map(candidate => candidate.title) })

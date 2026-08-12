@@ -4,6 +4,10 @@ export const acceptedTaskFileTypes = [
   'image/png',
   'image/jpeg',
   'application/pdf',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/json',
+  'application/x-ipynb+json',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
 ] as const
@@ -108,7 +112,7 @@ export async function loadTaskFileAssets(taskId: string) {
 
 export async function uploadTaskFileAsset(taskId: string, file: File, reusable = false) {
   if (!acceptedTaskFileTypes.includes(file.type as typeof acceptedTaskFileTypes[number])) {
-    throw new Error('Choose a PNG, JPEG, PDF, DOCX, or TXT file.')
+    throw new Error('Choose a PNG, JPEG, PDF, DOCX, TXT, ZIP, or notebook file.')
   }
   if (file.size > 20 * 1024 * 1024) throw new Error('Attachments must be 20 MB or smaller.')
   const client = await getCloudClient()
