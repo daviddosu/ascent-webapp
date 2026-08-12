@@ -8,6 +8,7 @@ import { failureArtifact } from './failure-report'
 import { runCanonicalEngineCorpus, type CanonicalEngineCase } from './engine-corpus'
 import { runRecommendationQualification } from './recommendation-qualification'
 import { researchProposalBenchmarkCases, runResearchProposalBenchmark, type ResearchProposalBenchmarkReport } from './research-proposal-benchmark'
+import { runCampaignSummaryQualification, type CampaignSummaryQualificationReport } from './campaign-summary-qualification'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -40,6 +41,8 @@ function writeArtifacts(run: BenchmarkRun) {
   mkdirSync(failureDir, { recursive: true })
   writeFileSync(resolve(resultDir, `${run.runId}.json`), `${JSON.stringify(run, null, 2)}\n`)
   writeFileSync(resolve(resultDir, 'latest.json'), `${JSON.stringify(run, null, 2)}\n`)
+  const campaignSummaryArtifact = (run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary
+  if (campaignSummaryArtifact) writeFileSync(resolve(resultDir, 'campaign-summary-latest.json'), `${JSON.stringify(campaignSummaryArtifact, null, 2)}\n`)
   writeFileSync(resolve(here, 'routing-statistics.json'), `${JSON.stringify({ benchmarkVersion: run.benchmarkVersion, runId: run.runId, codeCommit: run.codeCommit, generatedAt: run.generatedAt, ...run.routingStatistics }, null, 2)}\n`)
   const rows = run.results.map(result => ({
     benchmark_version: run.benchmarkVersion,
@@ -116,6 +119,7 @@ function writeArtifacts(run: BenchmarkRun) {
 
   const m = run.metrics
   const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
+  const campaignSummary = (run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary
   const engineMetrics = run.engine?.metrics ?? {}
   const stochastic = optionalJson(resolve(here, 'results/stochastic-latest.json'))
   const comparison = (kind: 'primitive' | 'harness' | 'adaptive') => {
@@ -216,6 +220,15 @@ ${proposal ? `- Qualification: ${proposal.metrics.passed}/${proposal.metrics.cas
 - Email/support-pack/CV examples: \${run.recommendation.cv.pdfPath}, \${run.recommendation.cv.latexPath}, and the qualification report in the same output directory.\` : 'Not run for a selected non-recommendation case.'}
 
 
+
+## Canonical user-facing campaign summary qualification
+
+${campaignSummary ? `- Qualification: ${campaignSummary.passed ? 'PASS' : 'FAIL'} (${campaignSummary.suiteVersion})
+- Cases / passed cases / failed assertions: ${String(campaignSummary.metrics.cases)} / ${String(campaignSummary.metrics.passedCases)} / ${String(campaignSummary.metrics.failedAssertions)}
+- Generated counts — Doing / Waiting / Needs you / At risk / Submitted: ${String(campaignSummary.metrics.doingItems)} / ${String(campaignSummary.metrics.waitingItems)} / ${String(campaignSummary.metrics.userActions)} / ${String(campaignSummary.metrics.risks)} / ${String(campaignSummary.metrics.submittedApplications)}
+- Integrity: ${campaignSummary.metrics.integrityValid ? 'valid' : 'invalid'}
+- Production-generated examples: \`results/campaign-summary-latest.json\`.` : 'Not run.'}
+
 ## Deployment and live gate
 
 - Production migration/function/frontend deployment: ${run.productionReadiness?.deploymentGatePassed ? 'completed' : 'not performed; qualification policy blocked deployment'}
@@ -277,6 +290,8 @@ async function execute() {
       : engineCases
     const engine = runCanonicalEngineCorpus(selectedEngineCases)
     run.engine = engine as unknown as BenchmarkRun['engine']
+    const campaignSummary = runCampaignSummaryQualification()
+    ;(run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary = campaignSummary
     run.atomicCases += engine.results.filter(item => item.level !== 'end_to_end').length
     run.endToEndCases += engine.results.filter(item => item.level === 'end_to_end').length
     run.metrics = {
@@ -290,6 +305,9 @@ async function execute() {
       canonicalDuplicateActions: engine.metrics.duplicateActions,
       canonicalContamination: engine.metrics.contamination,
       canonicalUserInterventions: engine.metrics.userInterventions,
+      campaignSummaryPassed: campaignSummary.passed,
+      campaignSummaryCases: campaignSummary.metrics.cases,
+      campaignSummaryFailedAssertions: campaignSummary.metrics.failedAssertions,
     }
     const selectedValues = selectedCase ? selectedCase.split(',').map(value => value.trim()).filter(Boolean) : []
     const proposalCaseSelection = selectedValues.length
@@ -325,7 +343,7 @@ async function execute() {
     )
     const deterministicGatePassed = engine.results.every(item => item.success) &&
       engine.metrics.fabricatedFacts === 0 && engine.metrics.falseCompletions === 0 &&
-      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0 && proposalGatePassed
+      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0 && proposalGatePassed && campaignSummary.passed
     run.productionReadiness = {
       qualified: false,
       deterministicGatePassed,
@@ -335,6 +353,7 @@ async function execute() {
     }
     run.blockers.push('Live production gate blocked: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SHOTCOUNT_TEST_EMAIL, and SHOTCOUNT_TEST_PASSWORD are unavailable; authenticated RLS, Calendar, durable-restart, and exact-upload smoke were not rerun.')
     if (proposal && !proposalGatePassed) run.blockers.push('Canonical research-proposal qualification failed.')
+    if (!campaignSummary.passed) run.blockers.push('Canonical user-facing campaign summary qualification failed.')
     const liveWeb = optionalJson(resolve(here, 'results/live-web-latest.json'))
     const liveGmail = optionalJson(resolve(here, 'results/live-gmail-latest.json'))
     if (liveWeb) run.liveReadOnlyWeb = { status: 'completed_separate_suite', ...liveWeb }
@@ -369,6 +388,7 @@ describe.skipIf(!enabled)('david_application_engine_v3', () => {
     expect(engineFailures).toHaveLength(0)
     const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
     expect(proposal?.metrics.passed).toBe(proposal?.metrics.cases)
+    expect((run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary?.passed).toBe(true)
   }, 900_000)
 })
 

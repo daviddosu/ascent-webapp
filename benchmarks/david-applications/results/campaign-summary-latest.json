@@ -1,0 +1,1896 @@
+{
+  "suiteVersion": "david_campaign_summary_qualification_v1",
+  "passed": true,
+  "metrics": {
+    "cases": 2,
+    "passedCases": 2,
+    "failedAssertions": 0,
+    "doingItems": 1,
+    "waitingItems": 2,
+    "userActions": 1,
+    "risks": 2,
+    "submittedApplications": 1,
+    "integrityValid": true
+  },
+  "cases": [
+    {
+      "id": "campaign-summary-canonical",
+      "passed": true,
+      "assertions": [
+        {
+          "id": "strict-done-evidence",
+          "passed": true,
+          "detail": "Submitted work appears in DONE only with matching verification evidence."
+        },
+        {
+          "id": "grouped-wait",
+          "passed": true,
+          "detail": "External recommender work is grouped with the responsible actor."
+        },
+        {
+          "id": "typed-user-action",
+          "passed": true,
+          "detail": "The approval is a typed, referenceable user action."
+        },
+        {
+          "id": "deadline-risk",
+          "passed": true,
+          "detail": "The transcript risk uses expected completion time plus a safety buffer."
+        },
+        {
+          "id": "post-submission",
+          "passed": true,
+          "detail": "Submitted applications remain visible in decision monitoring."
+        },
+        {
+          "id": "integrity",
+          "passed": true,
+          "detail": "The generated projection has no cross-case or orphan references."
+        }
+      ],
+      "projection": {
+        "version": "application-campaign-projection@1",
+        "campaignId": "campaign-qualification-1",
+        "applicantId": "benchmark-applicant",
+        "generatedAt": "2026-11-26T12:00:00.000Z",
+        "status": "needs_user",
+        "phase": "applications_submitted",
+        "applications": [
+          {
+            "applicationCaseId": "case-mit",
+            "institution": "MIT",
+            "programme": "EECS PhD",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-15T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-15",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "blocked_on_user",
+            "completionPercent": 0,
+            "progressState": "Needs your input",
+            "activeRequirements": [],
+            "waitingRequirements": [],
+            "userBlockedRequirements": [
+              {
+                "requirementId": "req-mit-approval",
+                "applicationCaseId": "case-mit",
+                "name": "Final application approval",
+                "label": "Approve final application",
+                "status": "ready",
+                "bucket": "NEEDS_YOU",
+                "deadline": {
+                  "dateTime": "2026-12-15T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-15",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": null,
+                "interaction": {
+                  "id": "interaction:mit-approval",
+                  "applicationCaseId": "case-mit",
+                  "requirementId": "req-mit-approval",
+                  "taskId": "task-qualification-1",
+                  "kind": "approve",
+                  "question": "Approve final application",
+                  "reason": "The application is ready for your review.",
+                  "status": "pending",
+                  "dedupeKey": "approval:mit"
+                },
+                "lastVerifiedAt": null,
+                "requirementType": "approval"
+              }
+            ],
+            "riskRequirements": [],
+            "completedRequirements": [],
+            "completedRequirementCount": 0,
+            "nextAction": "Approve final application",
+            "nextActionReference": {
+              "requirementId": "req-mit-approval",
+              "applicationCaseId": "case-mit",
+              "interactionId": "interaction:mit-approval",
+              "taskId": "task-qualification-1",
+              "responsibleAgent": null,
+              "deadline": {
+                "dateTime": "2026-12-15T23:59:00Z",
+                "timezone": "UTC",
+                "label": "2026-12-15",
+                "sourceUrl": "https://university.example/official",
+                "retrievedAt": "2026-11-26T12:00:00.000Z"
+              }
+            },
+            "lastVerifiedProgress": null,
+            "submissionState": "not_started",
+            "postSubmissionState": "not_applicable",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "pending",
+                "requirementIds": [
+                  "req-mit-approval"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          },
+          {
+            "applicationCaseId": "case-oxford",
+            "institution": "Oxford",
+            "programme": "DPhil Computer Science",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "at_risk",
+            "completionPercent": 0,
+            "progressState": "At risk",
+            "activeRequirements": [],
+            "waitingRequirements": [
+              {
+                "requirementId": "req-oxford-transcript",
+                "applicationCaseId": "case-oxford",
+                "name": "Official transcript",
+                "label": "Waiting for official transcript",
+                "status": "awaiting_institution",
+                "bucket": "WAITING",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": {
+                  "id": "registrar:case-oxford",
+                  "kind": "registrar",
+                  "name": "Registrar"
+                },
+                "interaction": null,
+                "lastVerifiedAt": null,
+                "requirementType": "transcript"
+              }
+            ],
+            "userBlockedRequirements": [],
+            "riskRequirements": [
+              {
+                "id": "risk:case-oxford:req-oxford-transcript",
+                "applicationCaseId": "case-oxford",
+                "requirementId": "req-oxford-transcript",
+                "level": "critical",
+                "reasonCodes": [
+                  "EXTERNAL_REGISTRAR_WAIT",
+                  "DEADLINE_LOW_SLACK"
+                ],
+                "reason": "The remaining deadline slack is shorter than the expected completion time and safety buffer.",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "timeRemainingMs": 647940000,
+                "expectedCompletionMs": 864000000,
+                "safetyBufferMs": 172800000,
+                "deadlineSlackMs": -388860000,
+                "blocker": null,
+                "recommendedMitigation": "Activate an accepted alternative transcript path or escalate with the registrar.",
+                "actor": {
+                  "id": "registrar:case-oxford",
+                  "kind": "registrar",
+                  "name": "Registrar"
+                },
+                "affectedApplicationCaseIds": [],
+                "priority": 2821
+              }
+            ],
+            "completedRequirements": [],
+            "completedRequirementCount": 0,
+            "nextAction": "Activate an accepted alternative transcript path or escalate with the registrar.",
+            "nextActionReference": {
+              "requirementId": "req-oxford-transcript",
+              "applicationCaseId": "case-oxford",
+              "interactionId": null,
+              "taskId": null,
+              "responsibleAgent": null,
+              "deadline": {
+                "dateTime": "2026-12-03T23:59:00Z",
+                "timezone": "UTC",
+                "label": "2026-12-03",
+                "sourceUrl": "https://university.example/official",
+                "retrievedAt": "2026-11-26T12:00:00.000Z"
+              }
+            },
+            "lastVerifiedProgress": null,
+            "submissionState": "not_started",
+            "postSubmissionState": "not_applicable",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": [
+                  "req-oxford-transcript"
+                ]
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "pending",
+                "requirementIds": [
+                  "req-oxford-transcript"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          },
+          {
+            "applicationCaseId": "case-stanford",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "at_risk",
+            "completionPercent": 0,
+            "progressState": "At risk",
+            "activeRequirements": [
+              {
+                "requirementId": "req-stanford-form",
+                "applicationCaseId": "case-stanford",
+                "name": "Application form",
+                "label": "Completing application form",
+                "status": "in_progress",
+                "bucket": "DOING",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": null,
+                "interaction": null,
+                "lastVerifiedAt": null,
+                "requirementType": "portal_section"
+              }
+            ],
+            "waitingRequirements": [
+              {
+                "requirementId": "req-stanford-referee",
+                "applicationCaseId": "case-stanford",
+                "name": "Recommendation letter",
+                "label": "Waiting for recommendation",
+                "status": "awaiting_referee",
+                "bucket": "WAITING",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": {
+                  "id": "professor-adeyemi",
+                  "kind": "recommender",
+                  "name": "Professor Adeyemi"
+                },
+                "interaction": null,
+                "lastVerifiedAt": null,
+                "requirementType": "referee"
+              }
+            ],
+            "userBlockedRequirements": [],
+            "riskRequirements": [
+              {
+                "id": "risk:case-stanford:req-stanford-form",
+                "applicationCaseId": "case-stanford",
+                "requirementId": "req-stanford-form",
+                "level": "watch",
+                "reasonCodes": [
+                  "PORTAL_UNVERIFIED"
+                ],
+                "reason": "A required resulting-state verification is still missing.",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "timeRemainingMs": 647940000,
+                "expectedCompletionMs": 86400000,
+                "safetyBufferMs": 86400000,
+                "deadlineSlackMs": 475140000,
+                "blocker": null,
+                "recommendedMitigation": "Continue the autonomous recovery path and verify the resulting state before submission.",
+                "actor": null,
+                "affectedApplicationCaseIds": [
+                  "case-stanford"
+                ],
+                "priority": 821
+              }
+            ],
+            "completedRequirements": [],
+            "completedRequirementCount": 0,
+            "nextAction": "Continue the autonomous recovery path and verify the resulting state before submission.",
+            "nextActionReference": {
+              "requirementId": "req-stanford-form",
+              "applicationCaseId": "case-stanford",
+              "interactionId": null,
+              "taskId": null,
+              "responsibleAgent": null,
+              "deadline": {
+                "dateTime": "2026-12-03T23:59:00Z",
+                "timezone": "UTC",
+                "label": "2026-12-03",
+                "sourceUrl": "https://university.example/official",
+                "retrievedAt": "2026-11-26T12:00:00.000Z"
+              }
+            },
+            "lastVerifiedProgress": null,
+            "submissionState": "not_started",
+            "postSubmissionState": "not_applicable",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "complete",
+                "requirementIds": [
+                  "req-stanford-referee"
+                ]
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": [
+                  "req-stanford-form"
+                ]
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "pending",
+                "requirementIds": [
+                  "req-stanford-form",
+                  "req-stanford-referee"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          },
+          {
+            "applicationCaseId": "case-ucl",
+            "institution": "UCL",
+            "programme": "Computer Science PhD",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-20T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-20",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "awaiting_decision",
+            "completionPercent": 100,
+            "progressState": "Awaiting decision",
+            "activeRequirements": [],
+            "waitingRequirements": [],
+            "userBlockedRequirements": [],
+            "riskRequirements": [],
+            "completedRequirements": [
+              {
+                "requirementId": "req-ucl-submission",
+                "applicationCaseId": "case-ucl",
+                "name": "Application submission",
+                "label": "Application submitted",
+                "status": "submitted",
+                "bucket": "DONE",
+                "deadline": {
+                  "dateTime": "2026-12-20T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-20",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [
+                  "e-ucl-submitted"
+                ],
+                "actor": null,
+                "interaction": null,
+                "lastVerifiedAt": "2026-11-26T12:00:00.000Z",
+                "requirementType": "submission"
+              }
+            ],
+            "completedRequirementCount": 1,
+            "nextAction": null,
+            "nextActionReference": null,
+            "lastVerifiedProgress": {
+              "label": "Application submitted",
+              "verifiedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "submissionState": "submitted",
+            "postSubmissionState": "monitoring",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "complete",
+                "requirementIds": [
+                  "req-ucl-submission"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          }
+        ],
+        "activeWork": [
+          {
+            "id": "campaign:doing:case-stanford:Completing application form:req-stanford-form",
+            "bucket": "DOING",
+            "label": "Completing application form",
+            "detail": "ShotCount owns the next executable step.",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "applicationCaseIds": [
+              "case-stanford"
+            ],
+            "requirementIds": [
+              "req-stanford-form"
+            ],
+            "references": [
+              {
+                "requirementId": "req-stanford-form",
+                "applicationCaseId": "case-stanford",
+                "interactionId": null,
+                "taskId": null,
+                "responsibleAgent": "david",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": null,
+            "interaction": null,
+            "priority": 1321,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          }
+        ],
+        "queuedWork": [],
+        "waitingExternal": [
+          {
+            "id": "campaign:waiting:professor-adeyemi:req-stanford-referee",
+            "bucket": "WAITING",
+            "label": "Waiting on Professor Adeyemi",
+            "detail": "Waiting on Professor Adeyemi.",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "applicationCaseIds": [
+              "case-stanford"
+            ],
+            "requirementIds": [
+              "req-stanford-referee"
+            ],
+            "references": [
+              {
+                "requirementId": "req-stanford-referee",
+                "applicationCaseId": "case-stanford",
+                "interactionId": null,
+                "taskId": null,
+                "responsibleAgent": null,
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": {
+              "id": "professor-adeyemi",
+              "kind": "recommender",
+              "name": "Professor Adeyemi"
+            },
+            "interaction": null,
+            "priority": 1821,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          },
+          {
+            "id": "campaign:waiting:registrar:case-oxford:req-oxford-transcript",
+            "bucket": "WAITING",
+            "label": "Waiting on Registrar",
+            "detail": "Waiting on Registrar.",
+            "institution": "Oxford",
+            "programme": "DPhil Computer Science",
+            "applicationCaseIds": [
+              "case-oxford"
+            ],
+            "requirementIds": [
+              "req-oxford-transcript"
+            ],
+            "references": [
+              {
+                "requirementId": "req-oxford-transcript",
+                "applicationCaseId": "case-oxford",
+                "interactionId": null,
+                "taskId": null,
+                "responsibleAgent": null,
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": {
+              "id": "registrar:case-oxford",
+              "kind": "registrar",
+              "name": "Registrar"
+            },
+            "interaction": null,
+            "priority": 1821,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          }
+        ],
+        "userActions": [
+          {
+            "id": "campaign:needs_you:approval:mit:req-mit-approval",
+            "bucket": "NEEDS_YOU",
+            "label": "Approve final application",
+            "detail": "Approve final application",
+            "institution": "MIT",
+            "programme": "EECS PhD",
+            "applicationCaseIds": [
+              "case-mit"
+            ],
+            "requirementIds": [
+              "req-mit-approval"
+            ],
+            "references": [
+              {
+                "requirementId": "req-mit-approval",
+                "applicationCaseId": "case-mit",
+                "interactionId": "interaction:mit-approval",
+                "taskId": "task-qualification-1",
+                "responsibleAgent": null,
+                "deadline": {
+                  "dateTime": "2026-12-15T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-15",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-15T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-15",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": null,
+            "interaction": {
+              "id": "interaction:mit-approval",
+              "applicationCaseId": "case-mit",
+              "requirementId": "req-mit-approval",
+              "taskId": "task-qualification-1",
+              "kind": "approve",
+              "question": "Approve final application",
+              "reason": "The application is ready for your review.",
+              "status": "pending",
+              "dedupeKey": "approval:mit"
+            },
+            "priority": 2533,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          }
+        ],
+        "risks": [
+          {
+            "id": "risk:case-oxford:req-oxford-transcript",
+            "applicationCaseId": "case-oxford",
+            "requirementId": "req-oxford-transcript",
+            "level": "critical",
+            "reasonCodes": [
+              "EXTERNAL_REGISTRAR_WAIT",
+              "DEADLINE_LOW_SLACK"
+            ],
+            "reason": "The remaining deadline slack is shorter than the expected completion time and safety buffer.",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "timeRemainingMs": 647940000,
+            "expectedCompletionMs": 864000000,
+            "safetyBufferMs": 172800000,
+            "deadlineSlackMs": -388860000,
+            "blocker": null,
+            "recommendedMitigation": "Activate an accepted alternative transcript path or escalate with the registrar.",
+            "actor": {
+              "id": "registrar:case-oxford",
+              "kind": "registrar",
+              "name": "Registrar"
+            },
+            "affectedApplicationCaseIds": [],
+            "priority": 2821
+          },
+          {
+            "id": "risk:case-stanford:req-stanford-form",
+            "applicationCaseId": "case-stanford",
+            "requirementId": "req-stanford-form",
+            "level": "watch",
+            "reasonCodes": [
+              "PORTAL_UNVERIFIED"
+            ],
+            "reason": "A required resulting-state verification is still missing.",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "timeRemainingMs": 647940000,
+            "expectedCompletionMs": 86400000,
+            "safetyBufferMs": 86400000,
+            "deadlineSlackMs": 475140000,
+            "blocker": null,
+            "recommendedMitigation": "Continue the autonomous recovery path and verify the resulting state before submission.",
+            "actor": null,
+            "affectedApplicationCaseIds": [
+              "case-stanford"
+            ],
+            "priority": 821
+          }
+        ],
+        "recentlyCompleted": [
+          {
+            "id": "done:case-ucl:req-ucl-submission",
+            "applicationCaseId": "case-ucl",
+            "requirementId": "req-ucl-submission",
+            "label": "Application submitted",
+            "institution": "UCL",
+            "programme": "Computer Science PhD",
+            "verifiedAt": "2026-11-26T12:00:00.000Z",
+            "evidenceIds": [
+              "e-ucl-submitted"
+            ]
+          }
+        ],
+        "upcomingDeadlines": [
+          {
+            "applicationCaseId": "case-oxford",
+            "requirementId": "req-oxford-transcript",
+            "label": "Waiting for official transcript",
+            "institution": "Oxford",
+            "programme": "DPhil Computer Science",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          },
+          {
+            "applicationCaseId": "case-stanford",
+            "requirementId": "req-stanford-form",
+            "label": "Completing application form",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          },
+          {
+            "applicationCaseId": "case-stanford",
+            "requirementId": "req-stanford-referee",
+            "label": "Waiting for recommendation",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          },
+          {
+            "applicationCaseId": "case-mit",
+            "requirementId": "req-mit-approval",
+            "label": "Approve final application",
+            "institution": "MIT",
+            "programme": "EECS PhD",
+            "deadline": {
+              "dateTime": "2026-12-15T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-15",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          }
+        ],
+        "counts": {
+          "applications": 4,
+          "activeApplications": 4,
+          "submittedApplications": 1,
+          "decisionsPending": 1,
+          "doing": 1,
+          "queued": 0,
+          "waitingExternal": 2,
+          "needsUser": 1,
+          "risks": 2,
+          "completedRecently": 1
+        },
+        "nextMeaningfulEvent": {
+          "id": "campaign:needs_you:approval:mit:req-mit-approval",
+          "bucket": "NEEDS_YOU",
+          "label": "Approve final application",
+          "detail": "Approve final application",
+          "institution": "MIT",
+          "programme": "EECS PhD",
+          "applicationCaseIds": [
+            "case-mit"
+          ],
+          "requirementIds": [
+            "req-mit-approval"
+          ],
+          "references": [
+            {
+              "requirementId": "req-mit-approval",
+              "applicationCaseId": "case-mit",
+              "interactionId": "interaction:mit-approval",
+              "taskId": "task-qualification-1",
+              "responsibleAgent": null,
+              "deadline": {
+                "dateTime": "2026-12-15T23:59:00Z",
+                "timezone": "UTC",
+                "label": "2026-12-15",
+                "sourceUrl": "https://university.example/official",
+                "retrievedAt": "2026-11-26T12:00:00.000Z"
+              }
+            }
+          ],
+          "deadline": {
+            "dateTime": "2026-12-15T23:59:00Z",
+            "timezone": "UTC",
+            "label": "2026-12-15",
+            "sourceUrl": "https://university.example/official",
+            "retrievedAt": "2026-11-26T12:00:00.000Z"
+          },
+          "actor": null,
+          "interaction": {
+            "id": "interaction:mit-approval",
+            "applicationCaseId": "case-mit",
+            "requirementId": "req-mit-approval",
+            "taskId": "task-qualification-1",
+            "kind": "approve",
+            "question": "Approve final application",
+            "reason": "The application is ready for your review.",
+            "status": "pending",
+            "dedupeKey": "approval:mit"
+          },
+          "priority": 2533,
+          "updatedAt": "2026-11-26T12:00:00.000Z"
+        },
+        "integrity": {
+          "valid": true,
+          "issues": []
+        }
+      },
+      "generatedSummary": "4 applications; MIT: Needs your input; Oxford: At risk; Stanford: At risk; UCL: Awaiting decision. Doing: Completing application form. Waiting: Waiting on Professor Adeyemi, Waiting on Registrar. Needs you: Approve final application. At risk: The remaining deadline slack is shorter than the expected completion time and safety buffer. (critical), A required resulting-state verification is still missing. (watch). Completed recently: Application submitted."
+    },
+    {
+      "id": "campaign-summary-transition",
+      "passed": true,
+      "assertions": [
+        {
+          "id": "answered-action-disappears",
+          "passed": true,
+          "detail": "The same projection converges after the persisted interaction becomes answered."
+        },
+        {
+          "id": "submitted-state-persists",
+          "passed": true,
+          "detail": "Submission state is derived from current application rows, not stale narration."
+        }
+      ],
+      "projection": {
+        "version": "application-campaign-projection@1",
+        "campaignId": "campaign-qualification-1",
+        "applicantId": "benchmark-applicant",
+        "generatedAt": "2026-11-26T12:00:00.000Z",
+        "status": "risk_detected",
+        "phase": "applications_submitted",
+        "applications": [
+          {
+            "applicationCaseId": "case-mit",
+            "institution": "MIT",
+            "programme": "EECS PhD",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-15T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-15",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "preparing",
+            "completionPercent": 0,
+            "progressState": "Getting started",
+            "activeRequirements": [
+              {
+                "requirementId": "req-mit-approval",
+                "applicationCaseId": "case-mit",
+                "name": "Final application approval",
+                "label": "Final application approval",
+                "status": "ready",
+                "bucket": "DOING",
+                "deadline": {
+                  "dateTime": "2026-12-15T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-15",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": null,
+                "interaction": null,
+                "lastVerifiedAt": null,
+                "requirementType": "approval"
+              }
+            ],
+            "waitingRequirements": [],
+            "userBlockedRequirements": [],
+            "riskRequirements": [],
+            "completedRequirements": [],
+            "completedRequirementCount": 0,
+            "nextAction": "Final application approval",
+            "nextActionReference": {
+              "requirementId": "req-mit-approval",
+              "applicationCaseId": "case-mit",
+              "interactionId": null,
+              "taskId": null,
+              "responsibleAgent": null,
+              "deadline": {
+                "dateTime": "2026-12-15T23:59:00Z",
+                "timezone": "UTC",
+                "label": "2026-12-15",
+                "sourceUrl": "https://university.example/official",
+                "retrievedAt": "2026-11-26T12:00:00.000Z"
+              }
+            },
+            "lastVerifiedProgress": null,
+            "submissionState": "not_started",
+            "postSubmissionState": "not_applicable",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "pending",
+                "requirementIds": [
+                  "req-mit-approval"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          },
+          {
+            "applicationCaseId": "case-oxford",
+            "institution": "Oxford",
+            "programme": "DPhil Computer Science",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "at_risk",
+            "completionPercent": 0,
+            "progressState": "At risk",
+            "activeRequirements": [],
+            "waitingRequirements": [
+              {
+                "requirementId": "req-oxford-transcript",
+                "applicationCaseId": "case-oxford",
+                "name": "Official transcript",
+                "label": "Waiting for official transcript",
+                "status": "awaiting_institution",
+                "bucket": "WAITING",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": {
+                  "id": "registrar:case-oxford",
+                  "kind": "registrar",
+                  "name": "Registrar"
+                },
+                "interaction": null,
+                "lastVerifiedAt": null,
+                "requirementType": "transcript"
+              }
+            ],
+            "userBlockedRequirements": [],
+            "riskRequirements": [
+              {
+                "id": "risk:case-oxford:req-oxford-transcript",
+                "applicationCaseId": "case-oxford",
+                "requirementId": "req-oxford-transcript",
+                "level": "critical",
+                "reasonCodes": [
+                  "EXTERNAL_REGISTRAR_WAIT",
+                  "DEADLINE_LOW_SLACK"
+                ],
+                "reason": "The remaining deadline slack is shorter than the expected completion time and safety buffer.",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "timeRemainingMs": 647940000,
+                "expectedCompletionMs": 864000000,
+                "safetyBufferMs": 172800000,
+                "deadlineSlackMs": -388860000,
+                "blocker": null,
+                "recommendedMitigation": "Activate an accepted alternative transcript path or escalate with the registrar.",
+                "actor": {
+                  "id": "registrar:case-oxford",
+                  "kind": "registrar",
+                  "name": "Registrar"
+                },
+                "affectedApplicationCaseIds": [],
+                "priority": 2821
+              }
+            ],
+            "completedRequirements": [],
+            "completedRequirementCount": 0,
+            "nextAction": "Activate an accepted alternative transcript path or escalate with the registrar.",
+            "nextActionReference": {
+              "requirementId": "req-oxford-transcript",
+              "applicationCaseId": "case-oxford",
+              "interactionId": null,
+              "taskId": null,
+              "responsibleAgent": null,
+              "deadline": {
+                "dateTime": "2026-12-03T23:59:00Z",
+                "timezone": "UTC",
+                "label": "2026-12-03",
+                "sourceUrl": "https://university.example/official",
+                "retrievedAt": "2026-11-26T12:00:00.000Z"
+              }
+            },
+            "lastVerifiedProgress": null,
+            "submissionState": "not_started",
+            "postSubmissionState": "not_applicable",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": [
+                  "req-oxford-transcript"
+                ]
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "pending",
+                "requirementIds": [
+                  "req-oxford-transcript"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          },
+          {
+            "applicationCaseId": "case-stanford",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "at_risk",
+            "completionPercent": 0,
+            "progressState": "At risk",
+            "activeRequirements": [
+              {
+                "requirementId": "req-stanford-form",
+                "applicationCaseId": "case-stanford",
+                "name": "Application form",
+                "label": "Completing application form",
+                "status": "in_progress",
+                "bucket": "DOING",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": null,
+                "interaction": null,
+                "lastVerifiedAt": null,
+                "requirementType": "portal_section"
+              }
+            ],
+            "waitingRequirements": [
+              {
+                "requirementId": "req-stanford-referee",
+                "applicationCaseId": "case-stanford",
+                "name": "Recommendation letter",
+                "label": "Waiting for recommendation",
+                "status": "awaiting_referee",
+                "bucket": "WAITING",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [],
+                "actor": {
+                  "id": "professor-adeyemi",
+                  "kind": "recommender",
+                  "name": "Professor Adeyemi"
+                },
+                "interaction": null,
+                "lastVerifiedAt": null,
+                "requirementType": "referee"
+              }
+            ],
+            "userBlockedRequirements": [],
+            "riskRequirements": [
+              {
+                "id": "risk:case-stanford:req-stanford-form",
+                "applicationCaseId": "case-stanford",
+                "requirementId": "req-stanford-form",
+                "level": "watch",
+                "reasonCodes": [
+                  "PORTAL_UNVERIFIED"
+                ],
+                "reason": "A required resulting-state verification is still missing.",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "timeRemainingMs": 647940000,
+                "expectedCompletionMs": 86400000,
+                "safetyBufferMs": 86400000,
+                "deadlineSlackMs": 475140000,
+                "blocker": null,
+                "recommendedMitigation": "Continue the autonomous recovery path and verify the resulting state before submission.",
+                "actor": null,
+                "affectedApplicationCaseIds": [
+                  "case-stanford"
+                ],
+                "priority": 821
+              }
+            ],
+            "completedRequirements": [],
+            "completedRequirementCount": 0,
+            "nextAction": "Continue the autonomous recovery path and verify the resulting state before submission.",
+            "nextActionReference": {
+              "requirementId": "req-stanford-form",
+              "applicationCaseId": "case-stanford",
+              "interactionId": null,
+              "taskId": null,
+              "responsibleAgent": null,
+              "deadline": {
+                "dateTime": "2026-12-03T23:59:00Z",
+                "timezone": "UTC",
+                "label": "2026-12-03",
+                "sourceUrl": "https://university.example/official",
+                "retrievedAt": "2026-11-26T12:00:00.000Z"
+              }
+            },
+            "lastVerifiedProgress": null,
+            "submissionState": "not_started",
+            "postSubmissionState": "not_applicable",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "complete",
+                "requirementIds": [
+                  "req-stanford-referee"
+                ]
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": [
+                  "req-stanford-form"
+                ]
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "pending",
+                "requirementIds": [
+                  "req-stanford-form",
+                  "req-stanford-referee"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          },
+          {
+            "applicationCaseId": "case-ucl",
+            "institution": "UCL",
+            "programme": "Computer Science PhD",
+            "degree": "PhD",
+            "deadline": {
+              "dateTime": "2026-12-20T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-20",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "overallState": "awaiting_decision",
+            "completionPercent": 100,
+            "progressState": "Awaiting decision",
+            "activeRequirements": [],
+            "waitingRequirements": [],
+            "userBlockedRequirements": [],
+            "riskRequirements": [],
+            "completedRequirements": [
+              {
+                "requirementId": "req-ucl-submission",
+                "applicationCaseId": "case-ucl",
+                "name": "Application submission",
+                "label": "Application submitted",
+                "status": "submitted",
+                "bucket": "DONE",
+                "deadline": {
+                  "dateTime": "2026-12-20T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-20",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                },
+                "evidenceIds": [
+                  "e-ucl-submitted"
+                ],
+                "actor": null,
+                "interaction": null,
+                "lastVerifiedAt": "2026-11-26T12:00:00.000Z",
+                "requirementType": "submission"
+              }
+            ],
+            "completedRequirementCount": 1,
+            "nextAction": null,
+            "nextActionReference": null,
+            "lastVerifiedProgress": {
+              "label": "Application submitted",
+              "verifiedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "submissionState": "submitted",
+            "postSubmissionState": "monitoring",
+            "milestones": [
+              {
+                "id": "programme-verified",
+                "label": "Programme verified",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "materials-ready",
+                "label": "Application materials ready",
+                "state": "current",
+                "requirementIds": []
+              },
+              {
+                "id": "recommendations-underway",
+                "label": "Recommendations underway",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "portal-substantially-complete",
+                "label": "Portal substantially complete",
+                "state": "pending",
+                "requirementIds": []
+              },
+              {
+                "id": "final-review-ready",
+                "label": "Final review ready",
+                "state": "complete",
+                "requirementIds": [
+                  "req-ucl-submission"
+                ]
+              },
+              {
+                "id": "submitted",
+                "label": "Submitted",
+                "state": "complete",
+                "requirementIds": []
+              },
+              {
+                "id": "post-submission-complete",
+                "label": "Post-submission complete",
+                "state": "pending",
+                "requirementIds": []
+              }
+            ]
+          }
+        ],
+        "activeWork": [
+          {
+            "id": "campaign:doing:case-stanford:Completing application form:req-stanford-form",
+            "bucket": "DOING",
+            "label": "Completing application form",
+            "detail": "ShotCount owns the next executable step.",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "applicationCaseIds": [
+              "case-stanford"
+            ],
+            "requirementIds": [
+              "req-stanford-form"
+            ],
+            "references": [
+              {
+                "requirementId": "req-stanford-form",
+                "applicationCaseId": "case-stanford",
+                "interactionId": null,
+                "taskId": null,
+                "responsibleAgent": "david",
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": null,
+            "interaction": null,
+            "priority": 1321,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          },
+          {
+            "id": "campaign:doing:case-mit:Final application approval:req-mit-approval",
+            "bucket": "DOING",
+            "label": "Final application approval",
+            "detail": "ShotCount owns the next executable step.",
+            "institution": "MIT",
+            "programme": "EECS PhD",
+            "applicationCaseIds": [
+              "case-mit"
+            ],
+            "requirementIds": [
+              "req-mit-approval"
+            ],
+            "references": [
+              {
+                "requirementId": "req-mit-approval",
+                "applicationCaseId": "case-mit",
+                "interactionId": null,
+                "taskId": null,
+                "responsibleAgent": null,
+                "deadline": {
+                  "dateTime": "2026-12-15T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-15",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-15T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-15",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": null,
+            "interaction": null,
+            "priority": 1033,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          }
+        ],
+        "queuedWork": [],
+        "waitingExternal": [
+          {
+            "id": "campaign:waiting:professor-adeyemi:req-stanford-referee",
+            "bucket": "WAITING",
+            "label": "Waiting on Professor Adeyemi",
+            "detail": "Waiting on Professor Adeyemi.",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "applicationCaseIds": [
+              "case-stanford"
+            ],
+            "requirementIds": [
+              "req-stanford-referee"
+            ],
+            "references": [
+              {
+                "requirementId": "req-stanford-referee",
+                "applicationCaseId": "case-stanford",
+                "interactionId": null,
+                "taskId": null,
+                "responsibleAgent": null,
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": {
+              "id": "professor-adeyemi",
+              "kind": "recommender",
+              "name": "Professor Adeyemi"
+            },
+            "interaction": null,
+            "priority": 1821,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          },
+          {
+            "id": "campaign:waiting:registrar:case-oxford:req-oxford-transcript",
+            "bucket": "WAITING",
+            "label": "Waiting on Registrar",
+            "detail": "Waiting on Registrar.",
+            "institution": "Oxford",
+            "programme": "DPhil Computer Science",
+            "applicationCaseIds": [
+              "case-oxford"
+            ],
+            "requirementIds": [
+              "req-oxford-transcript"
+            ],
+            "references": [
+              {
+                "requirementId": "req-oxford-transcript",
+                "applicationCaseId": "case-oxford",
+                "interactionId": null,
+                "taskId": null,
+                "responsibleAgent": null,
+                "deadline": {
+                  "dateTime": "2026-12-03T23:59:00Z",
+                  "timezone": "UTC",
+                  "label": "2026-12-03",
+                  "sourceUrl": "https://university.example/official",
+                  "retrievedAt": "2026-11-26T12:00:00.000Z"
+                }
+              }
+            ],
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "actor": {
+              "id": "registrar:case-oxford",
+              "kind": "registrar",
+              "name": "Registrar"
+            },
+            "interaction": null,
+            "priority": 1821,
+            "updatedAt": "2026-11-26T12:00:00.000Z"
+          }
+        ],
+        "userActions": [],
+        "risks": [
+          {
+            "id": "risk:case-oxford:req-oxford-transcript",
+            "applicationCaseId": "case-oxford",
+            "requirementId": "req-oxford-transcript",
+            "level": "critical",
+            "reasonCodes": [
+              "EXTERNAL_REGISTRAR_WAIT",
+              "DEADLINE_LOW_SLACK"
+            ],
+            "reason": "The remaining deadline slack is shorter than the expected completion time and safety buffer.",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "timeRemainingMs": 647940000,
+            "expectedCompletionMs": 864000000,
+            "safetyBufferMs": 172800000,
+            "deadlineSlackMs": -388860000,
+            "blocker": null,
+            "recommendedMitigation": "Activate an accepted alternative transcript path or escalate with the registrar.",
+            "actor": {
+              "id": "registrar:case-oxford",
+              "kind": "registrar",
+              "name": "Registrar"
+            },
+            "affectedApplicationCaseIds": [],
+            "priority": 2821
+          },
+          {
+            "id": "risk:case-stanford:req-stanford-form",
+            "applicationCaseId": "case-stanford",
+            "requirementId": "req-stanford-form",
+            "level": "watch",
+            "reasonCodes": [
+              "PORTAL_UNVERIFIED"
+            ],
+            "reason": "A required resulting-state verification is still missing.",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            },
+            "timeRemainingMs": 647940000,
+            "expectedCompletionMs": 86400000,
+            "safetyBufferMs": 86400000,
+            "deadlineSlackMs": 475140000,
+            "blocker": null,
+            "recommendedMitigation": "Continue the autonomous recovery path and verify the resulting state before submission.",
+            "actor": null,
+            "affectedApplicationCaseIds": [
+              "case-stanford"
+            ],
+            "priority": 821
+          }
+        ],
+        "recentlyCompleted": [
+          {
+            "id": "done:case-ucl:req-ucl-submission",
+            "applicationCaseId": "case-ucl",
+            "requirementId": "req-ucl-submission",
+            "label": "Application submitted",
+            "institution": "UCL",
+            "programme": "Computer Science PhD",
+            "verifiedAt": "2026-11-26T12:00:00.000Z",
+            "evidenceIds": [
+              "e-ucl-submitted"
+            ]
+          }
+        ],
+        "upcomingDeadlines": [
+          {
+            "applicationCaseId": "case-oxford",
+            "requirementId": "req-oxford-transcript",
+            "label": "Waiting for official transcript",
+            "institution": "Oxford",
+            "programme": "DPhil Computer Science",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          },
+          {
+            "applicationCaseId": "case-stanford",
+            "requirementId": "req-stanford-form",
+            "label": "Completing application form",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          },
+          {
+            "applicationCaseId": "case-stanford",
+            "requirementId": "req-stanford-referee",
+            "label": "Waiting for recommendation",
+            "institution": "Stanford",
+            "programme": "Physics PhD",
+            "deadline": {
+              "dateTime": "2026-12-03T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-03",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          },
+          {
+            "applicationCaseId": "case-mit",
+            "requirementId": "req-mit-approval",
+            "label": "Final application approval",
+            "institution": "MIT",
+            "programme": "EECS PhD",
+            "deadline": {
+              "dateTime": "2026-12-15T23:59:00Z",
+              "timezone": "UTC",
+              "label": "2026-12-15",
+              "sourceUrl": "https://university.example/official",
+              "retrievedAt": "2026-11-26T12:00:00.000Z"
+            }
+          }
+        ],
+        "counts": {
+          "applications": 4,
+          "activeApplications": 4,
+          "submittedApplications": 1,
+          "decisionsPending": 1,
+          "doing": 2,
+          "queued": 0,
+          "waitingExternal": 2,
+          "needsUser": 0,
+          "risks": 2,
+          "completedRecently": 1
+        },
+        "nextMeaningfulEvent": {
+          "id": "risk:case-oxford:req-oxford-transcript",
+          "applicationCaseId": "case-oxford",
+          "requirementId": "req-oxford-transcript",
+          "level": "critical",
+          "reasonCodes": [
+            "EXTERNAL_REGISTRAR_WAIT",
+            "DEADLINE_LOW_SLACK"
+          ],
+          "reason": "The remaining deadline slack is shorter than the expected completion time and safety buffer.",
+          "deadline": {
+            "dateTime": "2026-12-03T23:59:00Z",
+            "timezone": "UTC",
+            "label": "2026-12-03",
+            "sourceUrl": "https://university.example/official",
+            "retrievedAt": "2026-11-26T12:00:00.000Z"
+          },
+          "timeRemainingMs": 647940000,
+          "expectedCompletionMs": 864000000,
+          "safetyBufferMs": 172800000,
+          "deadlineSlackMs": -388860000,
+          "blocker": null,
+          "recommendedMitigation": "Activate an accepted alternative transcript path or escalate with the registrar.",
+          "actor": {
+            "id": "registrar:case-oxford",
+            "kind": "registrar",
+            "name": "Registrar"
+          },
+          "affectedApplicationCaseIds": [],
+          "priority": 2821
+        },
+        "integrity": {
+          "valid": true,
+          "issues": []
+        }
+      },
+      "generatedSummary": "4 applications; MIT: Getting started; Oxford: At risk; Stanford: At risk; UCL: Awaiting decision. Doing: Completing application form, Final application approval. Waiting: Waiting on Professor Adeyemi, Waiting on Registrar. Needs you: nothing. At risk: The remaining deadline slack is shorter than the expected completion time and safety buffer. (critical), A required resulting-state verification is still missing. (watch). Completed recently: Application submitted."
+    }
+  ],
+  "examples": [
+    {
+      "caseId": "campaign-summary-canonical",
+      "status": "needs_user",
+      "summary": "4 applications; MIT: Needs your input; Oxford: At risk; Stanford: At risk; UCL: Awaiting decision. Doing: Completing application form. Waiting: Waiting on Professor Adeyemi, Waiting on Registrar. Needs you: Approve final application. At risk: The remaining deadline slack is shorter than the expected completion time and safety buffer. (critical), A required resulting-state verification is still missing. (watch). Completed recently: Application submitted.",
+      "nextMeaningfulEvent": "Approve final application"
+    },
+    {
+      "caseId": "campaign-summary-transition",
+      "status": "risk_detected",
+      "summary": "4 applications; MIT: Getting started; Oxford: At risk; Stanford: At risk; UCL: Awaiting decision. Doing: Completing application form, Final application approval. Waiting: Waiting on Professor Adeyemi, Waiting on Registrar. Needs you: nothing. At risk: The remaining deadline slack is shorter than the expected completion time and safety buffer. (critical), A required resulting-state verification is still missing. (watch). Completed recently: Application submitted.",
+      "nextMeaningfulEvent": "The remaining deadline slack is shorter than the expected completion time and safety buffer."
+    }
+  ]
+}

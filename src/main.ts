@@ -97,6 +97,13 @@ import {
   type FileAsset,
 } from './data/file-assets'
 import { isApplicationIntent } from './data/application'
+import {
+  loadApplicationCampaignProjection,
+  type ApplicationCampaignProjection,
+  type ProjectionExecutionState,
+  type ProjectionInteractionKind,
+  type ProjectionUserInteraction,
+} from './data/david-application'
 import { renderRecommendationProgressDetail } from './data/recommendation-progress-detail'
 import { renderWorkSampleProgressDetail } from './data/work-sample-progress-detail'
 import type { RecommendationInteraction } from '../supabase/functions/_shared/recommendation-workflow'
@@ -433,6 +440,8 @@ let selectedTaskId = showDemoData && tasks.some(task => task.id === 'license') ?
 let mobileInspectorOpen = false
 const agentRuns = readAgentRuns()
 const taskFileAssets = new Map<string, FileAsset[]>()
+const applicationCampaignProjections = new Map<string, ApplicationCampaignProjection | null>()
+const applicationProjectionLoading = new Set<string>()
 const loadingTaskFileAssets = new Set<string>()
 const taskFileAssetBusy = new Set<string>()
 let filePreview: { asset: FileAsset; url: string | null; message?: string } | null = null
@@ -881,6 +890,115 @@ function applyCompletedAgentTasks(runs: AgentRun[]) {
   refreshCounts()
 }
 
+function projectionRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function projectionText(value: unknown, maximum = 500) {
+  return typeof value === 'string' ? value.trim().slice(0, maximum) : ''
+}
+
+function projectionInteractionKind(value: unknown): ProjectionInteractionKind {
+  const kind = projectionText(value, 80)
+  const mapping: Record<string, ProjectionInteractionKind> = {
+    approval: 'approve',
+    application_question: 'short_text',
+    single_choice: 'choose_one',
+    multiple_choice: 'choose_several',
+    contact_select: 'contact',
+    attachment_request: 'attachment',
+    attachment_selection: 'attachment',
+    confirmation: 'confirm',
+    correction: 'correction',
+    email: 'email',
+    date: 'date',
+    fact: 'short_text',
+    short_text: 'short_text',
+    browser_submit: 'approve',
+    payment_approval: 'payment_approval',
+    secure_authentication: 'secure_authentication',
+  }
+  return mapping[kind] ?? 'short_text'
+}
+
+function projectionInteractionFromRun(task: Task, run: AgentRun | null, approval?: AgentApproval | null): ProjectionUserInteraction | null {
+  const applicationCaseId = run?.applicationCaseId || run?.applicationState?.currentCaseId || ''
+  if (!run || !applicationCaseId) return null
+  const raw = projectionRecord(run.contextInteraction)
+  if (Object.keys(raw).length) {
+    const requirementId = projectionText(raw.requirementId, 300) || null
+    const question = projectionText(raw.question, 2_000)
+    if (question) return {
+      id: projectionText(raw.id, 300) || ['interaction', run.id].join(':'),
+      applicationCaseId,
+      requirementId,
+      taskId: task.id,
+      kind: projectionInteractionKind(raw.kind),
+      question,
+      reason: projectionText(raw.reason, 2_000) || 'Your confirmed input is required to continue this application.',
+      status: 'pending',
+      dedupeKey: projectionText(raw.mapsToRequirement, 300) || projectionText(raw.id, 300) || null,
+      deadline: null,
+    }
+  }
+  if (!approval || approval.status !== 'pending') return null
+  const payload = projectionRecord(approval.payload)
+  const payloadPreview = projectionRecord(payload.preview)
+  const approvalCaseId = projectionText(payload.application_case_id ?? payload.applicationCaseId ?? payloadPreview.application_case_id ?? payloadPreview.applicationCaseId, 80) || applicationCaseId
+  const requirementId = projectionText(payload.requirement_id ?? payload.requirementId ?? payloadPreview.requirement_id ?? payloadPreview.requirementId, 300) || null
+  return {
+    id: `approval:${approval.id}`,
+    applicationCaseId: approvalCaseId,
+    requirementId,
+    taskId: task.id,
+    kind: approval.kind === 'browser_submit' ? 'approve' : approval.kind === 'send_email' ? 'approve' : 'approve',
+    question: approval.title || 'Review and approve the prepared action',
+    reason: approval.summary || 'ShotCount is ready for your approval before anything consequential happens.',
+    status: 'pending',
+    dedupeKey: `approval:${approval.actionId}`,
+    deadline: null,
+  }
+}
+
+function projectionExecutionsForRun(run: AgentRun | null): ProjectionExecutionState[] {
+  if (!run || !isApplicationIntent(run.objective, run.context)) return []
+  if (!['planning', 'running'].includes(run.status)) return []
+  const applicationCaseId = run.applicationCaseId || run.applicationState?.currentCaseId
+  const requirementId = run.applicationRequirementId || null
+  if (!applicationCaseId || !requirementId) return []
+  const owner = run.activeSpecialistId === 'roon' ? 'roon' : run.activeSpecialistId === 'david' ? 'david' : 'system'
+  return [{ applicationCaseId, requirementId, state: 'active', owner, runId: run.id, updatedAt: run.updatedAt }]
+}
+
+async function refreshApplicationProjection(taskId: string, renderAfter = true) {
+  const task = tasks.find(item => item.id === taskId)
+  if (!task || !isApplicationIntent(task.title, task.description) || !activeUser || applicationProjectionLoading.has(taskId)) return
+  applicationProjectionLoading.add(taskId)
+  try {
+    const run = agentRuns.get(taskId) ?? null
+    const approval = run ? agentApprovals.get(run.id) ?? null : null
+    const interaction = projectionInteractionFromRun(task, run, approval)
+    const projection = await loadApplicationCampaignProjection(taskId, {
+      executions: projectionExecutionsForRun(run),
+      interactions: interaction ? [interaction] : [],
+    })
+    applicationCampaignProjections.set(taskId, projection)
+  } catch {
+    // A projection read is recoverable. Keep the last known projection until
+    // the next state/realtime refresh instead of replacing it with narration.
+    if (!applicationCampaignProjections.has(taskId)) applicationCampaignProjections.set(taskId, null)
+  } finally {
+    applicationProjectionLoading.delete(taskId)
+    if (renderAfter && selectedTaskId === taskId) render()
+  }
+}
+
+async function refreshApplicationProjections(taskIds = tasks.filter(task => isApplicationIntent(task.title, task.description)).map(task => task.id)) {
+  if (!activeUser || !taskIds.length) return
+  await Promise.all(taskIds.map(taskId => refreshApplicationProjection(taskId, false)))
+  render()
+}
+
 async function refreshAgentRuns() {
   if (!activeUser || agentRunsRefreshing) return
   agentRunsRefreshing = true
@@ -897,6 +1015,7 @@ async function refreshAgentRuns() {
     agentApprovals.clear()
     pendingApprovals.forEach(approval => agentApprovals.set(approval.runId, approval))
     persistAgentRuns()
+    await refreshApplicationProjections()
     // Task state is ready before attachment metadata. Keep the workspace
     // responsive while that secondary read finishes in the background.
     render()
@@ -1233,6 +1352,7 @@ async function startAgentRun(task: Task, context = '', interactionResponse?: { i
     } finally {
       agentDecisionBusy.delete(existing.id)
       persistAgentRuns()
+      void refreshApplicationProjection(task.id, false)
       render()
       if (toast) clearAgentToast(toast)
     }
@@ -1274,6 +1394,7 @@ async function startAgentRun(task: Task, context = '', interactionResponse?: { i
     toast = run.error
   } finally {
     persistAgentRuns()
+    void refreshApplicationProjection(task.id, false)
     render()
     if (toast) clearAgentToast(toast)
   }
@@ -1455,6 +1576,7 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
   } finally {
     agentDecisionBusy.delete(approval.id)
     persistAgentRuns()
+    if (task) void refreshApplicationProjection(task.id, false)
     render()
     if (toast) clearAgentToast(toast)
   }
@@ -3127,8 +3249,71 @@ function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder
   <aside class="task-agent-notification">${icon('bell')}<span>You’ll be notified when this is ready.</span></aside>`
 }
 
+function projectionDeadlineLabel(deadline: { dateTime: string; timezone: string } | null) {
+  if (!deadline) return ''
+  try {
+    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: deadline.timezone || 'UTC' }).format(new Date(deadline.dateTime))
+  } catch {
+    return deadline.dateTime.slice(0, 10)
+  }
+}
+
+function renderCampaignProjectionItem(taskId: string, item: ApplicationCampaignProjection['activeWork'][number], bucketLabel: string) {
+  const reference = item.references[0]
+  const attributes = `data-action="open-campaign-progress-detail" data-task-id="${escapeHtml(taskId)}" data-application-case-id="${escapeHtml(reference?.applicationCaseId ?? item.applicationCaseIds[0] ?? '')}" data-application-requirement-id="${escapeHtml(reference?.requirementId ?? item.requirementIds[0] ?? '')}" data-interaction-id="${escapeHtml(reference?.interactionId ?? item.interaction?.id ?? '')}"`
+  return `<button type="button" class="campaign-summary-item" ${attributes} aria-label="${escapeHtml(`${bucketLabel}: ${item.label}`)}">
+    <span class="campaign-summary-item-main"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.institution)}${item.programme ? ` · ${escapeHtml(item.programme)}` : ''}</small></span>
+    <span class="campaign-summary-item-meta">${item.deadline ? escapeHtml(projectionDeadlineLabel(item.deadline)) : ''}${item.applicationCaseIds.length > 1 ? ` · ${item.applicationCaseIds.length} applications` : ''}</span>
+  </button>`
+}
+
+function renderCampaignRiskItem(taskId: string, risk: ApplicationCampaignProjection['risks'][number]) {
+  return `<button type="button" class="campaign-summary-risk" data-action="open-campaign-progress-detail" data-task-id="${escapeHtml(taskId)}" data-application-case-id="${escapeHtml(risk.applicationCaseId)}" data-application-requirement-id="${escapeHtml(risk.requirementId)}" aria-label="At risk: ${escapeHtml(risk.reason)}">
+    <span><strong>${escapeHtml(risk.actor?.name ?? 'Application requirement')}</strong><small>${escapeHtml(risk.reason)}</small></span>
+    <em>${escapeHtml(risk.level)}</em>
+  </button>`
+}
+
+function campaignStatusLabel(status: ApplicationCampaignProjection['status']) {
+  return status === 'needs_user' ? 'Needs you' : status === 'risk_detected' ? 'Risk detected' : status === 'all_currently_waiting' ? 'Waiting on others' : status === 'decisions_pending' ? 'Decisions pending' : status === 'submission_season_complete' ? 'Submission season complete' : 'Active'
+}
+
+function renderApplicationCampaignSummary(task: Task, projection: ApplicationCampaignProjection) {
+  const counts = projection.counts
+  const appRows = projection.applications.slice(0, 8).map(application => {
+    const current = application.userBlockedRequirements[0]?.label
+      ?? application.riskRequirements[0]?.recommendedMitigation
+      ?? application.activeRequirements[0]?.label
+      ?? application.waitingRequirements[0]?.label
+      ?? (application.postSubmissionState === 'monitoring' ? 'Waiting for decision' : application.progressState)
+    return `<article class="campaign-summary-application" data-application-case-id="${escapeHtml(application.applicationCaseId)}">
+      <div><strong>${escapeHtml(application.institution)}</strong><span>${escapeHtml(application.progressState)}</span></div>
+      <p>${escapeHtml(application.programme)}${application.degree ? ` · ${escapeHtml(application.degree)}` : ''}</p>
+      <small>${application.completionPercent === null ? escapeHtml(current) : `${application.completionPercent}% complete · ${escapeHtml(current)}`}${application.deadline ? ` · Due ${escapeHtml(projectionDeadlineLabel(application.deadline))}` : ''}</small>
+    </article>`
+  }).join('')
+  const doing = projection.activeWork.slice(0, 4).map(item => renderCampaignProjectionItem(task.id, item, 'ShotCount is doing')).join('')
+  const waiting = projection.waitingExternal.slice(0, 4).map(item => renderCampaignProjectionItem(task.id, item, 'Waiting')).join('')
+  const needsYou = projection.userActions.slice(0, 4).map(item => renderCampaignProjectionItem(task.id, item, 'Needs you')).join('')
+  const risks = projection.risks.slice(0, 4).map(risk => renderCampaignRiskItem(task.id, risk)).join('')
+  const completed = projection.recentlyCompleted.slice(0, 4).map(item => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.institution)}</span></li>`).join('')
+  return `<section class="campaign-summary" data-campaign-summary="${escapeHtml(projection.campaignId)}" aria-label="Application campaign summary">
+    <header class="campaign-summary-header"><div><span>Application campaign</span><strong>${counts.applications} application${counts.applications === 1 ? '' : 's'}</strong></div><em>${escapeHtml(campaignStatusLabel(projection.status))}</em></header>
+    <div class="campaign-summary-counts"><span><b>${counts.doing}</b> Doing</span><span><b>${counts.waitingExternal}</b> Waiting</span><span><b>${counts.needsUser}</b> Needs you</span><span><b>${counts.risks}</b> At risk</span><span><b>${counts.submittedApplications}</b> Submitted</span></div>
+    <section class="campaign-summary-section campaign-summary-applications"><h4>Applications</h4>${appRows || '<p class="campaign-summary-empty">No active applications.</p>'}</section>
+    <section class="campaign-summary-section"><h4>ShotCount is doing</h4>${doing || '<p class="campaign-summary-empty">Nothing active right now.</p>'}</section>
+    <section class="campaign-summary-section"><h4>Waiting on others</h4>${waiting || '<p class="campaign-summary-empty">Nothing is waiting on someone else.</p>'}</section>
+    <section class="campaign-summary-section campaign-summary-needs"><h4>Needs you</h4>${needsYou || '<p class="campaign-summary-empty">Nothing needs you right now.</p>'}</section>
+    ${risks ? `<section class="campaign-summary-section campaign-summary-risks"><h4>At risk</h4>${risks}</section>` : ''}
+    ${completed ? `<section class="campaign-summary-section campaign-summary-completed"><h4>Completed recently</h4><ul>${completed}</ul></section>` : ''}
+  </section>`
+}
+
 function renderDavidApplicationStatus(task: Task, run?: AgentRun | null) {
-  if (!isApplicationIntent(task.title, task.description) || !run?.applicationState) return ''
+  if (!isApplicationIntent(task.title, task.description)) return ''
+  const projection = applicationCampaignProjections.get(task.id)
+  if (projection) return renderApplicationCampaignSummary(task, projection)
+  if (!run?.applicationState) return ''
   const state = run.applicationState
   const progress = state.progress
   const statusLabel = state.status === 'awaiting_shortlist_approval'
@@ -4901,6 +5086,24 @@ app.addEventListener('change', event => {
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
+  if (action === 'open-campaign-progress-detail') {
+    const control = target.closest<HTMLElement>('[data-action="open-campaign-progress-detail"]')
+    const taskId = control?.dataset.taskId
+    const interactionId = control?.dataset.interactionId
+    if (!taskId) return
+    selectedTaskId = taskId
+    mobileInspectorOpen = true
+    render()
+    if (interactionId) queueMicrotask(() => {
+      const detail = [...document.querySelectorAll<HTMLElement>('[data-progress-detail], .recommendation-progress-detail')].find(item =>
+        item.dataset.recommendationInteractionId === interactionId || item.dataset.workSampleInteractionId === interactionId,
+      )
+      if (!detail) return
+      if (typeof detail.scrollIntoView === 'function') detail.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      detail.querySelector<HTMLElement>('input, textarea, button')?.focus()
+    })
+    return
+  }
   if (action === 'plan-tomorrow') {
     dailyPlanningPrompt = null
     rememberView('upcoming')

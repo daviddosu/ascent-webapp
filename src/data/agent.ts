@@ -130,6 +130,9 @@ export type AgentRun = {
   progress: string[]
   result: AgentResult | null
   applicationState?: DavidApplicationState | null
+  applicationCaseId?: string | null
+  applicationCaseIds?: string[]
+  applicationRequirementId?: string | null
   error?: string
   errorCode?: string
   durable: boolean
@@ -168,6 +171,9 @@ type AgentRunRow = {
   context: {
     description?: string
     user_context?: string
+    application_case_id?: string
+    application_case_ids?: string[]
+    application_requirement_id?: string
     recipient_resolution_pending?: AgentRun['recipientResolution']
     scheduling_options?: AgentRun['schedulingOptions']
     progress_detail_interaction?: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction | null
@@ -254,6 +260,9 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     progressIndex: row.current_step,
     progress: Array.isArray(row.progress) ? row.progress : [],
     applicationState: row.application_state ?? null,
+    applicationCaseId: typeof row.context?.application_case_id === 'string' ? row.context.application_case_id : null,
+    applicationCaseIds: Array.isArray(row.context?.application_case_ids) ? row.context.application_case_ids.filter((value): value is string => typeof value === 'string') : [],
+    applicationRequirementId: typeof row.context?.application_requirement_id === 'string' ? row.context.application_requirement_id : null,
     result: row.result,
     error: row.error ?? undefined,
     errorCode: row.error_code ?? undefined,
@@ -575,6 +584,78 @@ export async function subscribeToAgentRuns(onChange: () => void) {
       event: '*',
       schema: 'public',
       table: 'agent_approvals',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_campaigns',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_cases',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_opportunities',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_requirements',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_evidence',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_artifacts',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_contacts',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'portal_checkpoints',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_questions',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_recommendation_interactions',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'human_assignments',
+      filter: `user_id=eq.${user.id}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'application_communications',
       filter: `user_id=eq.${user.id}`,
     }, onChange)
   await channel.subscribe()

@@ -322,6 +322,22 @@ export type Requirement = {
   linkedArtifactId: string | null
   verificationEvidenceIds: string[]
   blockerReason: string | null
+  /** Requirement-graph fields are optional for backwards-compatible rows. */
+  sourceId?: string | null
+  requirementType?: string | null
+  dependencyIds?: string[]
+  evidenceContract?: string[]
+  retryState?: {
+    attempts: number
+    maximumAttempts: number
+    lastFailure: string | null
+    nextAttemptAt: string | null
+    escalated: boolean
+  } | null
+  resolutionTier?: number | null
+  waitUntil?: string | null
+  createdAt?: string | null
+  updatedAt?: string | null
 }
 
 export const applicationCaseStages = [
