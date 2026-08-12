@@ -13,6 +13,7 @@ import {
   type FactResolution,
   type RequirementNode,
 } from './application-controller.ts'
+import type { ApplicationQuestion } from './application-questions.ts'
 
 export const APPLICATION_ENGINE_VERSION = 'david-application-engine@3' as const
 
@@ -30,8 +31,10 @@ export type ApplicationSemanticFunction = typeof applicationSemanticFunctions[nu
 
 export type RequirementType =
   | 'profile_fact' | 'eligibility' | 'official_requirement' | 'deadline' | 'funding'
-  | 'document' | 'writer' | 'referee' | 'professor' | 'communication' | 'portal_field'
-  | 'portal_section' | 'artifact_upload' | 'approval' | 'submission' | 'post_submission' | 'calendar'
+  | 'document' | 'writer' | 'research_proposal' | 'referee' | 'professor' | 'communication' | 'portal_field'
+  | 'portal_section' | 'supplemental_question' | 'artifact_upload' | 'transcript' | 'degree_certificate' | 'proof_of_graduation'
+  | 'credential_evaluation' | 'english_language_test' | 'admissions_test' | 'academic_evidence'
+  | 'approval' | 'submission' | 'post_submission' | 'calendar'
 
 export type ResolutionTier = 0 | 1 | 2 | 3 | 4 | 5
 
@@ -161,6 +164,7 @@ export type ApplicationEngineState = {
   approvals: Array<{ id: string; kind: string; status: 'pending' | 'approved' | 'rejected'; artifactIds: string[] }>
   browser: { portal: string | null; section: string | null; sessionId: string | null; checkpointObservationId: string | null }
   communication: Array<{ requirementId: string; providerMessageId: string; providerThreadId: string; state: string }>
+  questions?: ApplicationQuestion[]
   tierCounts: Record<ResolutionTier, number>
   userInterventions: number
 }
@@ -171,6 +175,7 @@ export type EngineStep =
   | { kind: 'WAIT'; caseId: string; requirementId: string; until: string | null }
   | { kind: 'USER_HANDOFF'; caseId: string; requirementId: string; missingFactIds: string[]; tier: 5 }
   | { kind: 'SEMANTIC_DECISION'; caseId: string; requirementId: string; tier: 2 | 4; request: SemanticRequest }
+  | { kind: 'SUPPLEMENTAL_QUESTION'; caseId: string; requirementId: string; questionId: string; action: 'discover' | 'resolve' | 'generate' | 'delegate_writer' | 'write' | 'verify' | 'user_decision'; question: ApplicationQuestion | null }
   | { kind: 'EXECUTE'; caseId: string; requirementId: string; tier: 0 | 1 | 3; action: string; evidenceContract: ObservationKind[]; idempotencyKey: string }
   | { kind: 'VERIFY'; caseId: string; requirementId: string; evidenceContract: ObservationKind[] }
   | { kind: 'BLOCKED'; caseId: string; reason: string }
@@ -268,6 +273,20 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
   }
   if (requirement.status === 'WAITING' && time(requirement.waitUntil) > time(now)) return { kind: 'WAIT', caseId: state.caseId, requirementId: requirement.id, until: requirement.waitUntil ?? null }
   if (!requirement.evidenceContract.length) return { kind: 'BLOCKED', caseId: state.caseId, reason: `Requirement ${requirement.id} has no evidence contract.` }
+  if (requirement.type === 'supplemental_question') {
+    const question = state.questions?.find(item => item.id === requirement.id || item.questionKey === requirement.source.id || item.id === requirement.source.id) ?? null
+    if (!question) return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: requirement.source.id, action: 'discover', question: null }
+    if (question.status === 'awaiting_user') return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: question.id, action: 'user_decision', question }
+    if (question.status === 'awaiting_writer') return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: question.id, action: 'delegate_writer', question }
+    if (question.status === 'ready_to_answer' || question.status === 'classified') return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: question.id, action: 'resolve', question }
+    if (question.status === 'ready_to_write' || question.status === 'generated' || question.status === 'quality_checked' || question.status === 'consistency_checked') return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: question.id, action: 'write', question }
+    if (question.status === 'written' || question.status === 'saved') return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: question.id, action: 'verify', question }
+    if (question.status === 'failed') {
+      const retryState = question.retryState
+      if ((retryState?.attempts ?? 0) >= (retryState?.maximumAttempts ?? 3)) return { kind: 'BLOCKED', caseId: state.caseId, reason: `Supplemental question ${question.id} exhausted its bounded retries: ${question.lastError ?? 'answer gate failed.'}` }
+      return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: question.id, action: 'resolve', question }
+    }
+  }
   const missingFacts = requirement.requiredFactIds.filter(id => state.facts.find(fact => fact.factId === id)?.verification !== 'VERIFIED')
   if (missingFacts.length) {
     const searched = requirement.retry.attempts > 0
@@ -277,11 +296,18 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
   }
   const existing = state.observations.filter(item => item.requirementId === requirement.id && item.verified)
   const semanticFunction = semanticFunctionByType[requirement.type]
-  if (semanticFunction && !existing.some(item => item.evidenceIds.includes(`semantic:${semanticFunction}`))) {
+  // Reference requirements begin with verified applicant referee facts, not
+  // provider correspondence. Route that first procedural step through the
+  // referee harness; semantic reference interpretation becomes meaningful
+  // only after a real provider observation exists.
+  const verifiedRefereeFacts = requirement.type === 'referee' && state.facts.some(fact =>
+    fact.verification === 'VERIFIED' && /^profile:referees(?:\[|$)/i.test(fact.factId),
+  )
+  if (semanticFunction && !verifiedRefereeFacts && !existing.some(item => item.evidenceIds.includes(`semantic:${semanticFunction}`))) {
     return { kind: 'SEMANTIC_DECISION', caseId: state.caseId, requirementId: requirement.id, tier: requirement.retry.attempts >= 1 ? 4 : 2, request: semanticRequestFor(state, requirement, semanticFunction) }
   }
   if (requirement.evidenceContract.every(kind => existing.some(item => item.kind === kind))) return { kind: 'VERIFY', caseId: state.caseId, requirementId: requirement.id, evidenceContract: requirement.evidenceContract }
-  const harness = requirement.retry.attempts > 0 || ['portal_section', 'artifact_upload', 'submission'].includes(requirement.type)
+  const harness = requirement.retry.attempts > 0 || ['portal_section', 'artifact_upload', 'referee', 'submission'].includes(requirement.type)
   return {
     kind: 'EXECUTE', caseId: state.caseId, requirementId: requirement.id, tier: harness ? 3 : 1,
     action: harness ? 'execute_with_harness' : 'execute_primitive', evidenceContract: requirement.evidenceContract,

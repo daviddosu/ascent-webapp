@@ -165,6 +165,17 @@ function publicError(error: unknown, operationType: BrowserOperation['type']) {
   }
 }
 
+function safeRuntimeDiagnostic(error: unknown) {
+  const raw = error instanceof Error
+    ? `${error.name}: ${error.message}`
+    : String(error)
+  return raw
+    .replace(/https?:\/\/\S+/gi, '[url]')
+    .replace(/[A-Za-z0-9+/_=-]{32,}/g, '[redacted]')
+    .replace(/\s+/g, ' ')
+    .slice(0, 500)
+}
+
 async function materializeApplicationAsset(admin: any, session: any, operation: BrowserOperation, assetId: string) {
   const run = await admin.from('agent_runs').select('task_id,context').eq('id', session.run_id).eq('user_id', session.user_id).single()
   if (!run.data) throw new BrowserExecutionError('browser_asset_inaccessible', 'The private file is not available to this task.', false)
@@ -510,6 +521,8 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
         submitted: result.submitted,
         confirmation_observed: result.confirmationObserved,
         expected_effect: String(operation.arguments.expected_effect ?? ''),
+        persisted_values: result.persistedValues,
+        read_back_values: result.readBackValues,
         observation: result.state.observation,
       }
       currentUrl = result.state.currentUrl
@@ -552,6 +565,12 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     response.status(200).json({ ok: true })
   } catch (error) {
     const safeError = publicError(error, operation.type)
+    console.error('[browser-worker] operation failed', {
+      operationType: operation.type,
+      errorCode: safeError.code,
+      errorMessage: safeError.message,
+      runtimeDiagnostic: safeRuntimeDiagnostic(error),
+    })
     await admin
       .from('browser_execution_sessions')
       .update({

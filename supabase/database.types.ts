@@ -883,6 +883,535 @@ export type Database = {
           },
         ]
       }
+      application_recommender_candidates: {
+        Row: {
+          candidate_key: string
+          created_at: string
+          current_title: string | null
+          data: Json
+          department: string | null
+          email: string | null
+          id: string
+          institution: string | null
+          name: string
+          relationship_evidence: Json
+          relationship_type: string
+          reusable: boolean
+          source_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          candidate_key: string
+          created_at?: string
+          current_title?: string | null
+          data?: Json
+          department?: string | null
+          email?: string | null
+          id?: string
+          institution?: string | null
+          name: string
+          relationship_evidence?: Json
+          relationship_type?: string
+          reusable?: boolean
+          source_ids?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          candidate_key?: string
+          created_at?: string
+          current_title?: string | null
+          data?: Json
+          department?: string | null
+          email?: string | null
+          id?: string
+          institution?: string | null
+          name?: string
+          relationship_evidence?: Json
+          relationship_type?: string
+          reusable?: boolean
+          source_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      application_recommendation_campaigns: {
+        Row: {
+          application_case_id: string
+          campaign_id: string | null
+          candidates: Json
+          created_at: string
+          data: Json
+          id: string
+          idempotency_key: string
+          interaction_metrics: Json
+          opportunity_id: string | null
+          requirement_graph: Json
+          requirements: Json
+          reusable_context: Json
+          status: string
+          strategy: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_case_id: string
+          campaign_id?: string | null
+          candidates?: Json
+          created_at?: string
+          data?: Json
+          id?: string
+          idempotency_key: string
+          interaction_metrics?: Json
+          opportunity_id?: string | null
+          requirement_graph?: Json
+          requirements?: Json
+          reusable_context?: Json
+          status?: string
+          strategy?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_case_id?: string
+          campaign_id?: string | null
+          candidates?: Json
+          created_at?: string
+          data?: Json
+          id?: string
+          idempotency_key?: string
+          interaction_metrics?: Json
+          opportunity_id?: string | null
+          requirement_graph?: Json
+          requirements?: Json
+          reusable_context?: Json
+          status?: string
+          strategy?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_recommendation_campaigns_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_recommendation_campaigns_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "application_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_recommendation_campaigns_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "application_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_recommendation_interactions: {
+        Row: {
+          agent_run_id: string | null
+          application_case_id: string
+          campaign_id: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          interaction_id: string
+          kind: string
+          question: string
+          reason: string
+          requirement_id: string
+          response: Json | null
+          reusable: boolean
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_run_id?: string | null
+          application_case_id: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          interaction_id: string
+          kind: string
+          question: string
+          reason: string
+          requirement_id: string
+          response?: Json | null
+          reusable?: boolean
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_run_id?: string | null
+          application_case_id?: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          interaction_id?: string
+          kind?: string
+          question?: string
+          reason?: string
+          requirement_id?: string
+          response?: Json | null
+          reusable?: boolean
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_recommendation_interactions_agent_run_id_fkey"
+            columns: ["agent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_recommendation_interactions_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_recommendation_interactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "application_recommendation_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_work_sample_candidates: {
+        Row: {
+          application_case_id: string | null
+          application_fit_score: number
+          candidate_data: Json
+          candidate_key: string
+          created_at: string
+          eligibility: string
+          id: string
+          quality_score: number
+          selected: boolean
+          source_asset_ids: string[]
+          source_ids: string[]
+          title: string
+          updated_at: string
+          user_id: string
+          artifact_type: string
+        }
+        Insert: {
+          application_case_id?: string | null
+          application_fit_score?: number
+          candidate_data?: Json
+          candidate_key: string
+          created_at?: string
+          eligibility?: string
+          id?: string
+          quality_score?: number
+          selected?: boolean
+          source_asset_ids?: string[]
+          source_ids?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+          artifact_type: string
+        }
+        Update: {
+          application_case_id?: string | null
+          application_fit_score?: number
+          candidate_data?: Json
+          candidate_key?: string
+          created_at?: string
+          eligibility?: string
+          id?: string
+          quality_score?: number
+          selected?: boolean
+          source_asset_ids?: string[]
+          source_ids?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+          artifact_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_work_sample_candidates_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_work_sample_interactions: {
+        Row: {
+          application_case_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          interaction_id: string
+          kind: string
+          metric: Json
+          options: Json
+          reason: string
+          reusable: boolean
+          response: Json | null
+          status: string
+          question: string
+          updated_at: string
+          user_id: string
+          work_sample_requirement_id: string | null
+        }
+        Insert: {
+          application_case_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          interaction_id: string
+          kind: string
+          metric?: Json
+          options?: Json
+          reason: string
+          reusable?: boolean
+          response?: Json | null
+          status?: string
+          question: string
+          updated_at?: string
+          user_id: string
+          work_sample_requirement_id?: string | null
+        }
+        Update: {
+          application_case_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          interaction_id?: string
+          kind?: string
+          metric?: Json
+          options?: Json
+          reason?: string
+          reusable?: boolean
+          response?: Json | null
+          status?: string
+          question?: string
+          updated_at?: string
+          user_id?: string
+          work_sample_requirement_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_work_sample_interactions_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_work_sample_interactions_work_sample_requirement_id_fkey"
+            columns: ["work_sample_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_work_sample_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_work_sample_requirements: {
+        Row: {
+          application_case_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          mode: string
+          opportunity_id: string | null
+          requirement_data: Json
+          requirement_key: string
+          requirement_type: string
+          source_evidence: Json
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_case_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          mode: string
+          opportunity_id?: string | null
+          requirement_data?: Json
+          requirement_key: string
+          requirement_type: string
+          source_evidence?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_case_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          mode?: string
+          opportunity_id?: string | null
+          requirement_data?: Json
+          requirement_key?: string
+          requirement_type?: string
+          source_evidence?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_work_sample_requirements_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_work_sample_requirements_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "application_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_work_sample_submissions: {
+        Row: {
+          application_case_id: string
+          approval_state: string
+          artifact_type: string
+          candidate_id: string | null
+          checksum: string
+          created_at: string
+          derived_artifact_id: string | null
+          filename: string
+          id: string
+          idempotency_key: string
+          original_artifact_id: string | null
+          original_checksum: string | null
+          page_count: number | null
+          provenance: Json
+          quality_gate: Json
+          resulting_state_evidence: Json
+          selected_pages: Json
+          selected_projects: Json
+          size_bytes: number | null
+          transformations: Json
+          updated_at: string
+          upload_state: string
+          user_id: string
+          word_count: number | null
+          work_sample_requirement_id: string
+        }
+        Insert: {
+          application_case_id: string
+          approval_state?: string
+          artifact_type: string
+          candidate_id?: string | null
+          checksum: string
+          created_at?: string
+          derived_artifact_id?: string | null
+          filename: string
+          id?: string
+          idempotency_key: string
+          original_artifact_id?: string | null
+          original_checksum?: string | null
+          page_count?: number | null
+          provenance?: Json
+          quality_gate?: Json
+          resulting_state_evidence?: Json
+          selected_pages?: Json
+          selected_projects?: Json
+          size_bytes?: number | null
+          transformations?: Json
+          updated_at?: string
+          upload_state?: string
+          user_id: string
+          word_count?: number | null
+          work_sample_requirement_id: string
+        }
+        Update: {
+          application_case_id?: string
+          approval_state?: string
+          artifact_type?: string
+          candidate_id?: string | null
+          checksum?: string
+          created_at?: string
+          derived_artifact_id?: string | null
+          filename?: string
+          id?: string
+          idempotency_key?: string
+          original_artifact_id?: string | null
+          original_checksum?: string | null
+          page_count?: number | null
+          provenance?: Json
+          quality_gate?: Json
+          resulting_state_evidence?: Json
+          selected_pages?: Json
+          selected_projects?: Json
+          size_bytes?: number | null
+          transformations?: Json
+          updated_at?: string
+          upload_state?: string
+          user_id?: string
+          word_count?: number | null
+          work_sample_requirement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_work_sample_submissions_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_work_sample_submissions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "application_work_sample_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_work_sample_submissions_derived_artifact_id_fkey"
+            columns: ["derived_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "application_artifacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_work_sample_submissions_original_artifact_id_fkey"
+            columns: ["original_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "application_artifacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_work_sample_submissions_work_sample_requirement_id_fkey"
+            columns: ["work_sample_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_work_sample_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_cases: {
         Row: {
           application_id: string | null
@@ -1602,13 +2131,20 @@ export type Database = {
           id: string
           linked_artifact_id: string | null
           name: string
+          dependency_ids: string[]
+          evidence_contract: Json
           required: boolean
+          requirement_type: string | null
+          resolution_tier: number | null
+          retry_state: Json
           responsible_party: string
           source: Json | null
+          source_id: string | null
           status: string
           updated_at: string
           user_id: string
           verification_evidence_ids: string[]
+          wait_until: string | null
         }
         Insert: {
           application_case_id: string
@@ -1621,13 +2157,20 @@ export type Database = {
           id?: string
           linked_artifact_id?: string | null
           name: string
+          dependency_ids?: string[]
+          evidence_contract?: Json
           required?: boolean
+          requirement_type?: string | null
+          resolution_tier?: number | null
+          retry_state?: Json
           responsible_party?: string
           source?: Json | null
+          source_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
           verification_evidence_ids?: string[]
+          wait_until?: string | null
         }
         Update: {
           application_case_id?: string
@@ -1640,13 +2183,20 @@ export type Database = {
           id?: string
           linked_artifact_id?: string | null
           name?: string
+          dependency_ids?: string[]
+          evidence_contract?: Json
           required?: boolean
+          requirement_type?: string | null
+          resolution_tier?: number | null
+          retry_state?: Json
           responsible_party?: string
           source?: Json | null
+          source_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
           verification_evidence_ids?: string[]
+          wait_until?: string | null
         }
         Relationships: [
           {
@@ -1661,6 +2211,139 @@ export type Database = {
             columns: ["linked_artifact_id"]
             isOneToOne: false
             referencedRelation: "application_artifacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_questions: {
+        Row: {
+          answer_route: string | null
+          answer_strategy: Json | null
+          answer_value: string | null
+          application_case_id: string
+          application_requirement_id: string | null
+          approval_requirement: string
+          artifact_dependencies: string[]
+          checkpoint_id: string | null
+          conditional_trigger: string | null
+          created_at: string
+          current_value: Json | null
+          exact_prompt: string
+          evidence_dependencies: string[]
+          id: string
+          input_type: string
+          last_error: string | null
+          maximum: number | null
+          minimum: number | null
+          normalized_prompt: string
+          options: Json
+          portal: string
+          portal_section: string
+          question_key: string
+          question_type: string
+          required: boolean
+          retry_state: Json
+          saved_state_evidence: Json | null
+          source: Json
+          status: string
+          unit: string | null
+          updated_at: string
+          user_id: string
+          validation_rule: string | null
+          writer_dependencies: string[]
+        }
+        Insert: {
+          answer_route?: string | null
+          answer_strategy?: Json | null
+          answer_value?: string | null
+          application_case_id: string
+          application_requirement_id?: string | null
+          approval_requirement?: string
+          artifact_dependencies?: string[]
+          checkpoint_id?: string | null
+          conditional_trigger?: string | null
+          created_at?: string
+          current_value?: Json | null
+          exact_prompt: string
+          evidence_dependencies?: string[]
+          id?: string
+          input_type: string
+          last_error?: string | null
+          maximum?: number | null
+          minimum?: number | null
+          normalized_prompt: string
+          options?: Json
+          portal: string
+          portal_section: string
+          question_key: string
+          question_type: string
+          required?: boolean
+          retry_state?: Json
+          saved_state_evidence?: Json | null
+          source?: Json
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+          validation_rule?: string | null
+          writer_dependencies?: string[]
+        }
+        Update: {
+          answer_route?: string | null
+          answer_strategy?: Json | null
+          answer_value?: string | null
+          application_case_id?: string
+          application_requirement_id?: string | null
+          approval_requirement?: string
+          artifact_dependencies?: string[]
+          checkpoint_id?: string | null
+          conditional_trigger?: string | null
+          created_at?: string
+          current_value?: Json | null
+          exact_prompt?: string
+          evidence_dependencies?: string[]
+          id?: string
+          input_type?: string
+          last_error?: string | null
+          maximum?: number | null
+          minimum?: number | null
+          normalized_prompt?: string
+          options?: Json
+          portal?: string
+          portal_section?: string
+          question_key?: string
+          question_type?: string
+          required?: boolean
+          retry_state?: Json
+          saved_state_evidence?: Json | null
+          source?: Json
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+          validation_rule?: string | null
+          writer_dependencies?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_questions_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_questions_application_requirement_id_fkey"
+            columns: ["application_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_questions_checkpoint_id_fkey"
+            columns: ["checkpoint_id"]
+            isOneToOne: false
+            referencedRelation: "portal_checkpoints"
             referencedColumns: ["id"]
           },
         ]
@@ -2994,6 +3677,388 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      academic_evidence_requirements: {
+        Row: {
+          accepted_evidence_types: Json
+          application_case_id: string
+          approval_requirement: string
+          blocker: string | null
+          completion_evidence: Json
+          confidence: string
+          cost: Json | null
+          created_at: string
+          current_artifact_ids: string[]
+          deadline_at: string | null
+          deadline_timezone: string | null
+          dependency_ids: string[]
+          exact_rule: Json
+          external_provider: Json | null
+          id: string
+          idempotency_key: string
+          institution: string
+          programme: string
+          requirement_key: string
+          requirement_type: string
+          requiredness: string
+          source_evidence: Json
+          stage: string
+          status: string
+          submission_method: Json
+          updated_at: string
+          user_id: string
+          official_status: string
+        }
+        Insert: {
+          accepted_evidence_types?: Json
+          application_case_id: string
+          approval_requirement?: string
+          blocker?: string | null
+          completion_evidence?: Json
+          confidence?: string
+          cost?: Json | null
+          created_at?: string
+          current_artifact_ids?: string[]
+          deadline_at?: string | null
+          deadline_timezone?: string | null
+          dependency_ids?: string[]
+          exact_rule?: Json
+          external_provider?: Json | null
+          id?: string
+          idempotency_key: string
+          institution: string
+          programme: string
+          requirement_key: string
+          requirement_type: string
+          requiredness: string
+          source_evidence?: Json
+          stage: string
+          status?: string
+          submission_method?: Json
+          updated_at?: string
+          user_id: string
+          official_status: string
+        }
+        Update: {
+          accepted_evidence_types?: Json
+          application_case_id?: string
+          approval_requirement?: string
+          blocker?: string | null
+          completion_evidence?: Json
+          confidence?: string
+          cost?: Json | null
+          created_at?: string
+          current_artifact_ids?: string[]
+          deadline_at?: string | null
+          deadline_timezone?: string | null
+          dependency_ids?: string[]
+          exact_rule?: Json
+          external_provider?: Json | null
+          id?: string
+          idempotency_key?: string
+          institution?: string
+          programme?: string
+          requirement_key?: string
+          requirement_type?: string
+          requiredness?: string
+          source_evidence?: Json
+          stage?: string
+          status?: string
+          submission_method?: Json
+          updated_at?: string
+          user_id?: string
+          official_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_evidence_requirements_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academic_evidence_deliveries: {
+        Row: {
+          application_case_id: string
+          blocker: string | null
+          commitment_at: string | null
+          commitment_due_at: string | null
+          created_at: string
+          delivery_key: string
+          delivery_type: string
+          evidence: Json
+          id: string
+          idempotency_key: string
+          provider: string | null
+          provider_id: string | null
+          recipient: string | null
+          requirement_key: string
+          retry_state: Json
+          state: string
+          tracking_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_case_id: string
+          blocker?: string | null
+          commitment_at?: string | null
+          commitment_due_at?: string | null
+          created_at?: string
+          delivery_key: string
+          delivery_type: string
+          evidence?: Json
+          id?: string
+          idempotency_key: string
+          provider?: string | null
+          provider_id?: string | null
+          recipient?: string | null
+          requirement_key: string
+          retry_state?: Json
+          state?: string
+          tracking_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_case_id?: string
+          blocker?: string | null
+          commitment_at?: string | null
+          commitment_due_at?: string | null
+          created_at?: string
+          delivery_key?: string
+          delivery_type?: string
+          evidence?: Json
+          id?: string
+          idempotency_key?: string
+          provider?: string | null
+          provider_id?: string | null
+          recipient?: string | null
+          requirement_key?: string
+          retry_state?: Json
+          state?: string
+          tracking_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_evidence_deliveries_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credential_evaluation_cases: {
+        Row: {
+          application_case_ids: string[]
+          blocker: string | null
+          cost: Json | null
+          created_at: string
+          deadline_at: string | null
+          evaluation_key: string
+          evaluation_type: string
+          expected_processing_time: string | null
+          id: string
+          idempotency_key: string
+          institution_deliveries: Json
+          provider: string
+          recipient_institutions: string[]
+          reference_number: string | null
+          report_dispatch_state: string
+          report_id: string | null
+          required_delivery_route: string
+          required_documents: string[]
+          requirement_keys: string[]
+          source_evidence: Json
+          state: string
+          translation_rules: string[]
+          university_receipt_states: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_case_ids?: string[]
+          blocker?: string | null
+          cost?: Json | null
+          created_at?: string
+          deadline_at?: string | null
+          evaluation_key: string
+          evaluation_type: string
+          expected_processing_time?: string | null
+          id?: string
+          idempotency_key: string
+          institution_deliveries?: Json
+          provider: string
+          recipient_institutions?: string[]
+          reference_number?: string | null
+          report_dispatch_state?: string
+          report_id?: string | null
+          required_delivery_route?: string
+          required_documents?: string[]
+          requirement_keys?: string[]
+          source_evidence?: Json
+          state?: string
+          translation_rules?: string[]
+          university_receipt_states?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_case_ids?: string[]
+          blocker?: string | null
+          cost?: Json | null
+          created_at?: string
+          deadline_at?: string | null
+          evaluation_key?: string
+          evaluation_type?: string
+          expected_processing_time?: string | null
+          id?: string
+          idempotency_key?: string
+          institution_deliveries?: Json
+          provider?: string
+          recipient_institutions?: string[]
+          reference_number?: string | null
+          report_dispatch_state?: string
+          report_id?: string | null
+          required_delivery_route?: string
+          required_documents?: string[]
+          requirement_keys?: string[]
+          source_evidence?: Json
+          state?: string
+          translation_rules?: string[]
+          university_receipt_states?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      language_test_attempts: {
+        Row: {
+          candidate_or_report_number: string | null
+          created_at: string
+          id: string
+          attempt_key: string
+          official_report_state: string
+          overall_score: number | null
+          provider: string
+          provenance: Json
+          recipients: Json
+          score_report_artifact_id: string | null
+          section_scores: Json
+          test_date: string
+          test_type: string
+          test_version: string | null
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          candidate_or_report_number?: string | null
+          created_at?: string
+          id?: string
+          attempt_key: string
+          official_report_state?: string
+          overall_score?: number | null
+          provider: string
+          provenance?: Json
+          recipients?: Json
+          score_report_artifact_id?: string | null
+          section_scores?: Json
+          test_date: string
+          test_type: string
+          test_version?: string | null
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          candidate_or_report_number?: string | null
+          created_at?: string
+          id?: string
+          attempt_key?: string
+          official_report_state?: string
+          overall_score?: number | null
+          provider?: string
+          provenance?: Json
+          recipients?: Json
+          score_report_artifact_id?: string | null
+          section_scores?: Json
+          test_date?: string
+          test_type?: string
+          test_version?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      admissions_test_attempts: {
+        Row: {
+          attempt_key: string
+          candidate_or_report_number: string | null
+          composite_score: number | null
+          created_at: string
+          id: string
+          official_report_state: string
+          overall_score: number | null
+          percentile: number | null
+          provenance: Json
+          recipients: Json
+          score_artifact_id: string | null
+          section_scores: Json
+          test_date: string
+          test_type: string
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+          writing_score: number | null
+        }
+        Insert: {
+          attempt_key: string
+          candidate_or_report_number?: string | null
+          composite_score?: number | null
+          created_at?: string
+          id?: string
+          official_report_state?: string
+          overall_score?: number | null
+          percentile?: number | null
+          provenance?: Json
+          recipients?: Json
+          score_artifact_id?: string | null
+          section_scores?: Json
+          test_date: string
+          test_type: string
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+          writing_score?: number | null
+        }
+        Update: {
+          attempt_key?: string
+          candidate_or_report_number?: string | null
+          composite_score?: number | null
+          created_at?: string
+          id?: string
+          official_report_state?: string
+          overall_score?: number | null
+          percentile?: number | null
+          provenance?: Json
+          recipients?: Json
+          score_artifact_id?: string | null
+          section_scores?: Json
+          test_date?: string
+          test_type?: string
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+          writing_score?: number | null
+        }
+        Relationships: []
       }
     }
     Views: {

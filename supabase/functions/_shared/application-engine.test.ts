@@ -16,6 +16,7 @@ import {
   type PortalObservation,
   type WebObservation,
 } from './application-engine'
+import { discoverApplicationQuestions } from './application-questions'
 
 function requirement(overrides: Partial<EngineRequirement> = {}): EngineRequirement {
   return {
@@ -62,6 +63,27 @@ it('searches before asking for an unresolved applicant fact', () => {
   expect(planApplicationEngineStep(unresolved)).toMatchObject({ kind: 'USER_HANDOFF', missingFactIds: ['profile:name'], tier: 5 })
 })
 
+it('makes a discovered supplemental question a first-class engine step', () => {
+  const [question] = discoverApplicationQuestions({
+    applicationCaseId: 'case-1',
+    portal: 'benchmark.test',
+    section: 'Research direction',
+    fields: [{ name: 'research_interests', label: 'Research interests', prompt: 'Describe your research interests. Limit 150 words.', type: 'textarea', value: '', checked: false, required: true }],
+  })
+  const supplemental = requirement({
+    id: 'supplemental-1',
+    type: 'supplemental_question',
+    name: 'Research interests supplemental question',
+    requiredFactIds: [],
+    source: { id: question!.questionKey, authority: 'provider' },
+  })
+  const input = state([supplemental])
+  input.questions = [question!]
+  expect(planApplicationEngineStep(input)).toMatchObject({ kind: 'SUPPLEMENTAL_QUESTION', action: 'resolve', questionId: question!.id })
+  input.questions = [{ ...question!, status: 'awaiting_user' }]
+  expect(planApplicationEngineStep(input)).toMatchObject({ kind: 'SUPPLEMENTAL_QUESTION', action: 'user_decision' })
+})
+
 it('gives David one typed semantic decision with minimal context', () => {
   const semantic = requirement({ type: 'eligibility', evidenceContract: ['web'] })
   const input = state([semantic])
@@ -72,6 +94,16 @@ it('gives David one typed semantic decision with minimal context', () => {
   expect(step.request.function).toBe('evaluate_programme_eligibility')
   expect(step.request.verifiedFacts).toHaveLength(1)
   expect(validateSemanticDecision(input, step.request, { schemaVersion: 1, function: step.request.function, caseId: 'case-1', requirementId: 'req-1', decision: 'eligible', confidence: 'high', evidenceIds: ['excerpt-1'], factIds: ['profile:name'], rationale: 'The verified degree satisfies the official requirement.' })).toEqual({ valid: true, defects: [] })
+})
+
+it('routes verified synthetic referees to the procedural harness before semantic interpretation', () => {
+  const referee = requirement({ id: 'referee-1', type: 'referee', name: 'Referee contact', requiredFactIds: [], evidenceContract: ['gmail'] })
+  const input = state([referee])
+  input.facts.push({
+    factId: 'profile:referees[0]', value: 'Dr. Amina Bello', verification: 'VERIFIED',
+    provenance: { kind: 'user_statement', sourceId: 'profile-1', confirmed: true }, confidence: 'high', conflict: false, candidates: [], reason: null,
+  })
+  expect(planApplicationEngineStep(input)).toMatchObject({ kind: 'EXECUTE', requirementId: 'referee-1', action: 'execute_with_harness', tier: 3 })
 })
 
 it('rejects semantic answers with wrong case, unsupported decisions, or evidence', () => {

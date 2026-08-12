@@ -4,6 +4,7 @@ import { isIP } from 'node:net'
 import { chromium as playwright, type Browser, type Locator, type Page } from 'playwright-core'
 import { BrowserExecutionError } from './_flight-browser.js'
 import { normalizedIpLiteral, pinnedHostResolverRules, resolvePublicHostname } from './_egress-policy.js'
+import { discoverApplicationQuestions, type ApplicationQuestion, type PortalFieldObservation } from '../supabase/functions/_shared/application-questions.js'
 
 // Public browser runs are serverless Chromium invocations. Disable WebGL and
 // avoid the small shared-memory mount so a page renderer cannot take down the
@@ -31,7 +32,8 @@ export type PublicBrowserObservation = {
   text: string
   links: Array<{ text: string; href: string }>
   controls: Array<{ label: string; kind: string }>
-  fields: Array<{ name: string; label: string; type: string; value: string; checked: boolean; fileName: string | null }>
+  fields: Array<PortalFieldObservation>
+  questions: ApplicationQuestion[]
   untrustedExternalContent: true
 }
 
@@ -39,6 +41,15 @@ const sensitivePattern = /\b(?:password|passcode|otp|one[- ]?time|card|credit|de
 
 function benchmarkModeEnabled() {
   return process.env.SHOTCOUNT_BENCHMARK_MODE === 'true' && process.env.NODE_ENV !== 'production'
+}
+
+function controlledProductionFixturePage(page: Page) {
+  try {
+    const url = new URL(page.url())
+    return url.hostname === 'app.shotcount.app' && url.pathname === '/api/application-portal-fixture'
+  } catch {
+    return false
+  }
 }
 
 async function executablePath() {
@@ -64,12 +75,32 @@ async function launchBrowser(domains: unknown) {
       throw new BrowserExecutionError('browser_dns_not_public', 'The browser destination did not resolve exclusively to public network addresses.', false)
     }
   }
+  // Sparticuz's Lambda defaults include single-process and in-process GPU
+  // flags. They are useful for a constrained one-shot Lambda, but can close
+  // the renderer during repeated serverless form actions on Vercel. Keep the
+  // remaining hardened defaults and let Chromium isolate the renderer.
+  const linuxChromiumArgs = process.platform === 'linux'
+    ? chromium.args.filter(argument => ![
+      '--single-process',
+      '--in-process-gpu',
+      '--ignore-gpu-blocklist',
+    ].includes(argument))
+    : []
   return playwright.launch({
     executablePath: await executablePath(),
     headless: true,
     args: [
-      ...(process.platform === 'linux' ? chromium.args : []),
-      ...(process.platform === 'linux' ? ['--disable-dev-shm-usage'] : []),
+      ...linuxChromiumArgs,
+      ...(process.platform === 'linux' ? [
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--no-first-run',
+      ] : []),
       ...(benchmark ? ['--ignore-certificate-errors', '--host-resolver-rules=MAP benchmark.test 127.0.0.1'] : []),
       ...(!benchmark && resolverRules ? [`--host-resolver-rules=${resolverRules}`] : []),
     ],
@@ -159,12 +190,27 @@ async function assertPageAllowed(page: Page, domains: unknown) {
 }
 
 async function observe(page: Page): Promise<PublicBrowserObservation> {
-  return page.evaluate(() => {
+  const raw = await page.evaluate(() => {
     const clean = (value: string | null | undefined, maximum: number) => (value ?? '').replace(/\s+/g, ' ').trim().slice(0, maximum)
+    const exact = (value: string | null | undefined, maximum: number) => (value ?? '').trim().slice(0, maximum)
     const visible = (element: Element) => {
       const html = element as HTMLElement
       return html.offsetWidth > 0 && html.offsetHeight > 0
     }
+    const promptFor = (control: HTMLInputElement) => {
+      const describedBy = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean)
+        .map(id => document.getElementById(id)?.textContent || '').filter(Boolean)
+      const legend = control.closest('fieldset')?.querySelector('legend')?.textContent || ''
+      const label = control.getAttribute('aria-label') || control.labels?.[0]?.textContent || control.placeholder || control.name || ''
+      return exact(control.getAttribute('data-question-prompt') || control.closest('[data-question-prompt]')?.getAttribute('data-question-prompt') || [legend, label, ...describedBy].filter(Boolean).join(' — '), 2_000)
+    }
+    const sectionFor = (control: HTMLInputElement) => exact(
+      control.getAttribute('data-portal-section') ||
+      control.closest('fieldset')?.querySelector('legend')?.textContent ||
+      document.querySelector('h1,h2,h3')?.textContent ||
+      location.pathname,
+      240,
+    )
     const headings = [...document.querySelectorAll('h1,h2,h3')]
       .filter(visible)
       .map(element => clean(element.textContent, 240))
@@ -197,17 +243,37 @@ async function observe(page: Page): Promise<PublicBrowserObservation> {
         const control = element as HTMLInputElement
         const label = clean(control.getAttribute('aria-label') || control.labels?.[0]?.textContent || control.placeholder || control.name, 240)
         const fileName = control.type === 'file' ? control.files?.[0]?.name ?? null : null
+        const options = control.tagName.toLocaleLowerCase() === 'select'
+          ? [...(control as unknown as HTMLSelectElement).options].map(option => ({ value: exact(option.value, 500), label: clean(option.textContent, 500), ...(option.disabled ? { disabled: true } : {}) }))
+          : control.type === 'radio' || control.type === 'checkbox'
+            ? [...document.querySelectorAll(`input[name="${CSS.escape(control.name)}"]`)].map(option => {
+              const input = option as HTMLInputElement
+              return { value: exact(input.value, 500), label: clean(input.labels?.[0]?.textContent || input.value, 500), ...(input.disabled ? { disabled: true } : {}) }
+            })
+            : []
         return {
           name: clean(control.name, 160),
           label,
+          prompt: promptFor(control),
           type: clean(control.type || control.tagName.toLocaleLowerCase(), 80),
           value: control.type === 'password' || /otp|passcode|verification|security/i.test(`${control.name} ${label}`) ? '' : clean(control.value, 1_000),
           checked: Boolean(control.checked),
+          required: Boolean(control.required),
           fileName,
+          options,
+          minLength: control.minLength >= 0 ? control.minLength || null : null,
+          maxLength: control.maxLength >= 0 ? control.maxLength || null : null,
+          min: control.type === 'number' && control.min ? Number(control.min) : null,
+          max: control.type === 'number' && control.max ? Number(control.max) : null,
+          pattern: control.getAttribute('pattern'),
+          section: sectionFor(control),
+          conditionalTrigger: control.getAttribute('data-conditional-if') || control.getAttribute('aria-controls') || null,
+          visible: true,
+          savedState: control.getAttribute('data-saved-state') === 'true',
         }
       })
       .filter(field => field.name || field.label)
-      .slice(0, 40)
+      .slice(0, 80)
     return {
       title: clean(document.title, 300),
       url: location.href,
@@ -219,6 +285,15 @@ async function observe(page: Page): Promise<PublicBrowserObservation> {
       untrustedExternalContent: true as const,
     }
   })
+  const portal = new URL(raw.url).hostname
+  const questions = discoverApplicationQuestions({
+    applicationCaseId: '',
+    portal,
+    section: raw.headings[0] || new URL(raw.url).pathname,
+    url: raw.url,
+    fields: raw.fields,
+  })
+  return { ...raw, questions }
 }
 
 async function targetLocator(page: Page, target: string): Promise<Locator> {
@@ -268,11 +343,15 @@ async function assertNonSensitive(page: Page, locator: Locator, target: string, 
   const benchmarkSyntheticCredential = benchmarkModeEnabled() &&
     new URL(page.url()).hostname === 'benchmark.test' &&
     /^benchmark-(?:password|otp|code)-/i.test(value ?? '')
+  const productionFixtureSyntheticCredential = controlledProductionFixturePage(page) && (
+    /^Fixture-Run-[0-9]{4}![A-Za-z][A-Za-z0-9._-]{2,80}$/i.test(value ?? '') ||
+    (/verification|one[- ]?time|otp|passcode/i.test(`${target} ${metadata.name} ${metadata.autocomplete} ${metadata.label}`) && /^\d{6}$/.test(value ?? ''))
+  )
   if (
     metadata.type === 'password' ||
     sensitivePattern.test([target, value ?? '', metadata.name, metadata.autocomplete, metadata.label].join(' '))
   ) {
-    if (benchmarkSyntheticCredential) return
+    if (benchmarkSyntheticCredential || productionFixtureSyntheticCredential) return
     throw new BrowserExecutionError('browser_sensitive_field_blocked', 'ShotCount will not enter credentials, payment data, or private identifiers.', false)
   }
 }
@@ -321,11 +400,17 @@ async function applyAction(page: Page, action: PublicBrowserAction, domains: unk
       tag: element.tagName.toLocaleLowerCase(),
       type: (element as HTMLButtonElement).type || '',
       href: (element as HTMLAnchorElement).href || '',
+      expanded: element.getAttribute('aria-expanded'),
+      disclosure: element.hasAttribute('data-disclosure') || element.closest('details') !== null || element.tagName.toLocaleLowerCase() === 'summary',
     }))
-    if (metadata.tag !== 'a' || !metadata.href) {
-      throw new BrowserExecutionError('browser_click_requires_submit', 'Only safe navigation links can be clicked automatically. Form buttons require approval.', false)
+    const safeDisclosure = (metadata.tag === 'button' || metadata.tag === 'summary') && (metadata.expanded !== null || metadata.disclosure) && metadata.type !== 'submit'
+    if (metadata.tag !== 'a' && !safeDisclosure) {
+      throw new BrowserExecutionError('browser_click_requires_submit', 'Only safe navigation links and explicit disclosure controls can be clicked automatically. Form save and submit buttons require approval.', false)
     }
-    allowedPublicUrl(metadata.href, domains)
+    if (metadata.tag === 'a') {
+      if (!metadata.href) throw new BrowserExecutionError('browser_click_target_invalid', 'The safe navigation link has no destination.', false)
+      allowedPublicUrl(metadata.href, domains)
+    }
     await locator.click()
     await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => undefined)
     await assertPageAllowed(page, domains)
@@ -398,20 +483,49 @@ export async function submitPublicPage(state: PublicBrowserState, target: string
     ) {
       throw new BrowserExecutionError('browser_submit_target_invalid', 'The approved browser submission target is not a safe form submit control.', false)
     }
+    const invalidFields = await locator.evaluate(element => {
+      const form = (element as HTMLButtonElement).form
+      if (!form) return []
+      return Array.from(form.elements)
+        .filter(control => control !== element && !(control as HTMLInputElement).checkValidity())
+        .map(control => {
+          const input = control as HTMLInputElement
+          const label = input.labels?.[0]?.textContent?.replace(/\s+/g, ' ').trim() || input.getAttribute('aria-label') || input.name || input.type || 'form field'
+          return { name: input.name || '', label: label.slice(0, 240), type: input.type || input.tagName.toLocaleLowerCase() }
+        })
+        .slice(0, 20)
+    })
+    if (invalidFields.length) {
+      throw new BrowserExecutionError(
+        'browser_form_validation_required',
+        `Complete or correct these form fields before saving: ${invalidFields.map(field => field.label).join(', ')}.`,
+        true,
+        { missingFields: invalidFields },
+      )
+    }
     await locator.click()
     await page.waitForLoadState('domcontentloaded', { timeout: 20_000 }).catch(() => undefined)
     await assertPageAllowed(page, domains)
     const observation = await observe(page)
     const confirmationObserved = before.url !== observation.url || before.text !== observation.text
+    const fieldValues = (fields: PublicBrowserObservation['fields']) => Object.fromEntries(fields
+      .filter(field => field.name || field.label)
+      .map(field => [field.name || field.label, field.type === 'checkbox' || field.type === 'radio' ? (field.checked ? field.value : '') : field.value]))
     return {
       state: {
-        entryUrl: state.entryUrl || state.currentUrl,
+        // The submit response is a new resumable page. Do not keep replaying
+        // the pre-submit field actions from the original form: that would
+        // reconstruct the form while the observation describes the saved
+        // confirmation page, making its links appear to be missing.
+        entryUrl: page.url(),
         currentUrl: page.url(),
-        actions: state.actions,
+        actions: [],
         observation,
       } satisfies PublicBrowserState,
       submitted: true,
       confirmationObserved,
+      persistedValues: fieldValues(before.fields),
+      readBackValues: fieldValues(observation.fields),
     }
   } finally {
     await browser.close()

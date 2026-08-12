@@ -53,4 +53,13 @@ describe('controlled application portal fixture', () => {
     expect(result.body).toContain('name="legal_name"')
     expect(result.body).toContain('data-seed="42"')
   })
+
+  it('exposes supplemental prompts and conditional questions in the canonical v2 portal', () => {
+    const research = run('GET', '/api/application-portal-fixture?version=v2&step=research&seed=7')
+    expect(research.body).toContain('Limit your response to 150 words.')
+    expect(research.body).toContain('data-question-prompt=')
+    const conduct = run('GET', '/api/application-portal-fixture?version=v2&step=conduct&seed=7')
+    expect(conduct.body).toContain('conduct-detail')
+    expect(conduct.body).toContain('Limit your response to 100 words.')
+  })
 })

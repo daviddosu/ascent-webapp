@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { unzipSync } from 'https://esm.sh/fflate@0.8.2'
 import { constantTimeEqual } from '../_shared/crypto.ts'
+import { unzipSync } from 'https://esm.sh/fflate@0.8.2'
 import {
   agentCompletionEvidenceSatisfied,
   agentExecutionDateContext,
@@ -55,6 +55,42 @@ import { namedRecipientsFromObjective as parseNamedRecipients } from '../_shared
 import { validateDocumentText } from '../_shared/docx.ts'
 import { createPdf } from '../_shared/pdf.ts'
 import {
+  applyProposalRevisionPlan,
+  buildProposalArtifactIdentity,
+  buildProposalResearchDossier,
+  buildProposalRevisionPlan,
+  buildResearchProposalBrief,
+  buildResearchProposalStrategy,
+  collectProposalContext,
+  createProposalDraftApprovalInteraction,
+  createProposalFinalApprovalInteraction,
+  createProposalMissingContextInteraction,
+  createResearchDirectionInteraction,
+  createResearchProposalWorkflow,
+  detectResearchProposalRequirement,
+  evaluateResearchProposalQuality,
+  interpretResearchProposalFeedback,
+  normalizeResearchProposalRequirement,
+  rankResearchDirections,
+  selectResearchProposalWriter,
+  transitionResearchProposalWorkflow,
+  validateResearchProposalDraft,
+  verifyApprovedProposalArtifact,
+  verifyProposalDelivery,
+  type ProposalCitation,
+  type ProposalClaim,
+  type ProposalContextSource,
+  type ProposalDraft,
+  type ProposalEvidence,
+  type ProposalMethodology,
+  type ProposalPaperSummary,
+  type ProposalResearchDossier,
+  type ProposalResearchDirection,
+  type ResearchProposalRequirement,
+  type ResearchProposalStrategy,
+  type ResearchProposalWorkflow,
+} from '../_shared/research-proposal-workflow.ts'
+import {
   createInterAgentRequest,
   buildReadinessReport,
   buildRefereeSupportPack,
@@ -70,6 +106,43 @@ import {
   submissionIdempotencyKey,
   type DavidApplicationState,
 } from '../_shared/david-applications.ts'
+import {
+  applyRecommendationInteraction,
+  buildRecommendationRequirementGraph,
+  buildRecommenderSupportPack,
+  createRecommendationInteraction,
+  createRecommendationPortfolioStrategy,
+  extractRecommendationRequirements,
+  generateRecommendationRequestEmail,
+  nextRecommendationWorkflowState,
+  resolveRecommendationContext,
+  type RecommendationContextResolution,
+} from '../_shared/recommendation-workflow.ts'
+import {
+  applyWorkSampleInteraction,
+  buildWorkSampleRequirementGraph,
+  createWorkSamplePortfolioStrategy,
+  extractWorkSampleRequirements,
+  prepareWorkSampleSubmission,
+  rankWorkSampleCandidates,
+  resolveWorkSampleContext,
+  scanWorkSampleSecurity,
+  validateWorkSampleSubmission,
+  verifyCandidateAuthorship,
+  verifyWorkSampleUpload,
+  workSampleCompletionEvidence,
+  type WorkSampleCandidate,
+  type WorkSampleInteraction,
+  type WorkSampleRequirement,
+  type WorkSampleSubmission,
+} from '../_shared/work-sample-workflow.ts'
+import {
+  coordinateAcademicEvidence,
+  type AcademicApplicationInput,
+  type AcademicContextInput,
+  type AcademicEvidenceRequirementType,
+  type AcademicRule,
+} from '../_shared/academic-evidence.ts'
 import { isApplicationIntent } from '../_shared/application.ts'
 import {
   applicationEngineDirective,
@@ -102,6 +175,16 @@ import {
   type ProposedApplicationAction,
   type RequirementNode,
 } from '../_shared/application-controller.ts'
+import {
+  applicationQuestionTypes,
+  discoverApplicationQuestions,
+  resolveSupplementalAnswer,
+  runSupplementalAnswerGates,
+  verifySavedSupplementalAnswer,
+  type ApplicationQuestion,
+  type SupplementalProgressInteraction,
+  type VerifiedSupplementalFact,
+} from '../_shared/application-questions.ts'
 import { renderCanonicalCv, validateCvData, type CvData, type CvPageTarget } from '../_shared/cv.ts'
 import {
   generateSupervisorOutreach,
@@ -136,6 +219,7 @@ type RequestBody = {
   title?: string
   description?: string
   context?: string
+  interactionResponse?: { interactionId?: string; kind?: string; value?: unknown; reusable?: boolean }
   goalId?: string | null
   due?: string | null
   timezone?: string
@@ -280,6 +364,8 @@ type BrowserOperation = {
   arguments: Record<string, unknown>
 }
 
+type ControlledFixtureContext = Partial<Record<'run' | 'seed' | 'failure' | 'version' | 'profile' | 'step', string>>
+
 type BrowserCheckpoint = {
   workerAttempts?: number
   workerAttemptsByOperation?: Record<string, number>
@@ -330,6 +416,7 @@ type BrowserCheckpoint = {
     actions?: Array<Record<string, unknown>>
     observation?: Record<string, unknown>
   }
+  controlledFixtureContext?: ControlledFixtureContext
   submissionAttempted?: {
     operationId?: string
     attemptedAt?: string
@@ -385,6 +472,61 @@ function jsonResponse(request: Request, body: unknown, status = 200) {
 
 function safeString(value: unknown, maximum = 10_000) {
   return typeof value === 'string' ? value.slice(0, maximum) : ''
+}
+
+function unknownArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : []
+}
+
+const controlledFixtureUrlKeys = ['run', 'seed', 'failure', 'version', 'profile', 'step'] as const
+
+function controlledFixtureContextFromUrl(rawUrl: string): ControlledFixtureContext | null {
+  try {
+    const url = new URL(rawUrl)
+    if (url.hostname.toLocaleLowerCase() !== 'app.shotcount.app' || url.pathname !== '/api/application-portal-fixture') return null
+    const context: ControlledFixtureContext = {}
+    for (const key of controlledFixtureUrlKeys) {
+      const value = url.searchParams.get(key)
+      if (value) context[key] = value.slice(0, 2_000)
+    }
+    return context
+  } catch {
+    return null
+  }
+}
+
+function normalizeControlledFixtureNavigation(rawUrl: string, checkpoint: BrowserCheckpoint) {
+  const fallback = safeString(rawUrl, 2_000)
+  let destination: URL
+  try {
+    destination = new URL(fallback)
+  } catch {
+    return { url: fallback, context: checkpoint.controlledFixtureContext ?? null, repaired: false }
+  }
+  if (destination.hostname.toLocaleLowerCase() !== 'app.shotcount.app' || destination.pathname !== '/api/application-portal-fixture') {
+    return { url: fallback, context: checkpoint.controlledFixtureContext ?? null, repaired: false }
+  }
+
+  const current = checkpoint.controlledFixtureContext ??
+    controlledFixtureContextFromUrl(safeString(checkpoint.publicBrowser?.currentUrl, 2_000)) ??
+    controlledFixtureContextFromUrl(safeString(checkpoint.publicBrowser?.entryUrl, 2_000))
+  if (!current) return { url: destination.toString(), context: controlledFixtureContextFromUrl(destination.toString()), repaired: destination.toString() !== fallback }
+
+  // A recovery navigation often uses the fixture base URL. Keep that URL
+  // bound to the existing case/seed and section so the controlled portal
+  // cannot silently fall back to an unscoped account page.
+  const carriesExplicitStep = destination.searchParams.has('step')
+  for (const key of ['run', 'seed', 'failure', 'version', 'profile'] as const) {
+    const value = current[key]
+    if (value && (!carriesExplicitStep || !destination.searchParams.has(key))) destination.searchParams.set(key, value)
+  }
+  if (!destination.searchParams.has('step') && current.step) destination.searchParams.set('step', current.step)
+  const normalized = destination.toString()
+  return {
+    url: normalized,
+    context: controlledFixtureContextFromUrl(normalized) ?? current,
+    repaired: normalized !== fallback,
+  }
 }
 
 function airportContextOptions(run: AgentRunRow, question: string, missingFields: unknown) {
@@ -687,8 +829,8 @@ function contextOwnerSpecialistDisplayName(run: AgentRunRow) {
   return ownsContext ? getSpecialist('roon')?.displayName ?? 'Roon' : activeSpecialistDisplayName(run)
 }
 
-function specialistMessage(run: AgentRunRow, message: string) {
-  const rendered = message.replace(/\bRoon\b/gi, contextOwnerSpecialistDisplayName(run))
+function specialistMessage(run: AgentRunRow, message: unknown) {
+  const rendered = safeString(message, 4_000).replace(/\bRoon\b/gi, contextOwnerSpecialistDisplayName(run))
   if (run.capability !== 'flight_search') return rendered
   if (/live provider timed out after bounded recovery/i.test(rendered)) {
     return 'The live flight site is taking too long. Your options are saved—choose one to try again.'
@@ -1458,9 +1600,11 @@ async function updateRun(
 }
 
 async function claimRunForContinuation(admin: AdminClient, run: AgentRunRow) {
-  const workerId = `task-agent:${crypto.randomUUID()}`
   const { data, error } = await admin.rpc('claim_agent_run', {
     p_run_id: run.id,
+    // recoverStalledRun may call advanceRun, which claims the same run again
+    // before starting its continuation. Reuse this invocation's worker ID so
+    // the lease is re-entrant instead of appearing owned by another worker.
     p_worker_id: workerId,
     p_lease_seconds: 45,
   })
@@ -1680,6 +1824,40 @@ async function pauseForApproval(
     }).eq('id', action.id).eq('user_id', run.user_id).eq('status', 'cancelled').select('id').maybeSingle()
     if (actionReopened.error || !actionReopened.data) {
       throw new Error(actionReopened.error?.message ?? 'Could not reopen the agent action.')
+    }
+  } else if (existingApproval?.status === 'approved' && action.status === 'failed' && action.retryable === true) {
+    // The user already approved this exact consequential action, but the
+    // provider rejected it before producing an external effect (for example,
+    // a controlled portal validation error). Reopen the same approval with a
+    // fresh payload/version so the corrected retry cannot strand the run in
+    // needs_approval with no pending approval row.
+    const reopened = await admin.from('agent_approvals').update({
+      status: 'pending',
+      title: approvalTitle(toolName),
+      summary: approvalSummary(toolName, argumentsValue),
+      payload,
+      payload_hash: payloadHash,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      decided_at: null,
+      version: existingApproval.version + 1,
+    })
+      .eq('id', existingApproval.id)
+      .eq('user_id', run.user_id)
+      .eq('status', 'approved')
+      .eq('version', existingApproval.version)
+      .select('id')
+      .maybeSingle()
+    if (reopened.error || !reopened.data) {
+      throw new Error(reopened.error?.message ?? 'Could not reopen the retryable approval.')
+    }
+    const actionReopened = await admin.from('agent_actions').update({
+      status: 'awaiting_approval',
+      completed_at: null,
+      error_code: null,
+      error_message: null,
+    }).eq('id', action.id).eq('user_id', run.user_id).eq('status', 'failed').select('id').maybeSingle()
+    if (actionReopened.error || !actionReopened.data) {
+      throw new Error(actionReopened.error?.message ?? 'Could not reopen the retryable agent action.')
     }
   } else {
     const { error } = await admin.from('agent_approvals').upsert({
@@ -1942,7 +2120,15 @@ async function queueBrowserOperation(
   let allowedDomains = Array.isArray(session.allowed_domains)
     ? session.allowed_domains.map((domain: unknown) => safeString(domain, 253).toLocaleLowerCase())
     : []
-  const checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
+  let checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
+  if (operation.type === 'navigate') {
+    const normalized = normalizeControlledFixtureNavigation(
+      safeString(operation.arguments.url, 2_000),
+      checkpoint,
+    )
+    operation.arguments = { ...operation.arguments, url: normalized.url }
+    if (normalized.context) checkpoint = { ...checkpoint, controlledFixtureContext: normalized.context }
+  }
   const flightOperation = operation.type === 'search_flights' || operation.type === 'select_flight'
   if (flightOperation || operation.type === 'prepare_flight_checkout') {
     const providerDomains = configuredFlightProviderDomains()
@@ -2377,6 +2563,15 @@ type OfficialRequirementEvidence = {
   evidenceIdsByRequirement: Map<string, string[]>
 }
 
+function canUseOfficialRequirementEvidence(requirement: Record<string, unknown>) {
+  const name = safeString(requirement.name ?? requirement.label ?? requirement.title, 500).toLocaleLowerCase()
+  // An official programme page can verify what the institution requires. It
+  // cannot verify the applicant's identity, education, employment history,
+  // documents, referees, or portal state. Keep this boundary explicit because
+  // those categories need profile, artifact, Gmail, or portal evidence.
+  return name.length > 0 && !/(?:identity|contact details?|education|academic history|research history|employment history|referees?|references?|cv|resume|transcript|degree|statement|essay|personal information|portal|upload|document)/i.test(name)
+}
+
 async function ensureOfficialRequirementEvidence(
   admin: AdminClient,
   run: AgentRunRow,
@@ -2408,7 +2603,7 @@ async function ensureOfficialRequirementEvidence(
       : []
   if (!sources.length) return { rows: [], evidenceIdsByRequirement: new Map() }
 
-  const evidenceRows = rawRequirements.map(requirement => {
+  const evidenceRows = rawRequirements.filter(canUseOfficialRequirementEvidence).map(requirement => {
     const source = recordValue(requirement.source)
     const requirementUrls = stringArray(source.url ?? source.urls ?? requirement.source_id, 2_000)
     const targetUrl = safeString(source.url, 2_000) || requirementUrls[0] || safeString(requirement.source_id, 2_000)
@@ -2606,6 +2801,436 @@ async function applicationCaseContext(admin: AdminClient, run: AgentRunRow, case
   return { row: caseResult.data, applicationCase, opportunity: applicationOpportunityFromRow(opportunityResult.data), artifacts }
 }
 
+function decodeWorkSamplePdfText(bytes: Uint8Array) {
+  const raw = new TextDecoder('latin1').decode(bytes)
+  const values: string[] = []
+  for (const match of raw.matchAll(/\(((?:\\.|[^()])*)\)\s+Tj/g)) {
+    values.push((match[1] ?? '')
+      .replace(/\\([\\()])/g, '$1')
+      .replace(/\\[nrt]/g, ' '))
+  }
+  return values.join('\n').replace(/\s+\n/g, '\n').trim()
+}
+
+function decodeWorkSampleDocxText(bytes: Uint8Array) {
+  try {
+    const archive = unzipSync(bytes)
+    const document = archive['word/document.xml']
+    if (!document) return ''
+    return new TextDecoder().decode(document)
+      .replace(/<w:tab\s*\/?/g, ' ')
+      .replace(/<w:br\s*\/?/g, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+      .replace(/\s+/g, ' ')
+      .trim()
+  } catch {
+    return ''
+  }
+}
+
+function decodeWorkSampleZipText(bytes: Uint8Array) {
+  try {
+    const archive = unzipSync(bytes)
+    const chunks: string[] = []
+    for (const [path, file] of Object.entries(archive)) {
+      if (!file.length || file.length > 200_000) continue
+      const normalized = path.toLocaleLowerCase()
+      const readable = /(?:\.md|\.txt|\.csv|\.json|\.ipynb|\.py|\.js|\.ts|\.tsx|\.jsx|\.r|\.sql|\.html?|\.css|\.ya?ml)$/.test(normalized)
+      if (!readable && !/(?:\.env(?:\.|$)|id_rsa|\.pem$|credentials)/i.test(path)) continue
+      chunks.push(`${path}\n${new TextDecoder().decode(file).slice(0, 20_000)}`)
+      if (chunks.join('\n').length >= 200_000) break
+    }
+    return chunks.join('\n\n').slice(0, 200_000)
+  } catch {
+    return ''
+  }
+}
+
+function decodeWorkSampleAssetText(bytes: Uint8Array, mimeType: string, filename: string) {
+  const lowerMime = mimeType.toLocaleLowerCase()
+  const lowerName = filename.toLocaleLowerCase()
+  if (lowerMime === 'text/plain' || /\.(?:txt|md|csv|json|py|js|ts|r|sql|ipynb)$/i.test(lowerName)) return new TextDecoder().decode(bytes).slice(0, 200_000)
+  if (lowerMime === 'application/pdf' || lowerName.endsWith('.pdf')) return decodeWorkSamplePdfText(bytes).slice(0, 200_000)
+  if (lowerMime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || lowerName.endsWith('.docx')) return decodeWorkSampleDocxText(bytes).slice(0, 200_000)
+  if (lowerMime === 'application/zip' || lowerMime === 'application/x-zip-compressed' || lowerName.endsWith('.zip')) return decodeWorkSampleZipText(bytes)
+  return ''
+}
+
+async function workSampleFileRecords(admin: AdminClient, run: AgentRunRow, caseId: string) {
+  const queries = await Promise.all([
+    admin.from('file_assets').select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,storage_key,created_at,application_case_id,asset_kind,approval_status').eq('user_id', run.user_id).eq('application_case_id', caseId).order('created_at', { ascending: false }).limit(80),
+    admin.from('file_assets').select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,storage_key,created_at,application_case_id,asset_kind,approval_status').eq('user_id', run.user_id).eq('task_id', run.task_id).is('application_case_id', null).order('created_at', { ascending: false }).limit(80),
+    admin.from('file_assets').select('id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,storage_key,created_at,application_case_id,asset_kind,approval_status').eq('user_id', run.user_id).eq('reusable', true).order('created_at', { ascending: false }).limit(80),
+  ])
+  const failed = queries.find(result => result.error)
+  if (failed?.error) throw new Error(failed.error.message)
+  const rows = [...new Map(queries.flatMap(result => result.data ?? []).map(row => [String(row.id), row])).values()]
+  const records: Array<Record<string, unknown>> = []
+  for (const row of rows) {
+    let content = ''
+    try {
+      const downloaded = await admin.storage.from('private-file-assets').download(String(row.storage_key))
+      if (!downloaded.error && downloaded.data) content = decodeWorkSampleAssetText(new Uint8Array(await downloaded.data.arrayBuffer()), safeString(row.mime_type, 160), safeString(row.original_filename, 255))
+    } catch {
+      // Metadata remains useful for a missing or temporarily unreadable asset;
+      // the deterministic layer will keep it ineligible until it is inspected.
+    }
+    records.push({
+      id: row.id,
+      assetId: row.id,
+      sourceAssetIds: [row.id],
+      title: row.original_filename,
+      filename: row.original_filename,
+      fileFormat: row.mime_type || row.original_filename?.split('.').pop() || null,
+      mimeType: row.mime_type,
+      fileSizeBytes: row.size_bytes,
+      checksum: row.checksum,
+      content,
+      contentSource: `private-file-assets:${row.id}`,
+      assetAvailable: true,
+      source: row.source,
+      createdAt: row.created_at,
+      updatedAt: row.created_at,
+      reusable: row.reusable === true,
+    })
+  }
+  return records
+}
+
+function publicWorkSampleCandidate(candidate: WorkSampleCandidate) {
+  const { content: _content, ...safeCandidate } = candidate
+  return safeCandidate
+}
+
+function applicantDisplayName(profile: Record<string, unknown>, contextSources: Record<string, unknown>) {
+  const contextProfile = recordValue(contextSources.profile)
+  const preferred = recordValue(profile.preferredName).value ?? recordValue(profile.preferred_name).value ?? contextProfile.preferredName ?? contextProfile.preferred_name
+  const legal = recordValue(profile.legalName).value ?? recordValue(profile.legal_name).value ?? contextProfile.legalName ?? contextProfile.legal_name
+  return safeString(preferred ?? legal, 240) || 'Applicant'
+}
+
+function workSampleInteractionResponse(run: AgentRunRow) {
+  const response = recordValue(run.context?.progress_detail_response)
+  return {
+    id: safeString(response.interactionId ?? response.interaction_id, 240),
+    value: response.value,
+  }
+}
+
+function workSamplePdfPageCount(bytes: Uint8Array) {
+  return Math.max(1, (new TextDecoder('latin1').decode(bytes).match(/\/Type \/Page\b/g) ?? []).length)
+}
+
+async function workSampleSha256(bytes: Uint8Array) {
+  const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from(bytes))
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
+function workSampleExcerptBody(candidates: WorkSampleCandidate[], pageLimit: number | null) {
+  const blocks = candidates.map(candidate => [
+    `Work sample: ${candidate.title}`,
+    candidate.applicantContribution ? `Applicant contribution: ${candidate.applicantContribution}` : '',
+    candidate.content ?? '',
+  ].filter(Boolean).join('\n'))
+  const full = blocks.join('\n\n')
+  if (!pageLimit) return full
+  const budget = Math.max(24, pageLimit * 38)
+  const lines = full.split(/\r?\n/)
+  if (lines.length <= budget) return full
+  const priority = lines.flatMap((line, index) => /\b(?:abstract|introduction|problem|method|methodology|analysis|results|discussion|contribution|conclusion)\b/i.test(line) ? [index] : [])
+  const chosen = new Set<number>()
+  for (const index of priority) {
+    for (let offset = 0; offset <= 5 && chosen.size < budget; offset += 1) {
+      if (lines[index + offset]?.trim()) chosen.add(index + offset)
+    }
+  }
+  for (let index = 0; index < lines.length && chosen.size < budget; index += 1) if (lines[index]?.trim()) chosen.add(index)
+  return [...chosen].sort((left, right) => left - right).slice(0, budget).map(index => lines[index]).join('\n')
+}
+
+function workSampleApprovalInteraction(input: { requirement: WorkSampleRequirement; submission: WorkSampleSubmission; candidateTitles: string[] }) : WorkSampleInteraction {
+  return {
+    workflow: 'work_sample',
+    id: `${input.submission.id}:approval`,
+    requirementId: input.requirement.id,
+    kind: 'approval',
+    question: `Approve ${input.submission.filename} for the ${input.requirement.requirementType.replaceAll('_', ' ').toLocaleLowerCase()} requirement?`,
+    reason: `${input.submission.qualityGate.semantic.rationale} The original artifact remains preserved, and the derived copy passed filename, format, length, authorship, content, and security checks for ${input.candidateTitles.join(', ')}.`,
+    knownContext: [
+      `Programme instruction: ${input.requirement.exactInstructions.slice(0, 500)}`,
+      `Prepared filename: ${input.submission.filename}`,
+      `Pages: ${input.submission.pageCount ?? 'not reported'}${input.requirement.pageLimit === null ? '' : ` of ${input.requirement.pageLimit}`}`,
+      `Checksum: ${input.submission.checksum}`,
+      'The original checksum and source provenance are retained separately.',
+    ],
+    options: [],
+    reusableContextKeys: [],
+    confirmLabel: 'Approve artifact',
+    cancelLabel: 'Choose another',
+    approvalScope: 'work_sample_submission',
+    mapsToRequirement: input.requirement.requirementKey,
+    maximumFiles: 1,
+    minSelections: 1,
+  }
+}
+
+function proposalEvidenceList(value: unknown): ProposalEvidence[] {
+  const allowedSourceTypes = new Set<ProposalEvidence['sourceType']>([
+    'official_application_instruction', 'official_portal_requirement', 'official_research_degree_guidance',
+    'official_department_page', 'official_faculty_guidance', 'official_faq', 'supervisor_guidance',
+    'lab_guidance', 'scholarly_paper', 'applicant_document', 'provider_message', 'reusable_context',
+  ])
+  const allowedAuthorities = new Set<ProposalEvidence['authority']>(['official', 'scholarly', 'applicant', 'provider', 'inferred'])
+  return (Array.isArray(value) ? value : []).map((item, index) => {
+    const row = recordValue(item)
+    const rawSourceType = safeString(row.sourceType ?? row.source_type, 100)
+    const sourceType = rawSourceType === 'official'
+      ? 'official_programme_page'
+      : allowedSourceTypes.has(rawSourceType as ProposalEvidence['sourceType']) ? rawSourceType as ProposalEvidence['sourceType'] : 'provider_message'
+    const rawAuthority = safeString(row.authority, 40) as ProposalEvidence['authority']
+    const authority = allowedAuthorities.has(rawAuthority) ? rawAuthority : 'inferred'
+    return {
+      id: safeString(row.id ?? row.evidence_id ?? row.source_id, 160) || `proposal-evidence-${index + 1}`,
+      url: safeString(row.url ?? row.source_url, 2_000) || null,
+      title: safeString(row.title ?? row.name, 500),
+      excerpt: safeString(row.excerpt ?? row.text, 12_000),
+      retrievedAt: safeString(row.retrievedAt ?? row.retrieved_at, 100) || new Date().toISOString(),
+      sourceType,
+      authority,
+      verified: row.verified === true,
+    }
+  }).filter(item => item.title && item.excerpt)
+}
+
+function proposalContextSources(value: unknown) {
+  const allowedKinds = new Set(['applicant_profile', 'cv', 'transcript', 'thesis', 'publication', 'project', 'sop', 'previous_proposal', 'supervisor_dossier', 'programme_research', 'gmail', 'previous_application', 'reusable_context', 'attachment'])
+  const allowedProvenance = new Set(['verified_applicant', 'verified_document', 'verified_provider', 'inferred'])
+  return (Array.isArray(value) ? value : []).map((item, sourceIndex) => {
+    const row = recordValue(item)
+    const id = safeString(row.id ?? row.source_id, 160) || `proposal-context-${sourceIndex + 1}`
+    const kindValue = safeString(row.kind, 80)
+    const kind = (allowedKinds.has(kindValue) ? kindValue : 'attachment') as ProposalContextSource['kind']
+    const facts = (Array.isArray(row.facts) ? row.facts : []).map((factValue, factIndex) => {
+      const fact = recordValue(factValue)
+      const provenanceValue = safeString(fact.provenance, 80)
+      return {
+        id: safeString(fact.id ?? fact.fact_id, 240) || `${id}:fact:${factIndex + 1}`,
+        label: safeString(fact.label ?? fact.name, 500),
+        value: safeString(fact.value ?? fact.text, 20_000),
+        sourceIds: stringArray(fact.sourceIds ?? fact.source_ids, 240).length ? stringArray(fact.sourceIds ?? fact.source_ids, 240) : [id],
+        provenance: (allowedProvenance.has(provenanceValue) ? provenanceValue : 'inferred') as 'verified_applicant' | 'verified_document' | 'verified_provider' | 'inferred',
+        verified: fact.verified === true,
+      }
+    }).filter(fact => fact.label && fact.value)
+    return {
+      id,
+      kind,
+      title: safeString(row.title ?? row.name, 500) || kind,
+      verified: row.verified === true,
+      facts,
+      sourceIds: stringArray(row.sourceIds ?? row.source_ids, 240),
+    }
+  }).filter(source => source.facts.length)
+}
+
+function proposalClaimList(value: unknown, fallbackClaimType: ProposalClaim['claimType']) {
+  const allowedClaimTypes = new Set<ProposalClaim['claimType']>(['requirement', 'applicant', 'programme_fit', 'literature', 'novelty', 'feasibility', 'method'])
+  return (Array.isArray(value) ? value : []).map((item, index) => {
+    const row = recordValue(item)
+    const candidate = safeString(row.claimType ?? row.claim_type, 40) as ProposalClaim['claimType']
+    return {
+      id: safeString(row.id ?? row.claim_id, 240) || `proposal-claim-${index + 1}`,
+      text: safeString(row.text ?? row.claim, 4_000),
+      sourceIds: stringArray(row.sourceIds ?? row.source_ids, 240),
+      confidence: ['high', 'medium', 'low'].includes(safeString(row.confidence, 20)) ? safeString(row.confidence, 20) as 'high' | 'medium' | 'low' : 'low',
+      claimType: allowedClaimTypes.has(candidate) ? candidate : fallbackClaimType,
+    }
+  }).filter(claim => claim.text)
+}
+
+function proposalCitation(value: unknown, fallbackId: string): ProposalCitation {
+  const row = recordValue(value)
+  return {
+    id: safeString(row.id ?? row.citation_id, 160) || fallbackId,
+    authors: stringArray(row.authors, 300),
+    title: safeString(row.title, 1_000),
+    venue: safeString(row.venue, 500) || null,
+    year: Number.isInteger(row.year) ? Number(row.year) : null,
+    identifier: safeString(row.identifier ?? row.doi, 300) || null,
+    url: safeString(row.url, 2_000) || null,
+    sourceEvidenceIds: stringArray(row.sourceEvidenceIds ?? row.source_evidence_ids, 240),
+    claimSupport: stringArray(row.claimSupport ?? row.claim_support, 2_000),
+    verified: row.verified === true,
+  }
+}
+
+function proposalPaperList(value: unknown): ProposalPaperSummary[] {
+  return (Array.isArray(value) ? value : []).map((item, index) => {
+    const row = recordValue(item)
+    const citation = proposalCitation(row.citation ?? row, `proposal-paper-${index + 1}`)
+    return {
+      citation,
+      summary: safeString(row.summary, 4_000),
+      methods: stringArray(row.methods, 500),
+      limitations: stringArray(row.limitations, 1_000),
+      openProblems: stringArray(row.openProblems ?? row.open_problems, 1_000),
+      applicantContribution: safeString(row.applicantContribution ?? row.applicant_contribution, 2_000),
+      sourceEvidenceIds: stringArray(row.sourceEvidenceIds ?? row.source_evidence_ids, 240),
+    }
+  }).filter(paper => paper.citation.title)
+}
+
+function proposalDirectionList(value: unknown): ProposalResearchDirection[] {
+  return (Array.isArray(value) ? value : []).map((item, index) => {
+    const row = recordValue(item)
+    const scores = recordValue(row.scores)
+    const score = (key: string) => {
+      const number = Number(scores[key])
+      return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : 0
+    }
+    const status: ProposalResearchDirection['status'] = safeString(row.status, 40) === 'verified_basis' ? 'verified_basis' : 'proposed'
+    return {
+      id: safeString(row.id ?? row.direction_id, 160) || `proposal-direction-${index + 1}`,
+      workingTitle: safeString(row.workingTitle ?? row.working_title, 500),
+      problem: safeString(row.problem, 4_000),
+      motivation: safeString(row.motivation, 4_000),
+      likelyResearchQuestion: safeString(row.likelyResearchQuestion ?? row.likely_research_question, 2_000),
+      methodologicalDirection: safeString(row.methodologicalDirection ?? row.methodological_direction, 4_000),
+      whyApplicantFit: safeString(row.whyApplicantFit ?? row.why_applicant_fit, 4_000),
+      whyProgrammeFit: safeString(row.whyProgrammeFit ?? row.why_programme_fit, 4_000),
+      feasibility: safeString(row.feasibility, 4_000),
+      noveltyHypothesis: safeString(row.noveltyHypothesis ?? row.novelty_hypothesis, 2_000),
+      evidence: stringArray(row.evidence, 240),
+      status,
+      scores: { applicantFit: score('applicantFit'), programmeFit: score('programmeFit'), supervisorFit: score('supervisorFit'), feasibility: score('feasibility'), novelty: score('novelty'), total: score('total') },
+      recommended: row.recommended === true,
+    }
+  }).filter(direction => direction.id && direction.workingTitle && direction.likelyResearchQuestion)
+}
+
+function proposalMethodology(value: unknown): ProposalMethodology {
+  const row = recordValue(value)
+  return {
+    approach: safeString(row.approach, 4_000),
+    data: stringArray(row.data, 2_000),
+    experimentsOrAnalysis: stringArray(row.experimentsOrAnalysis ?? row.experiments_or_analysis, 2_000),
+    tools: stringArray(row.tools, 500),
+    validation: stringArray(row.validation, 2_000),
+    dependencies: stringArray(row.dependencies, 1_000),
+  }
+}
+
+/** Adapt the shared proposal interaction contract to the existing UI contract. */
+function proposalInteractionForUi(value: unknown) {
+  const interaction = recordValue(value)
+  const base = {
+    id: safeString(interaction.id, 300),
+    requirementId: safeString(interaction.applicationCaseId, 160) || 'research_proposal',
+    question: safeString(interaction.message ?? interaction.title, 2_000),
+    reason: safeString(interaction.message, 2_000),
+    knownContext: Array.isArray(interaction.knownContext) ? interaction.knownContext.map(item => safeString(item, 500)).filter(Boolean) : [],
+    reusableContextKeys: [],
+    required: true,
+    priority: 1,
+    mapsToRequirement: 'research_proposal',
+  }
+  if (safeString(interaction.inputMode, 40) === 'approve') {
+    return { ...base, kind: 'approval' as const, approvalScope: 'completion' as const, confirmLabel: 'Approve', cancelLabel: 'Request changes' }
+  }
+  const options = (Array.isArray(interaction.options) ? interaction.options : []).map(item => {
+    const option = recordValue(item)
+    return { value: safeString(option.value, 500) || safeString(option.id, 160), label: safeString(option.label, 500), description: safeString(option.description, 1_000) }
+  }).filter(option => option.value && option.label)
+  if (options.length) return { ...base, kind: 'single_choice' as const, options, allowOther: false }
+  return { ...base, kind: 'short_text' as const, placeholder: 'Add the missing research decision', currentValue: null, maximumCharacters: 2_000 }
+}
+
+function proposalDraft(value: unknown, applicationCaseId: string): ProposalDraft {
+  const row = recordValue(value)
+  const formatMetadata = Object.fromEntries(Object.entries(recordValue(row.formatMetadata ?? row.format_metadata)).flatMap(([key, item]) => {
+    if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean' || item === null) return [[key, item]]
+    return []
+  }))
+  const pageCount = Number.isInteger(row.pageCount ?? row.page_count) ? Number(row.pageCount ?? row.page_count) : null
+  return {
+    id: safeString(row.id ?? row.draft_id, 160) || `proposal-draft:${applicationCaseId}:1`,
+    version: Number.isInteger(row.version) && Number(row.version) > 0 ? Number(row.version) : 1,
+    applicationCaseId,
+    applicantName: safeString(row.applicantName ?? row.applicant_name, 240),
+    institution: safeString(row.institution, 300),
+    programme: safeString(row.programme, 500),
+    degree: safeString(row.degree, 200) || null,
+    supervisor: safeString(row.supervisor, 300) || null,
+    proposalType: safeString(row.proposalType ?? row.proposal_type, 120) as ResearchProposalRequirement['proposalType'],
+    filename: safeString(row.filename, 300),
+    fileType: safeString(row.fileType ?? row.file_type, 120) || 'application/pdf',
+    body: safeString(row.body, 50_000),
+    sections: stringArray(row.sections, 500),
+    pageCount,
+    citations: (Array.isArray(row.citations) ? row.citations : []).map((item, index) => proposalCitation(item, `proposal-citation-${index + 1}`)),
+    sourceFactIds: stringArray(row.sourceFactIds ?? row.source_fact_ids, 240),
+    sourceEvidenceIds: stringArray(row.sourceEvidenceIds ?? row.source_evidence_ids, 240),
+    formatMetadata,
+    artifactId: safeString(row.artifactId ?? row.artifact_id, 160) || null,
+    checksum: safeString(row.checksum, 128) || null,
+    receivedAt: safeString(row.receivedAt ?? row.received_at, 100) || new Date().toISOString(),
+  }
+}
+
+function proposalRequirementRecord(value: unknown, applicationCaseId: string, fallback: { institution: string; programme: string; sources: ProposalEvidence[] }) {
+  const row = recordValue(value)
+  return normalizeResearchProposalRequirement({
+    ...row,
+    id: safeString(row.id, 160) || undefined,
+    applicationCaseId,
+    institution: safeString(row.institution, 300) || fallback.institution,
+    programme: safeString(row.programme, 500) || fallback.programme,
+    sources: fallback.sources,
+  })
+}
+
+function proposalStrategyRecord(value: unknown, requirement: ResearchProposalRequirement, direction: ProposalResearchDirection, dossier: ProposalResearchDossier): ResearchProposalStrategy {
+  const row = recordValue(value)
+  const feasibility = recordValue(row.feasibility)
+  const riskLevel = ['low', 'medium', 'high'].includes(safeString(feasibility.riskLevel, 20)) ? safeString(feasibility.riskLevel, 20) as 'low' | 'medium' | 'high' : 'medium'
+  const evaluationCriteriaMapping = Object.fromEntries(Object.entries(recordValue(row.evaluationCriteriaMapping ?? row.evaluation_criteria_mapping)).flatMap(([key, item]) => {
+    const text = safeString(item, 2_000)
+    return text ? [[key, text]] : []
+  }))
+  return buildResearchProposalStrategy({
+    id: safeString(row.id, 160) || undefined,
+    requirement,
+    direction,
+    dossier,
+    methodology: proposalMethodology(row.methodology),
+    centralResearchProblem: safeString(row.centralResearchProblem ?? row.central_research_problem, 4_000) || undefined,
+    primaryResearchQuestion: safeString(row.primaryResearchQuestion ?? row.primary_research_question, 2_000) || undefined,
+    secondaryResearchQuestions: stringArray(row.secondaryResearchQuestions ?? row.secondary_research_questions, 2_000),
+    hypothesis: safeString(row.hypothesis, 2_000) || null,
+    motivation: safeString(row.motivation, 4_000) || undefined,
+    expectedContribution: stringArray(row.expectedContribution ?? row.expected_contribution, 2_000),
+    feasibility: { durationMonths: Number.isInteger(feasibility.durationMonths ?? feasibility.duration_months) ? Number(feasibility.durationMonths ?? feasibility.duration_months) : null, equipment: stringArray(feasibility.equipment, 500), dataAccess: stringArray(feasibility.dataAccess ?? feasibility.data_access, 1_000), skills: stringArray(feasibility.skills, 500), ethicalApprovals: stringArray(feasibility.ethicalApprovals ?? feasibility.ethical_approvals, 500), dependencies: stringArray(feasibility.dependencies, 1_000), riskLevel, assessment: safeString(feasibility.assessment, 4_000) },
+    risks: stringArray(row.risks, 1_000),
+    expectedOutputs: stringArray(row.expectedOutputs ?? row.expected_outputs, 1_000),
+    timeline: stringArray(row.timeline, 1_000),
+    evaluationCriteriaMapping,
+  })
+}
+
+async function persistProposalWorkflow(admin: AdminClient, run: AgentRunRow, context: Awaited<ReturnType<typeof applicationCaseContext>>, workflow: ResearchProposalWorkflow, input: { status: string; stage: string; nextAction: string; dataPatch?: Record<string, unknown> }) {
+  if (!context) throw new Error('The application case context is required for proposal persistence.')
+  const updated = await admin.from('application_cases').update({ status: input.status, current_stage: input.stage, next_action: input.nextAction, data: { ...recordValue(context.row.data), ...(input.dataPatch ?? {}), researchProposalWorkflow: workflow } }).eq('id', workflow.applicationCaseId).eq('user_id', run.user_id)
+  if (updated.error) throw new Error(updated.error.message)
+  return nextApplicationState(run, {
+    currentCaseId: workflow.applicationCaseId,
+    status: input.status as never,
+    stage: input.stage as never,
+    nextAction: input.nextAction,
+    progress: { completed: workflow.currentState === 'complete' ? 5 : workflow.brief ? 3 : workflow.dossier ? 2 : 1, label: `Research proposal: ${workflow.currentState.replaceAll('_', ' ')}`, nextAction: input.nextAction, blockers: workflow.blockers },
+  })
+}
+
 type ApplicationControllerSnapshot = {
   state: ApplicationControllerState
   caseId: string | null
@@ -2620,17 +3245,33 @@ type ApplicationControllerSnapshot = {
   serializedContext: string
 }
 
-function engineRequirementType(name: string, responsible: string): RequirementType {
+function engineRequirementType(name: string, responsible: string, explicitType = ''): RequirementType {
+  if (explicitType === 'supplemental_question') return 'supplemental_question'
+  if (explicitType === 'transcript') return 'transcript'
+  if (explicitType === 'degree_certificate') return 'degree_certificate'
+  if (explicitType === 'proof_of_graduation') return 'proof_of_graduation'
+  if (explicitType === 'credential_evaluation') return 'credential_evaluation'
+  if (explicitType === 'english_language_test') return 'english_language_test'
+  if (explicitType === 'admissions_test') return 'admissions_test'
+  if (explicitType === 'academic_evidence') return 'academic_evidence'
   const value = name.toLocaleLowerCase()
+  if (/identity|contact details?|education|academic history|research history|employment history|applicant profile/.test(value)) return 'portal_section'
   if (/eligib|prerequisite|admission requirement/.test(value)) return 'eligibility'
   if (/deadline/.test(value)) return 'deadline'
   if (/funding|scholarship|fee/.test(value)) return 'funding'
   if (/calendar|meeting|interview|slot/.test(value)) return 'calendar'
+  if (/credential evaluation|credential assessment|wes|ece|spantran|educational perspectives|course.?by.?course|document.?by.?document/.test(value)) return 'credential_evaluation'
+  if (/english|language proficiency|language test|ielts|toefl|pte|duolingo|cambridge/.test(value)) return 'english_language_test'
+  if (/gre|gmat|graduate management admission|executive assessment|admission test/.test(value)) return 'admissions_test'
+  if (/degree certificate|degree award|diploma certificate/.test(value)) return 'degree_certificate'
+  if (/proof of graduation|proof of degree|statement of result|completion letter|conferral/.test(value)) return 'proof_of_graduation'
+  if (/transcript|academic record|grade report/.test(value)) return 'transcript'
   if (/professor|supervisor|faculty/.test(value) || responsible === 'institution') return 'professor'
   if (/referee|reference|recommendation/.test(value) || responsible === 'referee') return 'referee'
+  if (/research proposal|proposed research|research outline|research plan|phd project proposal|project[- ]specific application statement|methodology proposal/.test(value)) return 'research_proposal'
   if (/writer|statement|essay|draft/.test(value) || responsible === 'writer') return 'writer'
   if (/upload/.test(value)) return 'artifact_upload'
-  if (/document|cv|résumé|resume|transcript/.test(value)) return 'document'
+  if (/document|cv|résumé|resume/.test(value)) return 'document'
   if (/submit/.test(value)) return 'submission'
   if (/approval|declaration/.test(value)) return 'approval'
   if (/email|message|reply|contact/.test(value)) return 'communication'
@@ -2640,8 +3281,10 @@ function engineRequirementType(name: string, responsible: string): RequirementTy
 }
 
 function defaultEngineEvidenceContract(type: RequirementType): ObservationKind[] {
+  if (['transcript', 'degree_certificate', 'proof_of_graduation'].includes(type)) return ['artifact']
+  if (['credential_evaluation', 'english_language_test', 'admissions_test', 'academic_evidence'].includes(type)) return ['artifact', 'gmail']
   if (['eligibility', 'official_requirement', 'deadline', 'funding', 'professor', 'profile_fact'].includes(type)) return ['web']
-  if (['document', 'writer', 'artifact_upload'].includes(type)) return ['artifact']
+  if (['document', 'writer', 'research_proposal', 'artifact_upload'].includes(type)) return ['artifact']
   if (['referee', 'communication', 'post_submission'].includes(type)) return ['gmail']
   if (type === 'submission') return ['submission']
   if (type === 'calendar') return ['calendar']
@@ -2706,6 +3349,280 @@ function profileFactResolutions(profile: unknown) {
   return [...candidates.entries()].map(([factId, values]) => resolveApplicationFact(factId, values))
 }
 
+function supplementalFacts(facts: FactResolution[]): VerifiedSupplementalFact[] {
+  return facts
+    .filter(fact => fact.verification === 'VERIFIED' && fact.value !== null && fact.value !== undefined)
+    .map(fact => ({
+      factId: fact.factId,
+      value: fact.value,
+      verified: true,
+      evidenceIds: [...new Set([
+        safeString(fact.provenance?.sourceId, 500),
+        ...stringArray(fact.provenance?.sourceAssetIds, 120),
+      ].filter(Boolean))],
+      source: fact.provenance?.kind ?? null,
+    }))
+}
+
+function supplementalRequirementStatus(status: string, required: boolean) {
+  if (status === 'awaiting_user') return 'awaiting_user'
+  if (status === 'awaiting_writer') return 'awaiting_writer'
+  if (status === 'skipped') return 'waived'
+  if (status === 'blocked' || status === 'failed') return 'missing'
+  if (status === 'verified' || status === 'saved') return 'verified'
+  if (status === 'ready_to_write' || status === 'written' || status === 'quality_checked' || status === 'consistency_checked') return 'ready'
+  return required ? 'in_progress' : 'ready'
+}
+
+/**
+ * Discover and resolve every question observed by the task-owned browser.
+ * This is called from the browser continuation as well as browser.observe so
+ * a worker restart cannot lose the question graph or re-ask a resolved fact.
+ */
+async function persistSupplementalQuestionsFromObservation(
+  admin: AdminClient,
+  run: AgentRunRow,
+  input: { caseId: string; sessionId: string; observation: Record<string, unknown> },
+) {
+  if (!input.caseId) return { questions: [], interaction: null as SupplementalProgressInteraction | null, writerQuestions: [] as ApplicationQuestion[] }
+  const rawFields = Array.isArray(input.observation.fields) ? input.observation.fields : []
+  const portal = safeString(input.observation.url, 2_000)
+    ? (() => { try { return new URL(safeString(input.observation.url, 2_000)).hostname } catch { return safeString(input.observation.url, 240) } })()
+    : 'portal'
+  const section = safeString((Array.isArray(input.observation.headings) ? input.observation.headings[0] : null) ?? input.observation.section, 400) || 'Portal section'
+  const discovered = rawFields.length
+    ? discoverApplicationQuestions({
+      applicationCaseId: input.caseId,
+      portal,
+      section,
+      url: safeString(input.observation.url, 2_000) || null,
+      fields: rawFields as never,
+      sourceEvidenceIds: [input.sessionId],
+    })
+    : (Array.isArray(input.observation.questions) ? input.observation.questions.filter(item => item && typeof item === 'object') as ApplicationQuestion[] : [])
+  if (!discovered.length) return { questions: [], interaction: null as SupplementalProgressInteraction | null, writerQuestions: [] as ApplicationQuestion[] }
+  const [profileResult, requirementResult, existingQuestionResult] = await Promise.all([
+    admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle(),
+    admin.from('application_requirements').select('id,name,required,status,source,source_id,requirement_type,verification_evidence_ids').eq('application_case_id', input.caseId).eq('user_id', run.user_id),
+    admin.from('application_questions').select('*').eq('application_case_id', input.caseId).eq('user_id', run.user_id),
+  ])
+  if (profileResult.error && profileResult.error.code !== '42P01') throw new Error(profileResult.error.message)
+  if (requirementResult.error && requirementResult.error.code !== '42P01') throw new Error(requirementResult.error.message)
+  if (existingQuestionResult.error && !['42P01', 'PGRST205'].includes(existingQuestionResult.error.code ?? '')) throw new Error(existingQuestionResult.error.message)
+  if (existingQuestionResult.error?.code === '42P01' || existingQuestionResult.error?.code === 'PGRST205') return { questions: discovered, interaction: null as SupplementalProgressInteraction | null, writerQuestions: [] as ApplicationQuestion[] }
+  const facts = profileFactResolutions(profileResult.data?.profile)
+  const contextFacts = supplementalFacts(facts)
+  const requirements = (requirementResult.data ?? []) as Array<Record<string, unknown>>
+  const existingQuestions = (existingQuestionResult.data ?? []) as Array<Record<string, unknown>>
+  const output: ApplicationQuestion[] = []
+  const writerQuestions: ApplicationQuestion[] = []
+  let interaction: SupplementalProgressInteraction | null = null
+  for (const found of discovered) {
+    const existing = existingQuestions.find(row => safeString(row.question_key, 400) === found.questionKey)
+    const existingRequirement = requirements.find(row => safeString(row.source_id ?? recordValue(row.source).question_key, 400) === found.questionKey)
+    const question: ApplicationQuestion = {
+      ...found,
+      id: safeString(existing?.id, 80) || found.id,
+      applicationCaseId: input.caseId,
+      applicationRequirementId: safeString(existingRequirement?.id, 80) || null,
+      source: { ...found.source, evidenceIds: [...new Set([...found.source.evidenceIds, input.sessionId])] },
+    }
+    if (!applicationQuestionTypes.includes(question.questionType)) question.questionType = 'other'
+    const resolved = resolveSupplementalAnswer(question, { facts: contextFacts, profileFacts: contextFacts })
+    const observedAnswer = question.answerValue
+    const candidateAnswer = observedAnswer ?? resolved.answer
+    const candidateGate = candidateAnswer === null ? null : runSupplementalAnswerGates(question, candidateAnswer, { facts: contextFacts, profileFacts: contextFacts })
+    const effectiveStatus = candidateGate && !candidateGate.valid
+      ? 'failed' as const
+      : candidateAnswer !== null
+        ? 'ready_to_write' as const
+        : resolved.status
+    const effectiveRoute = candidateAnswer !== null ? (question.answerRoute ?? resolved.route) : resolved.route
+    const strategy = { ...resolved.strategy, answerRoute: effectiveRoute, sourceFactIds: resolved.sourceFactIds, evidenceIds: [...new Set([...resolved.evidenceIds, input.sessionId])] }
+    const priorRetry = recordValue(existing?.retry_state)
+    const priorAttempts = Number(priorRetry.attempts ?? 0)
+    const retryState = candidateGate && !candidateGate.valid
+      ? { attempts: priorAttempts + 1, maximumAttempts: Number(priorRetry.maximumAttempts ?? priorRetry.maximum_attempts ?? 3) || 3, lastFailure: candidateGate.issues.join(', '), nextAttemptAt: new Date().toISOString(), escalated: priorAttempts + 1 >= 3 }
+      : { attempts: priorAttempts, maximumAttempts: Number(priorRetry.maximumAttempts ?? priorRetry.maximum_attempts ?? 3) || 3, lastFailure: null, nextAttemptAt: null, escalated: priorRetry.escalated === true }
+    const requirementPayload = {
+      application_case_id: input.caseId,
+      user_id: run.user_id,
+      name: `Supplemental question: ${question.exactPrompt.slice(0, 460)}`,
+      category: 'portal',
+      required: question.required,
+      exact_instructions: question.exactPrompt,
+      status: supplementalRequirementStatus(effectiveStatus, question.required),
+      responsible_party: effectiveRoute === 'writer_delegate' ? 'writer' : effectiveStatus === 'awaiting_user' ? 'applicant' : 'david',
+      source: { ...question.source, question_key: question.questionKey, normalized_prompt: question.normalizedPrompt },
+      source_id: question.questionKey,
+      requirement_type: 'supplemental_question',
+      dependency_ids: [],
+      evidence_contract: { kinds: ['portal'], required_fact_ids: resolved.sourceFactIds },
+      verification_evidence_ids: [],
+      blocker_reason: effectiveStatus === 'awaiting_user' ? resolved.reason : candidateGate && !candidateGate.valid ? candidateGate.issues.join(', ') : null,
+    }
+    let requirementId = safeString(existingRequirement?.id, 80)
+    if (!requirementId) {
+      const insertedRequirement = await admin.from('application_requirements').insert(requirementPayload).select('id').single()
+      if (insertedRequirement.error || !insertedRequirement.data) throw new Error(insertedRequirement.error?.message ?? 'The supplemental question requirement could not be persisted.')
+      requirementId = safeString(insertedRequirement.data.id, 80)
+    } else {
+      const updatedRequirement = await admin.from('application_requirements').update(requirementPayload).eq('id', requirementId).eq('application_case_id', input.caseId).eq('user_id', run.user_id)
+      if (updatedRequirement.error) throw new Error(updatedRequirement.error.message)
+    }
+    question.applicationRequirementId = requirementId
+    question.status = effectiveStatus
+    question.answerRoute = effectiveRoute
+    question.answerStrategy = strategy
+    question.answerValue = candidateAnswer
+    question.evidenceDependencies = resolved.sourceFactIds
+    question.writerDependencies = effectiveRoute === 'writer_delegate' ? [requirementId] : []
+    question.approvalRequirement = strategy.approvalRequirement
+    question.lastError = candidateGate && !candidateGate.valid ? candidateGate.issues.join(', ') : null
+    question.retryState = retryState
+    const payload = {
+      user_id: run.user_id,
+      application_case_id: input.caseId,
+      application_requirement_id: requirementId,
+      question_key: question.questionKey,
+      portal: question.portal,
+      portal_section: question.portalSection,
+      exact_prompt: question.exactPrompt,
+      normalized_prompt: question.normalizedPrompt,
+      question_type: question.questionType,
+      input_type: question.inputType,
+      required: question.required,
+      minimum: question.minimum,
+      maximum: question.maximum,
+      unit: question.unit,
+      validation_rule: question.validationRule,
+      options: question.options,
+      conditional_trigger: question.conditionalTrigger,
+      source: question.source,
+      current_value: question.currentValue,
+      status: question.status,
+      answer_strategy: question.answerStrategy,
+      evidence_dependencies: question.evidenceDependencies,
+      artifact_dependencies: question.artifactDependencies,
+      writer_dependencies: question.writerDependencies,
+      approval_requirement: question.approvalRequirement,
+      answer_route: question.answerRoute,
+      answer_value: question.answerValue,
+      retry_state: retryState,
+      last_error: question.lastError,
+    }
+    const persisted = await admin.from('application_questions').upsert(payload, { onConflict: 'user_id,application_case_id,question_key' }).select('id').single()
+    if (persisted.error || !persisted.data) throw new Error(persisted.error?.message ?? 'The supplemental question could not be persisted.')
+    question.id = safeString(persisted.data.id, 80)
+    if (question.status === 'awaiting_user' && !interaction) {
+      interaction = resolved.progressInteraction
+        ? { ...resolved.progressInteraction, id: `application-question-interaction:${question.id}`, questionId: question.id, requirementId, mapsToRequirement: requirementId }
+        : null
+    }
+    if (effectiveRoute === 'writer_delegate') writerQuestions.push(question)
+    output.push(question)
+  }
+  return { questions: output, interaction, writerQuestions }
+}
+
+async function verifySupplementalReadBack(
+  admin: AdminClient,
+  run: AgentRunRow,
+  input: { caseId: string; sessionId: string; persistedValues: Record<string, unknown>; readBackValues: Record<string, unknown>; saveConfirmation: string; checkpointId?: string | null },
+) {
+  const questionRows = await admin.from('application_questions').select('*').eq('application_case_id', input.caseId).eq('user_id', run.user_id).not('status', 'eq', 'skipped')
+  if (questionRows.error) {
+    if (['42P01', 'PGRST205'].includes(questionRows.error.code ?? '')) return []
+    throw new Error(questionRows.error.message)
+  }
+  const verified: Array<{ questionId: string; verified: boolean; issues: string[] }> = []
+  for (const row of (questionRows.data ?? []) as Array<Record<string, unknown>>) {
+    const question = applicationQuestionFromRow(row)
+    const source = recordValue(row.source)
+    const fieldName = question.fieldName || safeString(source.field_name, 240) || question.questionKey.split(':')[2] || ''
+    if (!fieldName || !(fieldName in input.persistedValues) || !(fieldName in input.readBackValues)) continue
+    const evidenceIds = [...new Set([input.sessionId, input.checkpointId ?? ''].filter(Boolean))]
+    const result = verifySavedSupplementalAnswer({
+      question,
+      persistedValue: input.persistedValues[fieldName],
+      readBackValue: input.readBackValues[fieldName],
+      saveConfirmation: input.saveConfirmation,
+      sessionId: input.sessionId,
+      evidenceIds,
+    })
+    const updated = await admin.from('application_questions').update({
+      status: result.verified ? 'verified' : 'failed',
+      answer_value: safeString(input.persistedValues[fieldName], 100_000) || null,
+      saved_state_evidence: result.evidence,
+      checkpoint_id: input.checkpointId ?? null,
+      last_error: result.verified ? null : result.issues.join(', '),
+    }).eq('id', question.id).eq('application_case_id', input.caseId).eq('user_id', run.user_id)
+    if (updated.error) throw new Error(updated.error.message)
+    const requirementId = safeString(row.application_requirement_id, 80)
+    if (requirementId && result.verified) {
+      const requirement = await admin.from('application_requirements').select('verification_evidence_ids').eq('id', requirementId).eq('application_case_id', input.caseId).eq('user_id', run.user_id).maybeSingle()
+      if (requirement.error) throw new Error(requirement.error.message)
+      const evidence = [...new Set([...stringArray(requirement.data?.verification_evidence_ids, 120), ...evidenceIds])]
+      const updatedRequirement = await admin.from('application_requirements').update({ status: 'verified', verification_evidence_ids: evidence, blocker_reason: null }).eq('id', requirementId).eq('application_case_id', input.caseId).eq('user_id', run.user_id)
+      if (updatedRequirement.error) throw new Error(updatedRequirement.error.message)
+    }
+    verified.push({ questionId: question.id, verified: result.verified, issues: result.issues })
+  }
+  return verified
+}
+
+function applicationQuestionFromRow(row: Record<string, unknown>): ApplicationQuestion {
+  const source = recordValue(row.source)
+  return {
+    id: safeString(row.id, 80),
+    applicationCaseId: safeString(row.application_case_id, 80),
+    applicationRequirementId: safeString(row.application_requirement_id, 80) || null,
+    questionKey: safeString(row.question_key, 400),
+    portal: safeString(row.portal, 240),
+    portalSection: safeString(row.portal_section, 400),
+    exactPrompt: safeString(row.exact_prompt, 12_000),
+    normalizedPrompt: safeString(row.normalized_prompt, 12_000),
+    questionType: applicationQuestionTypes.includes(safeString(row.question_type, 80) as never) ? safeString(row.question_type, 80) as ApplicationQuestion['questionType'] : 'other',
+    inputType: safeString(row.input_type, 80) as ApplicationQuestion['inputType'],
+    required: row.required !== false,
+    optional: row.required === false,
+    minimum: row.minimum === null || row.minimum === undefined ? null : Number(row.minimum),
+    maximum: row.maximum === null || row.maximum === undefined ? null : Number(row.maximum),
+    unit: ['characters', 'words', 'bytes'].includes(safeString(row.unit, 40)) ? safeString(row.unit, 40) as ApplicationQuestion['unit'] : null,
+    validationRule: safeString(row.validation_rule, 500) || null,
+    options: Array.isArray(row.options) ? row.options as ApplicationQuestion['options'] : [],
+    conditionalTrigger: safeString(row.conditional_trigger, 500) || null,
+    source: {
+      kind: ['portal_dom', 'portal_text', 'saved_checkpoint', 'prior_application', 'applicant_context'].includes(safeString(source.kind, 80)) ? safeString(source.kind, 80) as ApplicationQuestion['source']['kind'] : 'portal_dom',
+      portal: safeString(source.portal, 240),
+      url: safeString(source.url, 2_000) || null,
+      section: safeString(source.section, 400),
+      observedAt: safeString(source.observedAt ?? source.observed_at, 80) || null,
+      evidenceIds: stringArray(source.evidenceIds ?? source.evidence_ids, 120),
+      fieldName: safeString(source.fieldName ?? source.field_name, 240) || null,
+    },
+    fieldName: safeString(source.fieldName ?? source.field_name, 240) || null,
+    currentValue: row.current_value ?? null,
+    status: safeString(row.status, 80) as ApplicationQuestion['status'],
+    answerStrategy: Object.keys(recordValue(row.answer_strategy)).length ? recordValue(row.answer_strategy) as never : null,
+    evidenceDependencies: stringArray(row.evidence_dependencies, 500),
+    artifactDependencies: stringArray(row.artifact_dependencies, 500),
+    writerDependencies: stringArray(row.writer_dependencies, 500),
+    approvalRequirement: ['none', 'answer_review', 'submission'].includes(safeString(row.approval_requirement, 80)) ? safeString(row.approval_requirement, 80) as ApplicationQuestion['approvalRequirement'] : 'none',
+    savedStateEvidence: Object.keys(recordValue(row.saved_state_evidence)).length ? recordValue(row.saved_state_evidence) as never : null,
+    answerRoute: ['deterministic', 'reuse', 'david_generate', 'writer_delegate', 'user_decision', 'skip'].includes(safeString(row.answer_route, 80)) ? safeString(row.answer_route, 80) as ApplicationQuestion['answerRoute'] : null,
+    answerValue: safeString(row.answer_value, 100_000) || null,
+    lastError: safeString(row.last_error, 2_000) || null,
+    retryState: {
+      attempts: Number(recordValue(row.retry_state).attempts ?? 0),
+      maximumAttempts: Number(recordValue(row.retry_state).maximumAttempts ?? recordValue(row.retry_state).maximum_attempts ?? 3),
+      lastFailure: safeString(recordValue(row.retry_state).lastFailure ?? recordValue(row.retry_state).last_failure, 2_000) || null,
+      nextAttemptAt: safeString(recordValue(row.retry_state).nextAttemptAt ?? recordValue(row.retry_state).next_attempt_at, 80) || null,
+      escalated: recordValue(row.retry_state).escalated === true,
+    },
+  }
+}
+
 function controllerEvidenceType(kind: string): ControllerEvidenceType | null {
   switch (kind) {
     case 'official_requirement_source':
@@ -2768,22 +3685,25 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   if (run.active_specialist_id !== 'david' || !run.application_state) return null
   const caseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state.currentCaseId, 80) || null
   const campaignId = safeString(run.context?.application_campaign_id, 80) || safeString(run.application_state.campaignId, 80) || null
-  const [profileResult, campaignResult, caseResult, requirementsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult] = await Promise.all([
+  const [profileResult, campaignResult, opportunitiesResult, campaignCasesResult, caseResult, requirementsResult, questionsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult] = await Promise.all([
     admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle(),
-    campaignId ? admin.from('application_campaigns').select('id,status,data,next_action').eq('id', campaignId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    campaignId ? admin.from('application_campaigns').select('id,status,data,next_action,target_quantity').eq('id', campaignId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    campaignId ? admin.from('application_opportunities').select('id,institution,programme_title,official_url,application_url,verification_status,confidence,fit_score').eq('campaign_id', campaignId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
+    campaignId ? admin.from('application_cases').select('id,opportunity_id,status').eq('campaign_id', campaignId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_cases').select('id,current_stage,status,data,next_action,application_id,opportunity_id,campaign_id').eq('id', caseId).eq('user_id', run.user_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-    caseId ? admin.from('application_requirements').select('id,application_case_id,name,required,status,source,source_id,dependency_ids,evidence_contract,responsible_party,deadline_at,verification_evidence_ids,linked_artifact_id,blocker_reason').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('application_requirements').select('id,application_case_id,name,required,status,source,source_id,requirement_type,dependency_ids,evidence_contract,responsible_party,deadline_at,verification_evidence_ids,linked_artifact_id,blocker_reason').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('application_questions').select('*').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_artifacts').select('id,application_case_id,checksum,approval_status,kind').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_contacts').select('id,kind,provider_contact_id,gmail_thread_id,last_provider_message_id,data').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('human_assignments').select('id,status,deadline_at,final_artifact_id').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_communications').select('id,direction,classification,provider_message_id,provider_thread_id,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
-    caseId ? admin.from('portal_checkpoints').select('id,application_case_id,verified,portal,section,entered_values,save_confirmation,session_information,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('portal_checkpoints').select('id,application_case_id,verified,portal,section,entered_values,save_confirmation,session_information,idempotency_key,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_evidence').select('id,application_case_id,kind,source_url,provider_message_id,provider_thread_id,asset_id,metadata,captured_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('captured_at', { ascending: false }).limit(80) : Promise.resolve({ data: [], error: null }),
     admin.from('agent_approvals').select('id,kind,status,updated_at').eq('run_id', run.id).eq('user_id', run.user_id).order('updated_at', { ascending: false }).limit(20),
     admin.from('agent_actions').select('idempotency_key,status,provider_action_id,tool_name').eq('run_id', run.id).eq('user_id', run.user_id).eq('status', 'succeeded').not('provider_action_id', 'is', null).limit(200),
   ])
-  const results = [profileResult, campaignResult, caseResult, requirementsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult]
-  const fatal = results.find(result => result.error && result.error.code !== '42P01')?.error
+  const results = [profileResult, campaignResult, opportunitiesResult, campaignCasesResult, caseResult, requirementsResult, questionsResult, artifactsResult, contactsResult, assignmentsResult, communicationsResult, checkpointsResult, evidenceResult, approvalsResult, actionsResult]
+  const fatal = results.find(result => result.error && !['42P01', 'PGRST205'].includes(result.error.code ?? ''))?.error
   if (fatal) throw new Error(fatal.message)
   const opportunityId = safeString(caseResult.data?.opportunity_id, 80)
   const opportunityResult = opportunityId
@@ -2824,10 +3744,112 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
       opportunityResult.data as Record<string, unknown> | null,
     )
     : { rows: [], evidenceIdsByRequirement: new Map<string, string[]>() }
+  const invalidOfficialEvidenceIds = new Set(
+    (evidenceResult.data ?? [])
+      .filter(item => safeString(item.kind, 120) === 'official_requirement_source')
+      .filter(item => {
+        const metadata = recordValue(item.metadata)
+        const requirement = rawRequirements.find(candidate => safeString(candidate.id, 80) === safeString(metadata.requirement_id, 80))
+        return Boolean(requirement && !canUseOfficialRequirementEvidence(requirement))
+      })
+      .map(item => safeString(item.id, 80))
+      .filter(Boolean),
+  )
+  if (caseId && invalidOfficialEvidenceIds.size) {
+    const removed = await admin.from('application_evidence')
+      .delete()
+      .in('id', [...invalidOfficialEvidenceIds])
+      .eq('application_case_id', caseId)
+      .eq('user_id', run.user_id)
+    if (removed.error) throw new Error(removed.error.message)
+    for (const rawRequirement of rawRequirements) {
+      if (canUseOfficialRequirementEvidence(rawRequirement)) continue
+      const currentEvidenceIds = stringArray(rawRequirement.verification_evidence_ids, 120)
+      const retainedEvidenceIds = currentEvidenceIds.filter(id => !invalidOfficialEvidenceIds.has(id))
+      if (retainedEvidenceIds.length === currentEvidenceIds.length) continue
+      const hasLinkedArtifact = Boolean(safeString(rawRequirement.linked_artifact_id, 80))
+      const currentStatus = safeString(rawRequirement.status, 80)
+      const resetStatus = !hasLinkedArtifact && ['verified', 'ready', 'approved'].includes(currentStatus) && !retainedEvidenceIds.length
+      const repaired = await admin.from('application_requirements').update({
+        verification_evidence_ids: retainedEvidenceIds,
+        ...(resetStatus ? { status: 'unknown', blocker_reason: null } : {}),
+      }).eq('id', safeString(rawRequirement.id, 80)).eq('application_case_id', caseId).eq('user_id', run.user_id)
+      if (repaired.error) throw new Error(repaired.error.message)
+      if (resetStatus) rawRequirement.status = 'unknown'
+      rawRequirement.verification_evidence_ids = retainedEvidenceIds
+    }
+    await addEvent(admin, run, 'application_invalid_official_evidence_removed', run.status, 'Removed official-source evidence from applicant-specific requirements.', {
+      evidence_count: invalidOfficialEvidenceIds.size,
+    })
+  }
   for (const requirement of requirements) {
-    requirement.evidenceIds = [...new Set([...requirement.evidenceIds, ...(officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? [])])]
+    requirement.evidenceIds = [...new Set([
+      ...requirement.evidenceIds.filter(id => !invalidOfficialEvidenceIds.has(id)),
+      ...(officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? []),
+    ])]
+    const rawRequirement = rawRequirements.find(item => safeString(item.id, 80) === requirement.id)
+    if (rawRequirement && invalidOfficialEvidenceIds.size && !canUseOfficialRequirementEvidence(rawRequirement) && !requirement.evidenceIds.length && ['VERIFIED', 'READY'].includes(requirement.status)) {
+      requirement.status = 'UNRESOLVED'
+    }
+  }
+  // A previous model turn may have paused a requirement as awaiting an
+  // institution before the controller's official-source backfill completed.
+  // Once the same-case official evidence is durable, repair that nonterminal
+  // status before the engine sees it; otherwise a null wait-until timestamp
+  // becomes an unbounded WAIT and the model can only repeat itself.
+  if (caseId && officialRequirementEvidence.evidenceIdsByRequirement.size) {
+    for (const requirement of requirements) {
+      const officialEvidenceIds = officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? []
+      const rawRequirement = rawRequirements.find(item => safeString(item.id, 80) === requirement.id)
+      const rawStatus = safeString(rawRequirement?.status, 80)
+      if (!officialEvidenceIds.length || !['unknown', 'in_progress', 'awaiting_institution', 'awaiting_user'].includes(rawStatus)) continue
+      requirement.status = 'VERIFIED'
+      requirement.blocker = null
+      const repaired = await admin.from('application_requirements').update({
+        status: 'verified',
+        blocker_reason: null,
+        verification_evidence_ids: [...new Set([...stringArray(rawRequirement?.verification_evidence_ids, 120), ...officialEvidenceIds])],
+      }).eq('id', requirement.id).eq('application_case_id', caseId).eq('user_id', run.user_id)
+      if (repaired.error) throw new Error(repaired.error.message)
+      await addEvent(admin, run, 'application_requirement_evidence_reconciled', run.status, `Reconciled official evidence for ${requirement.name}.`, {
+        requirement_id: requirement.id,
+        evidence_ids: officialEvidenceIds,
+      })
+    }
   }
   const checkpoints = checkpointsResult.data ?? []
+  // Reconcile verified portal checkpoints that were persisted before the
+  // checkpoint handler learned to link their evidence directly. The stable
+  // portal-section idempotency key ends with the application requirement ID;
+  // link only verified rows and leave the requirement status for the explicit
+  // VERIFY/update_requirement path.
+  if (caseId && checkpoints.length) {
+    for (const checkpoint of checkpoints) {
+      if (checkpoint.verified !== true) continue
+      const idempotencyKey = safeString(checkpoint.idempotency_key, 300)
+      const requirementId = idempotencyKey.split(':').at(-1) ?? ''
+      const rawRequirement = rawRequirements.find(item => safeString(item.id, 80) === requirementId)
+      const requirement = requirements.find(item => item.id === requirementId)
+      if (!rawRequirement || !requirement || !checkpoint.id) continue
+      const existingEvidenceIds = stringArray(rawRequirement.verification_evidence_ids, 120)
+      if (existingEvidenceIds.includes(checkpoint.id)) {
+        if (!requirement.evidenceIds.includes(checkpoint.id)) requirement.evidenceIds.push(checkpoint.id)
+        continue
+      }
+      const evidenceIds = [...new Set([...existingEvidenceIds, checkpoint.id])]
+      const linked = await admin.from('application_requirements').update({ verification_evidence_ids: evidenceIds })
+        .eq('id', requirementId)
+        .eq('application_case_id', caseId)
+        .eq('user_id', run.user_id)
+      if (linked.error) throw new Error(linked.error.message)
+      rawRequirement.verification_evidence_ids = evidenceIds
+      requirement.evidenceIds = [...new Set([...requirement.evidenceIds, checkpoint.id])]
+      await addEvent(admin, run, 'application_portal_evidence_reconciled', run.status, `Linked verified ${safeString(checkpoint.section, 160)} portal evidence to ${requirement.name}.`, {
+        requirement_id: requirementId,
+        checkpoint_id: checkpoint.id,
+      })
+    }
+  }
   const latestCheckpoint = checkpoints[0] ?? null
   const caseData = recordValue(caseResult.data?.data)
   const readinessReport = recordValue(caseData.readinessReport)
@@ -2842,7 +3864,17 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     submissionApproved,
     submissionConfirmed: Boolean(caseResult.data?.application_id),
   })
-  const verifiedOpportunityCount = Number(recordValue(campaignResult.data?.data).verified_opportunity_count ?? run.application_state.verifiedOpportunityCount ?? 0)
+  const verifiedOpportunityRows = (opportunitiesResult.data ?? [])
+    .filter(opportunity => safeString(opportunity.verification_status, 80) === 'verified')
+  const verifiedOpportunityCount = Math.max(
+    verifiedOpportunityRows.length,
+    Number(recordValue(campaignResult.data?.data).verified_opportunity_count ?? run.application_state.verifiedOpportunityCount ?? 0),
+  )
+  const campaignCaseIds = [...new Set((campaignCasesResult.data ?? []).map(row => safeString(row.id, 80)).filter(Boolean))]
+  const targetCaseCount = Math.max(
+    Number(campaignResult.data?.target_quantity ?? 0) || 0,
+    verifiedOpportunityRows.length,
+  )
   const applicationContextText = [
     safeString(run.context?.user_context, 10_000),
     ...(Array.isArray(run.context?.application_context_answers)
@@ -2851,14 +3883,21 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   ].filter(Boolean).join(' ')
   const shortlistApproved = /\b(?:I|we)\s+(?:approve|approved|confirm|confirmed|authorize|authorise|accept|accepted)\b/i.test(applicationContextText) &&
     /\b(?:shortlist|three|applications?|programmes?|strategy)\b/i.test(applicationContextText)
+  const approvedApplicationIntent = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) && shortlistApproved
   // A natural request can contain both research language ("Find ...") and
   // application intent. Once the applicant has explicitly approved the
   // verified shortlist, move the durable research snapshot into the legal
   // CASE_CREATION state; otherwise the approval gate remains intact.
-  if (!caseId && verifiedOpportunityCount > 0 && isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) && shortlistApproved) state = 'CASE_CREATION'
+  if (verifiedOpportunityRows.length > campaignCaseIds.length &&
+      targetCaseCount > campaignCaseIds.length &&
+      verifiedOpportunityCount > 0 &&
+      approvedApplicationIntent) {
+    state = 'CASE_CREATION'
+  }
   if (state === 'PORTAL_EXECUTION' && latestCheckpoint?.verified === true && /review|final/i.test(safeString(latestCheckpoint.section, 160))) state = 'READINESS_REVIEW'
   const evidence: ControllerEvidence[] = []
   for (const item of [...(evidenceResult.data ?? []), ...officialRequirementEvidence.rows]) {
+    if (invalidOfficialEvidenceIds.has(safeString(item.id, 80))) continue
     const metadata = recordValue(item.metadata)
     const type = safeString(item.kind, 80) === 'uploaded_file_verification' && safeString(metadata.checksum, 128)
       ? 'DOCUMENT_CHECKSUM'
@@ -2879,12 +3918,23 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   }
   const contacts = contactsResult.data ?? []
   const contactStatus = (contact: Record<string, unknown>) => safeString(recordValue(contact.data).status, 80) || 'recorded'
+  const verifiedOpportunities = verifiedOpportunityRows.map(opportunity => ({
+      id: safeString(opportunity.id, 80),
+      institution: safeString(opportunity.institution, 240),
+      programmeTitle: safeString(opportunity.programme_title, 500),
+      officialUrl: safeString(opportunity.official_url, 2_000),
+      applicationUrl: safeString(opportunity.application_url, 2_000) || null,
+      verificationStatus: safeString(opportunity.verification_status, 80),
+      confidence: opportunity.confidence === null || opportunity.confidence === undefined ? null : Number(opportunity.confidence),
+      fitScore: opportunity.fit_score === null || opportunity.fit_score === undefined ? null : Number(opportunity.fit_score),
+    }))
   const authoritativeContext = buildAuthoritativeApplicationContext({
     objective: run.objective,
     campaignId,
     caseId,
     state,
     nextAction: safeString(caseResult.data?.next_action ?? campaignResult.data?.next_action ?? run.application_state.nextAction, 500) || null,
+    verifiedOpportunities,
     requirements,
     facts,
     artifacts: (artifactsResult.data ?? []).map(artifact => ({ id: safeString(artifact.id, 80), checksum: safeString(artifact.checksum, 128) || null, status: `${safeString(artifact.kind, 80)}:${safeString(artifact.approval_status, 80)}`, caseId: safeString(artifact.application_case_id, 80) })),
@@ -2928,7 +3978,7 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     const contract = recordValue(raw?.evidence_contract)
     const contractKinds = stringArray(contract.kinds ?? contract.requiredKinds, 40)
       .filter(kind => ['web', 'gmail', 'portal', 'artifact', 'calendar', 'submission'].includes(kind)) as EngineRequirement['evidenceContract']
-    const type = engineRequirementType(requirement.name, requirement.responsible)
+    const type = engineRequirementType(requirement.name, requirement.responsible, safeString(raw?.requirement_type, 120))
     return {
       ...requirement,
       type,
@@ -2959,16 +4009,26 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     if (!requirement || !applicationSemanticFunctions.includes(functionName as typeof applicationSemanticFunctions[number])) continue
     engineObservations.push({ id: safeString(decision.id, 160) || `semantic:${requirementId}:${functionName}`, caseId: caseId ?? '', requirementId, kind: 'web', verified: true, evidenceIds: [`semantic:${functionName}`, ...stringArray(decision.evidenceIds, 160)], observedAt: safeString(decision.observedAt, 80) || new Date().toISOString(), sourceUrl: requirement.source.url ?? 'https://semantic.invalid', authoritative: false, excerpts: [] })
   }
+  const applicationQuestions = questionsResult.error ? [] : (questionsResult.data ?? []).map(row => applicationQuestionFromRow(row as Record<string, unknown>))
   const engineState = createApplicationEngineState({
     caseId: caseId ?? '', objective: run.objective,
     status: state === 'COMPLETE' ? 'COMPLETE' : state === 'BLOCKED' ? 'BLOCKED' : state === 'POST_SUBMISSION' ? 'SUBMITTED' : 'ACTIVE',
     requirements: engineRequirements, facts, observations: engineObservations,
+    questions: applicationQuestions,
     completedActionKeys: (actionsResult.data ?? []).map(action => safeString(action.idempotency_key, 300)).filter(Boolean),
     approvals: (approvalsResult.data ?? []).map(approval => ({ id: safeString(approval.id, 80), kind: safeString(approval.kind, 80), status: ['approved', 'rejected'].includes(safeString(approval.status, 40)) ? safeString(approval.status, 40) as 'approved' | 'rejected' : 'pending', artifactIds: [] })),
     browser: { portal: safeString(latestCheckpoint?.portal, 200) || null, section: safeString(latestCheckpoint?.section, 160) || null, sessionId: safeString(recordValue(latestCheckpoint?.session_information).sessionId, 80) || null, checkpointObservationId: safeString(latestCheckpoint?.id, 80) || null },
     communication: (communicationsResult.data ?? []).map(item => ({ requirementId: '', providerMessageId: safeString(item.provider_message_id, 256), providerThreadId: safeString(item.provider_thread_id, 256), state: safeString(item.classification, 80) })),
   })
-  const engineStep = planApplicationEngineStep(engineState)
+  const plannedEngineStep = planApplicationEngineStep(engineState)
+  // A campaign with an approved shortlist is not complete until every
+  // verified opportunity has its own durable ApplicationCase. The per-case
+  // engine can quite correctly return COMPLETE for a small graph; at the
+  // campaign level that must become another controller step so the model can
+  // create the remaining cases without losing the current one.
+  const engineStep = state === 'CASE_CREATION' && campaignCaseIds.length < targetCaseCount
+    ? { kind: 'CONTROLLER' as const, caseId: caseId ?? '', action: 'continue_application_controller' as const }
+    : plannedEngineStep
   const applicationContextAnswers = Array.isArray(run.context?.application_context_answers)
     ? run.context.application_context_answers
       .filter(item => item && typeof item === 'object' && !Array.isArray(item))
@@ -2997,6 +4057,68 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   }
 }
 
+function normalizePortalCheckpointInput(input: Record<string, unknown>): Record<string, unknown> {
+  const fields = recordValue(input.fields)
+  const enteredValues = { ...recordValue(input.entered_values ?? input.enteredValues) }
+  const valueSources = { ...recordValue(input.value_sources ?? input.valueSources) }
+  for (const [fieldName, rawField] of Object.entries(fields)) {
+    const field = recordValue(rawField)
+    if (!(fieldName in enteredValues) && Object.prototype.hasOwnProperty.call(field, 'value')) {
+      enteredValues[fieldName] = field.value
+    }
+    const sourceId = safeString(field.fact_id ?? field.factId, 500)
+    if (!(fieldName in valueSources) && sourceId) valueSources[fieldName] = sourceId
+  }
+  const values = recordValue(input.values)
+  for (const [fieldName, value] of Object.entries(values)) {
+    if (!(fieldName in enteredValues)) enteredValues[fieldName] = value
+  }
+  const enteredFactsValue = input.enteredFacts ?? input.entered_facts
+  const enteredFacts = Array.isArray(enteredFactsValue) ? enteredFactsValue : []
+  for (const rawField of enteredFacts) {
+    const field = recordValue(rawField)
+    const fieldName = safeString(field.field ?? field.name, 240)
+    if (!fieldName) continue
+    if (!(fieldName in enteredValues) && Object.prototype.hasOwnProperty.call(field, 'value')) enteredValues[fieldName] = field.value
+    const sourceId = safeString(field.factId ?? field.fact_id, 500)
+    if (!(fieldName in valueSources) && sourceId) valueSources[fieldName] = sourceId
+  }
+  const factIds = stringArray(input.factIds ?? input.fact_ids, 500)
+  if (factIds.length === 1) {
+    for (const fieldName of Object.keys(enteredValues)) {
+      if (!(fieldName in valueSources)) valueSources[fieldName] = factIds[0]!
+    }
+  }
+  const providerEvidence = recordValue(input.provider_evidence ?? input.providerEvidence)
+  const evidence = recordValue(input.evidence)
+  const evidenceConfirmed = providerEvidence.confirmation_observed === true || providerEvidence.confirmationObserved === true ||
+    Boolean(safeString(evidence.confirmation, 1_000)) || input.readAfterWrite === true || input.read_after_write === true || input.readAfterWriteVerified === true || input.read_after_write_verified === true
+  const providerText = safeString(
+    providerEvidence.text ?? providerEvidence.confirmation ?? input.provider_confirmation ?? input.providerConfirmation ??
+      input.save_confirmation ?? input.saveConfirmation ?? evidence.confirmation,
+    1_000,
+  )
+  const url = safeString(input.url ?? input.portal_url ?? input.portalUrl, 2_000)
+  let portal = safeString(input.portal ?? input.portal_identity ?? input.portalIdentity, 160)
+  if (!portal && url) {
+    try { portal = new URL(url).host }
+    catch { /* The main validator will reject a non-HTTPS or malformed URL. */ }
+  }
+  const saveConfirmation = safeString(input.save_confirmation ?? input.saveConfirmation, 1_000) || (evidenceConfirmed ? providerText : '') || safeString(input.save_effect, 1_000)
+  const completionSignal = safeString(input.completion_signal ?? input.completionSignal, 1_000) || (evidenceConfirmed ? providerText : '')
+  const nextStep = safeString(input.next_step ?? input.nextStep, 1_000) || safeString(input.save_effect, 1_000) || (evidenceConfirmed ? 'Read-after-write verification completed.' : '')
+  return {
+    ...input,
+    portal,
+    url,
+    entered_values: enteredValues,
+    value_sources: valueSources,
+    save_confirmation: saveConfirmation || null,
+    completion_signal: completionSignal || null,
+    next_step: nextStep || null,
+  }
+}
+
 function applicationToolAction(toolName: string, argumentsValue: Record<string, unknown>, snapshot: ApplicationControllerSnapshot): ProposedApplicationAction | null {
   if (!toolName.startsWith('application.')) return null
   const caseId = safeString(argumentsValue.application_case_id, 80) || snapshot.caseId
@@ -3004,10 +4126,13 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
   const evidenceByTool: Partial<Record<string, ControllerEvidenceType[]>> = {
     'application.record_opportunity': ['OFFICIAL_SOURCE'],
     'application.record_portal_checkpoint': ['PORTAL_SAVE_CONFIRMATION', 'PORTAL_OBSERVATION'],
-    'application.generate_supervisor_outreach': ['DOCUMENT_CHECKSUM'],
     'application.record_communication': ['PROVIDER_MESSAGE', 'PROVIDER_THREAD'],
     'application.generate_document': ['DOCUMENT_CHECKSUM'],
     'application.generate_cv': ['DOCUMENT_CHECKSUM'],
+    'application.finalize_research_proposal': ['DOCUMENT_CHECKSUM'],
+    'application.record_proposal_delivery': ['PORTAL_OBSERVATION'],
+    'application.generate_supervisor_outreach': ['DOCUMENT_CHECKSUM', 'OFFICIAL_SOURCE'],
+    'application.coordinate_work_samples': ['DOCUMENT_CHECKSUM'],
     'application.build_readiness_report': ['PORTAL_SAVE_CONFIRMATION'],
     'application.submit': ['SUBMISSION_CONFIRMATION', 'APPLICATION_ID'],
   }
@@ -3022,26 +4147,37 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     'application.record_evidence': 'evidence',
     'application.record_communication': 'communication',
     'application.create_human_assignment': 'writer',
+    'application.coordinate_recommendations': 'referee',
+    'application.coordinate_academic_evidence': 'academic_evidence',
+    'application.coordinate_work_samples': 'document',
     'application.build_referee_support_pack': 'referee',
     'application.build_readiness_report': 'readiness',
     'application.generate_document': 'document',
     'application.generate_cv': 'document',
-    'application.generate_supervisor_outreach': 'document',
+    'application.prepare_research_proposal': 'proposal',
+    'application.review_research_proposal': 'proposal',
+    'application.interpret_research_proposal_feedback': 'proposal',
+    'application.finalize_research_proposal': 'proposal',
+    'application.record_proposal_delivery': 'proposal',
+    'application.generate_supervisor_outreach': 'professor',
     'application.submit': 'submission',
     'application.request_roon': safeString(argumentsValue.request_kind, 80).includes('professor') ? 'professor' : safeString(argumentsValue.request_kind, 80).includes('referee') ? 'referee' : 'communication',
   }
   const nextStateByTool: Partial<Record<string, ApplicationControllerState>> = {
     'application.create_case': 'DOCUMENT_PREPARATION',
     'application.create_human_assignment': 'WRITER_EXECUTION',
+    'application.coordinate_recommendations': 'REFEREE_EXECUTION',
+    'application.coordinate_academic_evidence': 'DOCUMENT_PREPARATION',
+    'application.coordinate_work_samples': 'DOCUMENT_PREPARATION',
     'application.build_referee_support_pack': 'REFEREE_EXECUTION',
     'application.build_readiness_report': 'SUBMISSION_APPROVAL',
     'application.submit': 'POST_SUBMISSION',
   }
   const requiredFactIds: string[] = []
   if (toolName === 'application.record_portal_checkpoint') {
-    const checkpoint = recordValue(argumentsValue.checkpoint)
-    const enteredValues = recordValue(checkpoint.entered_values ?? checkpoint.enteredValues)
-    const valueSources = recordValue(checkpoint.value_sources ?? checkpoint.valueSources)
+    const checkpoint = normalizePortalCheckpointInput(recordValue(argumentsValue.checkpoint))
+    const enteredValues = recordValue(checkpoint.entered_values)
+    const valueSources = recordValue(checkpoint.value_sources)
     for (const field of Object.keys(enteredValues)) {
       const sourceId = safeString(valueSources[field], 500)
       const exact = snapshot.facts.find(fact => fact.factId === sourceId || `fact:${fact.factId}` === sourceId)
@@ -3051,8 +4187,9 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     }
   }
   if (toolName === 'application.generate_document') requiredFactIds.push(...stringArray(argumentsValue.source_fact_ids, 300))
+  if (toolName === 'application.finalize_research_proposal') requiredFactIds.push(...stringArray(argumentsValue.source_fact_ids, 240))
   const completingRequirement = toolName === 'application.update_requirement' && ['verified', 'ready', 'approved', 'submitted'].includes(safeString(argumentsValue.status, 80))
-  const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.generate_supervisor_outreach', 'application.submit'].includes(toolName) || completingRequirement
+  const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.generate_supervisor_outreach', 'application.finalize_research_proposal', 'application.record_proposal_delivery', 'application.submit'].includes(toolName) || completingRequirement
   if (completingRequirement) {
     if (safeString(argumentsValue.linked_artifact_id, 80)) evidenceByTool[toolName] = ['DOCUMENT_CHECKSUM']
     else if (stringArray(argumentsValue.verification_evidence_ids, 120).length) evidenceByTool[toolName] = ['PORTAL_OBSERVATION']
@@ -3074,8 +4211,9 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
 
 function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) {
   const step = snapshot.engineStep
-  if (step.kind === 'CONTROLLER') return new Set(['application.record_opportunity', 'application.record_evidence', 'application.create_case', 'agent.request_context', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'])
+  if (step.kind === 'CONTROLLER') return new Set(['application.record_opportunity', 'application.record_evidence', 'application.create_case', 'agent.request_context', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'])
   if (step.kind === 'SEMANTIC_DECISION') return new Set([`application.${step.request.function}`])
+  if (step.kind === 'SUPPLEMENTAL_QUESTION') return new Set(['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.resolve_supplemental_questions', 'application.record_portal_checkpoint', 'application.create_human_assignment', 'agent.request_context'])
   if (step.kind === 'COMPLETE') return new Set(['agent.complete'])
   if (step.kind === 'USER_HANDOFF') return new Set(['agent.request_context'])
   if (step.kind === 'WAIT') return new Set(['application.request_roon'])
@@ -3088,14 +4226,23 @@ function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) 
     official_requirement: ['application.record_evidence', 'application.update_requirement'],
     deadline: ['application.record_evidence', 'application.update_requirement'],
     funding: ['application.record_evidence', 'application.update_requirement'],
-    document: ['application.generate_document', 'application.generate_cv', 'application.update_requirement'],
+    document: ['application.generate_document', 'application.generate_cv', 'application.coordinate_work_samples', 'application.update_requirement'],
+    transcript: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
+    degree_certificate: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
+    proof_of_graduation: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
+    credential_evaluation: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
+    english_language_test: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'calendar.list_events', 'calendar.get_availability'],
+    admissions_test: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'calendar.list_events', 'calendar.get_availability'],
+    academic_evidence: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence'],
+    research_proposal: ['application.prepare_research_proposal', 'application.create_human_assignment', 'application.review_research_proposal', 'application.interpret_research_proposal_feedback', 'application.finalize_research_proposal', 'application.record_proposal_delivery', 'application.update_requirement', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint', 'application.record_evidence'],
     writer: ['application.create_human_assignment', 'application.request_roon', 'application.update_requirement'],
-    referee: ['application.build_referee_support_pack', 'application.request_roon', 'application.update_requirement'],
+    referee: ['application.coordinate_recommendations', 'application.build_referee_support_pack', 'application.request_roon', 'application.update_requirement'],
     professor: ['application.record_contact', 'application.generate_supervisor_outreach', 'application.request_roon', 'application.update_requirement'],
     communication: ['application.request_roon', 'application.record_communication', 'application.update_requirement'],
-    portal_field: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint'],
-    portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint'],
-    artifact_upload: ['browser.observe', 'browser.act', 'application.record_portal_checkpoint', 'application.record_evidence'],
+    portal_field: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint'],
+    portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint'],
+    supplemental_question: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.resolve_supplemental_questions', 'application.record_portal_checkpoint', 'application.create_human_assignment', 'agent.request_context'],
+    artifact_upload: ['application.coordinate_work_samples', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint', 'application.record_evidence'],
     approval: ['application.build_readiness_report', 'application.update_requirement'],
     submission: ['application.submit'],
     post_submission: ['application.request_roon', 'application.record_evidence', 'application.update_requirement'],
@@ -3487,7 +4634,7 @@ async function executeProviderTool(
     if (!caseId || !requirementId || !['unknown', 'verified', 'missing', 'in_progress', 'awaiting_user', 'awaiting_writer', 'awaiting_referee', 'awaiting_institution', 'ready', 'approved', 'submitted', 'rejected', 'waived', 'expired'].includes(status)) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_requirement_invalid', message: 'The application requirement update is incomplete.', value: { valid: false }, actionStatus: 'failed' }
     }
-    const requirement = await admin.from('application_requirements').select('id,application_case_id,name').eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+    const requirement = await admin.from('application_requirements').select('id,application_case_id,name,verification_evidence_ids').eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
     if (requirement.error) throw new Error(requirement.error.message)
     if (!requirement.data) return { kind: 'pause', status: 'waiting_for_user', code: 'application_requirement_missing', message: 'The application requirement was not found on this case.', value: { valid: false }, actionStatus: 'failed' }
     if (linkedArtifactId) {
@@ -3495,10 +4642,52 @@ async function executeProviderTool(
       if (artifact.error) throw new Error(artifact.error.message)
       if (!artifact.data) return { kind: 'pause', status: 'waiting_for_user', code: 'application_artifact_missing', message: 'The linked application artifact is not owned by this case.', value: { valid: false }, actionStatus: 'failed' }
     }
-    const updated = await admin.from('application_requirements').update({ status, linked_artifact_id: linkedArtifactId, verification_evidence_ids: stringArray(argumentsValue.verification_evidence_ids, 120), blocker_reason: safeString(argumentsValue.blocker_reason, 1_000) || null }).eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id).select('id,name,status,linked_artifact_id').single()
+    const blockerReason = safeString(argumentsValue.blocker_reason, 1_000) || null
+    const verificationEvidenceIds = [...new Set([
+      ...stringArray(requirement.data.verification_evidence_ids, 120),
+      ...stringArray(argumentsValue.verification_evidence_ids, 120),
+    ])]
+    let effectiveStatus = status
+    let effectiveBlockerReason = blockerReason
+    if (['in_progress', 'awaiting_institution', 'awaiting_user'].includes(status) && blockerReason && verificationEvidenceIds.length) {
+      const evidence = await admin.from('application_evidence')
+        .select('id,kind,source_url')
+        .in('id', verificationEvidenceIds)
+        .eq('application_case_id', caseId)
+        .eq('user_id', run.user_id)
+      if (evidence.error) throw new Error(evidence.error.message)
+      const hasQualifyingOfficialEvidence = (evidence.data ?? []).some(item =>
+        safeString(item.kind, 120) === 'official_requirement_source' && verifyOfficialSource(safeString(item.source_url, 2_000)),
+      )
+      if (hasQualifyingOfficialEvidence) {
+        effectiveStatus = 'verified'
+        effectiveBlockerReason = null
+      }
+    }
+    const updated = await admin.from('application_requirements').update({ status: effectiveStatus, linked_artifact_id: linkedArtifactId, verification_evidence_ids: verificationEvidenceIds, blocker_reason: effectiveBlockerReason }).eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id).select('id,name,status,linked_artifact_id').single()
     if (updated.error || !updated.data) throw new Error(updated.error?.message ?? 'The application requirement could not be updated.')
-    const nextState = nextApplicationState(run, { currentCaseId: caseId, status: ['missing', 'awaiting_user'].includes(status) ? 'awaiting_user' : 'preparing', stage: 'document_preparation', nextAction: ['missing', 'awaiting_user'].includes(status) ? `Resolve the ${updated.data.name} requirement.` : 'Continue preparing the application package.', blockers: ['missing', 'awaiting_user'].includes(status) ? [`${updated.data.name}: ${status.replaceAll('_', ' ')}`] : [], progress: { label: `Requirement updated: ${updated.data.name}`, nextAction: ['missing', 'awaiting_user'].includes(status) ? `Resolve the ${updated.data.name} requirement.` : 'Continue preparing the application package.' } })
-    return { kind: 'output', value: { requirement_id: updated.data.id, name: updated.data.name, status: updated.data.status, linked_artifact_id: updated.data.linked_artifact_id }, providerActionId: updated.data.id, publicSummary: `Updated the ${updated.data.name} requirement to ${status.replaceAll('_', ' ')}.`, runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, application_requirement_id: requirementId } } }
+    const terminalRequirementStatuses = ['verified', 'ready', 'approved', 'submitted', 'waived']
+    const awaitingUser = ['missing', 'awaiting_user'].includes(effectiveStatus) || Boolean(effectiveBlockerReason && !terminalRequirementStatuses.includes(effectiveStatus))
+    const nextAction = awaitingUser ? `Resolve the ${updated.data.name} requirement.` : 'Continue preparing the application package.'
+    const nextState = nextApplicationState(run, { currentCaseId: caseId, status: awaitingUser ? 'awaiting_user' : 'preparing', stage: 'document_preparation', nextAction, blockers: awaitingUser ? [`${updated.data.name}: ${effectiveBlockerReason || effectiveStatus.replaceAll('_', ' ')}`] : [], progress: { label: `Requirement updated: ${updated.data.name}`, nextAction } })
+    const value = { requirement_id: updated.data.id, name: updated.data.name, status: updated.data.status, linked_artifact_id: updated.data.linked_artifact_id }
+    const runPatch = { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, application_requirement_id: requirementId } }
+    if (awaitingUser) {
+      return {
+        kind: 'pause',
+        status: 'waiting_for_user',
+        code: 'application_requirement_awaiting_user',
+        message: `${nextAction}${effectiveBlockerReason ? ` ${effectiveBlockerReason}` : ''}`,
+        value: { ...value, requires_user: true },
+        providerActionId: updated.data.id,
+        publicSummary: `Updated the ${updated.data.name} requirement to ${effectiveStatus.replaceAll('_', ' ')} and paused for the applicant.`,
+        actionSucceeded: true,
+        actionStatus: 'succeeded',
+        advanceStep: true,
+        runPatch,
+      }
+    }
+    return { kind: 'output', value, providerActionId: updated.data.id, publicSummary: `Updated the ${updated.data.name} requirement to ${effectiveStatus.replaceAll('_', ' ')}.`, runPatch }
   }
 
   if (toolName === 'application.record_contact') {
@@ -3674,10 +4863,52 @@ async function executeProviderTool(
     return { kind: 'output', value: { communication_id: communication.data.id, classification, provider_message_id: communication.data.provider_message_id, provider_thread_id: communication.data.provider_thread_id, excerpt }, providerActionId: communication.data.id, publicSummary: `Recorded the application communication as ${classification.replaceAll('_', ' ')}.`, runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, application_communication_id: communication.data.id } } }
   }
 
+  if (toolName === 'application.resolve_supplemental_questions') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const sessionId = safeString(argumentsValue.session_id, 80)
+    const observation = recordValue(argumentsValue.observation)
+    if (!caseId || !sessionId || !Object.keys(observation).length) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'supplemental_observation_invalid', message: 'The supplemental-question resolver needs the current case, browser session, and page observation.', value: { valid: false }, actionStatus: 'failed' }
+    }
+    const resolved = await persistSupplementalQuestionsFromObservation(admin, run, { caseId, sessionId, observation })
+    const nextState = nextApplicationState(run, {
+      currentCaseId: caseId,
+      status: resolved.interaction ? 'awaiting_user' : 'preparing',
+      stage: 'portal_preparation',
+      nextAction: resolved.interaction ? resolved.interaction.question : 'Continue with the next portal section after every discovered supplemental question has a route.',
+      blockers: resolved.interaction ? [resolved.interaction.reason] : [],
+      progress: { label: `Tracked ${resolved.questions.length} supplemental question(s)`, nextAction: resolved.interaction ? resolved.interaction.question : 'Continue with the next portal section.' },
+    })
+    const runPatch = {
+      application_state: nextState,
+      context: {
+        ...(run.context ?? {}),
+        application_case_id: caseId,
+        ...(resolved.interaction ? { progress_detail_interaction: resolved.interaction, application_question_interaction_id: resolved.interaction.id } : {}),
+      },
+    }
+    if (resolved.interaction) {
+      return {
+        kind: 'pause',
+        status: 'needs_context',
+        code: 'supplemental_question_needs_user',
+        message: resolved.interaction.question,
+        value: { questions: resolved.questions, interaction: resolved.interaction, writer_questions: resolved.writerQuestions.map(question => ({ id: question.id, exact_prompt: question.exactPrompt })) },
+        providerActionId: `supplemental:${caseId}:${safeString(argumentsValue.idempotency_key, 300)}`,
+        publicSummary: `Tracked ${resolved.questions.length} supplemental question(s) and requested one missing applicant decision.`,
+        actionSucceeded: true,
+        actionStatus: 'succeeded',
+        advanceStep: false,
+        runPatch,
+      }
+    }
+    return { kind: 'output', value: { application_case_id: caseId, questions: resolved.questions, writer_questions: resolved.writerQuestions.map(question => ({ id: question.id, exact_prompt: question.exactPrompt })) }, providerActionId: `supplemental:${caseId}:${safeString(argumentsValue.idempotency_key, 300)}`, publicSummary: `Tracked ${resolved.questions.length} supplemental question(s) and assigned their answer routes.`, runPatch }
+  }
+
   if (toolName === 'application.record_portal_checkpoint') {
     const caseId = safeString(argumentsValue.application_case_id, 80)
     const sessionId = safeString(argumentsValue.session_id, 80)
-    const input = recordValue(argumentsValue.checkpoint)
+    const input = normalizePortalCheckpointInput(recordValue(argumentsValue.checkpoint))
     const url = safeString(input.url, 2_000)
     const section = safeString(input.section ?? input.section_identity, 160)
     if (!caseId || !sessionId || !section || !verifyOfficialSource(url)) {
@@ -3740,6 +4971,39 @@ async function executeProviderTool(
       verified: checkpoint.verified,
     }, { onConflict: 'application_case_id,idempotency_key' }).select('id,verified,section').single()
     if (persisted.error || !persisted.data) throw new Error(persisted.error?.message ?? 'The portal checkpoint could not be persisted.')
+    const supplementalReadBack = recordValue(input.read_back_values ?? input.readBackValues ?? input.read_after_write_values ?? input.readAfterWriteValues)
+    const supplementalEntered = recordValue(input.entered_values ?? input.enteredValues)
+    const supplementalVerification = Object.keys(supplementalReadBack).length
+      ? await verifySupplementalReadBack(admin, run, {
+        caseId,
+        sessionId,
+        persistedValues: supplementalEntered,
+        readBackValues: supplementalReadBack,
+        saveConfirmation: checkpoint.saveConfirmation ?? '',
+        checkpointId: persisted.data.id,
+      })
+      : []
+    const requirementId = safeString(input.requirement_id ?? input.requirementId, 80)
+    if (requirementId) {
+      const requirement = await admin.from('application_requirements')
+        .select('id,verification_evidence_ids')
+        .eq('id', requirementId)
+        .eq('application_case_id', caseId)
+        .eq('user_id', run.user_id)
+        .maybeSingle()
+      if (requirement.error) throw new Error(requirement.error.message)
+      if (requirement.data) {
+        const evidenceIds = [...new Set([
+          ...stringArray(requirement.data.verification_evidence_ids, 120),
+          persisted.data.id,
+        ])]
+        const linked = await admin.from('application_requirements').update({ verification_evidence_ids: evidenceIds })
+          .eq('id', requirementId)
+          .eq('application_case_id', caseId)
+          .eq('user_id', run.user_id)
+        if (linked.error) throw new Error(linked.error.message)
+      }
+    }
     const caseData = recordValue(ownedCase.data.data)
     const checkpointIds = Array.isArray(caseData.portalCheckpointIds) ? caseData.portalCheckpointIds.map(value => safeString(value, 80)).filter(Boolean) : []
     if (!checkpointIds.includes(persisted.data.id)) checkpointIds.push(persisted.data.id)
@@ -3777,7 +5041,7 @@ async function executeProviderTool(
     })
     return {
       kind: 'output',
-      value: { checkpoint_id: persisted.data.id, verified: checkpoint.verified, section, next_step: checkpoint.nextStep, validation_errors: checkpoint.validationErrors },
+      value: { checkpoint_id: persisted.data.id, verified: checkpoint.verified, section, next_step: checkpoint.nextStep, validation_errors: checkpoint.validationErrors, supplemental_verification: supplementalVerification },
       providerActionId: persisted.data.id,
       publicSummary: checkpoint.verified ? `Verified the ${section} portal section after saving it.` : `Saved the ${section} portal checkpoint; verification still needs attention.`,
       runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, portal_checkpoint_id: persisted.data.id, portal_session_id: sessionId } },
@@ -3899,6 +5163,834 @@ async function executeProviderTool(
     await admin.from('application_cases').update({ status: 'awaiting_writer', current_stage: 'writer_assignment', next_action: 'Roon should send the approved writer brief and monitor for questions and the draft.', data: { ...caseData, writerAssignmentIds: assignmentIds } }).eq('id', caseId).eq('user_id', run.user_id)
     const nextState = nextApplicationState(run, { currentCaseId: caseId, status: 'awaiting_writer', stage: 'writer_assignment', nextAction: 'Roon should send the approved writer brief and monitor for questions and the draft.', progress: { completed: 3, label: 'SOP assigned to writer', nextAction: 'Roon should send the approved writer brief and monitor for questions and the draft.' } })
     return { kind: 'output', value: { human_assignment_id: persisted.data.id, status: persisted.data.status, writer_id: assignment.writerId, deadline_at: persisted.data.deadline_at }, providerActionId: persisted.data.id, publicSummary: 'Created the writer assignment with source materials and SLA deadline.', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, human_assignment_id: persisted.data.id } } }
+  }
+
+  if (toolName === 'application.coordinate_work_samples') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case and verified opportunity are required before coordinating a writing sample or portfolio.', value: { valid: false }, actionStatus: 'failed' }
+    const contextSources = recordValue(argumentsValue.context_sources)
+    const profileResult = await admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle()
+    if (profileResult.error && profileResult.error.code !== '42P01') throw new Error(profileResult.error.message)
+    const profile = profileResult.data?.profile ?? contextSources.profile
+    if (!profile) return { kind: 'pause', status: 'needs_context', code: 'applicant_profile_missing', message: 'Confirm the reusable applicant profile or attach the current CV so I can inspect and rank work samples safely.', value: { missing_fields: ['applicant_profile'], suggested_options: [] }, actionStatus: 'failed' }
+
+    const requirementInput = recordValue(argumentsValue.programme_requirements)
+    const opportunity = recordValue(context.opportunity)
+    const sourceEvidence = [
+      ...(Array.isArray(requirementInput.sourceEvidence) ? requirementInput.sourceEvidence : []),
+      ...(Array.isArray(requirementInput.source_evidence) ? requirementInput.source_evidence : []),
+      ...(Array.isArray(opportunity.citations) ? opportunity.citations : []),
+    ]
+    const requirements = extractWorkSampleRequirements({
+      applicationCaseId: caseId,
+      programme: safeString(opportunity.programmeTitle, 800),
+      raw: requirementInput,
+      sourceEvidence,
+      officialProgramme: unknownArray(requirementInput.officialProgramme ?? requirementInput.official_programme),
+      departmentInstructions: unknownArray(requirementInput.departmentInstructions ?? requirementInput.department_instructions),
+      applicationGuide: unknownArray(requirementInput.applicationGuide ?? requirementInput.application_guide),
+      portalSections: unknownArray(requirementInput.portalSections ?? requirementInput.portal_sections),
+      portfolioGuidance: unknownArray(requirementInput.portfolioGuidance ?? requirementInput.portfolio_guidance),
+      faq: unknownArray(requirementInput.faq),
+      downloads: unknownArray(requirementInput.downloads),
+    })
+    const caseData = recordValue(context.row.data)
+    const previousWorkflow = recordValue(caseData.workSampleWorkflow)
+    const uploadedFiles = await workSampleFileRecords(admin, run, caseId)
+    const suppliedFiles = [
+      ...unknownArray(contextSources.uploadedFiles ?? contextSources.uploaded_files),
+      ...unknownArray(run.context?.attachments),
+    ]
+    const existingCandidates = Array.isArray(argumentsValue.candidate_overrides)
+      ? argumentsValue.candidate_overrides
+      : Array.isArray(previousWorkflow.candidates) ? previousWorkflow.candidates : []
+    const reusableContext = contextSources.reusableContext ?? contextSources.reusable_context ?? caseData.workSampleContext ?? {}
+    const selectedFromResponse = workSampleInteractionResponse(run)
+    const responseValues = Array.isArray(selectedFromResponse.value)
+      ? selectedFromResponse.value.map(value => safeString(value, 240)).filter(Boolean)
+      : typeof selectedFromResponse.value === 'string' ? [safeString(selectedFromResponse.value, 240)] : []
+    const selectedCandidateIds = stringArray(argumentsValue.selected_candidate_ids, 240).length
+      ? stringArray(argumentsValue.selected_candidate_ids, 240)
+      : responseValues
+    const resolved = resolveWorkSampleContext({
+      profile,
+      uploadedFiles: [...uploadedFiles, ...suppliedFiles],
+      previousApplications: unknownArray(contextSources.previousApplications ?? contextSources.previous_applications),
+      canonicalCv: contextSources.canonicalCv ?? contextSources.canonical_cv,
+      thesisRecords: unknownArray(contextSources.thesisRecords ?? contextSources.thesis_records),
+      researchRecords: unknownArray(contextSources.researchRecords ?? contextSources.research_records),
+      publicationRecords: unknownArray(contextSources.publicationRecords ?? contextSources.publication_records),
+      projectRecords: unknownArray(contextSources.projectRecords ?? contextSources.project_records),
+      previousArtifacts: unknownArray(contextSources.previousArtifacts ?? contextSources.previous_artifacts),
+      gmailAttachments: unknownArray(contextSources.gmailAttachments ?? contextSources.gmail_attachments),
+      reusableContext,
+      existingCandidates,
+      requirements,
+      programme: safeString(opportunity.programmeTitle, 800),
+      selectedCandidateIds,
+      automaticContinuationCount: Number(previousWorkflow.automaticContinuationCount ?? 0),
+      interactionCount: Number(previousWorkflow.interactionCount ?? 0),
+    })
+    const persistableContext = {
+      version: resolved.version,
+      checkedSources: resolved.checkedSources,
+      autoResolvedFacts: resolved.autoResolvedFacts,
+      reusableContext: argumentsValue.reusable_context_consent === true ? resolved.reusableContext : {},
+      candidateIds: resolved.candidates.map(candidate => candidate.id),
+      unresolved: resolved.unresolved,
+      automaticContinuationRate: resolved.automaticContinuationRate,
+    }
+    const persistedRequirementIds = new Map<string, string>()
+    const sourceEvidenceIdsByRequirement = new Map<string, string[]>()
+    for (const requirement of requirements) {
+      const row = await admin.from('application_work_sample_requirements').upsert({
+        user_id: run.user_id,
+        application_case_id: caseId,
+        opportunity_id: safeString(opportunity.id, 80) || null,
+        requirement_key: requirement.requirementKey,
+        requirement_type: requirement.requirementType,
+        mode: requirement.mode,
+        status: requirement.status,
+        source_evidence: requirement.sources,
+        requirement_data: requirement,
+        idempotency_key: `work-sample-requirement:${caseId}:${requirement.requirementKey}`,
+      }, { onConflict: 'user_id,application_case_id,requirement_key' }).select('id').single()
+      if (row.error?.code === '42P01') return { kind: 'pause', status: 'waiting_for_user', code: 'application_migration_required', message: 'Work-sample persistence is not available until the canonical application migration is applied.', value: { available: false }, actionStatus: 'failed' }
+      if (row.error || !row.data) throw new Error(row.error?.message ?? 'The work-sample requirement could not be persisted.')
+      persistedRequirementIds.set(requirement.requirementKey, String(row.data.id))
+      const evidenceIds: string[] = []
+      for (const source of requirement.sources) {
+        const evidence = await admin.from('application_evidence').upsert({
+          user_id: run.user_id,
+          application_case_id: caseId,
+          task_id: safeString(context.row.task_id, 80) || run.task_id,
+          campaign_id: safeString(context.row.campaign_id, 80) || null,
+          agent_run_id: run.id,
+          kind: 'official_requirement_source',
+          source_url: source.url,
+          provider: source.sourceKind,
+          excerpt: source.excerpt.slice(0, 2_000) || source.title,
+          metadata: { work_sample_requirement_key: requirement.requirementKey, source_id: source.id, authority: source.authority, source_kind: source.sourceKind },
+          idempotency_key: `work-sample-source:${caseId}:${requirement.requirementKey}:${source.id}`,
+        }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').maybeSingle()
+        if (evidence.error) throw new Error(evidence.error.message)
+        if (evidence.data?.id) evidenceIds.push(String(evidence.data.id))
+      }
+      sourceEvidenceIdsByRequirement.set(requirement.requirementKey, evidenceIds)
+    }
+    const requestedRequirementKey = safeString(argumentsValue.requirement_key, 200) || safeString(previousWorkflow.requirementKey, 200)
+    const targetRequirement = requirements.find(requirement => requirement.requirementKey === requestedRequirementKey) ??
+      requirements.find(requirement => requirement.required) ?? requirements.find(requirement => requirement.mode !== 'not_applicable') ?? requirements[0]
+    if (!targetRequirement) return { kind: 'output', value: { application_case_id: caseId, requirements: [], workflow_state: 'not_required' }, providerActionId: `work-sample:${caseId}:none`, publicSummary: 'No work-sample or portfolio requirement was found in the supplied official programme sources.' }
+    const targetRequirementDbId = persistedRequirementIds.get(targetRequirement.requirementKey) ?? null
+    const previousInteraction = recordValue(previousWorkflow.interaction)
+    const responseMatchesInteraction = Boolean(selectedFromResponse.id && selectedFromResponse.id === safeString(previousInteraction.id, 240) && previousInteraction.workflow === 'work_sample')
+    let responseMetric: Record<string, unknown> | null = null
+    if (responseMatchesInteraction) {
+      const applied = applyWorkSampleInteraction({
+        context: resolved,
+        interaction: previousInteraction as unknown as WorkSampleInteraction,
+        value: selectedFromResponse.value,
+        reusableContextConsent: argumentsValue.reusable_context_consent === true,
+      })
+      if (!applied.accepted) return { kind: 'pause', status: 'needs_context', code: 'work_sample_interaction_invalid', message: applied.error ?? 'That Progress Detail response is not valid for this work-sample decision.', value: { interaction: previousInteraction, valid: false }, actionStatus: 'failed' }
+      responseMetric = applied.metric as unknown as Record<string, unknown>
+      const interactionUpdate = await admin.from('application_work_sample_interactions').update({ response: selectedFromResponse.value ?? null, reusable: applied.metric.reusableContextSaved, status: 'answered', metric: applied.metric }).eq('user_id', run.user_id).eq('application_case_id', caseId).eq('interaction_id', selectedFromResponse.id).eq('status', 'pending')
+      if (interactionUpdate.error && interactionUpdate.error.code !== '42P01') throw new Error(interactionUpdate.error.message)
+    }
+    const approvalResponse = responseMatchesInteraction && ['approval', 'confirmation'].includes(safeString(previousInteraction.kind, 80)) && (selectedFromResponse.value === true || responseValues[0]?.toLocaleLowerCase() === 'true' || responseValues[0]?.toLocaleLowerCase() === 'approved')
+
+    if (approvalResponse && previousWorkflow.submission && targetRequirementDbId) {
+      const previousSubmission = recordValue(previousWorkflow.submission)
+      const submissionId = safeString(previousSubmission.databaseId, 80)
+      const submissionLookup = submissionId
+        ? await admin.from('application_work_sample_submissions').select('*').eq('id', submissionId).eq('user_id', run.user_id).eq('application_case_id', caseId).maybeSingle()
+        : await admin.from('application_work_sample_submissions').select('*').eq('user_id', run.user_id).eq('application_case_id', caseId).eq('idempotency_key', safeString(previousSubmission.idempotencyKey, 300)).maybeSingle()
+      if (submissionLookup.error) throw new Error(submissionLookup.error.message)
+      if (!submissionLookup.data) return { kind: 'pause', status: 'needs_context', code: 'work_sample_submission_changed', message: 'The prepared work-sample record changed before approval. I need to re-check the current artifact and requirements.', value: { valid: false }, actionStatus: 'failed' }
+      const approved = await admin.from('application_work_sample_submissions').update({ approval_state: 'approved', upload_state: 'ready' }).eq('id', submissionLookup.data.id).eq('user_id', run.user_id).select('id').single()
+      if (approved.error) throw new Error(approved.error.message)
+      const artifactId = safeString(previousSubmission.derivedArtifactId, 80)
+      if (artifactId) {
+        const artifactUpdate = await admin.from('application_artifacts').update({ approval_status: 'approved' }).eq('id', artifactId).eq('application_case_id', caseId).eq('user_id', run.user_id)
+        if (artifactUpdate.error) throw new Error(artifactUpdate.error.message)
+        const asset = await admin.from('application_artifacts').select('file_asset_id').eq('id', artifactId).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+        if (asset.error) throw new Error(asset.error.message)
+        if (asset.data?.file_asset_id) await admin.from('file_assets').update({ approval_status: 'approved' }).eq('id', asset.data.file_asset_id).eq('user_id', run.user_id)
+      }
+      const legacyRequirement = context.applicationCase.requirements.find(requirement => /writing sample|work sample|paper|publication|portfolio|code|notebook|website/i.test(requirement.name))
+      if (legacyRequirement && artifactId) {
+        const linkedEvidence = [...new Set([...legacyRequirement.verificationEvidenceIds, ...(sourceEvidenceIdsByRequirement.get(targetRequirement.requirementKey) ?? [])])]
+        const requirementUpdate = await admin.from('application_requirements').update({ status: 'approved', linked_artifact_id: artifactId, verification_evidence_ids: linkedEvidence, blocker_reason: null }).eq('id', legacyRequirement.id).eq('application_case_id', caseId).eq('user_id', run.user_id)
+        if (requirementUpdate.error) throw new Error(requirementUpdate.error.message)
+      }
+      const workflow = { ...previousWorkflow, state: 'approved_for_upload', interaction: null, responseMetric, submission: { ...previousSubmission, approvalState: 'approved', uploadState: 'ready' } }
+      const nextAction = 'Upload the exact approved work-sample artifact through the task-owned browser, then read back the filename and checksum before recording portal evidence.'
+      await admin.from('application_cases').update({ status: 'active', current_stage: 'portal_preparation', next_action: nextAction, data: { ...caseData, workSampleWorkflow: workflow } }).eq('id', caseId).eq('user_id', run.user_id)
+      const nextState = nextApplicationState(run, { currentCaseId: caseId, status: 'preparing', stage: 'portal_preparation', nextAction, progress: { completed: 4, label: 'Work sample approved for portal upload', nextAction } })
+      return { kind: 'output', value: { application_case_id: caseId, workflow_state: workflow.state, submission: workflow.submission, requirement: targetRequirement, next_action: nextAction }, providerActionId: `work-sample-approval:${caseId}:${safeString(previousSubmission.checksum, 128)}`, publicSummary: 'Approved the exact derived work-sample artifact; portal upload still needs browser read-back verification.', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, work_sample_workflow: workflow, progress_detail_interaction: null } } }
+    }
+
+    const uploadInput = recordValue(argumentsValue.upload_verification)
+    if (Object.keys(uploadInput).length) {
+      if (containsSensitiveApplicationKeys(uploadInput)) return { kind: 'pause', status: 'waiting_for_user', code: 'work_sample_upload_sensitive', message: 'The upload observation contains a credential-like field. Remove it and resend only the filename, checksum, size, section, and confirmation evidence.', value: { valid: false }, actionStatus: 'failed' }
+      const uploadChecksum = safeString(uploadInput.checksum ?? uploadInput.sha256, 128)
+      const uploadFilename = safeString(uploadInput.filename ?? uploadInput.file_name, 255)
+      const submissionId = safeString(uploadInput.submission_id ?? uploadInput.submissionId ?? recordValue(previousWorkflow.submission).databaseId, 80)
+      const submissionResult = submissionId
+        ? await admin.from('application_work_sample_submissions').select('*').eq('id', submissionId).eq('user_id', run.user_id).eq('application_case_id', caseId).maybeSingle()
+        : await admin.from('application_work_sample_submissions').select('*').eq('user_id', run.user_id).eq('application_case_id', caseId).eq('upload_state', 'ready').order('updated_at', { ascending: false }).limit(1).maybeSingle()
+      if (submissionResult.error) throw new Error(submissionResult.error.message)
+      if (!submissionResult.data) return { kind: 'pause', status: 'needs_context', code: 'work_sample_submission_missing', message: 'The exact prepared work-sample submission is no longer available. Re-run the coordinator before uploading.', value: { valid: false }, actionStatus: 'failed' }
+      const storedSubmission = submissionResult.data
+      if (uploadFilename !== safeString(storedSubmission.filename, 255) || uploadChecksum !== safeString(storedSubmission.checksum, 128)) {
+        return { kind: 'pause', status: 'waiting_for_user', code: 'work_sample_upload_identity_mismatch', message: 'The portal observation does not match the approved filename or checksum. Keep the approved artifact unchanged and retry the browser upload.', value: { valid: false, expected_filename: storedSubmission.filename, expected_checksum: storedSubmission.checksum, observed_filename: uploadFilename, observed_checksum: uploadChecksum }, actionStatus: 'failed' }
+      }
+      const existingVerified = await admin.from('application_work_sample_submissions').select('id,upload_state').eq('user_id', run.user_id).eq('application_case_id', caseId).eq('checksum', uploadChecksum).eq('filename', uploadFilename).eq('upload_state', 'verified').maybeSingle()
+      if (existingVerified.error) throw new Error(existingVerified.error.message)
+      if (existingVerified.data) return { kind: 'output', value: { application_case_id: caseId, submission_id: existingVerified.data.id, upload_state: 'verified', duplicate: true }, providerActionId: String(existingVerified.data.id), publicSummary: 'The exact work-sample upload was already verified; prevented a duplicate evidence write.' }
+      const persistedValues = recordValue(uploadInput.persisted_values ?? uploadInput.persistedValues)
+      const readBackValues = recordValue(uploadInput.read_back_values ?? uploadInput.readBackValues)
+      const verification = verifyWorkSampleUpload({
+        applicationCaseId: caseId,
+        requirementId: safeString(uploadInput.requirement_id ?? uploadInput.requirementId, 80) || targetRequirementDbId || targetRequirement.id,
+        submissionId: safeString(recordValue(previousWorkflow.submission).id, 300) || String(storedSubmission.id),
+        portal: safeString(uploadInput.portal ?? uploadInput.portal_identity, 500),
+        section: safeString(uploadInput.section ?? uploadInput.section_identity, 240),
+        sessionId: safeString(uploadInput.session_id ?? uploadInput.sessionId, 80),
+        persistedValues,
+        readBackValues,
+        filename: uploadFilename,
+        checksum: uploadChecksum,
+        sizeBytes: Number.isFinite(Number(uploadInput.size_bytes ?? uploadInput.sizeBytes)) ? Number(uploadInput.size_bytes ?? uploadInput.sizeBytes) : null,
+        accepted: uploadInput.accepted === true,
+        validationWarnings: stringArray(uploadInput.validation_warnings ?? uploadInput.validationWarnings, 30),
+        confirmation: safeString(uploadInput.confirmation ?? uploadInput.save_confirmation, 1_000) || null,
+      })
+      if (!verification.verified || !verification.evidence) {
+        await admin.from('application_work_sample_submissions').update({ upload_state: 'blocked', resulting_state_evidence: { ...recordValue(storedSubmission.resulting_state_evidence), portal: safeString(uploadInput.portal, 500) || null, section: safeString(uploadInput.section, 240) || null, sessionId: safeString(uploadInput.session_id ?? uploadInput.sessionId, 80) || null, filename: uploadFilename || null, checksum: uploadChecksum || null, readBackValues, confirmation: safeString(uploadInput.confirmation, 1_000) || null, issues: verification.issues } }).eq('id', storedSubmission.id).eq('user_id', run.user_id)
+        return { kind: 'pause', status: 'waiting_for_user', code: 'work_sample_upload_verification_failed', message: `The portal upload was not verified: ${verification.issues.join(' ')}`, value: { verified: false, issues: verification.issues, expected_filename: storedSubmission.filename, expected_checksum: storedSubmission.checksum }, actionStatus: 'failed' }
+      }
+      const artifact = await admin.from('application_artifacts').select('file_asset_id').eq('id', storedSubmission.derived_artifact_id).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+      if (artifact.error) throw new Error(artifact.error.message)
+      const evidence = await admin.from('application_evidence').upsert({
+        user_id: run.user_id,
+        application_case_id: caseId,
+        task_id: safeString(context.row.task_id, 80) || run.task_id,
+        campaign_id: safeString(context.row.campaign_id, 80) || null,
+        agent_run_id: run.id,
+        kind: 'uploaded_file_verification',
+        provider: 'browser',
+        asset_id: artifact.data?.file_asset_id ?? null,
+        excerpt: `${uploadFilename} was accepted in ${safeString(uploadInput.section, 240)} and read back with the exact checksum.`,
+        metadata: { submission_id: storedSubmission.id, checksum: uploadChecksum, filename: uploadFilename, size_bytes: verification.evidence.sizeBytes, portal: verification.evidence.portal, section: verification.evidence.section, session_id: verification.evidence.sessionId, read_back_values: readBackValues, confirmation: verification.evidence.confirmation },
+        idempotency_key: `work-sample-upload:${caseId}:${storedSubmission.id}:${uploadChecksum}`,
+      }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
+      if (evidence.error || !evidence.data) throw new Error(evidence.error?.message ?? 'The work-sample upload evidence could not be persisted.')
+      const resultingEvidence = { ...verification.evidence, evidenceIds: [String(evidence.data.id)] }
+      const updatedSubmission = await admin.from('application_work_sample_submissions').update({ upload_state: 'verified', resulting_state_evidence: resultingEvidence }).eq('id', storedSubmission.id).eq('user_id', run.user_id).select('id').single()
+      if (updatedSubmission.error) throw new Error(updatedSubmission.error.message)
+      const legacyRequirement = context.applicationCase.requirements.find(requirement => /writing sample|work sample|paper|publication|portfolio|code|notebook|website/i.test(requirement.name))
+      if (legacyRequirement) {
+        const linkedEvidence = [...new Set([...legacyRequirement.verificationEvidenceIds, String(evidence.data.id)])]
+        const requirementUpdate = await admin.from('application_requirements').update({ status: 'submitted', linked_artifact_id: storedSubmission.derived_artifact_id, verification_evidence_ids: linkedEvidence, blocker_reason: null }).eq('id', legacyRequirement.id).eq('application_case_id', caseId).eq('user_id', run.user_id)
+        if (requirementUpdate.error) throw new Error(requirementUpdate.error.message)
+      }
+      const priorSubmission = recordValue(previousWorkflow.submission)
+      const workflow = { ...previousWorkflow, state: 'submitted_to_portal', interaction: null, submission: { ...priorSubmission, databaseId: storedSubmission.id, uploadState: 'verified', resultingStateEvidence: resultingEvidence } }
+      const nextAction = 'Continue the remaining portal sections; keep this exact filename and checksum attached to the application case.'
+      await admin.from('application_cases').update({ status: 'active', current_stage: 'portal_preparation', next_action: nextAction, data: { ...caseData, workSampleWorkflow: workflow, workSampleUploadEvidenceId: evidence.data.id } }).eq('id', caseId).eq('user_id', run.user_id)
+      const nextState = nextApplicationState(run, { currentCaseId: caseId, status: 'preparing', stage: 'portal_preparation', nextAction, lastEvidenceAt: new Date().toISOString(), progress: { completed: 5, label: 'Work sample upload verified', nextAction, evidenceCount: (run.application_state?.progress.evidenceCount ?? 0) + 1 } })
+      return { kind: 'output', value: { application_case_id: caseId, submission_id: storedSubmission.id, upload_state: 'verified', evidence_id: evidence.data.id, filename: uploadFilename, checksum: uploadChecksum, completion: { complete: true, defects: [] } }, providerActionId: String(evidence.data.id), publicSummary: 'Verified the exact work-sample filename and checksum after portal read-back and persisted the upload evidence.', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, work_sample_workflow: workflow, work_sample_upload_evidence_id: evidence.data.id } } }
+    }
+
+    if (targetRequirement.mode === 'not_applicable') {
+      const workflow = { version: 'work-sample-execution@1.0.0', state: 'not_required', requirementKey: targetRequirement.requirementKey, requirements: requirements.map(requirement => ({ ...requirement })), checkedContext: persistableContext, candidates: [], strategy: null, interaction: null }
+      await admin.from('application_cases').update({ data: { ...caseData, workSampleWorkflow: workflow } }).eq('id', caseId).eq('user_id', run.user_id)
+      return { kind: 'output', value: { application_case_id: caseId, workflow_state: 'not_required', requirement: targetRequirement, requirements }, providerActionId: `work-sample-not-required:${caseId}:${targetRequirement.requirementKey}`, publicSummary: 'Verified that the official programme does not require a writing sample, portfolio, code sample, or other previous-work artifact.' }
+    }
+    if (targetRequirement.prohibited) {
+      return { kind: 'output', value: { application_case_id: caseId, workflow_state: 'prohibited', requirement: targetRequirement }, providerActionId: `work-sample-prohibited:${caseId}:${targetRequirement.requirementKey}`, publicSummary: 'The official programme source explicitly prohibits this work-sample class, so no artifact was prepared.' }
+    }
+
+    const ranked = rankWorkSampleCandidates({ requirement: targetRequirement, candidates: resolved.candidates, programme: safeString(opportunity.programmeTitle, 800) })
+    const candidateDbIds = new Map<string, string>()
+    for (const candidate of ranked) {
+      const safeCandidate = publicWorkSampleCandidate(candidate)
+      const candidateRow = await admin.from('application_work_sample_candidates').upsert({
+        user_id: run.user_id,
+        application_case_id: caseId,
+        candidate_key: candidate.id,
+        title: candidate.title,
+        artifact_type: candidate.artifactType,
+        source_asset_ids: candidate.sourceAssetIds,
+        source_ids: candidate.provenance.sourceIds,
+        eligibility: candidate.eligibility,
+        quality_score: candidate.qualityScore,
+        application_fit_score: candidate.applicationFitScore,
+        selected: selectedCandidateIds.includes(candidate.id),
+        candidate_data: safeCandidate,
+      }, { onConflict: 'user_id,application_case_id,candidate_key' }).select('id').single()
+      if (candidateRow.error?.code === '42P01') return { kind: 'pause', status: 'waiting_for_user', code: 'application_migration_required', message: 'Work-sample persistence is not available until the canonical application migration is applied.', value: { available: false }, actionStatus: 'failed' }
+      if (candidateRow.error || !candidateRow.data) throw new Error(candidateRow.error?.message ?? 'The work-sample candidate could not be persisted.')
+      candidateDbIds.set(candidate.id, String(candidateRow.data.id))
+    }
+    const strategyResult = createWorkSamplePortfolioStrategy({ applicationCaseId: caseId, requirement: targetRequirement, rankedCandidates: ranked, selectedCandidateIds })
+    let interaction = strategyResult.interaction
+    if (!strategyResult.strategy && !interaction) {
+      const unreadable = ranked.find(candidate => candidate.eligibility !== 'ineligible' && (!candidate.inspection.inspected || !candidate.content))
+      interaction = {
+        workflow: 'work_sample',
+        id: `${targetRequirement.id}:inspection-file`,
+        requirementId: targetRequirement.id,
+        kind: 'attachment_request',
+        question: unreadable ? `I found ${unreadable.title}, but I cannot safely inspect its readable contents yet.` : 'Attach the strongest work sample or portfolio artifact for this programme.',
+        reason: unreadable ? 'Submission preparation is blocked until the artifact can be inspected for authorship, contribution, quality, and security.' : 'No authorized eligible source file was found in the current ApplicantProfile, prior cases, or private uploads.',
+        knownContext: unreadable ? [unreadable.title, ...unreadable.eligibilityReasons.slice(0, 3)] : ['Official requirements were extracted and stored.', 'No eligible candidate with an inspectable source file is available.'],
+        options: [],
+        reusableContextKeys: [],
+        confirmLabel: 'Continue',
+        cancelLabel: 'Not now',
+        attachmentPrompt: 'Attach the exact PDF, DOCX, TXT, ZIP, notebook, or portfolio export.',
+        acceptedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/zip'],
+        maximumFiles: 1,
+        minSelections: 1,
+      }
+    }
+    const persistInteraction = async (pendingInteraction: WorkSampleInteraction) => {
+      if (!targetRequirementDbId) return
+      const interactionRow = await admin.from('application_work_sample_interactions').upsert({
+        user_id: run.user_id,
+        application_case_id: caseId,
+        work_sample_requirement_id: targetRequirementDbId,
+        interaction_id: pendingInteraction.id,
+        kind: pendingInteraction.kind,
+        question: pendingInteraction.question,
+        reason: pendingInteraction.reason,
+        options: pendingInteraction.options,
+        response: null,
+        reusable: pendingInteraction.reusableContextKeys.length > 0,
+        status: 'pending',
+        metric: {},
+        idempotency_key: `work-sample-interaction:${caseId}:${pendingInteraction.id}`,
+      }, { onConflict: 'user_id,application_case_id,interaction_id' }).select('id').maybeSingle()
+      if (interactionRow.error && interactionRow.error.code !== '42P01') throw new Error(interactionRow.error.message)
+    }
+    if (interaction) {
+      await persistInteraction(interaction)
+      const workflow = {
+        version: 'work-sample-execution@1.0.0', state: interaction.kind === 'attachment_request' ? 'needs_file' : 'awaiting_user_selection', requirementKey: targetRequirement.requirementKey,
+        requirements: requirements.map(requirement => ({ ...requirement })), checkedContext: persistableContext, candidates: ranked.map(publicWorkSampleCandidate), strategy: null, interaction, interactionCount: Number(previousWorkflow.interactionCount ?? 0) + 1,
+        requirementGraph: buildWorkSampleRequirementGraph({ caseId, requirements }),
+      }
+      const nextAction = interaction.question
+      await admin.from('application_cases').update({ status: 'awaiting_user', current_stage: 'document_preparation', next_action: nextAction, data: { ...caseData, workSampleWorkflow: workflow, ...(argumentsValue.reusable_context_consent === true ? { workSampleContext: resolved.reusableContext } : {}) } }).eq('id', caseId).eq('user_id', run.user_id)
+      const nextState = nextApplicationState(run, { currentCaseId: caseId, status: 'awaiting_user', stage: 'document_preparation', nextAction, blockers: resolved.unresolved, progress: { completed: 2, label: 'Work-sample decision needed', nextAction, blockers: resolved.unresolved } })
+      return { kind: 'pause', status: 'needs_context', code: 'work_sample_progress_detail', message: interaction.question, value: { workflow: 'work_sample', interaction, requirement: targetRequirement, requirements, candidates: ranked.map(publicWorkSampleCandidate), workflow_state: workflow.state }, runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, work_sample_workflow: workflow, progress_detail_interaction: interaction, last_context_question: interaction.question, scheduling_options: [] } } }
+    }
+    const strategy = strategyResult.strategy
+    if (!strategy) return { kind: 'pause', status: 'needs_context', code: 'work_sample_no_eligible_candidate', message: 'No eligible work-sample candidate passed authorship, contribution, format, and quality checks. Attach or identify a better source artifact before continuing.', value: { requirement: targetRequirement, candidates: ranked.map(publicWorkSampleCandidate), blockers: ranked.flatMap(candidate => candidate.eligibilityReasons).slice(0, 12) }, actionStatus: 'failed' }
+    const selectedCandidates = strategy.selectedCandidateIds.map(id => ranked.find(candidate => candidate.id === id)).filter(Boolean) as WorkSampleCandidate[]
+    const leadCandidate = selectedCandidates[0]
+    if (!leadCandidate || selectedCandidates.some(candidate => !candidate.content?.trim())) {
+      return { kind: 'pause', status: 'needs_context', code: 'work_sample_content_missing', message: 'The chosen work sample is known, but its readable source content is not available for a safe derived copy. Attach the exact source file and continue.', value: { requirement: targetRequirement, selected_candidate_ids: strategy.selectedCandidateIds, candidates: selectedCandidates.map(publicWorkSampleCandidate) }, actionStatus: 'failed' }
+    }
+    if (targetRequirement.fileFormats.length && !targetRequirement.fileFormats.some(format => /pdf/i.test(format))) {
+      return { kind: 'pause', status: 'needs_context', code: 'work_sample_format_requires_original', message: `This programme specifies ${targetRequirement.fileFormats.join(', ')} and the current deterministic renderer can only produce a normalized PDF derivative. Preserve the original format or attach an accepted PDF export before continuing.`, value: { requirement: targetRequirement, accepted_formats: targetRequirement.fileFormats, selected_candidate_ids: strategy.selectedCandidateIds }, actionStatus: 'failed' }
+    }
+    const applicantName = applicantDisplayName(recordValue(profile), contextSources)
+    const preparedBody = workSampleExcerptBody(selectedCandidates, targetRequirement.pageLimit)
+    const security = scanWorkSampleSecurity({ content: preparedBody, filename: leadCandidate.title })
+    const bytes = createPdf(`${safeString(opportunity.programmeTitle, 800)} — ${leadCandidate.title}`, preparedBody)
+    const derivedChecksum = await workSampleSha256(bytes)
+    const originalArtifact = context.artifacts.find(artifact => leadCandidate.sourceAssetIds.includes(artifact.fileAssetId))
+    const originalAsset = uploadedFiles.find(asset => leadCandidate.sourceAssetIds.includes(String(asset.assetId)))
+    const preliminary = prepareWorkSampleSubmission({
+      applicationCaseId: caseId,
+      requirement: targetRequirement,
+      candidate: { ...leadCandidate, fileFormat: 'application/pdf' },
+      applicantName,
+      originalArtifactId: originalArtifact?.id ?? null,
+      originalChecksum: leadCandidate.provenance.checksum ?? (originalAsset ? safeString(originalAsset.checksum, 128) : null),
+      derivedChecksum,
+      derivedSizeBytes: bytes.length,
+      selectedProjects: strategy.selectedCandidateIds,
+      anonymized: !targetRequirement.anonymizationRequired,
+      applicantNameIncluded: !targetRequirement.applicantNameRequired || preparedBody.toLocaleLowerCase().includes(applicantName.toLocaleLowerCase()),
+      approvalRequired: true,
+    })
+    const pageCount = workSamplePdfPageCount(bytes)
+    const wordCount = preparedBody.split(/\s+/).filter(Boolean).length
+    const qualityGate = validateWorkSampleSubmission({
+      requirement: targetRequirement,
+      candidate: leadCandidate,
+      filename: preliminary.filename,
+      applicantName,
+      originalChecksum: preliminary.originalChecksum,
+      checksum: derivedChecksum,
+      sizeBytes: bytes.length,
+      pageCount,
+      wordCount,
+      selectedPages: preliminary.selectedPages,
+      anonymized: !targetRequirement.anonymizationRequired,
+      applicantNameIncluded: !targetRequirement.applicantNameRequired || preparedBody.toLocaleLowerCase().includes(applicantName.toLocaleLowerCase()),
+      substantiveContentChanged: false,
+      securityFindings: security.findings,
+    })
+    const submission = { ...preliminary, sizeBytes: bytes.length, pageCount, wordCount, qualityGate, uploadState: qualityGate.passed ? 'ready' as const : 'blocked' as const }
+    if (!qualityGate.passed) {
+      const workflow = { version: 'work-sample-execution@1.0.0', state: 'blocked_quality_gate', requirementKey: targetRequirement.requirementKey, requirements: requirements.map(requirement => ({ ...requirement })), checkedContext: persistableContext, candidates: ranked.map(publicWorkSampleCandidate), strategy, submission: publicWorkSampleCandidate(leadCandidate), qualityGate, interaction: null, requirementGraph: buildWorkSampleRequirementGraph({ caseId, requirements }) }
+      await admin.from('application_cases').update({ status: 'awaiting_user', current_stage: 'document_preparation', next_action: qualityGate.programmatic.issues[0] ?? qualityGate.semantic.issues[0] ?? 'Resolve the work-sample quality gate before continuing.', data: { ...caseData, workSampleWorkflow: workflow } }).eq('id', caseId).eq('user_id', run.user_id)
+      return { kind: 'pause', status: 'needs_context', code: 'work_sample_quality_gate_failed', message: qualityGate.programmatic.issues[0] ?? qualityGate.semantic.issues[0] ?? 'The derived work-sample artifact did not pass its quality gate.', value: { requirement: targetRequirement, candidate: publicWorkSampleCandidate(leadCandidate), quality_gate: qualityGate, checksum: derivedChecksum }, actionStatus: 'failed' }
+    }
+    const persistedAsset = await persistApplicationGeneratedAsset(admin, run, {
+      bytes,
+      filename: preliminary.filename,
+      mimeType: 'application/pdf',
+      applicationCaseId: caseId,
+      opportunityId: safeString(opportunity.id, 80),
+      kind: 'programme_derivative',
+      sourceAssetIds: leadCandidate.sourceAssetIds,
+      templateVersion: 'work-sample-pdf@1',
+      promptVersion: 'work-sample-execution@1.0.0',
+      metadata: { workflow_version: 'work-sample-execution@1.0.0', requirement_key: targetRequirement.requirementKey, requirement_type: targetRequirement.requirementType, original_checksum: preliminary.originalChecksum, selected_pages: preliminary.selectedPages, selected_projects: strategy.selectedCandidateIds, quality_gate: qualityGate },
+    })
+    const checksumEvidence = await admin.from('application_evidence').upsert({
+      user_id: run.user_id,
+      application_case_id: caseId,
+      task_id: safeString(context.row.task_id, 80) || run.task_id,
+      campaign_id: safeString(context.row.campaign_id, 80) || null,
+      agent_run_id: run.id,
+      kind: 'uploaded_file_verification',
+      provider: 'private-file-assets',
+      asset_id: persistedAsset.assetId,
+      excerpt: `${preliminary.filename} derived checksum verified before any portal upload.`,
+      metadata: { artifact_id: persistedAsset.artifactId, checksum: persistedAsset.checksum, original_checksum: preliminary.originalChecksum, work_sample_requirement_key: targetRequirement.requirementKey, quality_gate: qualityGate },
+      idempotency_key: `work-sample-derived-checksum:${caseId}:${persistedAsset.checksum}`,
+    }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
+    if (checksumEvidence.error || !checksumEvidence.data) throw new Error(checksumEvidence.error?.message ?? 'The derived work-sample checksum evidence could not be persisted.')
+    const submissionKey = `work-sample-submission:${caseId}:${targetRequirement.requirementKey}:${persistedAsset.checksum}`
+    const persistedSubmissionResult = await admin.from('application_work_sample_submissions').upsert({
+      user_id: run.user_id,
+      application_case_id: caseId,
+      work_sample_requirement_id: targetRequirementDbId,
+      candidate_id: candidateDbIds.get(leadCandidate.id) ?? null,
+      original_artifact_id: originalArtifact?.id ?? null,
+      derived_artifact_id: persistedAsset.artifactId,
+      artifact_type: targetRequirement.requirementType,
+      transformations: submission.transformations,
+      selected_pages: submission.selectedPages,
+      selected_projects: submission.selectedProjects,
+      filename: submission.filename,
+      size_bytes: submission.sizeBytes,
+      page_count: submission.pageCount,
+      word_count: submission.wordCount,
+      checksum: persistedAsset.checksum,
+      original_checksum: submission.originalChecksum,
+      approval_state: submission.approvalState,
+      upload_state: submission.uploadState,
+      quality_gate: submission.qualityGate,
+      resulting_state_evidence: { ...submission.resultingStateEvidence, evidenceIds: [String(checksumEvidence.data.id)] },
+      provenance: submission.provenance,
+      idempotency_key: submissionKey,
+    }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
+    if (persistedSubmissionResult.error || !persistedSubmissionResult.data) throw new Error(persistedSubmissionResult.error?.message ?? 'The prepared work-sample submission could not be persisted.')
+    const storedSubmission = { ...submission, derivedArtifactId: persistedAsset.artifactId, checksum: persistedAsset.checksum, databaseId: String(persistedSubmissionResult.data.id), idempotencyKey: submissionKey, resultingStateEvidence: { ...submission.resultingStateEvidence, evidenceIds: [String(checksumEvidence.data.id)] } }
+    const legacyRequirement = context.applicationCase.requirements.find(requirement => /writing sample|work sample|paper|publication|portfolio|code|notebook|website/i.test(requirement.name))
+    if (legacyRequirement) {
+      const evidenceIds = [...new Set([...legacyRequirement.verificationEvidenceIds, String(checksumEvidence.data.id)])]
+      const requirementUpdate = await admin.from('application_requirements').update({ status: 'ready', linked_artifact_id: persistedAsset.artifactId, verification_evidence_ids: evidenceIds, blocker_reason: null }).eq('id', legacyRequirement.id).eq('application_case_id', caseId).eq('user_id', run.user_id)
+      if (requirementUpdate.error) throw new Error(requirementUpdate.error.message)
+    }
+    const approvalInteraction = workSampleApprovalInteraction({ requirement: targetRequirement, submission: storedSubmission, candidateTitles: selectedCandidates.map(candidate => candidate.title) })
+    await persistInteraction(approvalInteraction)
+    const workflow = {
+      version: 'work-sample-execution@1.0.0', state: 'awaiting_approval', requirementKey: targetRequirement.requirementKey,
+      requirements: requirements.map(requirement => ({ ...requirement })), checkedContext: persistableContext, candidates: ranked.map(publicWorkSampleCandidate), strategy, submission: storedSubmission, interaction: approvalInteraction,
+      requirementGraph: buildWorkSampleRequirementGraph({ caseId, requirements, submissions: [storedSubmission] }),
+      sourceEvidenceIds: sourceEvidenceIdsByRequirement.get(targetRequirement.requirementKey) ?? [],
+      responseMetric,
+    }
+    const nextAction = approvalInteraction.question
+    await admin.from('application_cases').update({ status: 'awaiting_user', current_stage: 'document_preparation', next_action: nextAction, data: { ...caseData, workSampleWorkflow: workflow, workSampleContext: argumentsValue.reusable_context_consent === true ? resolved.reusableContext : undefined } }).eq('id', caseId).eq('user_id', run.user_id)
+    const nextState = nextApplicationState(run, { currentCaseId: caseId, status: 'awaiting_user', stage: 'document_preparation', nextAction, progress: { completed: 3, label: 'Exact work-sample artifact prepared', nextAction, evidenceCount: (run.application_state?.progress.evidenceCount ?? 0) + 1 } })
+    return { kind: 'pause', status: 'needs_context', code: 'work_sample_progress_detail', message: approvalInteraction.question, value: { workflow: 'work_sample', interaction: approvalInteraction, requirement: targetRequirement, requirements, candidates: ranked.map(publicWorkSampleCandidate), strategy, submission: storedSubmission, workflow_state: workflow.state }, runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, work_sample_workflow: workflow, progress_detail_interaction: approvalInteraction, last_context_question: approvalInteraction.question, scheduling_options: [] } } }
+  }
+
+  if (toolName === 'application.coordinate_recommendations') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case and verified opportunity are required before coordinating recommendations.', value: { valid: false }, actionStatus: 'failed' }
+    const profileResult = await admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle()
+    if (profileResult.error && profileResult.error.code !== '42P01') throw new Error(profileResult.error.message)
+    const profile = profileResult.data?.profile
+    if (!profile) return { kind: 'pause', status: 'needs_context', code: 'applicant_profile_missing', message: 'Confirm the reusable applicant profile or attach the current CV so I can resolve recommendation context safely.', value: { missing_fields: ['applicant_profile'], suggested_options: [] }, actionStatus: 'failed' }
+    const requirementInput = recordValue(argumentsValue.programme_requirements)
+    const sourceEvidence = [
+      ...(Array.isArray(requirementInput.sourceEvidence) ? requirementInput.sourceEvidence : []),
+      ...(Array.isArray(requirementInput.source_evidence) ? requirementInput.source_evidence : []),
+      ...(Array.isArray(recordValue(context.opportunity).citations) ? recordValue(context.opportunity).citations as unknown[] : []),
+    ]
+    const requirements = extractRecommendationRequirements({ raw: requirementInput, opportunity: context.opportunity, sourceEvidence })
+    const contextSources = recordValue(argumentsValue.context_sources)
+    const caseData = recordValue(context.row.data)
+    const priorCampaign = recordValue(caseData.recommendationCampaign)
+    const savedInteractionResponse = recordValue(run.context?.progress_detail_response)
+    const responseCandidateValues = Array.isArray(savedInteractionResponse.value)
+      ? savedInteractionResponse.value
+      : typeof savedInteractionResponse.value === 'string' ? [savedInteractionResponse.value] : []
+    const selectedCandidateIds = stringArray(argumentsValue.selected_candidate_ids, 160).length
+      ? stringArray(argumentsValue.selected_candidate_ids, 160)
+      : responseCandidateValues.map(value => safeString(value, 160)).filter(Boolean)
+    const resolved = resolveRecommendationContext({
+      profile,
+      applicationContext: contextSources.applicationContext ?? caseData.recommendationContext,
+      uploadedDocuments: Array.isArray(contextSources.uploadedDocuments) ? contextSources.uploadedDocuments : Array.isArray(run.context?.attachments) ? run.context.attachments : [],
+      gmailMessages: Array.isArray(contextSources.gmailMessages) ? contextSources.gmailMessages : [],
+      contacts: Array.isArray(contextSources.contacts) ? contextSources.contacts : [],
+      previousApplications: Array.isArray(contextSources.previousApplications) ? contextSources.previousApplications : [],
+      existingCandidates: Array.isArray(argumentsValue.candidate_overrides) ? argumentsValue.candidate_overrides : Array.isArray(priorCampaign.candidates) ? priorCampaign.candidates : [],
+      requirements,
+      programme: safeString(requirements.programme.value ?? context.opportunity.programmeTitle, 500),
+      reusableContextConsent: argumentsValue.reusable_context_consent === true,
+      selectedCandidateIds,
+    })
+    const programmes = [{
+      institution: safeString(context.opportunity.institution, 500),
+      title: safeString(context.opportunity.programmeTitle, 800),
+      deadline: context.opportunity.deadline?.dateTime ?? null,
+      applicationUrl: context.opportunity.applicationUrl ?? null,
+    }]
+    const selectedCandidates = resolved.candidates.filter(candidate => selectedCandidateIds.includes(candidate.id))
+    const strategyResult = selectedCandidates.length
+      ? createRecommendationPortfolioStrategy({ rankedCandidates: resolved.candidates, programmes, recommendationCount: requirements.recommendationCount.value, preferredCandidateIds: selectedCandidateIds })
+      : null
+    const strategy = strategyResult?.strategy ?? null
+    const requestEmails = strategyResult && strategy
+      ? strategyResult.candidates.filter(candidate => strategy.selectedCandidateIds.includes(candidate.id)).map(candidate => generateRecommendationRequestEmail({
+        applicantName: safeString(recordValue(profile.preferredName).value ?? recordValue(profile.legalName).value, 240) || 'the applicant',
+        applicantEmail: safeString(recordValue(recordValue(profile.contactInformation).email).value, 320) || null,
+        recommender: candidate,
+        programmes,
+        relationshipEvidence: candidate.relationshipEvidence,
+        reason: `Your firsthand perspective on the applicant's preparation is relevant to ${programmes[0]!.title}.`,
+        applicantGoal: programmes[0]!.title,
+        supportPackAvailable: true,
+        programmeRequirements: requirements,
+      }))
+      : []
+    const supportPacks = strategyResult && strategy
+      ? strategyResult.candidates.filter(candidate => strategy.selectedCandidateIds.includes(candidate.id)).map(candidate => buildRecommenderSupportPack({
+        id: `recommendation-support-pack:${caseId}:${candidate.id}`,
+        candidate,
+        programme: programmes[0]!,
+        requirements,
+        applicantName: safeString(recordValue(profile.preferredName).value ?? recordValue(profile.legalName).value, 240) || 'the applicant',
+        applicantGoal: programmes[0]!.title,
+        relationshipEvidence: candidate.relationshipEvidence,
+        assetIds: stringArray(argumentsValue.applicant_asset_ids, 120),
+      }))
+      : []
+    const interaction = !strategy
+      ? resolved.nextInteraction
+      : createRecommendationInteraction({
+          kind: 'approval',
+          id: `recommendation:request-approval:${safeString(argumentsValue.idempotency_key, 300)}`,
+          requirementId: 'recommendation_request_approval',
+          question: `Approve the prepared recommendation plan for ${strategy.selectedCandidateIds.length} recommender${strategy.selectedCandidateIds.length === 1 ? '' : 's'}?`,
+          reason: `${strategy.recommendation} The exact email is prepared, but Roon will not contact anyone until this approval is recorded.`,
+          knownContext: [
+            ...strategy.programmeAssignments.map(assignment => `${assignment.programme}: ${assignment.candidateIds.join(', ')}`),
+            `Request count: ${requestEmails.length}`,
+            'Contact verification remains a separate provider evidence gate.',
+          ],
+          reusableContextKeys: [],
+          approvalScope: 'recommendation_request',
+          mapsToRequirement: 'recommendation_request_approval',
+        })
+    const workflowState = nextRecommendationWorkflowState({ requirements, context: resolved, strategy, contactVerified: false, requestPrepared: requestEmails.length > 0, requestSent: false })
+    const requirementGraph = buildRecommendationRequirementGraph({ caseId, requirements, candidateIds: strategy?.selectedCandidateIds })
+    const campaign = {
+      version: 'recommendation-coordination@1.0.0',
+      state: interaction?.kind === 'approval' ? 'awaiting_request_approval' : workflowState,
+      requirements,
+      context: resolved,
+      candidates: strategyResult?.candidates ?? resolved.candidates,
+      strategy,
+      requestEmails,
+      supportPacks,
+      requirementGraph,
+      interaction,
+      idempotencyKey: safeString(argumentsValue.idempotency_key, 300),
+      applicantAssetIds: stringArray(argumentsValue.applicant_asset_ids, 120),
+      updatedAt: new Date().toISOString(),
+    }
+    let persistedRecommendationCampaignId = ''
+    const recommendationCampaignRow = await admin.from('application_recommendation_campaigns').upsert({
+      user_id: run.user_id,
+      application_case_id: caseId,
+      campaign_id: safeString(context.row.campaign_id, 80) || null,
+      opportunity_id: safeString(context.row.opportunity_id, 80) || null,
+      status: campaign.state,
+      requirements,
+      candidates: campaign.candidates,
+      strategy,
+      requirement_graph: requirementGraph,
+      interaction_metrics: [],
+      reusable_context: resolved.reusableContext,
+      data: { version: campaign.version, requestEmails: campaign.requestEmails, supportPacks: campaign.supportPacks, idempotencyKey: campaign.idempotencyKey },
+      idempotency_key: campaign.idempotencyKey || `recommendation:${caseId}`,
+    }, { onConflict: 'user_id,idempotency_key' }).select('id').maybeSingle()
+    if (recommendationCampaignRow.error && recommendationCampaignRow.error.code !== '42P01') throw new Error(recommendationCampaignRow.error.message)
+    persistedRecommendationCampaignId = safeString(recommendationCampaignRow.data?.id, 80)
+    if (interaction && persistedRecommendationCampaignId) {
+      const interactionRow = await admin.from('application_recommendation_interactions').upsert({
+        user_id: run.user_id,
+        agent_run_id: run.id,
+        application_case_id: caseId,
+        campaign_id: persistedRecommendationCampaignId,
+        interaction_id: interaction.id,
+        requirement_id: interaction.requirementId,
+        kind: interaction.kind,
+        question: interaction.question,
+        reason: interaction.reason,
+        response: null,
+        reusable: interaction.reusableContextKeys.length > 0,
+        status: 'pending',
+        idempotency_key: `recommendation-interaction:${caseId}:${interaction.id}`,
+      }, { onConflict: 'user_id,idempotency_key' }).select('id').maybeSingle()
+      if (interactionRow.error && interactionRow.error.code !== '42P01') throw new Error(interactionRow.error.message)
+    }
+    if (persistedRecommendationCampaignId) (campaign as Record<string, unknown>).id = persistedRecommendationCampaignId
+    const nextAction = interaction
+      ? interaction.question
+      : 'Verify the recommender contact, approve the exact request, then ask Roon to prepare and monitor the Gmail thread.'
+    const updatedCase = await admin.from('application_cases').update({
+      status: interaction ? 'awaiting_user' : 'awaiting_referee',
+      current_stage: 'referee_coordination',
+      next_action: nextAction,
+      data: { ...caseData, recommendationCampaign: campaign, recommendationContext: resolved.reusableContext },
+    }).eq('id', caseId).eq('user_id', run.user_id)
+    if (updatedCase.error) throw new Error(updatedCase.error.message)
+    const nextState = nextApplicationState(run, {
+      currentCaseId: caseId,
+      status: interaction ? 'awaiting_user' : 'awaiting_referee',
+      stage: 'referee_coordination',
+      nextAction,
+      blockers: requirements.unresolvedFields,
+      progress: { completed: interaction ? 2 : 3, label: interaction ? 'Recommendation coordination needs one decision' : 'Recommendation request ready', nextAction, blockers: requirements.unresolvedFields },
+    })
+    if (interaction) {
+      return {
+        kind: 'pause',
+        status: 'needs_context',
+        code: 'recommendation_progress_detail',
+        message: interaction.question,
+        value: { interaction, candidates: campaign.candidates, strategy, requirements, workflow_state: campaign.state },
+        runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, recommendation_campaign: campaign, progress_detail_interaction: interaction, last_context_question: interaction.question, scheduling_options: [] } },
+      }
+    }
+    return {
+      kind: 'output',
+      value: { application_case_id: caseId, workflow_state: campaign.state, campaign, requirement_graph: requirementGraph },
+      providerActionId: `recommendation-coordination:${caseId}:${safeString(argumentsValue.idempotency_key, 300)}`,
+      publicSummary: 'Prepared the canonical recommendation strategy and exact request email; no contact was made.',
+      runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, recommendation_campaign: campaign, progress_detail_interaction: null } },
+    }
+  }
+
+  if (toolName === 'application.coordinate_academic_evidence') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case and verified opportunity are required before coordinating academic evidence.', value: { valid: false }, actionStatus: 'failed' }
+    const profileResult = await admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle()
+    if (profileResult.error && profileResult.error.code !== '42P01') throw new Error(profileResult.error.message)
+    const contextSources = recordValue(argumentsValue.context_sources)
+    const caseData = recordValue(context.row.data)
+    const savedResponse = recordValue(argumentsValue.interaction_response)
+    const sourceArray = (...keys: string[]) => {
+      for (const key of keys) if (Array.isArray(contextSources[key])) return contextSources[key] as unknown[]
+      return [] as unknown[]
+    }
+    const applicationCaseInputs = (Array.isArray(argumentsValue.application_cases) ? argumentsValue.application_cases : [])
+      .map(value => recordValue(value))
+      .map(value => ({
+        applicationCaseId: safeString(value.application_case_id ?? value.applicationCaseId, 80),
+        institution: safeString(value.institution ?? value.university, 500),
+        programme: safeString(value.programme ?? value.programme_title ?? value.programmeTitle, 800),
+        deadline: safeString(value.deadline ?? value.deadline_at, 80) || null,
+        deadlineTimezone: safeString(value.deadline_timezone ?? value.deadlineTimezone, 120) || null,
+        rules: (Array.isArray(value.rules) ? value.rules : Array.isArray(value.requirements) ? value.requirements : []).map(rule => recordValue(rule)) as AcademicRule[],
+      }))
+      .filter(value => value.applicationCaseId && value.institution && value.programme)
+    const programmeRequirements = recordValue(argumentsValue.programme_requirements)
+    const fallbackRules = (Array.isArray(programmeRequirements.rules) ? programmeRequirements.rules : Array.isArray(programmeRequirements.requirements) ? programmeRequirements.requirements : []).map(value => recordValue(value)) as AcademicRule[]
+    const opportunity = context.opportunity
+    const applications: AcademicApplicationInput[] = applicationCaseInputs.length
+      ? applicationCaseInputs
+      : [{
+          applicationCaseId: caseId,
+          institution: safeString(opportunity.institution, 500),
+          programme: safeString(opportunity.programmeTitle, 800),
+          deadline: opportunity.deadline?.dateTime ?? null,
+          deadlineTimezone: opportunity.deadline?.timezone ?? null,
+          rules: fallbackRules,
+        }]
+    const storedArtifactsResult = await admin.from('application_artifacts').select('*').eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(200)
+    if (storedArtifactsResult.error) throw new Error(storedArtifactsResult.error.message)
+    const uploadedDocuments = [
+      ...(Array.isArray(contextSources.uploaded_documents) ? contextSources.uploaded_documents : []),
+      ...(Array.isArray(contextSources.uploadedDocuments) ? contextSources.uploadedDocuments : []),
+      ...(Array.isArray(storedArtifactsResult.data) ? storedArtifactsResult.data : []),
+      ...(Array.isArray(run.context?.attachments) ? run.context.attachments : []),
+    ]
+    const academicContext: AcademicContextInput = {
+      applicantId: run.user_id,
+      applicantProfile: profileResult.data?.profile ?? contextSources.applicant_profile ?? contextSources.applicantProfile,
+      canonicalCv: contextSources.canonical_cv ?? contextSources.canonicalCv,
+      uploadedDocuments,
+      transcripts: sourceArray('transcripts'),
+      degreeCertificates: sourceArray('degree_certificates', 'degreeCertificates'),
+      proofOfGraduation: sourceArray('proof_of_graduation', 'proofOfGraduation'),
+      scoreReports: sourceArray('score_reports', 'scoreReports'),
+      previousApplicationCases: sourceArray('previous_application_cases', 'previousApplicationCases'),
+      previousUniversityUploads: sourceArray('previous_university_uploads', 'previousUniversityUploads'),
+      existingCredentialEvaluations: sourceArray('existing_credential_evaluations', 'existingCredentialEvaluations'),
+      gmailAttachments: sourceArray('gmail_attachments', 'gmailAttachments'),
+      previousProviderConfirmations: sourceArray('previous_provider_confirmations', 'previousProviderConfirmations'),
+      confirmedUserAnswers: [savedResponse, run.context?.user_context, ...sourceArray('confirmed_user_answers')].filter(value => Object.keys(recordValue(value)).length > 0),
+      reusableAcademicHistory: contextSources.reusable_academic_history ?? contextSources.reusableAcademicHistory ?? caseData.academicReusableContext,
+    }
+    const plan = coordinateAcademicEvidence({ applications, context: academicContext })
+    if (Object.keys(savedResponse).length && plan.interaction && savedResponse.interactionId === plan.interaction.id) {
+      plan.context.autoResolvedFacts.push({ key: plan.interaction.mapsToRequirement, value: savedResponse.value ?? null, sourceIds: [`interaction:${plan.interaction.id}`], confidence: 'high' })
+    }
+    const academicRequirementRows = plan.requirements.map(requirement => ({
+      user_id: run.user_id,
+      application_case_id: requirement.applicationCaseId,
+      requirement_key: requirement.id,
+      institution: requirement.institution,
+      programme: requirement.programme,
+      requirement_type: requirement.requirementType,
+      requiredness: requirement.requiredness,
+      stage: requirement.stage,
+      official_status: requirement.officialStatus,
+      deadline_at: requirement.deadline,
+      deadline_timezone: requirement.deadlineTimezone,
+      accepted_evidence_types: requirement.acceptedEvidenceTypes,
+      submission_method: requirement.submissionMethod,
+      source_evidence: requirement.sourceEvidence,
+      confidence: requirement.confidence,
+      dependency_ids: requirement.dependencies,
+      current_artifact_ids: requirement.currentArtifactIds,
+      status: requirement.status,
+      blocker: requirement.blocker,
+      external_provider: requirement.externalProvider,
+      cost: requirement.cost,
+      approval_requirement: requirement.approvalRequirement,
+      completion_evidence: requirement.completionEvidence,
+      exact_rule: requirement.exactRule,
+      idempotency_key: `academic-requirement:${requirement.id}`,
+    }))
+    const academicRows = await admin.from('academic_evidence_requirements').upsert(academicRequirementRows, { onConflict: 'user_id,application_case_id,requirement_key' }).select('id,requirement_key').limit(200)
+    if (academicRows.error && !['42P01', 'PGRST205'].includes(academicRows.error.code ?? '')) throw new Error(academicRows.error.message)
+    const evaluationRows = plan.credentialEvaluationCases.map(evaluation => ({
+      user_id: run.user_id,
+      evaluation_key: evaluation.id,
+      provider: evaluation.provider,
+      evaluation_type: evaluation.evaluationType,
+      application_case_ids: evaluation.applicationCaseIds,
+      requirement_keys: evaluation.requirementIds,
+      recipient_institutions: evaluation.recipientInstitutions,
+      required_documents: evaluation.requiredDocuments,
+      required_delivery_route: evaluation.requiredDeliveryRoute,
+      reference_number: evaluation.referenceNumber,
+      report_id: evaluation.reportId,
+      translation_rules: evaluation.translationRules,
+      deadline_at: evaluation.deadline,
+      expected_processing_time: evaluation.expectedProcessingTime,
+      cost: evaluation.cost,
+      state: evaluation.state,
+      institution_deliveries: evaluation.institutionDeliveries,
+      report_dispatch_state: evaluation.reportDispatchState,
+      university_receipt_states: evaluation.universityReceiptStates,
+      source_evidence: evaluation.sourceEvidence,
+      blocker: evaluation.blocker,
+      idempotency_key: evaluation.idempotencyKey,
+    }))
+    const evaluations = await admin.from('credential_evaluation_cases').upsert(evaluationRows, { onConflict: 'user_id,idempotency_key' }).select('id,evaluation_key').limit(100)
+    if (evaluations.error && !['42P01', 'PGRST205'].includes(evaluations.error.code ?? '')) throw new Error(evaluations.error.message)
+    const languageRows = plan.context.languageTestAttempts.map(attempt => ({
+      user_id: run.user_id,
+      attempt_key: attempt.id,
+      provider: attempt.testProvider,
+      test_type: attempt.testType,
+      test_version: attempt.testVersion,
+      test_date: attempt.testDate,
+      overall_score: attempt.overallScore,
+      section_scores: attempt.sectionScores,
+      candidate_or_report_number: attempt.candidateOrReportNumber,
+      valid_until: attempt.validUntil,
+      score_report_artifact_id: attempt.scoreReportArtifactId,
+      official_report_state: attempt.officialReportState,
+      recipients: attempt.recipients,
+      provenance: attempt.provenance,
+    }))
+    const languageAttempts = await admin.from('language_test_attempts').upsert(languageRows, { onConflict: 'user_id,attempt_key' }).select('id,attempt_key').limit(100)
+    if (languageAttempts.error && !['42P01', 'PGRST205'].includes(languageAttempts.error.code ?? '')) throw new Error(languageAttempts.error.message)
+    const admissionsRows = plan.context.admissionsTestAttempts.map(attempt => ({
+      user_id: run.user_id,
+      attempt_key: attempt.id,
+      test_type: attempt.testType,
+      test_date: attempt.testDate,
+      overall_score: attempt.overallScore,
+      composite_score: attempt.compositeScore,
+      section_scores: attempt.sectionScores,
+      percentile: attempt.percentile,
+      writing_score: attempt.writingScore,
+      candidate_or_report_number: attempt.candidateOrReportNumber,
+      valid_until: attempt.validUntil,
+      score_artifact_id: attempt.scoreArtifactId,
+      official_report_state: attempt.officialReportState,
+      recipients: attempt.recipients,
+      provenance: attempt.provenance,
+    }))
+    const admissionsAttempts = await admin.from('admissions_test_attempts').upsert(admissionsRows, { onConflict: 'user_id,attempt_key' }).select('id,attempt_key').limit(100)
+    if (admissionsAttempts.error && !['42P01', 'PGRST205'].includes(admissionsAttempts.error.code ?? '')) throw new Error(admissionsAttempts.error.message)
+    const nextAction = plan.nextAction?.label ?? plan.blockers[0] ?? 'Academic evidence map is current.'
+    const updatedCase = await admin.from('application_cases').update({
+      status: plan.interaction ? 'awaiting_user' : plan.blockers.length ? 'awaiting_institution' : 'preparing',
+      current_stage: 'academic_evidence',
+      next_action: plan.interaction?.question ?? nextAction,
+      data: { ...caseData, academicEvidencePlan: plan, academicEvidenceWorkflowVersion: plan.version, academicReusableContext: plan.context.reusableAcademicHistory },
+    }).eq('id', caseId).eq('user_id', run.user_id)
+    if (updatedCase.error) throw new Error(updatedCase.error.message)
+    const nextState = nextApplicationState(run, {
+      currentCaseId: caseId,
+      status: plan.interaction ? 'awaiting_user' : plan.blockers.length ? 'awaiting_institution' : 'preparing',
+      stage: 'document_preparation',
+      nextAction: plan.interaction?.question ?? nextAction,
+      blockers: plan.blockers,
+      progress: { completed: plan.metrics.automaticallyResolvedRequirements, label: plan.interaction ? 'Academic evidence needs one structured decision' : 'Academic evidence map updated', nextAction: plan.interaction?.question ?? nextAction, blockers: plan.blockers },
+    })
+    if (plan.interaction) {
+      return {
+        kind: 'pause',
+        status: 'needs_context',
+        code: 'academic_evidence_progress_detail',
+        message: plan.interaction.question,
+        value: { plan, interaction: plan.interaction, requirements: plan.requirements, coverage_map: plan.coverageMap },
+        runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, academic_evidence_plan: plan, progress_detail_interaction: plan.interaction, last_context_question: plan.interaction.question, scheduling_options: [] } },
+      }
+    }
+    return {
+      kind: 'output',
+      value: { application_case_id: caseId, plan, requirements: plan.requirements, credential_evaluation_cases: plan.credentialEvaluationCases, coverage_map: plan.coverageMap },
+      providerActionId: `academic-evidence:${caseId}:${safeString(argumentsValue.idempotency_key, 300)}`,
+      publicSummary: plan.blockers.length ? `Academic evidence map updated with ${plan.blockers.length} blocker(s).` : 'Updated the canonical academic evidence map and delivery plan; no credentials or payment data were requested.',
+      runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, academic_evidence_plan: plan, progress_detail_interaction: null } },
+    }
   }
 
   if (toolName === 'application.build_referee_support_pack') {
@@ -4053,6 +6145,267 @@ async function executeProviderTool(
     })
     if (!packageValue.quality.passed) return { kind: 'pause', status: 'needs_context', code: 'supervisor_outreach_quality_failed', message: packageValue.quality.issues.join(' ') || 'The supervisor outreach quality gate failed.', value: { ...packageValue, outreach_package_id: packageRow.data.id }, providerActionId: packageRow.data.id, actionStatus: 'failed', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, supervisor_outreach_package_id: packageRow.data.id } } }
     return { kind: 'output', value: { ...packageValue, outreach_package_id: packageRow.data.id, cv_artifact_id: cvReference.artifact_id, cv_asset_id: cvReference.file_asset_id }, providerActionId: packageRow.data.id, publicSummary: 'Prepared the research-backed supervisor dossier, fit rationale, exact canonical CV, and approval-ready Gmail package; nothing was sent.', runPatch: { application_state: nextState, context: { ...(run.context ?? {}), application_case_id: caseId, supervisor_outreach_package_id: packageRow.data.id, supervisor_id: packageValue.supervisor_id } } }
+  }
+
+  if (toolName === 'application.prepare_research_proposal') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case and verified opportunity are required before preparing a research proposal.', value: { valid: false }, actionStatus: 'failed' }
+    const opportunity = recordValue(context.opportunity)
+    const requirementInput = recordValue(argumentsValue.requirement)
+    const institution = safeString(requirementInput.institution, 300) || safeString(opportunity.institution, 300)
+    const programme = safeString(requirementInput.programme ?? requirementInput.programme_title, 500) || safeString(opportunity.programmeTitle ?? opportunity.programme_title, 500)
+    const officialSources = proposalEvidenceList(argumentsValue.official_sources)
+    const portalSources = proposalEvidenceList(requirementInput.portalRequirements ?? requirementInput.portal_requirements)
+    const supervisorSources = proposalEvidenceList(requirementInput.supervisorGuidance ?? requirementInput.supervisor_guidance)
+    const embeddedSources = proposalEvidenceList(requirementInput.sources)
+    const allEvidence = [...new Map([...officialSources, ...portalSources, ...supervisorSources, ...embeddedSources].map(item => [item.id, item])).values()]
+    const detected = detectResearchProposalRequirement({
+      id: safeString(requirementInput.id, 160) || undefined,
+      applicationCaseId: caseId,
+      institution,
+      programme,
+      degree: safeString(requirementInput.degree, 200) || null,
+      officialSources: officialSources.length ? officialSources : embeddedSources,
+      portalRequirements: portalSources,
+      supervisorGuidance: supervisorSources,
+      deadline: safeString(requirementInput.deadline, 100) || null,
+      uploadLocation: safeString(requirementInput.uploadLocation ?? requirementInput.upload_location, 500) || null,
+      extracted: requirementInput as Partial<ResearchProposalRequirement>,
+      retrievedAt: safeString(requirementInput.retrievalDate ?? requirementInput.retrieval_date, 100) || undefined,
+    })
+    if (!detected.evidenceBacked || detected.requirement.requirementState === 'unresolved') {
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_requirement_unresolved', message: 'I cannot safely decide whether this programme expects a research proposal until an authoritative programme or portal instruction is available.', value: { requirement: detected.requirement, authoritative_sources: detected.authoritativeSources, unresolved_fields: detected.unresolvedFields, rationale: detected.rationale }, actionStatus: 'failed' }
+    }
+    const proposalContext = collectProposalContext({ sources: proposalContextSources(argumentsValue.context_sources) })
+    if (proposalContext.unresolvedKinds.length) {
+      const missingKind = proposalContext.unresolvedKinds.includes('thesis') ? 'thesis' : proposalContext.unresolvedKinds.includes('programme_research') ? 'programme_requirement' : 'research_preference'
+      const interaction = createProposalMissingContextInteraction({ applicationCaseId: caseId, missingKind })
+      const nextAction = interaction.message
+      const workflow = createResearchProposalWorkflow({ applicationCaseId: caseId, requirement: detected.requirement, context: proposalContext })
+      const applicationState = await persistProposalWorkflow(admin, run, context, workflow, { status: 'awaiting_user', stage: 'research', nextAction })
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_context_missing', message: nextAction, value: { interaction, resolved_facts: proposalContext.verifiedFacts, unresolved_kinds: proposalContext.unresolvedKinds, autonomous_resolution_rate: proposalContext.autonomousResolutionRate }, actionStatus: 'running', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: workflow.currentState, proposal_progress_detail: interaction, progress_detail_interaction: proposalInteractionForUi(interaction), proposal_interaction: true, scheduling_options: interaction.options.map(option => ({ label: option.label, value: option.value })) } } }
+    }
+    const directions = rankResearchDirections(proposalDirectionList(argumentsValue.direction_candidates), allEvidence.map(item => item.id))
+    if (!directions.length) {
+      const interaction = createProposalMissingContextInteraction({ applicationCaseId: caseId, missingKind: 'research_preference' })
+      const workflow = createResearchProposalWorkflow({ applicationCaseId: caseId, requirement: detected.requirement, context: proposalContext })
+      const applicationState = await persistProposalWorkflow(admin, run, context, workflow, { status: 'awaiting_user', stage: 'research', nextAction: interaction.message })
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_direction_missing', message: interaction.message, value: { interaction, resolved_facts: proposalContext.verifiedFacts, unresolved_kinds: ['research_direction'] }, actionStatus: 'running', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: workflow.currentState, proposal_progress_detail: interaction, progress_detail_interaction: proposalInteractionForUi(interaction), proposal_interaction: true, scheduling_options: interaction.options.map(option => ({ label: option.label, value: option.value })) } } }
+    }
+    let workflow = createResearchProposalWorkflow({ applicationCaseId: caseId, requirement: detected.requirement, context: proposalContext })
+    workflow = transitionResearchProposalWorkflow(workflow, { type: 'context_collected', context: proposalContext })
+    workflow = transitionResearchProposalWorkflow(workflow, { type: 'directions_proposed', candidates: directions })
+    const requestedDirectionId = safeString(argumentsValue.selected_direction_id, 160) || safeString(run.context?.proposal_selected_direction_id, 160) || null
+    if (!requestedDirectionId && directions.length > 1) {
+      const interaction = createResearchDirectionInteraction({ applicationCaseId: caseId, candidates: directions })
+      const applicationState = await persistProposalWorkflow(admin, run, context, workflow, { status: 'awaiting_user', stage: 'research', nextAction: interaction.message })
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_direction_choice_required', message: interaction.message, value: { interaction, candidates: directions, resolved_facts: proposalContext.verifiedFacts, unresolved_kinds: proposalContext.unresolvedKinds, autonomous_resolution_rate: proposalContext.autonomousResolutionRate }, actionStatus: 'running', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: workflow.currentState, proposal_progress_detail: interaction, progress_detail_interaction: proposalInteractionForUi(interaction), proposal_interaction: true, scheduling_options: interaction.options.map(option => ({ label: option.label, value: option.value })) } } }
+    }
+    const selected = directions.find(direction => direction.id === (requestedDirectionId ?? directions[0]!.id))
+    if (!selected) return { kind: 'pause', status: 'needs_context', code: 'research_proposal_direction_invalid', message: 'The selected research direction is not one of the grounded candidates. Choose one of the current options.', value: { candidates: directions.map(direction => ({ id: direction.id, workingTitle: direction.workingTitle })) }, actionStatus: 'failed' }
+    workflow = transitionResearchProposalWorkflow(workflow, { type: 'direction_approved', directionId: selected.id })
+    const dossierInput = recordValue(argumentsValue.research_dossier)
+    const dossierSources = [...new Map([...allEvidence, ...proposalEvidenceList(dossierInput.sources)].map(item => [item.id, item])).values()]
+    const dossier = buildProposalResearchDossier({
+      id: safeString(dossierInput.id, 160) || undefined,
+      applicationCaseId: caseId,
+      institution: detected.requirement.institution,
+      programme: detected.requirement.programme,
+      department: safeString(dossierInput.department, 300) || null,
+      supervisor: safeString(dossierInput.supervisor, 300) || null,
+      researchGroup: safeString(dossierInput.researchGroup ?? dossierInput.research_group, 300) || null,
+      sources: dossierSources,
+      currentResearchThemes: proposalClaimList(dossierInput.currentResearchThemes ?? dossierInput.current_research_themes, 'programme_fit'),
+      relevantRecentPapers: proposalPaperList(dossierInput.relevantRecentPapers ?? dossierInput.relevant_recent_papers),
+      methods: proposalClaimList(dossierInput.methods, 'method'),
+      researchGaps: proposalClaimList(dossierInput.researchGaps ?? dossierInput.research_gaps, 'novelty'),
+      relevantDatasets: proposalClaimList(dossierInput.relevantDatasets ?? dossierInput.relevant_datasets, 'feasibility'),
+      infrastructure: proposalClaimList(dossierInput.infrastructure, 'programme_fit'),
+      relatedApplicantWork: proposalClaimList(dossierInput.relatedApplicantWork ?? dossierInput.related_applicant_work, 'applicant'),
+      candidateResearchQuestions: proposalClaimList(dossierInput.candidateResearchQuestions ?? dossierInput.candidate_research_questions, 'method'),
+    })
+    workflow = transitionResearchProposalWorkflow(workflow, { type: 'dossier_ready', dossier })
+    if (dossier.invalidClaims.length) {
+      const interaction = createProposalMissingContextInteraction({ applicationCaseId: caseId, missingKind: 'programme_requirement' })
+      const applicationState = await persistProposalWorkflow(admin, run, context, workflow, { status: 'awaiting_user', stage: 'research', nextAction: 'Resolve the ungrounded research-dossier claims before drafting.' })
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_dossier_ungrounded', message: 'The research dossier contains claims without verified source evidence. Resolve those claims before a writer receives the brief.', value: { interaction, invalid_claims: dossier.invalidClaims, dossier }, actionStatus: 'failed', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: workflow.currentState, proposal_progress_detail: interaction, progress_detail_interaction: proposalInteractionForUi(interaction), proposal_interaction: true } } }
+    }
+    const strategy = buildResearchProposalStrategy({ requirement: detected.requirement, direction: selected, dossier, methodology: proposalMethodology(argumentsValue.methodology), centralResearchProblem: safeString(dossierInput.centralResearchProblem ?? dossierInput.central_research_problem, 4_000) || undefined, primaryResearchQuestion: safeString(dossierInput.primaryResearchQuestion ?? dossierInput.primary_research_question, 2_000) || undefined, expectedContribution: stringArray(dossierInput.expectedContribution ?? dossierInput.expected_contribution, 2_000), feasibility: recordValue(dossierInput.feasibility) as never, expectedOutputs: stringArray(dossierInput.expectedOutputs ?? dossierInput.expected_outputs, 1_000), risks: stringArray(dossierInput.risks, 1_000) })
+    workflow = transitionResearchProposalWorkflow(workflow, { type: 'strategy_ready', strategy })
+    const brief = buildResearchProposalBrief({ requirement: detected.requirement, context: proposalContext, direction: selected, dossier, strategy, programmeRestrictions: detected.requirement.formatRequirements.other })
+    workflow = transitionResearchProposalWorkflow(workflow, { type: 'brief_ready', brief })
+    const writerCandidates = Array.isArray(argumentsValue.writer_candidates) ? argumentsValue.writer_candidates as never[] : []
+    const writer = selectResearchProposalWriter({ applicationCaseId: caseId, brief, candidates: writerCandidates as never[] })
+    if (writer.assignment) workflow = transitionResearchProposalWorkflow(workflow, { type: 'writer_assigned', assignment: writer.assignment })
+    const nextAction = writer.assignment ? 'Create or confirm the durable writer assignment, then wait for the proposal draft.' : 'Select an available proposal writer before requesting a draft.'
+    const applicationState = await persistProposalWorkflow(admin, run, context, workflow, { status: writer.assignment ? 'awaiting_writer' : 'awaiting_user', stage: writer.assignment ? 'writer_assignment' : 'document_preparation', nextAction })
+    return { kind: 'output', value: { application_case_id: caseId, workflow_version: workflow.version, workflow_state: workflow.currentState, requirement: detected.requirement, requirement_rationale: detected.rationale, context: proposalContext, directions, selected_direction: selected, dossier, strategy, writer_assignment: writer.assignment, ranked_writers: writer.ranked, writer_brief: brief.briefText, progress_detail: { resolved: proposalContext.verifiedFacts.map(fact => fact.label), missing: proposalContext.unresolvedKinds, why_missing: proposalContext.unresolvedKinds.length ? 'The requested source has not been verified yet.' : 'No required context is missing.', autonomous_next_steps: ['Build the grounded research dossier', 'Validate the writer draft', 'Prepare the exact PDF artifact'], user_decisions: directions.length > 1 ? ['Select the research direction'] : [] } }, providerActionId: writer.assignment?.id ?? brief.id, publicSummary: `Prepared the canonical research-proposal brief for ${detected.requirement.programme}.`, runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: workflow.currentState, proposal_brief_id: brief.id, proposal_writer_assignment_id: writer.assignment?.id ?? null, scheduling_options: [] } } }
+  }
+
+  if (toolName === 'application.review_research_proposal') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case is required before reviewing a research proposal.', value: { valid: false }, actionStatus: 'failed' }
+    const caseData = recordValue(context.row.data)
+    const stored = recordValue(caseData.researchProposalWorkflow)
+    if (!safeString(stored.version, 100)) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_not_prepared', message: 'Prepare the source-backed research-proposal brief before reviewing a draft.', value: { valid: false }, actionStatus: 'failed' }
+    const workflow = stored as ResearchProposalWorkflow
+    const requirement = workflow.requirement
+    const direction = workflow.directionCandidates.find(candidate => candidate.id === workflow.selectedDirectionId) ?? workflow.directionCandidates[0]
+    const dossier = workflow.dossier
+    if (!direction || !dossier || !workflow.strategy) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_workflow_incomplete', message: 'The research direction, dossier, and strategy must be complete before a draft can be reviewed.', value: { valid: false, workflow_state: workflow.currentState }, actionStatus: 'failed' }
+    const draft = proposalDraft(argumentsValue.draft, caseId)
+    const verifiedFactIds = stringArray(argumentsValue.verified_fact_ids, 240).length ? stringArray(argumentsValue.verified_fact_ids, 240) : workflow.context.verifiedFacts.map(fact => fact.id)
+    const verifiedEvidenceIds = stringArray(argumentsValue.verified_evidence_ids, 240).length ? stringArray(argumentsValue.verified_evidence_ids, 240) : [...dossier.sources.map(source => source.id), ...dossier.relevantRecentPapers.flatMap(paper => paper.sourceEvidenceIds)]
+    const verifiedFacts = (Array.isArray(argumentsValue.verified_facts) ? argumentsValue.verified_facts : workflow.context.verifiedFacts).map((item, index) => {
+      const row = recordValue(item)
+      return { id: safeString(row.id ?? row.fact_id, 240) || verifiedFactIds[index] || `proposal-fact-${index + 1}`, value: safeString(row.value ?? row.text, 20_000) }
+    }).filter(item => item.id && item.value)
+    const evidence = proposalEvidenceList(argumentsValue.evidence).length ? proposalEvidenceList(argumentsValue.evidence) : dossier.sources
+    const sourcePapers = proposalPaperList(argumentsValue.source_papers).length ? proposalPaperList(argumentsValue.source_papers) : dossier.relevantRecentPapers
+    const consistencyClaims = (Array.isArray(argumentsValue.consistency_claims) ? argumentsValue.consistency_claims : []).map(item => {
+      const row = recordValue(item)
+      return { field: safeString(row.field, 300), value: safeString(row.value, 4_000), sourceFactId: safeString(row.sourceFactId ?? row.source_fact_id, 240) }
+    }).filter(item => item.field && item.value && item.sourceFactId)
+    const validation = validateResearchProposalDraft({ draft, requirement, expected: { applicantName: safeString(recordValue(argumentsValue.expected).applicantName ?? recordValue(argumentsValue.expected).applicant_name, 240) || draft.applicantName, institution: safeString(recordValue(argumentsValue.expected).institution, 300) || requirement.institution, programme: safeString(recordValue(argumentsValue.expected).programme, 500) || requirement.programme, supervisor: safeString(recordValue(argumentsValue.expected).supervisor, 300) || dossier.supervisor, proposalType: requirement.proposalType }, verifiedFactIds, verifiedEvidenceIds, verifiedFacts, sourcePapers, evidence, consistencyClaims, otherProgrammeNames: stringArray(recordValue(argumentsValue.expected).otherProgrammeNames ?? recordValue(argumentsValue.expected).other_programme_names, 500), otherSupervisorNames: stringArray(recordValue(argumentsValue.expected).otherSupervisorNames ?? recordValue(argumentsValue.expected).other_supervisor_names, 500) })
+    const quality = evaluateResearchProposalQuality({ draft, validation, strategy: workflow.strategy, reviewer: 'david' })
+    let nextWorkflow: ResearchProposalWorkflow
+    try {
+      nextWorkflow = transitionResearchProposalWorkflow(workflow, { type: 'draft_received', draft })
+      nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'quality_reviewed', review: quality })
+    } catch (error) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_transition_invalid', message: error instanceof Error ? error.message : 'The proposal draft arrived out of order. Resume from the latest workflow checkpoint.', value: { valid: false, workflow_state: workflow.currentState }, actionStatus: 'failed' }
+    }
+    const nextAction = quality.passed ? 'Review the grounded draft and approve it before the exact PDF artifact is finalized.' : 'Revise the draft against the deterministic blockers and submit it for another review.'
+    const applicationState = await persistProposalWorkflow(admin, run, context, nextWorkflow, { status: quality.passed ? 'awaiting_user' : 'active', stage: 'document_preparation', nextAction, dataPatch: { proposalLastReview: { draft, validation, quality, reviewedAt: new Date().toISOString() } } })
+    const interaction = quality.passed ? createProposalDraftApprovalInteraction({ applicationCaseId: caseId, programme: draft.programme, supervisor: draft.supervisor, wordCount: validation.wordCount, quality }) : null
+    if (quality.passed && interaction) {
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_draft_approval_required', message: interaction.message, value: { interaction, draft, validation, quality, workflow_state: nextWorkflow.currentState, deterministic_gate: true }, actionStatus: 'running', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_approval_pending: 'draft', proposal_progress_detail: interaction, progress_detail_interaction: proposalInteractionForUi(interaction), proposal_interaction: true, scheduling_options: [{ label: 'Approve draft', value: 'approve' }, { label: 'Request revision', value: 'revise' }] } } }
+    }
+    return { kind: 'output', value: { application_case_id: caseId, valid: validation.valid, validation, quality, workflow_state: nextWorkflow.currentState, next_action: nextAction }, providerActionId: draft.id, publicSummary: quality.passed ? 'The proposal passed deterministic review and is awaiting applicant approval.' : `The proposal is blocked by ${quality.hardFailures.map(issue => issue.code).join(', ') || 'quality dimensions'}; no final artifact was created.`, runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_approval_pending: quality.passed ? 'draft' : null, scheduling_options: [] } } }
+  }
+
+  if (toolName === 'application.interpret_research_proposal_feedback') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case is required before interpreting proposal feedback.', value: { valid: false }, actionStatus: 'failed' }
+    const caseData = recordValue(context.row.data)
+    const stored = recordValue(caseData.researchProposalWorkflow)
+    if (!safeString(stored.version, 100)) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_not_prepared', message: 'Prepare the canonical proposal workflow before interpreting feedback.', value: { valid: false }, actionStatus: 'failed' }
+    const workflow = stored as ResearchProposalWorkflow
+    const direction = workflow.directionCandidates.find(candidate => candidate.id === workflow.selectedDirectionId) ?? workflow.directionCandidates[0]
+    if (!direction || !workflow.dossier || !workflow.strategy) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_workflow_incomplete', message: 'The proposal strategy is incomplete; feedback cannot be applied safely.', value: { valid: false }, actionStatus: 'failed' }
+    const feedback = interpretResearchProposalFeedback({ messageId: safeString(argumentsValue.message_id, 256), threadId: safeString(argumentsValue.thread_id, 256) || null, body: safeString(argumentsValue.body, 20_000), evidenceIds: stringArray(argumentsValue.evidence_ids, 240) })
+    const revisionNumber = Number.isInteger(argumentsValue.revision_number) ? Number(argumentsValue.revision_number) : workflow.revisionCount + 1
+    const plan = buildProposalRevisionPlan({ strategy: workflow.strategy, feedback, revisionNumber })
+    let nextWorkflow = workflow
+    try {
+      if (nextWorkflow.currentState === 'awaiting_applicant_decision') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'applicant_approved' })
+      if (nextWorkflow.currentState === 'supervisor_review') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'supervisor_feedback_received', feedback })
+      else if (nextWorkflow.currentState !== 'final_quality_review' && nextWorkflow.currentState !== 'supervisor_feedback_received') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'supervisor_feedback_received', feedback })
+      if (nextWorkflow.currentState === 'supervisor_feedback_received' && !plan.requiresDirectionDecision && !feedback.every(item => item.category === 'approval')) nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'revision_planned', plan })
+    } catch (error) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_feedback_transition_invalid', message: error instanceof Error ? error.message : 'The feedback arrived out of order. Resume from the latest proposal checkpoint.', value: { valid: false, workflow_state: workflow.currentState, feedback }, actionStatus: 'failed' }
+    }
+    const nextAction = plan.requiresDirectionDecision ? 'Choose a grounded replacement direction before the writer revises the proposal.' : feedback.every(item => item.category === 'approval') ? 'The feedback contains approval; run the final quality and artifact gates.' : 'Revise the strategy and draft against the typed feedback, then run deterministic review again.'
+    const applicationState = await persistProposalWorkflow(admin, run, context, nextWorkflow, { status: plan.requiresDirectionDecision ? 'awaiting_user' : 'active', stage: plan.requiresDirectionDecision ? 'research' : 'document_preparation', nextAction, dataPatch: { proposalLastFeedback: { feedback, plan, receivedAt: new Date().toISOString() } } })
+    if (plan.requiresDirectionDecision) {
+      const interaction = createResearchDirectionInteraction({ applicationCaseId: caseId, candidates: workflow.directionCandidates })
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_direction_redecision_required', message: nextAction, value: { interaction, feedback, revision_plan: plan, candidates: workflow.directionCandidates }, actionStatus: 'running', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_progress_detail: interaction, progress_detail_interaction: proposalInteractionForUi(interaction), proposal_interaction: true, scheduling_options: interaction.options.map(option => ({ label: option.label, value: option.value })) } } }
+    }
+    return { kind: 'output', value: { application_case_id: caseId, feedback, revision_plan: plan, strategy: nextWorkflow.strategy, workflow_state: nextWorkflow.currentState, next_action: nextAction }, providerActionId: safeString(argumentsValue.message_id, 256), publicSummary: feedback.every(item => item.category === 'approval') ? 'Recorded supervisor approval and retained the evidence for final quality review.' : 'Converted supervisor feedback into a typed, source-linked revision plan.', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_progress_detail: null, progress_detail_interaction: null, proposal_interaction: false, scheduling_options: [] } } }
+  }
+
+  if (toolName === 'application.finalize_research_proposal') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case is required before finalizing a research proposal.', value: { valid: false }, actionStatus: 'failed' }
+    const caseData = recordValue(context.row.data)
+    const stored = recordValue(caseData.researchProposalWorkflow)
+    if (!safeString(stored.version, 100)) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_not_prepared', message: 'Prepare and review the canonical proposal before finalization.', value: { valid: false }, actionStatus: 'failed' }
+    const workflow = stored as ResearchProposalWorkflow
+    const draft = proposalDraft(argumentsValue.draft ?? recordValue(caseData.proposalLastReview).draft, caseId)
+    const direction = workflow.directionCandidates.find(candidate => candidate.id === workflow.selectedDirectionId) ?? workflow.directionCandidates[0]
+    const dossier = workflow.dossier
+    if (!direction || !dossier || !workflow.strategy) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_workflow_incomplete', message: 'The proposal direction, dossier, and strategy must be complete before finalization.', value: { valid: false }, actionStatus: 'failed' }
+    const requirement = workflow.requirement
+    const verifiedFacts = workflow.context.verifiedFacts.map(fact => ({ id: fact.id, value: fact.value }))
+    const validation = validateResearchProposalDraft({ draft, requirement, expected: { applicantName: draft.applicantName, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalType: requirement.proposalType }, verifiedFactIds: workflow.context.verifiedFacts.map(fact => fact.id), verifiedEvidenceIds: [...dossier.sources.map(source => source.id), ...dossier.relevantRecentPapers.flatMap(paper => paper.sourceEvidenceIds)], verifiedFacts, sourcePapers: dossier.relevantRecentPapers, evidence: dossier.sources })
+    const quality = evaluateResearchProposalQuality({ draft, validation, strategy: workflow.strategy, reviewer: 'david' })
+    if (!quality.passed) return { kind: 'pause', status: 'needs_context', code: 'research_proposal_quality_failed', message: 'The exact artifact cannot be finalized until deterministic proposal review passes.', value: { valid: false, validation, quality, workflow_state: workflow.currentState }, actionStatus: 'failed' }
+    const approvedByApplicant = argumentsValue.approved === true || run.context?.proposal_approval_response === true || /^(?:approve|approved|true)$/i.test(safeString(run.context?.proposal_approval_response, 80))
+    if (!approvedByApplicant) {
+      const interaction = createProposalDraftApprovalInteraction({ applicationCaseId: caseId, programme: draft.programme, supervisor: draft.supervisor, wordCount: validation.wordCount, quality })
+      const nextAction = 'Review the exact grounded draft and approve it before the private PDF artifact is created.'
+      const applicationState = await persistProposalWorkflow(admin, run, context, workflow, { status: 'awaiting_user', stage: 'document_preparation', nextAction })
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_final_approval_required', message: interaction.message, value: { interaction, draft, validation, quality, workflow_state: workflow.currentState, deterministic_gate: true }, actionStatus: 'running', runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_approval_pending: 'final', proposal_progress_detail: interaction, progress_detail_interaction: proposalInteractionForUi(interaction), proposal_interaction: true, scheduling_options: [{ label: 'Approve final proposal', value: 'approve' }, { label: 'Request revision', value: 'revise' }] } } }
+    }
+    const destination = safeString(argumentsValue.destination, 500) || requirement.uploadLocation || 'Research documents'
+    const filename = safeString(draft.filename, 300).replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.pdf$/i, '') + '.pdf'
+    const pdf = createPdf('Research Proposal', draft.body)
+    const persisted = await persistApplicationGeneratedAsset(admin, run, { bytes: pdf, filename, mimeType: 'application/pdf', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'programme_derivative', sourceAssetIds: [], templateVersion: 'research-proposal-pdf@1', promptVersion: workflow.version, metadata: { artifact_role: 'research_proposal_final', workflow_version: workflow.version, proposal_type: requirement.proposalType, requirement_state: requirement.requirementState, proposal_version: draft.version, source_fact_ids: stringArray(argumentsValue.source_fact_ids, 240), source_evidence_ids: stringArray(argumentsValue.source_evidence_ids, 240), deterministic_validation: validation, quality_review: quality } })
+    const approvedArtifactRow = await admin.from('application_artifacts').update({ approval_status: 'approved', final_submission_destination: destination, metadata: { artifact_role: 'research_proposal_final', workflow_version: workflow.version, proposal_type: requirement.proposalType, deterministic_validation: validation, quality_review: quality } }).eq('id', persisted.artifactId).eq('application_case_id', caseId).eq('user_id', run.user_id).select('id').single()
+    if (approvedArtifactRow.error || !approvedArtifactRow.data) throw new Error(approvedArtifactRow.error?.message ?? 'The proposal artifact approval record could not be persisted.')
+    await admin.from('file_assets').update({ approval_status: 'approved' }).eq('id', persisted.assetId).eq('user_id', run.user_id)
+    const artifact = buildProposalArtifactIdentity({ applicationCaseId: caseId, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalVersion: draft.version, sourceArtifactId: draft.id, renderedArtifactId: persisted.artifactId, sourceFilename: null, renderedFilename: filename, checksum: persisted.checksum, provenanceSourceIds: [...new Set([...draft.sourceFactIds, ...draft.sourceEvidenceIds, ...stringArray(argumentsValue.source_evidence_ids, 240)])], approvalState: 'approved', uploadState: 'not_uploaded' })
+    const artifactCheck = verifyApprovedProposalArtifact({ artifact, expected: { applicationCaseId: caseId, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalVersion: draft.version, checksum: persisted.checksum } })
+    if (!artifactCheck.valid) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_artifact_invalid', message: 'The rendered artifact did not match the approved proposal identity.', value: { artifact, issues: artifactCheck.issues }, actionStatus: 'failed' }
+    const requirementRows = await admin.from('application_requirements').select('id,name').eq('application_case_id', caseId).eq('user_id', run.user_id)
+    if (requirementRows.error) throw new Error(requirementRows.error.message)
+    const requirementRow = (requirementRows.data ?? []).find(row => safeString(row.id, 80) === requirement.id || /research proposal|proposed research|research outline|research plan|project-specific|methodology proposal/i.test(safeString(row.name, 500)))
+    if (requirementRow) {
+      const updatedRequirement = await admin.from('application_requirements').update({ status: 'ready', linked_artifact_id: persisted.artifactId, blocker_reason: null }).eq('id', requirementRow.id).eq('user_id', run.user_id)
+      if (updatedRequirement.error) throw new Error(updatedRequirement.error.message)
+    }
+    const approvalEvidence = await admin.from('application_evidence').upsert({ user_id: run.user_id, application_case_id: caseId, task_id: run.task_id, agent_run_id: run.id, kind: 'approval_record', provider: 'shotcount', asset_id: persisted.assetId, excerpt: `${filename} was approved as the exact research-proposal artifact for ${requirement.programme}.`, metadata: { artifact_id: persisted.artifactId, checksum: persisted.checksum, proposal_version: draft.version, destination }, idempotency_key: `research-proposal-approval:${persisted.artifactId}:${persisted.checksum}` }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
+    if (approvalEvidence.error || !approvalEvidence.data) throw new Error(approvalEvidence.error?.message ?? 'The proposal approval evidence could not be persisted.')
+    let nextWorkflow = workflow
+    try {
+      if (nextWorkflow.currentState === 'awaiting_applicant_decision') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'supervisor_feedback_received', feedback: [{ id: `approval:${caseId}`, sourceMessageId: `approval:${caseId}`, sourceThreadId: null, category: 'approval', requestedChange: 'Applicant approved the exact proposal after deterministic review.', severity: 'informational', clarificationRequired: false, revisionPriority: 4, evidenceIds: [approvalEvidence.data.id], revisionRequirements: [], affectsStrategy: false }] })
+      if (nextWorkflow.currentState === 'supervisor_review') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'supervisor_feedback_received', feedback: [{ id: `approval:${caseId}`, sourceMessageId: `approval:${caseId}`, sourceThreadId: null, category: 'approval', requestedChange: 'No additional supervisor changes were required before finalization.', severity: 'informational', clarificationRequired: false, revisionPriority: 4, evidenceIds: [approvalEvidence.data.id], revisionRequirements: [], affectsStrategy: false }] })
+      if (nextWorkflow.currentState === 'final_quality_review') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'final_quality_reviewed', review: quality })
+      if (nextWorkflow.currentState === 'approved') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'artifact_ready', artifact })
+    } catch (error) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_finalization_transition_invalid', message: error instanceof Error ? error.message : 'The proposal artifact was saved but the workflow checkpoint needs recovery.', value: { artifact, workflow_state: workflow.currentState }, actionStatus: 'failed' }
+    }
+    const nextAction = `Upload ${filename} to ${destination}, then verify the resulting portal state.`
+    const applicationState = await persistProposalWorkflow(admin, run, context, nextWorkflow, { status: 'active', stage: 'portal_preparation', nextAction, dataPatch: { proposalFinalArtifact: artifact, proposalApprovalEvidenceId: approvalEvidence.data.id } })
+    const finalInteraction = createProposalFinalApprovalInteraction({ applicationCaseId: caseId, programme: requirement.programme, supervisor: dossier.supervisor, wordCount: validation.wordCount, artifact, quality })
+    return { kind: 'output', value: { application_case_id: caseId, artifact, artifact_check: artifactCheck, validation, quality, approval_evidence_id: approvalEvidence.data.id, final_interaction: finalInteraction, destination, next_action: nextAction }, providerActionId: persisted.artifactId, publicSummary: `Created the approved, checksum-addressed research-proposal PDF for ${requirement.programme}; it is ready for a verified upload.`, runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_artifact_id: persisted.artifactId, proposal_asset_id: persisted.assetId, proposal_checksum: persisted.checksum, proposal_approval_pending: null, scheduling_options: [] } } }
+  }
+
+  if (toolName === 'application.record_proposal_delivery') {
+    const caseId = safeString(argumentsValue.application_case_id, 80)
+    const context = await applicationCaseContext(admin, run, caseId)
+    if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case is required before recording proposal delivery.', value: { valid: false }, actionStatus: 'failed' }
+    const caseData = recordValue(context.row.data)
+    const stored = recordValue(caseData.researchProposalWorkflow)
+    const workflow = stored as ResearchProposalWorkflow
+    const artifact = workflow.finalArtifact ?? recordValue(caseData.proposalFinalArtifact) as never
+    if (!artifact || !safeString(artifact.renderedArtifactId, 160)) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_artifact_missing', message: 'Create and approve the exact proposal artifact before recording a delivery result.', value: { valid: false }, actionStatus: 'failed' }
+    const exactArtifact = { ...artifact, uploadState: argumentsValue.read_back_verified === true ? 'verified' : 'uploaded' } as typeof artifact
+    const artifactCheck = verifyApprovedProposalArtifact({ artifact: exactArtifact, expected: { applicationCaseId: caseId, institution: artifact.institution, programme: artifact.programme, supervisor: artifact.supervisor, proposalVersion: artifact.proposalVersion, checksum: artifact.checksum } })
+    const delivery = verifyProposalDelivery({ artifact: exactArtifact, destination: safeString(argumentsValue.destination, 500), uploadedFilename: safeString(argumentsValue.filename, 300), uploadedChecksum: safeString(argumentsValue.checksum, 128), readBackVerified: argumentsValue.read_back_verified === true, evidenceIds: stringArray(argumentsValue.evidence_ids, 240) })
+    if (!artifactCheck.valid || !delivery.valid) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_delivery_unverified', message: 'The proposal upload cannot be marked complete until filename, checksum, destination, and read-back evidence all match the approved artifact.', value: { artifact_check: artifactCheck, delivery }, actionStatus: 'failed' }
+    const evidence = await admin.from('application_evidence').upsert({ user_id: run.user_id, application_case_id: caseId, task_id: run.task_id, agent_run_id: run.id, kind: 'uploaded_file_verification', provider: 'browser', asset_id: null, excerpt: `${delivery.uploadedFilename} was read back at ${delivery.destination} with the approved checksum.`, metadata: { artifact_id: delivery.artifactId, checksum: delivery.checksum, destination: delivery.destination, read_back_verified: true, evidence_ids: delivery.evidenceIds }, idempotency_key: `research-proposal-delivery:${delivery.artifactId}:${delivery.checksum}` }, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id').single()
+    if (evidence.error || !evidence.data) throw new Error(evidence.error?.message ?? 'The proposal delivery evidence could not be persisted.')
+    const requirementRows = await admin.from('application_requirements').select('id,name,verification_evidence_ids').eq('application_case_id', caseId).eq('user_id', run.user_id)
+    if (requirementRows.error) throw new Error(requirementRows.error.message)
+    const requirementRow = (requirementRows.data ?? []).find(row => /research proposal|proposed research|research outline|research plan|project-specific|methodology proposal/i.test(safeString(row.name, 500)))
+    if (requirementRow) {
+      const updatedRequirement = await admin.from('application_requirements').update({ status: 'submitted', linked_artifact_id: delivery.artifactId, verification_evidence_ids: [...new Set([...stringArray(requirementRow.verification_evidence_ids, 120), evidence.data.id, ...delivery.evidenceIds])] }).eq('id', requirementRow.id).eq('user_id', run.user_id)
+      if (updatedRequirement.error) throw new Error(updatedRequirement.error.message)
+    }
+    let nextWorkflow = workflow
+    try {
+      if (nextWorkflow.currentState === 'artifact_ready' || nextWorkflow.currentState === 'uploaded') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'delivery_verified', delivery })
+    } catch (error) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_delivery_transition_invalid', message: error instanceof Error ? error.message : 'The delivery evidence was saved but the proposal workflow checkpoint needs recovery.', value: { delivery, workflow_state: workflow.currentState }, actionStatus: 'failed' }
+    }
+    const nextAction = 'The research-proposal requirement is verified as submitted. Continue with the remaining application requirements.'
+    const applicationState = await persistProposalWorkflow(admin, run, context, nextWorkflow, { status: 'active', stage: 'portal_preparation', nextAction, dataPatch: { proposalDeliveryEvidenceId: evidence.data.id } })
+    return { kind: 'output', value: { application_case_id: caseId, delivery, evidence_id: evidence.data.id, workflow_state: nextWorkflow.currentState, requirement_status: 'submitted' }, providerActionId: evidence.data.id, publicSummary: `Verified the exact research-proposal upload at ${delivery.destination}.`, runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_delivery_verified: true, scheduling_options: [] } } }
   }
 
   if (toolName === 'application.generate_cv') {
@@ -4813,19 +7166,31 @@ async function executeProviderTool(
       }
     }
     const checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
+    const publicObservation = recordValue(recordValue(checkpoint.publicBrowser).observation)
+    const applicationCaseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80)
+    const supplemental = applicationCaseId && Object.keys(publicObservation).length
+      ? await persistSupplementalQuestionsFromObservation(admin, run, { caseId: applicationCaseId, sessionId: session.id, observation: publicObservation })
+      : { questions: [], interaction: null as SupplementalProgressInteraction | null, writerQuestions: [] as ApplicationQuestion[] }
+    const supplementalContext = supplemental.questions.length ? {
+      supplemental_questions: supplemental.questions,
+      ...(supplemental.interaction ? { progress_detail_interaction: supplemental.interaction } : {}),
+    } : {}
     return {
-      kind: 'output',
+      ...(supplemental.interaction ? { kind: 'pause' as const, status: 'needs_context' as const, code: 'supplemental_question_needs_user', message: supplemental.interaction.question, actionSucceeded: true, actionStatus: 'succeeded' as const, advanceStep: false } : { kind: 'output' as const }),
       value: {
         session_id: session.id,
         status: session.status,
         current_url: session.current_url,
         current_domain: session.current_domain,
         last_operation: checkpoint.lastOperation ?? null,
+        observation: publicObservation,
+        ...supplementalContext,
         resumable: session.resumable === true,
         payment_boundary_reached: session.payment_boundary_reached === true,
       },
       providerActionId: session.id,
       publicSummary: 'Observed the isolated browser session.',
+      ...(supplemental.interaction ? { runPatch: { context: { ...(run.context ?? {}), application_case_id: applicationCaseId, progress_detail_interaction: supplemental.interaction } } } : {}),
     }
   }
 
@@ -5673,9 +8038,59 @@ async function resumeWithContext(
   admin: AdminClient,
   run: AgentRunRow,
   context: string,
+  interactionResponse?: RequestBody['interactionResponse'],
 ) {
   const value = context.trim()
   if (!value) throw new Error('Add the missing context before resuming this task.')
+  const proposalInteractionPending = run.context.proposal_interaction === true && Boolean(recordValue(run.context.proposal_progress_detail).id)
+  if (interactionResponse?.interactionId) {
+    const pendingInteraction = run.context.progress_detail_interaction
+    if (!pendingInteraction || typeof pendingInteraction !== 'object' || Array.isArray(pendingInteraction) || safeString((pendingInteraction as Record<string, unknown>).id, 300) !== interactionResponse.interactionId) {
+      throw new Error('That Progress Detail interaction is no longer current. Refresh the task and choose the current option.')
+    }
+    if (proposalInteractionPending) {
+      const proposalProgress = recordValue(run.context.proposal_progress_detail)
+      const proposalOptions = Array.isArray(proposalProgress.options) ? proposalProgress.options.map(option => recordValue(option)) : []
+      const submittedValue = Array.isArray(interactionResponse.value) ? interactionResponse.value[0] : interactionResponse.value
+      if (safeString(proposalProgress.inputMode, 40) === 'choose' && !proposalOptions.some(option => safeString(option.id, 160) === safeString(submittedValue, 500) || safeString(option.value, 500) === safeString(submittedValue, 500))) {
+        throw new Error('That proposal direction is not one of the current grounded options. Refresh the task and choose again.')
+      }
+    } else if (safeString((pendingInteraction as Record<string, unknown>).kind, 80) === 'application_question') {
+      const questionId = safeString((pendingInteraction as Record<string, unknown>).questionId, 80)
+      const caseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80)
+      if (!questionId || !caseId) throw new Error('The supplemental question context is no longer attached to an application case.')
+      const questionRow = await admin.from('application_questions').select('*').eq('id', questionId).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+      if (questionRow.error) throw new Error(questionRow.error.message)
+      if (!questionRow.data) throw new Error('That supplemental question is no longer available on this application case.')
+      const profile = await admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle()
+      if (profile.error && profile.error.code !== '42P01') throw new Error(profile.error.message)
+      const question = applicationQuestionFromRow(questionRow.data as Record<string, unknown>)
+      const answer = typeof interactionResponse.value === 'string'
+        ? interactionResponse.value.trim()
+        : typeof interactionResponse.value === 'boolean' || typeof interactionResponse.value === 'number'
+          ? String(interactionResponse.value)
+          : JSON.stringify(interactionResponse.value ?? '')
+      const facts = supplementalFacts(profileFactResolutions(profile.data?.profile))
+      const gates = runSupplementalAnswerGates(question, answer, { facts, profileFacts: facts })
+      if (!gates.valid) throw new Error(`That response does not satisfy the exact portal constraint: ${gates.issues.join(', ')}.`)
+      const updatedQuestion = await admin.from('application_questions').update({ status: 'ready_to_write', answer_route: 'user_decision', answer_value: answer, last_error: null }).eq('id', questionId).eq('application_case_id', caseId).eq('user_id', run.user_id).select('id').maybeSingle()
+      if (updatedQuestion.error || !updatedQuestion.data) throw new Error(updatedQuestion.error?.message ?? 'The supplemental answer could not be saved.')
+      const requirementId = safeString(questionRow.data.application_requirement_id, 80)
+      if (requirementId) {
+        const requirementUpdate = await admin.from('application_requirements').update({ status: 'ready', blocker_reason: null }).eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id)
+        if (requirementUpdate.error) throw new Error(requirementUpdate.error.message)
+      }
+    } else {
+      const campaignContext = recordValue(recordValue(run.context.recommendation_campaign).context) as unknown as RecommendationContextResolution
+      const validatedInteraction = applyRecommendationInteraction({
+        context: campaignContext,
+        interaction: pendingInteraction as never,
+        value: interactionResponse.value as never,
+        reusableContextConsent: interactionResponse.reusable === true,
+      })
+      if (!validatedInteraction.accepted) throw new Error('That Progress Detail response does not match the requested field or option.')
+    }
+  }
   const restartingDeclinedNegotiation = safeString(run.context?.negotiation_status, 40) === 'declined'
   let history = await loadModelHistory(admin, run)
   if (restartingDeclinedNegotiation) {
@@ -5780,6 +8195,15 @@ async function resumeWithContext(
     context: {
       ...(run.context ?? {}),
       user_context: value,
+      ...(interactionResponse?.interactionId ? { progress_detail_response: { ...interactionResponse, receivedAt: new Date().toISOString() } } : {}),
+      ...(proposalInteractionPending ? {
+        proposal_interaction: false,
+        proposal_progress_detail: null,
+        progress_detail_interaction: null,
+        proposal_selected_direction_id: safeString(run.context.proposal_progress_detail && recordValue(run.context.proposal_progress_detail).inputMode === 'choose' ? interactionResponse?.value : '', 160) || null,
+        proposal_approval_response: recordValue(run.context.proposal_progress_detail).inputMode === 'approve' ? interactionResponse?.value ?? null : null,
+      } : {}),
+      ...(interactionResponse?.interactionId && safeString(recordValue(run.context?.progress_detail_interaction).kind, 80) === 'application_question' ? { progress_detail_interaction: null, application_question_answered: true } : {}),
       application_context_answers: [
         ...(Array.isArray(run.context?.application_context_answers) ? run.context.application_context_answers : []),
         { question: safeString(run.waiting_reason, 600), answer: value, answeredAt: new Date().toISOString() },
@@ -5820,6 +8244,14 @@ async function resumeWithContext(
     lease_owner: null,
     lease_expires_at: null,
   })
+  if (interactionResponse?.interactionId) {
+    const interactionUpdate = await admin.from('application_recommendation_interactions').update({
+      response: interactionResponse.value ?? null,
+      reusable: interactionResponse.reusable === true,
+      status: 'answered',
+    }).eq('user_id', run.user_id).eq('agent_run_id', run.id).eq('interaction_id', interactionResponse.interactionId).eq('status', 'pending')
+    if (interactionUpdate.error && interactionUpdate.error.code !== '42P01') throw new Error(interactionUpdate.error.message)
+  }
   if (isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) {
     const clearedHistory = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
     if (clearedHistory.error) throw new Error(clearedHistory.error.message)
@@ -5828,7 +8260,7 @@ async function resumeWithContext(
       role: 'user',
       content: [{
         type: 'input_text',
-        text: `Authoritative applicant continuation: ${value}. Use this answer in the current application controller step and do not ask the same question again.`,
+        text: `Authoritative applicant continuation: ${value}${interactionResponse?.interactionId ? `\nTyped Progress Detail response: ${JSON.stringify(interactionResponse)}` : ''}. Use this answer in the current application controller step and do not ask the same question again.`,
       }],
     })
   }
@@ -6484,6 +8916,60 @@ async function pollBrowserExecutionRun(
         completed_at: new Date().toISOString(),
       }).eq('id', actionResult.data.id)
     }
+    if (operation.type === 'submit' && errorCode === 'browser_form_validation_required' && actionResult.data?.model_call_id && openaiKey) {
+      const recoveredCheckpoint = {
+        ...checkpoint,
+        // The worker sets this marker before clicking so an uncertain submit
+        // cannot be repeated. Native form validation is different: no POST
+        // can occur until these fields are corrected, so the same durable
+        // action may safely be retried after David fills them.
+        submissionAttempted: null,
+        pendingOperation: null,
+      }
+      const repairedSession = await admin.from('browser_execution_sessions').update({
+        status: 'completed',
+        checkpoint: recoveredCheckpoint,
+        worker_session_id: null,
+        resumable: true,
+        last_observed_at: new Date().toISOString(),
+      }).eq('id', session.id).eq('run_id', run.id).eq('user_id', run.user_id).select('id').maybeSingle()
+      if (repairedSession.error || !repairedSession.data) throw new Error(repairedSession.error?.message ?? 'Could not preserve the validated browser form state.')
+      let history = await loadModelHistory(admin, run)
+      const callId = safeString(actionResult.data.model_call_id, 256)
+      if (!historyHasToolOutput(history, callId)) {
+        history = [...history, {
+          type: 'function_call_output',
+          call_id: callId,
+          output: JSON.stringify({
+            ok: false,
+            error_code: errorCode,
+            error_message: message,
+            missing_fields: operation.error?.details?.missingFields ?? [],
+            instruction: 'Fill the listed fields with grounded applicant facts, then retry the same reversible section save.',
+          }),
+        }]
+      }
+      const resumed = await updateRun(admin, run, {
+        status: 'running',
+        waiting_reason: '',
+        error: null,
+        error_code: null,
+        retryable: true,
+        current_step: run.current_step + 1,
+        progress: [...(Array.isArray(run.progress) ? run.progress : []), 'The portal reported required fields; David is correcting the saved section.'],
+        external_correlation_id: null,
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      await saveModelHistory(admin, resumed, history)
+      await addEvent(admin, resumed, 'agent_browser_validation_recovered', resumed.status, 'Preserved the browser form and returned the required fields to David before retrying the reversible save.', {
+        browser_session_id: session.id,
+        operation_type: operation.type,
+        action_id: actionResult.data.id,
+        missing_fields: operation.error?.details?.missingFields ?? [],
+      })
+      return advanceRun(admin, resumed, openaiKey)
+    }
     const providerFallbackRecoveryAvailable = operation.type === 'select_flight' &&
       errorCode === 'flight_provider_handoff_unavailable' &&
       Boolean(openaiKey) &&
@@ -6759,6 +9245,30 @@ async function pollBrowserExecutionRun(
 
   if (session.status !== 'completed' || operation.status !== 'succeeded') return run
   let output = operation.output ?? {}
+  let supplementalObservation: Awaited<ReturnType<typeof persistSupplementalQuestionsFromObservation>> | null = null
+  if (operation.type === 'navigate' || operation.type === 'act' || operation.type === 'submit') {
+    const applicationCaseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80)
+    const observation = recordValue(output.observation)
+    if (applicationCaseId && Object.keys(observation).length) {
+      supplementalObservation = await persistSupplementalQuestionsFromObservation(admin, run, { caseId: applicationCaseId, sessionId: session.id, observation })
+      const readBack = operation.type === 'submit'
+        ? await verifySupplementalReadBack(admin, run, {
+          caseId: applicationCaseId,
+          sessionId: session.id,
+          persistedValues: recordValue(output.persisted_values),
+          readBackValues: recordValue(output.read_back_values),
+          saveConfirmation: safeString(observation.text, 1_000) || (output.confirmation_observed === true ? 'Browser confirmation observed.' : ''),
+          checkpointId: safeString(checkpoint.lastOperation?.id, 80) || null,
+        })
+        : []
+      output = {
+        ...output,
+        supplemental_questions: supplementalObservation.questions,
+        supplemental_writer_questions: supplementalObservation.writerQuestions.map(question => ({ id: question.id, exact_prompt: question.exactPrompt })),
+        supplemental_read_back: readBack,
+      }
+    }
+  }
     const operationSummary = operation.type === 'search_flights'
       ? 'Compared live flight options.'
       : operation.type === 'select_flight'
@@ -6954,6 +9464,31 @@ async function pollBrowserExecutionRun(
         call_id: callId,
         output: JSON.stringify(output),
       }]
+    }
+    if (supplementalObservation?.interaction) {
+      const waiting = await updateRun(admin, run, {
+        status: 'needs_context',
+        waiting_reason: supplementalObservation.interaction.question,
+        error: null,
+        error_code: null,
+        retryable: true,
+        context: {
+          ...(run.context ?? {}),
+          progress_detail_interaction: supplementalObservation.interaction,
+          application_question_interaction_id: supplementalObservation.interaction.id,
+        },
+        progress: [...(Array.isArray(run.progress) ? run.progress : []), 'The portal revealed a supplemental question that needs one missing applicant decision.'],
+        external_correlation_id: null,
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      await saveModelHistory(admin, waiting, history)
+      await addEvent(admin, waiting, 'agent_context_requested', waiting.status, supplementalObservation.interaction.question, {
+        browser_session_id: session.id,
+        operation_type: operation.type,
+        application_question_id: supplementalObservation.interaction.questionId ?? supplementalObservation.interaction.id,
+      })
+      return waiting
     }
     const resumed = await updateRun(admin, run, {
       status: 'running',
@@ -8463,6 +10998,11 @@ async function advanceRun(
         }]
       : history
     const response = await callOpenAI(openaiKey, current, modelHistory, applicationController, semanticRepairAttempts > 0)
+    if (Number(current.context?.model_rate_limit_count ?? 0) > 0) {
+      current = await updateRun(admin, current, {
+        context: { ...(current.context ?? {}), model_rate_limit_count: 0 },
+      })
+    }
     const benchmarkRunId = safeString(current.context?.benchmark_run_id, 160)
     const applicationRun = isApplicationIntent(current.objective, safeString(current.context?.description, 4_000)) &&
       Array.isArray(current.context?.attachments) &&
@@ -8857,11 +11397,46 @@ async function advanceRun(
         continue
       }
     }
+    let action: Awaited<ReturnType<typeof recordAction>>
     if (policy.approvalKind) {
+      // Check the durable action ledger before creating another approval. A
+      // stale model continuation can repeat the same consequential call after
+      // its provider result was already confirmed; asking for approval again
+      // would leave the run in needs_approval with no pending approval row.
+      const replayKey = await actionIdempotencyKey(current, toolName, argumentsValue)
+      const existingAction = await admin.from('agent_actions')
+        .select('*')
+        .eq('run_id', current.id)
+        .eq('user_id', current.user_id)
+        .eq('tool_name', toolName)
+        .eq('idempotency_key', replayKey)
+        .maybeSingle()
+      if (existingAction.error) throw new Error(existingAction.error.message)
+      if (existingAction.data?.status === 'succeeded' && existingAction.data.provider_action_id && existingAction.data.output) {
+        const reusedSummary = safeString(existingAction.data.public_summary, 1200) || `Reused the confirmed ${toolName} result.`
+        history.push({
+          type: 'function_call_output',
+          call_id: safeString(call.call_id, 256),
+          output: JSON.stringify(existingAction.data.output),
+        })
+        current = await updateRun(admin, current, {
+          current_step: current.current_step + 1,
+          progress: [...(Array.isArray(current.progress) ? current.progress : []), reusedSummary],
+          openai_response_id: response.id ?? null,
+        })
+        await saveModelHistory(admin, current, history, response.id)
+        await addEvent(admin, current, 'agent_action_reused', current.status, reusedSummary, {
+          tool_name: toolName,
+          action_id: existingAction.data.id,
+          provider_action_id: existingAction.data.provider_action_id,
+          reason: 'stable_consequential_idempotency_key_before_approval',
+        })
+        continue
+      }
       return pauseForApproval(admin, current, toolName, safeString(call.call_id, 256), argumentsValue)
     }
 
-    const action = await recordAction(
+    action = await recordAction(
       admin,
       current,
       toolName,
@@ -9957,8 +12532,61 @@ Deno.serve(async request => {
         let applicationAttachmentsRefreshed = false
         let applicationHistoryReset = false
         let applicationContextResumed = false
+        // A stale continuation can request approval for an action whose
+        // durable approval and provider action are already complete. That
+        // leaves no pending approval for the client to resume. Reset the
+        // model turn only when the approved action is confirmed succeeded.
+        if (run.status === 'needs_approval') {
+          const pendingApproval = await admin.from('agent_approvals')
+            .select('id')
+            .eq('run_id', run.id)
+            .eq('user_id', run.user_id)
+            .eq('status', 'pending')
+            .limit(1)
+            .maybeSingle()
+          if (pendingApproval.error) throw new Error(pendingApproval.error.message)
+          if (!pendingApproval.data) {
+            const approvedApproval = await admin.from('agent_approvals')
+              .select('id,action_id')
+              .eq('run_id', run.id)
+              .eq('user_id', run.user_id)
+              .eq('status', 'approved')
+              .order('decided_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            if (approvedApproval.error) throw new Error(approvedApproval.error.message)
+              const approvedAction = approvedApproval.data
+              ? await admin.from('agent_actions')
+                .select('id,tool_name,provider_action_id,status,retryable')
+                .eq('id', approvedApproval.data.action_id)
+                .eq('run_id', run.id)
+                .eq('user_id', run.user_id)
+                .maybeSingle()
+              : { data: null, error: null }
+            if (approvedAction.error) throw new Error(approvedAction.error.message)
+            if (
+              (approvedAction.data?.status === 'succeeded' && approvedAction.data.provider_action_id) ||
+              (approvedAction.data?.status === 'failed' && approvedAction.data.retryable === true)
+            ) {
+              await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+              run = await updateRun(admin, run, {
+                status: 'planning',
+                waiting_reason: '',
+                error: null,
+                error_code: null,
+                retryable: true,
+              })
+              applicationHistoryReset = true
+              recoverSavedAction = true
+              await addEvent(admin, run, 'agent_approval_replay_recovered', run.status, 'Reset a stale approval continuation after the provider result was already recorded.', {
+                action_id: approvedAction.data.id,
+                tool_name: approvedAction.data.tool_name,
+              })
+            }
+          }
+        }
         const applicationBrowserRecovery = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
-          ['browser_worker_unavailable', 'browser_retry_exhausted', 'browser_target_closed', 'browser_target_ambiguous'].includes(safeString(run.error_code, 120))
+           ['browser_worker_unavailable', 'browser_retry_exhausted', 'browser_target_closed', 'browser_target_ambiguous', 'browser_sensitive_field_blocked'].includes(safeString(run.error_code, 120))
         if (run.status === 'failed' && /new email cannot reuse an existing thread/i.test(run.error ?? '')) {
           await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
         }
@@ -10035,7 +12663,7 @@ Deno.serve(async request => {
         const applicationContextRecovery = run.status === 'waiting_for_user' &&
           isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
           Boolean(safeString(body.context, 10_000).trim()) &&
-          /application_assignment_required|call_id|function call output|no tool output found/i.test(
+          /application_assignment_required|application_requirement_awaiting_user|call_id|function call output|no tool output found/i.test(
             `${safeString(run.error_code, 160)} ${safeString(run.error, 1_200)} ${safeString(run.waiting_reason, 1_200)}`,
           )
         if (applicationContextRecovery) {
@@ -10043,7 +12671,7 @@ Deno.serve(async request => {
           // worker failure can leave the saved Responses transcript ending in
           // an unmatched function call; replaying it would make the API reject
           // the user’s otherwise valid recovery answer before David can act.
-          run = await resumeWithContext(admin, run, body.context ?? '')
+          run = await resumeWithContext(admin, run, body.context ?? '', body.interactionResponse)
           applicationContextResumed = true
           applicationHistoryReset = true
         } else if (run.status === 'needs_context') {
@@ -10068,7 +12696,7 @@ Deno.serve(async request => {
             })
             applicationAttachmentsRefreshed = true
           } else {
-            run = await resumeWithContext(admin, run, body.context ?? '')
+            run = await resumeWithContext(admin, run, body.context ?? '', body.interactionResponse)
           }
         } else if (run.status === 'waiting_for_user') {
           const pendingApplicationRequestId = safeString(run.context?.application_pending_request_id, 80)
@@ -10167,7 +12795,26 @@ Deno.serve(async request => {
     if (run && !['completed', 'cancelled'].includes(run.status)) {
       try {
         const current = await loadOwnedRun(admin, user.id, run.id)
-        if (current && !['completed', 'cancelled', 'needs_approval', 'waiting_external'].includes(current.status)) {
+        if (current && !['completed', 'cancelled', 'needs_approval'].includes(current.status)) {
+          const modelRateLimited = /rate limit|tokens per min|too many requests|\b429\b/i.test(message)
+          const rateLimitCount = Number(current.context?.model_rate_limit_count ?? 0) + 1
+          if (modelRateLimited && rateLimitCount <= 5) {
+            const retrying = await updateRun(admin, current, {
+              status: 'planning',
+              waiting_reason: 'The production model is temporarily rate limited; retrying the same application step.',
+              error: null,
+              error_code: null,
+              context: { ...(current.context ?? {}), model_rate_limit_count: rateLimitCount },
+              lease_owner: null,
+              lease_expires_at: null,
+            })
+            await addEvent(admin, retrying, 'agent_model_rate_limit_retry_scheduled', retrying.status,
+              'The production model rate limit was reached; the same application step will retry without changing provider state.', {
+                rate_limit_count: rateLimitCount,
+                retryable: true,
+              })
+            return jsonResponse(request, serializeRun(retrying))
+          }
           const modelTimedOut = /(?:abort|timed out|timeout)/i.test(message)
           const timeoutCount = Number(current.context?.model_timeout_count ?? 0) + 1
           // A transient model connection must not strand a task in its progress

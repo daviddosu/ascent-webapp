@@ -97,6 +97,12 @@ import {
   type FileAsset,
 } from './data/file-assets'
 import { isApplicationIntent } from './data/application'
+import { renderRecommendationProgressDetail } from './data/recommendation-progress-detail'
+import { renderWorkSampleProgressDetail } from './data/work-sample-progress-detail'
+import type { RecommendationInteraction } from '../supabase/functions/_shared/recommendation-workflow'
+import type { WorkSampleInteraction } from '../supabase/functions/_shared/work-sample-workflow'
+import { renderApplicationQuestionProgressDetail } from './data/application-question-progress-detail'
+import type { SupplementalProgressInteraction } from '../supabase/functions/_shared/application-questions'
 import './style.css'
 import heroCollage from './assets/shotcount-collage.webp'
 import peopleCollage from './assets/shotcount-people-collage.webp'
@@ -1199,7 +1205,7 @@ function showTransientToast(message: string, duration = 1200) {
   render()
 }
 
-async function startAgentRun(task: Task, context = '') {
+async function startAgentRun(task: Task, context = '', interactionResponse?: { interactionId: string; kind: string; value: unknown; reusable?: boolean }) {
   const route = taskSpecialistRoute(task)
   if (!route.supported && !route.needsSemanticClassification) {
     toast = 'ShotCount cannot assign this task to a supported specialist yet.'
@@ -1216,7 +1222,7 @@ async function startAgentRun(task: Task, context = '') {
     persistAgentRuns()
     render()
     try {
-      const resumed = await resumeAgentRun(existing.id, context)
+      const resumed = await resumeAgentRun(existing.id, context, interactionResponse)
       agentRuns.set(task.id, resumed)
       await syncAgentApproval(resumed)
       toast = agentUpdateToast(resumed)
@@ -1278,6 +1284,37 @@ function roonContinuationContext(task: Task, note: string) {
   return latestDescription
     ? `Latest task Description from the user:\n${latestDescription}\n\n${note}`
     : note
+}
+
+function isWorkSampleProgressInteraction(value: unknown): value is WorkSampleInteraction {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value) && (value as Record<string, unknown>).workflow === 'work_sample')
+}
+
+function isRecommendationProgressInteraction(value: unknown): value is RecommendationInteraction {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value) &&
+    (value as Record<string, unknown>).workflow !== 'work_sample' &&
+    (value as Record<string, unknown>).kind !== 'application_question')
+}
+
+function isRecommendationMultipleChoiceInteraction(value: unknown): value is RecommendationInteraction & { kind: 'multiple_choice' } {
+  return isRecommendationProgressInteraction(value) && value.kind === 'multiple_choice'
+}
+
+function recommendationInteractionContext(interaction: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction, value: unknown) {
+  const serialized = Array.isArray(value) ? value.join(', ') : typeof value === 'boolean' ? (value ? 'Approved' : 'Not approved') : String(value ?? '').trim()
+  return `Typed Progress Detail response for ${interaction.kind} (${interaction.id}): ${serialized}`
+}
+
+function submitRecommendationInteraction(task: Task, interaction: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction, value: unknown) {
+  const run = agentRuns.get(task.id)
+  if (!run || !value || agentDecisionBusy.has(run.id)) return
+  roonContextDrafts.delete(run.id)
+  void startAgentRun(task, recommendationInteractionContext(interaction, value), {
+    interactionId: interaction.id,
+    kind: interaction.kind,
+    value,
+    reusable: interaction.kind === 'application_question' ? false : interaction.reusableContextKeys.length > 0,
+  })
 }
 
 function resumeApplicationRunForNewAttachment(task: Task, assets: FileAsset[]) {
@@ -3331,14 +3368,19 @@ function renderAgentPanel(task: Task) {
     const replyPlaceholder = asksForConfirmation ? 'Confirm or correct these details' : requestsAttachment ? `Anything ${ownerName} should know about this file` : sopAuthoringOptions ? `Anything ${ownerName} should share with the expert` : tripTypeOptions ? 'Add a return date if needed' : schedulingOptions.length ? 'Enter another airport or city' : flightContext ? 'Type your answer' : `Write the details ${ownerName} needs`
     const attachmentHint = 'Roon checks it automatically once it is attached.'.replace('Roon', ownerName)
     const contextStatus = flightContext ? 'One detail at a time' : 'Needs context'
+    const contextInteraction = run.contextInteraction
+    const workSampleInteraction = isWorkSampleProgressInteraction(contextInteraction) ? contextInteraction : null
+    const applicationQuestionInteraction = contextInteraction?.kind === 'application_question' ? contextInteraction : null
+    const recommendationInteraction = isRecommendationProgressInteraction(contextInteraction) ? contextInteraction : null
     return `<section class="task-agent-card task-agent-card--context">
       <header>${specialistHeader(task, run)}<em>${contextStatus}</em></header>
+      ${workSampleInteraction ? renderWorkSampleProgressDetail(workSampleInteraction, task.id, agentDecisionBusy.has(run.id)) : applicationQuestionInteraction ? renderApplicationQuestionProgressDetail(applicationQuestionInteraction, task.id, agentDecisionBusy.has(run.id)) : recommendationInteraction ? renderRecommendationProgressDetail(recommendationInteraction, task.id, agentDecisionBusy.has(run.id)) : ''}
       ${formattedPrompt}
       ${flightContext ? '<small class="task-agent-context-hint">Roon asks the questions. Caspian continues as soon as you answer.</small>' : ''}
       ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${escapeHtml(task.id)}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. ${escapeHtml(ownerName)} will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${escapeHtml(task.id)}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label.replace(/Roon/gi, ownerName))}</strong><span>${sopAuthoringOptions ? 'Choose this path' : 'Use this option'}</span></button>`).join('')}</div><small>${sopAuthoringOptions ? `${escapeHtml(ownerName)} stays in the driver’s seat—from expert brief to final submission-ready pack.` : tripTypeOptions ? 'Choose your trip type, or add the return date below.' : `Choose an option, or give ${escapeHtml(ownerName)} a different airport or city below.`}</small>` : ''}
-      ${canReplyInPanel ? `<label class="task-agent-context-input"><span>${replyLabel}</span><textarea class="task-agent-context" data-agent-context-input data-run-id="${escapeHtml(run.id)}" placeholder="${replyPlaceholder}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${escapeHtml(draft)}</textarea></label>` : ''}
-      ${requestsAttachment ? `<small class="task-agent-attachment-hint">Use the attachment control in Description to add the file. ${escapeHtml(attachmentHint)}</small>` : ''}
-      <footer><button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button>${candidates.length ? '' : canUseAttachedCv ? '<button class="agent-primary" type="button" data-action="use-attached-cv" data-task-id="' + escapeHtml(task.id) + '">Use attached CV</button>' : requestsAttachment ? '<button type="button" data-action="focus-task-description" data-task-id="' + escapeHtml(task.id) + '">Attach file</button><button class="agent-primary" type="button" data-action="check-attached-context" data-task-id="' + escapeHtml(task.id) + '">Check attachment</button>' : needsFlightDescription ? '<button type="button" data-action="focus-task-description" data-task-id="' + escapeHtml(task.id) + '">Add details</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + escapeHtml(task.id) + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>Continue</button>' : '<button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + escapeHtml(task.id) + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>' + (asksForConfirmation ? 'Confirm' : 'Continue') + '</button>'}</footer>
+      ${!contextInteraction && canReplyInPanel ? `<label class="task-agent-context-input"><span>${replyLabel}</span><textarea class="task-agent-context" data-agent-context-input data-run-id="${escapeHtml(run.id)}" placeholder="${replyPlaceholder}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${escapeHtml(draft)}</textarea></label>` : ''}
+      ${!contextInteraction && requestsAttachment ? `<small class="task-agent-attachment-hint">Use the attachment control in Description to add the file. ${escapeHtml(attachmentHint)}</small>` : ''}
+      ${contextInteraction ? '' : `<footer><button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button>${candidates.length ? '' : canUseAttachedCv ? '<button class="agent-primary" type="button" data-action="use-attached-cv" data-task-id="' + escapeHtml(task.id) + '">Use attached CV</button>' : requestsAttachment ? '<button type="button" data-action="focus-task-description" data-task-id="' + escapeHtml(task.id) + '">Attach file</button><button class="agent-primary" type="button" data-action="check-attached-context" data-task-id="' + escapeHtml(task.id) + '">Check attachment</button>' : needsFlightDescription ? '<button type="button" data-action="focus-task-description" data-task-id="' + escapeHtml(task.id) + '">Add details</button><button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + escapeHtml(task.id) + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>Continue</button>' : '<button class="agent-primary" type="button" data-action="submit-agent-context" data-task-id="' + escapeHtml(task.id) + '" ' + (agentDecisionBusy.has(run.id) ? 'disabled' : '') + '>' + (asksForConfirmation ? 'Confirm' : 'Continue') + '</button>'}</footer>`}
     </section>`
   }
 
@@ -4749,7 +4791,7 @@ app.addEventListener('change', event => {
     if (!file) return
     captureTodayComposerDraft()
     if (!acceptedTaskFileTypes.includes(file.type as typeof acceptedTaskFileTypes[number])) {
-      toast = 'Choose a PNG, JPEG, PDF, DOCX, or TXT file.'
+      toast = 'Choose a PNG, JPEG, PDF, DOCX, TXT, ZIP, or notebook file.'
       render()
       return
     }
@@ -4760,6 +4802,32 @@ app.addEventListener('change', event => {
     }
     todayComposerAttachment = file
     render()
+    return
+  }
+  const recommendationFileInput = (event.target as HTMLElement).closest<HTMLInputElement>('[data-recommendation-file]')
+  if (recommendationFileInput) {
+    const taskId = recommendationFileInput.dataset.taskId
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
+    const run = task ? agentRuns.get(task.id) : null
+    const interaction = run?.contextInteraction
+    const files = [...(recommendationFileInput.files ?? [])]
+    if (!task || !run || !interaction || interaction.kind !== 'attachment_request' || !files.length || taskFileAssetBusy.has(task.id)) return
+    taskFileAssetBusy.add(task.id)
+    render()
+    void Promise.all(files.slice(0, interaction.maximumFiles ?? 1).map(file => uploadTaskFileAsset(task.id, file)))
+      .then(assets => {
+        const current = taskFileAssets.get(task.id) ?? []
+        const merged = [...current, ...assets.filter(asset => !current.some(item => item.id === asset.id))]
+        taskFileAssets.set(task.id, merged)
+        submitRecommendationInteraction(task, interaction, assets.map(asset => asset.id))
+      })
+      .catch(error => {
+        toast = error instanceof Error ? error.message : 'The requested file could not be attached.'
+      })
+      .finally(() => {
+        taskFileAssetBusy.delete(task.id)
+        render()
+      })
     return
   }
   const taskFileInput = (event.target as HTMLElement).closest<HTMLInputElement>('[data-task-file-input]')
@@ -5149,6 +5217,35 @@ app.addEventListener('click', async event => {
     const run = agentRuns.get(task.id)
     if (run) roonContextDrafts.delete(run.id)
     void startAgentRun(task, context)
+    return
+  }
+
+  if (action === 'submit-recommendation-interaction') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
+    const run = task ? agentRuns.get(task.id) : null
+    const interaction = run?.contextInteraction
+    if (!task || !interaction) return
+    const optionValue = target.closest<HTMLElement>('[data-interaction-value]')?.dataset.interactionValue
+    const input = target.closest<HTMLElement>('[data-progress-detail], .recommendation-progress-detail')?.querySelector<HTMLInputElement | HTMLTextAreaElement>('[data-recommendation-input], [data-application-question-input]')
+    const value = optionValue ?? input?.value.trim() ?? ''
+    if (!value) {
+      input?.focus()
+      return
+    }
+    submitRecommendationInteraction(task, interaction, interaction.kind === 'date' ? value : value)
+    return
+  }
+
+  if (action === 'submit-recommendation-multiple') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    const task = taskId ? tasks.find(item => item.id === taskId) : null
+    const run = task ? agentRuns.get(task.id) : null
+    const interaction = run?.contextInteraction
+    const panel = target.closest<HTMLElement>('[data-progress-detail], .recommendation-progress-detail')
+    const values = [...(panel?.querySelectorAll<HTMLInputElement>('[data-recommendation-choice]:checked') ?? [])].map(input => input.dataset.interactionValue).filter((value): value is string => Boolean(value))
+    const typedWorkSample = isWorkSampleProgressInteraction(interaction)
+    if (task && ((isRecommendationMultipleChoiceInteraction(interaction) && values.length >= interaction.minSelections) || (typedWorkSample && interaction.kind === 'multiple_choice' && values.length >= (interaction.minSelections ?? 1)))) submitRecommendationInteraction(task, interaction, values)
     return
   }
 

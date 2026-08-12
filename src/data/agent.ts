@@ -23,6 +23,9 @@ import {
 } from '../../supabase/functions/_shared/specialists'
 import type { Task } from './planner-model'
 import type { DavidApplicationState } from '../../supabase/functions/_shared/david-applications'
+import type { RecommendationInteraction } from '../../supabase/functions/_shared/recommendation-workflow'
+import type { WorkSampleInteraction } from '../../supabase/functions/_shared/work-sample-workflow'
+import type { SupplementalProgressInteraction } from '../../supabase/functions/_shared/application-questions'
 
 export type AgentRunStatus = DurableAgentRunStatus
 
@@ -104,6 +107,8 @@ export type AgentRun = {
     candidates?: Array<{ name?: string; email?: string; evidence?: string }>
   } | null
   schedulingOptions?: Array<{ label: string; value: string }>
+  /** Typed Progress Detail interaction for canonical application workflows. */
+  contextInteraction?: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction | null
   capability: AgentCapability
   intent: AgentIntent
   specialistId: SpecialistId | null
@@ -165,6 +170,7 @@ type AgentRunRow = {
     user_context?: string
     recipient_resolution_pending?: AgentRun['recipientResolution']
     scheduling_options?: AgentRun['schedulingOptions']
+    progress_detail_interaction?: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction | null
     flight_context_owner_specialist_id?: SpecialistId | null
   } | null
   recipientResolution?: AgentRun['recipientResolution']
@@ -228,6 +234,7 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     context: row.context?.user_context || row.context?.description || '',
     recipientResolution: row.recipientResolution ?? row.context?.recipient_resolution_pending ?? null,
     schedulingOptions: Array.isArray(row.context?.scheduling_options) ? row.context.scheduling_options : [],
+    contextInteraction: row.context?.progress_detail_interaction ?? null,
     capability: row.capability,
     intent,
     specialistId,
@@ -489,8 +496,8 @@ async function invokeRunAction(
   return { ...data, durable: true }
 }
 
-export function resumeAgentRun(runId: string, context = '') {
-  return invokeRunAction({ action: 'resume', runId, context }, 'ShotCount could not resume this task.')
+export function resumeAgentRun(runId: string, context = '', interactionResponse?: { interactionId: string; kind: string; value: unknown; reusable?: boolean }) {
+  return invokeRunAction({ action: 'resume', runId, context, ...(interactionResponse ? { interactionResponse } : {}) }, 'ShotCount could not resume this task.')
 }
 
 export function selectAgentRecipient(runId: string, recipientEmail: string) {

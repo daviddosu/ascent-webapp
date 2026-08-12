@@ -366,6 +366,18 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'application.resolve_supplemental_questions',
+    description: 'Persist every supplemental question found in the current portal observation, classify the exact prompt, resolve verified applicant context, select deterministic/David/writer/user routing, and return any typed Progress Detail interaction. Call after every portal observation and after selections that may reveal conditional questions.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      session_id: stringValue('Task-owned browser session ID.', 64),
+      observation: { type: 'object', description: 'The current browser observation, including fields, headings, URL, and discovered questions.', additionalProperties: true },
+      idempotency_key: stringValue('Stable key for this portal observation.', 300),
+    }, ['application_case_id', 'session_id', 'observation', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
     name: 'application.record_evidence',
     description: 'Attach one immutable evidence record to an ApplicationCase, such as an official citation, saved-section screenshot, approval record, or submission confirmation.',
     parameters: objectSchema({
@@ -422,6 +434,69 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'application.coordinate_recommendations',
+    description: 'Run the deterministic recommendation-letter coordinator for one application case. It scans reusable applicant context, uploads, previous applications, Gmail, and Contacts; extracts source-backed programme requirements; ranks candidates; prepares a portfolio and typed Progress Detail decision when one user choice remains. This never contacts a recommender directly.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        programme_requirements: { type: 'object', additionalProperties: true, description: 'Source-backed recommendation requirements and source evidence.' },
+        context_sources: { type: 'object', additionalProperties: true, description: 'Resolved profile, document, Gmail, Contacts, and previous-application context.' },
+        candidate_overrides: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 20 },
+        selected_candidate_ids: { type: 'array', items: stringValue('Candidate IDs selected by the user.', 160), maxItems: 10 },
+        reusable_context_consent: { type: 'boolean', description: 'Persist durable recommender context for later applications only when explicitly true.' },
+        applicant_asset_ids: { type: 'array', items: stringValue('Private applicant asset ID.', 120), maxItems: 40 },
+        idempotency_key: stringValue('Stable coordinator run key.', 300),
+      },
+      required: ['application_case_id', 'programme_requirements', 'context_sources', 'candidate_overrides', 'selected_candidate_ids', 'reusable_context_consent', 'applicant_asset_ids', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.coordinate_academic_evidence',
+    description: 'Run the canonical Academic Records & Testing coordinator across one or more application cases. It resolves authoritative programme rules and reusable applicant context before asking, preserves transcript and degree artifacts, deduplicates credential evaluations, evaluates English waivers and score validity, models GRE/GMAT policy, prepares official delivery and provider handoffs, and returns typed Progress Detail only at a genuine decision or evidence boundary. Never request or persist passwords, OTPs, payment-card values, or security codes.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Primary durable ApplicationCase ID.', 64),
+        application_cases: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 40, description: 'The institution and programme cases covered by this run.' },
+        programme_requirements: { type: 'object', additionalProperties: true, description: 'Authoritative programme, graduate-school, portal, testing, evaluation, and registrar rules with source evidence.' },
+        context_sources: { type: 'object', additionalProperties: true, description: 'Applicant profile, CV, uploads, previous cases, Gmail/provider evidence, reusable academic history, and parsed score attempts.' },
+        interaction_response: { type: ['object', 'null'], additionalProperties: true, description: 'The typed Progress Detail response already supplied for automatic continuation, or null.' },
+        idempotency_key: stringValue('Stable academic coordinator run key.', 300),
+      },
+      required: ['application_case_id', 'application_cases', 'programme_requirements', 'context_sources', 'interaction_response', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.coordinate_work_samples',
+    description: 'Run the canonical writing-sample and portfolio coordinator for one application case. It extracts official source-backed requirements, searches authorized applicant context and private files, inspects authorship and content, ranks candidates by programme fit and contribution, prepares an exact derived artifact without changing substantive work, and returns typed Progress Detail only for a genuine choice, missing file, approval, or upload-verification boundary. Do not claim portal completion without read-back evidence.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        programme_requirements: { type: 'object', additionalProperties: true, description: 'Official programme, department, application-guide, portal, FAQ, portfolio, and download evidence.' },
+        context_sources: { type: 'object', additionalProperties: true, description: 'Authorized profile, CV, thesis, research, publication, project, previous-case, Gmail-attachment, and private-file context.' },
+        candidate_overrides: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 40 },
+        selected_candidate_ids: { type: 'array', items: stringValue('Candidate IDs selected by the user.', 240), maxItems: 20 },
+        requirement_key: nullableString('Specific extracted work-sample requirement key to continue.', 200),
+        reusable_context_consent: { type: 'boolean', description: 'Persist reusable work-sample context only when the applicant explicitly consents.' },
+        applicant_asset_ids: { type: 'array', items: stringValue('Private applicant asset ID.', 120), maxItems: 80 },
+        upload_verification: { type: ['object', 'null'], additionalProperties: true, description: 'Exact portal upload observation after browser ACT→READ→VERIFY, or null while preparing.' },
+        idempotency_key: stringValue('Stable coordinator run key.', 300),
+      },
+      required: ['application_case_id', 'programme_requirements', 'context_sources', 'candidate_overrides', 'selected_candidate_ids', 'requirement_key', 'reusable_context_consent', 'applicant_asset_ids', 'upload_verification', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
     name: 'application.build_referee_support_pack',
     description: 'Build and persist a source-linked referee support pack for one application. This prepares the referee workflow; first contact remains approval-gated through Roon.',
     parameters: objectSchema({
@@ -461,6 +536,108 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       character_limit: { type: ['integer', 'null'], minimum: 1, maximum: 50000 },
     }, ['title', 'filename', 'body', 'original_asset_id', 'word_limit', 'character_limit']),
     strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.prepare_research_proposal',
+    description: 'Run the canonical research-proposal workflow for one ApplicationCase: verify the official requirement, resolve applicant context, rank grounded directions, build the research dossier and strategy, produce a source-linked writer brief, and return a typed Progress Detail decision when a research-direction choice is required. This never fabricates a requirement or contacts a supervisor.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        requirement: { type: 'object', additionalProperties: true, description: 'Structured proposal requirement candidate with official evidence.' },
+        official_sources: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 30 },
+        context_sources: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 40 },
+        direction_candidates: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 12 },
+        selected_direction_id: nullableString('Grounded direction selected by the applicant, or null when a choice is still required.', 160),
+        research_dossier: { type: 'object', additionalProperties: true, description: 'Source-linked programme, supervisor, literature, methods, feasibility, and applicant-fit dossier.' },
+        methodology: { type: 'object', additionalProperties: true },
+        writer_candidates: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 30 },
+        idempotency_key: stringValue('Stable proposal workflow preparation key.', 300),
+      },
+      required: ['application_case_id', 'requirement', 'official_sources', 'context_sources', 'direction_candidates', 'selected_direction_id', 'research_dossier', 'methodology', 'writer_candidates', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.review_research_proposal',
+    description: 'Run deterministic citation, identity, programme, supervisor, format, word/page, evidence, and cross-document checks on a received research-proposal draft, then evaluate bounded quality dimensions. A model review cannot waive a deterministic failure.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        requirement: { type: 'object', additionalProperties: true },
+        draft: { type: 'object', additionalProperties: true },
+        expected: { type: 'object', additionalProperties: true },
+        verified_fact_ids: { type: 'array', items: stringValue('Verified applicant fact ID.', 240), maxItems: 100 },
+        verified_evidence_ids: { type: 'array', items: stringValue('Verified evidence ID.', 240), maxItems: 150 },
+        verified_facts: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 100 },
+        source_papers: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 50 },
+        evidence: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 100 },
+        consistency_claims: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 100 },
+        strategy: { type: 'object', additionalProperties: true },
+        idempotency_key: stringValue('Stable proposal review key.', 300),
+      },
+      required: ['application_case_id', 'requirement', 'draft', 'expected', 'verified_fact_ids', 'verified_evidence_ids', 'verified_facts', 'source_papers', 'evidence', 'consistency_claims', 'strategy', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.interpret_research_proposal_feedback',
+    description: 'Interpret a supervisor, reviewer, or admissions message into typed proposal feedback categories and a deterministic revision plan. Preserve the source message and evidence IDs; do not silently change a research direction when clarification is required.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      message_id: stringValue('Provider message identifier.', 256),
+      thread_id: nullableString('Provider thread identifier.', 256),
+      body: stringValue('Redacted supervisor or reviewer message excerpt.', 20_000),
+      evidence_ids: { type: 'array', items: stringValue('Evidence ID for the message or thread.', 240), maxItems: 30 },
+      strategy: { type: 'object', additionalProperties: true },
+      revision_number: { type: 'integer', minimum: 1, maximum: 100 },
+      idempotency_key: stringValue('Stable proposal feedback key.', 300),
+    }, ['application_case_id', 'message_id', 'thread_id', 'body', 'evidence_ids', 'strategy', 'revision_number', 'idempotency_key']),
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.finalize_research_proposal',
+    description: 'Create the exact private, checksum-addressed proposal artifact after deterministic review and applicant approval. If approved is false, return the final Progress Detail approval card and do not create a submission-ready artifact.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        requirement: { type: 'object', additionalProperties: true },
+        draft: { type: 'object', additionalProperties: true },
+        quality: { type: 'object', additionalProperties: true },
+        approved: { type: 'boolean' },
+        destination: stringValue('Exact portal section, upload location, or user-approved handoff destination.', 500),
+        source_fact_ids: { type: 'array', items: stringValue('Verified fact ID.', 240), maxItems: 100 },
+        source_evidence_ids: { type: 'array', items: stringValue('Verified evidence ID.', 240), maxItems: 150 },
+        idempotency_key: stringValue('Stable final artifact key.', 300),
+      },
+      required: ['application_case_id', 'requirement', 'draft', 'quality', 'approved', 'destination', 'source_fact_ids', 'source_evidence_ids', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.record_proposal_delivery',
+    description: 'Record and verify the resulting proposal delivery state after a browser upload or approved handoff. The checksum, filename, destination, and read-back evidence must match the approved artifact before the requirement can become submitted.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      artifact_id: stringValue('Exact approved proposal artifact identifier.', 160),
+      checksum: stringValue('Exact SHA-256 checksum of the approved artifact.', 128),
+      filename: stringValue('Filename observed in the resulting provider state.', 300),
+      destination: stringValue('Portal section or handoff destination.', 500),
+      read_back_verified: { type: 'boolean' },
+      evidence_ids: { type: 'array', items: stringValue('Portal or provider evidence ID.', 240), maxItems: 40 },
+      idempotency_key: stringValue('Stable delivery verification key.', 300),
+    }, ['application_case_id', 'artifact_id', 'checksum', 'filename', 'destination', 'read_back_verified', 'evidence_ids', 'idempotency_key']),
+    strict: false,
   },
   {
     type: 'function',
@@ -527,7 +704,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       type: 'object',
       properties: {
         application_case_id: stringValue('Durable ApplicationCase ID.', 64),
-        request_kind: { type: 'string', enum: ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp'] },
+        request_kind: { type: 'string', enum: ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'] },
         payload: { type: 'object', additionalProperties: true, description: 'Typed request payload. Never include passwords, payment data, or a raw OTP.' },
         idempotency_key: stringValue('Stable request key for retries.', 300),
       },
@@ -937,7 +1114,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'browser.act',
-    description: 'Perform a safe preparatory action in the task-owned browser session. This tool fills fields and activates safe navigation links, but it does not activate form save or submit controls.',
+    description: 'Perform a safe preparatory action in the task-owned browser session. This tool fills fields, activates safe navigation links, and opens explicit disclosure/expander controls so conditional questions can be observed; it does not activate form save or submit controls.',
     parameters: objectSchema({
       session_id: stringValue('Browser execution session ID.', 64),
       action: {
@@ -981,12 +1158,21 @@ const policies: Record<string, ToolPolicy> = {
   'application.select_writer': { risk: 'read', approvalKind: null },
   'application.update_requirement': { risk: 'prepare', approvalKind: null },
   'application.record_portal_checkpoint': { risk: 'prepare', approvalKind: null },
+  'application.resolve_supplemental_questions': { risk: 'prepare', approvalKind: null },
   'application.record_evidence': { risk: 'prepare', approvalKind: null },
   'application.record_communication': { risk: 'prepare', approvalKind: null },
   'application.create_human_assignment': { risk: 'prepare', approvalKind: null },
+  'application.coordinate_recommendations': { risk: 'prepare', approvalKind: null },
+  'application.coordinate_academic_evidence': { risk: 'prepare', approvalKind: null },
+  'application.coordinate_work_samples': { risk: 'prepare', approvalKind: null },
   'application.build_referee_support_pack': { risk: 'prepare', approvalKind: null },
   'application.build_readiness_report': { risk: 'prepare', approvalKind: null },
   'application.generate_document': { risk: 'prepare', approvalKind: null },
+  'application.prepare_research_proposal': { risk: 'prepare', approvalKind: null },
+  'application.review_research_proposal': { risk: 'prepare', approvalKind: null },
+  'application.interpret_research_proposal_feedback': { risk: 'prepare', approvalKind: null },
+  'application.finalize_research_proposal': { risk: 'prepare', approvalKind: null },
+  'application.record_proposal_delivery': { risk: 'prepare', approvalKind: null },
   'application.generate_cv': { risk: 'prepare', approvalKind: null },
   'application.generate_supervisor_outreach': { risk: 'prepare', approvalKind: null },
   'application.submit': { risk: 'external_write', approvalKind: 'browser_submit' },
@@ -1181,6 +1367,8 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateString(value.idempotency_key, 300)
     case 'application.record_portal_checkpoint':
       return validateString(value.application_case_id, 64) && validateString(value.session_id, 64) && isRecord(value.checkpoint) && validateString(value.idempotency_key, 300)
+    case 'application.resolve_supplemental_questions':
+      return validateString(value.application_case_id, 64) && validateString(value.session_id, 64) && isRecord(value.observation) && validateString(value.idempotency_key, 300)
     case 'application.record_evidence':
       return validateString(value.application_case_id, 64) &&
         ['official_requirement_source', 'programme_snapshot', 'sent_message', 'received_message', 'uploaded_file_verification', 'saved_section_screenshot', 'submission_confirmation', 'application_id', 'receipt', 'status_email', 'approval_record', 'otp_retrieval', 'calendar_event'].includes(String(value.kind)) &&
@@ -1217,6 +1405,33 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateStringArray(value.relevant_achievements, 30, 1000) &&
         validateStringArray(value.suggested_evidence, 30, 1000) &&
         (value.recommendation_draft === null || validateString(value.recommendation_draft, 12000)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.coordinate_recommendations':
+      return validateString(value.application_case_id, 64) &&
+        isRecord(value.programme_requirements) &&
+        isRecord(value.context_sources) &&
+        Array.isArray(value.candidate_overrides) && value.candidate_overrides.length <= 20 && value.candidate_overrides.every(isRecord) &&
+        validateStringArray(value.selected_candidate_ids, 10, 160) &&
+        typeof value.reusable_context_consent === 'boolean' &&
+        validateStringArray(value.applicant_asset_ids, 40, 120) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.coordinate_academic_evidence':
+      return validateString(value.application_case_id, 64) &&
+        Array.isArray(value.application_cases) && value.application_cases.length <= 40 && value.application_cases.every(isRecord) &&
+        isRecord(value.programme_requirements) &&
+        isRecord(value.context_sources) &&
+        (value.interaction_response === null || isRecord(value.interaction_response)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.coordinate_work_samples':
+      return validateString(value.application_case_id, 64) &&
+        isRecord(value.programme_requirements) &&
+        isRecord(value.context_sources) &&
+        Array.isArray(value.candidate_overrides) && value.candidate_overrides.length <= 40 && value.candidate_overrides.every(isRecord) &&
+        validateStringArray(value.selected_candidate_ids, 20, 240) &&
+        (value.requirement_key === null || validateString(value.requirement_key, 200)) &&
+        typeof value.reusable_context_consent === 'boolean' &&
+        validateStringArray(value.applicant_asset_ids, 80, 120) &&
+        (value.upload_verification === null || isRecord(value.upload_verification)) &&
         validateString(value.idempotency_key, 300)
     case 'application.build_readiness_report':
       return validateString(value.application_case_id, 64) && validateStringArray(value.referee_status, 20, 500) &&
@@ -1457,6 +1672,53 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         (value.original_asset_id === null || /^[0-9a-f-]{36}$/i.test(String(value.original_asset_id))) &&
         (value.word_limit === null || (Number.isInteger(value.word_limit) && Number(value.word_limit) > 0)) &&
         (value.character_limit === null || (Number.isInteger(value.character_limit) && Number(value.character_limit) > 0))
+    case 'application.prepare_research_proposal':
+      return validateString(value.application_case_id, 64) &&
+        isRecord(value.requirement) &&
+        Array.isArray(value.official_sources) && value.official_sources.length <= 30 && value.official_sources.every(isRecord) &&
+        Array.isArray(value.context_sources) && value.context_sources.length <= 40 && value.context_sources.every(isRecord) &&
+        Array.isArray(value.direction_candidates) && value.direction_candidates.length <= 12 && value.direction_candidates.every(isRecord) &&
+        (value.selected_direction_id === null || validateString(value.selected_direction_id, 160)) &&
+        isRecord(value.research_dossier) &&
+        isRecord(value.methodology) &&
+        Array.isArray(value.writer_candidates) && value.writer_candidates.length <= 30 && value.writer_candidates.every(isRecord) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.review_research_proposal':
+      return validateString(value.application_case_id, 64) &&
+        isRecord(value.requirement) && isRecord(value.draft) && isRecord(value.expected) &&
+        validateStringArray(value.verified_fact_ids, 240, 100) &&
+        validateStringArray(value.verified_evidence_ids, 240, 150) &&
+        Array.isArray(value.verified_facts) && value.verified_facts.length <= 100 && value.verified_facts.every(isRecord) &&
+        Array.isArray(value.source_papers) && value.source_papers.length <= 50 && value.source_papers.every(isRecord) &&
+        Array.isArray(value.evidence) && value.evidence.length <= 100 && value.evidence.every(isRecord) &&
+        Array.isArray(value.consistency_claims) && value.consistency_claims.length <= 100 && value.consistency_claims.every(isRecord) &&
+        isRecord(value.strategy) && validateString(value.idempotency_key, 300)
+    case 'application.interpret_research_proposal_feedback':
+      return validateString(value.application_case_id, 64) &&
+        validateString(value.message_id, 256) &&
+        (value.thread_id === null || validateString(value.thread_id, 256)) &&
+        validateString(value.body, 20_000) &&
+        validateStringArray(value.evidence_ids, 240, 30) &&
+        isRecord(value.strategy) &&
+        Number.isInteger(value.revision_number) && Number(value.revision_number) >= 1 && Number(value.revision_number) <= 100 &&
+        validateString(value.idempotency_key, 300)
+    case 'application.finalize_research_proposal':
+      return validateString(value.application_case_id, 64) &&
+        isRecord(value.requirement) && isRecord(value.draft) && isRecord(value.quality) &&
+        typeof value.approved === 'boolean' &&
+        validateString(value.destination, 500) &&
+        validateStringArray(value.source_fact_ids, 240, 100) &&
+        validateStringArray(value.source_evidence_ids, 240, 150) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.record_proposal_delivery':
+      return validateString(value.application_case_id, 64) &&
+        validateString(value.artifact_id, 160) &&
+        /^[a-f0-9]{64}$/i.test(String(value.checksum)) &&
+        validateString(value.filename, 300) &&
+        validateString(value.destination, 500) &&
+        typeof value.read_back_verified === 'boolean' &&
+        validateStringArray(value.evidence_ids, 240, 40) &&
+        validateString(value.idempotency_key, 300)
     case 'application.generate_cv':
       return validateString(value.application_case_id, 64) &&
         validateString(value.filename, 255) &&
@@ -1491,7 +1753,7 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateString(value.package_checksum, 128)
     case 'application.request_roon':
       return validateString(value.application_case_id, 64) &&
-        ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp'].includes(String(value.request_kind)) &&
+        ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(String(value.request_kind)) &&
         isRecord(value.payload) &&
         validateString(value.idempotency_key, 300)
     default:
