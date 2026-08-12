@@ -1046,6 +1046,60 @@ async function processApplicationDeadlineRequest(admin: AdminClient, context: Ap
   return { status: 'queued', result: { kind: 'deadline_monitor', status: 'on_track', assignment_id: assignment.id, deadline_at: new Date(deadlineAt).toISOString() }, nextAttemptAt: new Date(Math.min(deadlineAt, now + 24 * 60 * 60 * 1000)).toISOString() }
 }
 
+function academicDeliverySearchQuery(payload: Record<string, unknown>) {
+  const after = safeString(payload.after ?? payload.requested_after ?? payload.requestedAt, 80)
+  const parts = [after ? `after:${after.slice(0, 10).replaceAll('-', '/')}` : 'newer_than:30d']
+  const destination = gmailSearchTerm(payload.destination_email ?? payload.destinationEmail ?? payload.to, 320)
+  if (destination) parts.push(`{to:${destination} from:${destination}}`)
+  const clues: unknown[] = Array.isArray(payload.subject_clues)
+    ? payload.subject_clues
+    : Array.isArray(payload.subjectClues) ? payload.subjectClues : []
+  const institution = gmailSearchTerm(payload.institution, 240)
+  const provider = gmailSearchTerm(payload.provider, 160)
+  const terms = [...clues.map(value => gmailSearchTerm(value, 120)), institution, provider].filter(Boolean)
+  if (terms.length) parts.push(`{${terms.map(term => `"${term}"`).join(' OR ')}}`)
+  return parts.join(' ')
+}
+
+async function processAcademicDeliveryRequest(admin: AdminClient, context: ApplicationRequestContext) {
+  const request = context.request
+  const requestKind = safeApplicationRequestKind(request.request_kind)
+  const payload = recordValue(request.payload)
+  if (!requestKind || !['request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(requestKind)) throw new Error('Unsupported academic delivery request.')
+  if (JSON.stringify(payload).match(/"(?:password|passcode|secret|card_number|cvv|cvc|bank_account|verification_code|otp|security_key)"\s*:/i)) throw new Error('Academic delivery payload contains a sensitive value.')
+  if (['request_academic_document', 'request_credential_evaluation_delivery'].includes(requestKind)) {
+    const to = Array.isArray(payload.to) ? payload.to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(payload.to ?? payload.destination_email ?? payload.destinationEmail)].filter(Boolean)
+    const subject = safeString(payload.subject, 998)
+    const bodyText = safeString(payload.body_text ?? payload.body, 30_000)
+    if (!to.length || !subject || !bodyText) return { status: 'waiting_user', result: { kind: 'academic_delivery_draft', code: 'academic_email_details_missing', message: 'A verified recipient, subject, and grounded message are required before Roon can prepare the academic delivery email.' } }
+    const draft = await executeGoogleTool(admin, request.user_id, 'gmail.create_draft', {
+      to,
+      cc: Array.isArray(payload.cc) ? payload.cc.map(normalizeEmail).filter(Boolean) : [],
+      bcc: Array.isArray(payload.bcc) ? payload.bcc.map(normalizeEmail).filter(Boolean) : [],
+      subject,
+      body_text: bodyText,
+      body_html: safeString(payload.body_html, 30_000) || null,
+      thread_id: safeString(payload.thread_id ?? payload.threadId, 256) || null,
+      in_reply_to_message_id: safeString(payload.in_reply_to_message_id ?? payload.inReplyToMessageId, 256) || null,
+    }, `academic-delivery-draft:${request.id}`)
+    return { status: 'completed', result: { kind: 'academic_delivery_draft', request_kind: requestKind, draft_id: draft.providerActionId ?? null, provider: 'gmail', evidence: 'provider_draft_created', public_summary: draft.publicSummary } }
+  }
+  const search = await executeGoogleTool(admin, request.user_id, 'gmail.search_messages', { query: academicDeliverySearchQuery(payload), max_results: 25 }, `academic-delivery-search:${request.id}`)
+  const value = recordValue(search.value)
+  const messages = Array.isArray(value.messages) ? value.messages : []
+  const evidence = messages.slice(0, 12).map(message => {
+    const item = recordValue(message)
+    return {
+      id: safeString(item.id ?? item.message_id, 256),
+      thread_id: safeString(item.thread_id ?? item.threadId, 256) || null,
+      subject: redactApplicationExcerpt(item.subject),
+      from: normalizeEmail(item.from) || safeString(item.from, 320) || null,
+      received_at: safeString(item.date ?? item.received_at ?? item.receivedAt, 80) || null,
+    }
+  }).filter(item => item.id)
+  return { status: 'completed', result: { kind: requestKind, state: evidence.length ? 'provider_messages_found' : 'monitoring', provider: 'gmail', message_count: evidence.length, evidence, checked_at: new Date().toISOString() } }
+}
+
 async function queuedApplicationRoonRequests(admin: AdminClient, kinds: string[], limit = 12) {
   let query = admin.from('application_inter_agent_requests')
     .select('id,user_id,task_id,agent_run_id,application_case_id,from_specialist_id,to_specialist_id,request_kind,payload,status,result,human_assignment_id,attempt_count')
@@ -1065,7 +1119,7 @@ async function queuedApplicationRoonRequests(admin: AdminClient, kinds: string[]
 }
 
 async function processApplicationRoonRequests(admin: AdminClient) {
-  const kinds = ['create_draft', 'send_email', 'follow_up', 'resolve_contact', 'monitor_thread', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages']
+  const kinds = ['create_draft', 'send_email', 'follow_up', 'resolve_contact', 'monitor_thread', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery']
   const queued = await queuedApplicationRoonRequests(admin, kinds, 16)
   const counts = { checked: queued.length, completed: 0, pending: 0, failed: 0 }
   for (const row of queued) {
@@ -1080,6 +1134,7 @@ async function processApplicationRoonRequests(admin: AdminClient) {
       else if (kind === 'resolve_contact') result = await processApplicationContactRequest(admin, context)
       else if (['schedule_interview', 'schedule_meeting', 'create_calendar_reminder'].includes(kind ?? '')) result = await processApplicationCalendarRequest(admin, context)
       else if (['monitor_writer_deadline', 'monitor_referee_deadline'].includes(kind ?? '')) result = await processApplicationDeadlineRequest(admin, context)
+      else if (['request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(kind ?? '')) result = await processAcademicDeliveryRequest(admin, context)
       else result = await processApplicationMessageMonitorRequest(admin, context)
       await updateApplicationRequest(admin, claimed.id, result.status, result.result, {
         next_attempt_at: result.nextAttemptAt ?? null,

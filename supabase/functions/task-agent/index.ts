@@ -137,6 +137,7 @@ import {
   type WorkSampleSubmission,
 } from '../_shared/work-sample-workflow.ts'
 import {
+  applyAcademicProgressInteraction,
   coordinateAcademicEvidence,
   type AcademicApplicationInput,
   type AcademicContextInput,
@@ -5809,6 +5810,10 @@ async function executeProviderTool(
     const contextSources = recordValue(argumentsValue.context_sources)
     const caseData = recordValue(context.row.data)
     const savedResponse = recordValue(argumentsValue.interaction_response)
+    const priorInteraction = run.context?.progress_detail_interaction
+    if (containsSensitiveApplicationKeys(argumentsValue.programme_requirements) || containsSensitiveApplicationKeys(contextSources) || containsSensitiveApplicationKeys(savedResponse)) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'academic_evidence_sensitive_payload', message: 'Academic evidence context cannot contain passwords, payment data, raw OTPs, or security codes. Use the secure provider handoff and return only redacted evidence.', value: { valid: false }, actionStatus: 'failed' }
+    }
     const sourceArray = (...keys: string[]) => {
       for (const key of keys) if (Array.isArray(contextSources[key])) return contextSources[key] as unknown[]
       return [] as unknown[]
@@ -5859,12 +5864,21 @@ async function executeProviderTool(
       existingCredentialEvaluations: sourceArray('existing_credential_evaluations', 'existingCredentialEvaluations'),
       gmailAttachments: sourceArray('gmail_attachments', 'gmailAttachments'),
       previousProviderConfirmations: sourceArray('previous_provider_confirmations', 'previousProviderConfirmations'),
-      confirmedUserAnswers: [savedResponse, run.context?.user_context, ...sourceArray('confirmed_user_answers')].filter(value => Object.keys(recordValue(value)).length > 0),
+      confirmedUserAnswers: [
+        savedResponse,
+        Object.keys(savedResponse).length && Object.keys(recordValue(priorInteraction)).length ? { ...savedResponse, mapsToRequirement: safeString(recordValue(priorInteraction).mapsToRequirement, 300) || safeString(recordValue(priorInteraction).requirementId, 300) } : null,
+        run.context?.user_context,
+        ...sourceArray('confirmed_user_answers'),
+      ].filter(value => Object.keys(recordValue(value)).length > 0),
       reusableAcademicHistory: contextSources.reusable_academic_history ?? contextSources.reusableAcademicHistory ?? caseData.academicReusableContext,
     }
     const plan = coordinateAcademicEvidence({ applications, context: academicContext })
-    if (Object.keys(savedResponse).length && plan.interaction && savedResponse.interactionId === plan.interaction.id) {
-      plan.context.autoResolvedFacts.push({ key: plan.interaction.mapsToRequirement, value: savedResponse.value ?? null, sourceIds: [`interaction:${plan.interaction.id}`], confidence: 'high' })
+    if (Object.keys(savedResponse).length && Object.keys(recordValue(priorInteraction)).length && savedResponse.interactionId === safeString(recordValue(priorInteraction).id, 300)) {
+      const applied = applyAcademicProgressInteraction({ context: plan.context, interaction: priorInteraction as never, value: savedResponse.value as never, reusableContextConsent: savedResponse.reusable === true })
+      if (applied.accepted) {
+        plan.context = applied.context
+        plan.interaction = null
+      }
     }
     const academicRequirementRows = plan.requirements.map(requirement => ({
       user_id: run.user_id,
@@ -5895,6 +5909,30 @@ async function executeProviderTool(
     }))
     const academicRows = await admin.from('academic_evidence_requirements').upsert(academicRequirementRows, { onConflict: 'user_id,application_case_id,requirement_key' }).select('id,requirement_key').limit(200)
     if (academicRows.error && !['42P01', 'PGRST205'].includes(academicRows.error.code ?? '')) throw new Error(academicRows.error.message)
+    const academicDeliveryRows = plan.requirements
+      .filter(requirement => requirement.submissionMethod.mode !== 'not_applicable')
+      .map(requirement => {
+        const state = requirement.status === 'ordered' ? 'ordered' : ['institution_processing', 'evaluation_in_progress', 'documents_requested', 'awaiting_institution_documents'].includes(requirement.status) ? 'processing' : ['dispatched', 'report_sent'].includes(requirement.status) ? 'dispatched' : ['delivered_to_recipient', 'university_receipt_pending'].includes(requirement.status) ? 'delivered' : requirement.status === 'rejected' ? 'rejected' : requirement.status === 'replacement_needed' ? 'replacement_needed' : requirement.status === 'blocked' ? 'blocked' : 'not_started'
+        return {
+          user_id: run.user_id,
+          application_case_id: requirement.applicationCaseId,
+          requirement_key: requirement.id,
+          delivery_key: `${requirement.id}:primary`,
+          delivery_type: requirement.requirementType === 'english_language_test' ? 'language_score' : requirement.requirementType === 'admissions_test' ? 'admissions_score' : requirement.requirementType,
+          provider: requirement.externalProvider?.name ?? requirement.submissionMethod.provider,
+          recipient: requirement.submissionMethod.recipient,
+          provider_id: requirement.externalProvider?.referenceNumber ?? null,
+          tracking_id: null,
+          state,
+          commitment_at: null,
+          commitment_due_at: requirement.deadline,
+          evidence: requirement.completionEvidence,
+          blocker: requirement.blocker,
+          idempotency_key: `academic-delivery:${requirement.id}:primary`,
+        }
+      })
+    const deliveries = await admin.from('academic_evidence_deliveries').upsert(academicDeliveryRows, { onConflict: 'user_id,idempotency_key' }).select('id,delivery_key').limit(200)
+    if (deliveries.error && !['42P01', 'PGRST205'].includes(deliveries.error.code ?? '')) throw new Error(deliveries.error.message)
     const evaluationRows = plan.credentialEvaluationCases.map(evaluation => ({
       user_id: run.user_id,
       evaluation_key: evaluation.id,

@@ -168,6 +168,14 @@ export type BenchmarkRun = {
     supportPack: Record<string, unknown>
     cv: { templateId: string; checksum: string; latexPath: string; pdfPath: string; atsPath: string; logPath: string; pageCount: number; compiled: boolean }
   }
+  academicEvidence?: {
+    suiteVersion: string
+    passed: boolean
+    metrics: Record<string, number | boolean | string>
+    regressionCases: Array<{ id: string; passed: boolean; detail: string }>
+    progressDetailExamples: Record<string, { kind: string; question: string; reason: string; knownContext: string[] }>
+    examples: Record<string, unknown>
+  }
 }
 
 function now() {

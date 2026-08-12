@@ -4,7 +4,8 @@ export const applicationRoonRequestKinds: InterAgentRequestKind[] = [
   'create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up',
   'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder',
   'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply',
-  'detect_application_messages', 'search_otp',
+  'detect_application_messages', 'search_otp', 'request_academic_document',
+  'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery',
 ]
 
 export function safeApplicationRequestKind(value: unknown): InterAgentRequestKind | null {

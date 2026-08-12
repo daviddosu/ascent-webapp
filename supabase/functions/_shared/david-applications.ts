@@ -618,6 +618,10 @@ export type InterAgentRequestKind =
   | 'monitor_professor_reply'
   | 'detect_application_messages'
   | 'search_otp'
+  | 'request_academic_document'
+  | 'request_credential_evaluation_delivery'
+  | 'monitor_academic_delivery'
+  | 'monitor_test_score_delivery'
 
 export type InterAgentRequestStatus = 'queued' | 'running' | 'waiting_user' | 'completed' | 'failed' | 'cancelled'
 
@@ -1076,7 +1080,7 @@ export function createInterAgentRequest(input: Omit<InterAgentRequest, 'status' 
 }
 
 export function isRoonRequestAllowed(kind: InterAgentRequestKind) {
-  return ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp'].includes(kind)
+  return ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(kind)
 }
 
 export function matchApplicationOtp(request: OtpRequest, messages: OtpMessage[]): MatchedOtp | null {
@@ -1265,6 +1269,7 @@ function slug(value: string) {
 
 export * from './recommendation-workflow.ts'
 export * from './research-proposal-workflow.ts'
+export * from './academic-evidence.ts'
 
 export function hasOnlyGroundedSubmittedValues(values: SubmittedValue[]) {
   return values.every(value => canUseFactForSubmission({ value: value.value, provenance: value.provenance }))

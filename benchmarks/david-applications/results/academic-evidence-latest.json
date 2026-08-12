@@ -1,0 +1,1437 @@
+{
+  "suiteVersion": "academic-evidence-qualification@1.0.0",
+  "passed": true,
+  "metrics": {
+    "requirementsDetected": 11,
+    "institutionsCovered": 2,
+    "applicationsCovered": 2,
+    "credentialEvaluationCases": 1,
+    "duplicateCostsPrevented": 3,
+    "sourceCheckedSources": 13,
+    "typedInteractions": 7,
+    "sensitiveInteractionsRejected": 1,
+    "falseCompletions": 0,
+    "forcedFailureCases": 14,
+    "passedRegressionCases": 14,
+    "passed": true
+  },
+  "regressionCases": [
+    {
+      "id": "transcript-missing-page-and-legend",
+      "passed": true,
+      "detail": "missing_page, grading_legend_missing"
+    },
+    {
+      "id": "english-subsection-threshold",
+      "passed": true,
+      "detail": "Required subsection minimums are not met: writing."
+    },
+    {
+      "id": "optional-gre-withhold-below-published-range",
+      "passed": true,
+      "detail": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application."
+    },
+    {
+      "id": "credential-illegal-transition",
+      "passed": true,
+      "detail": "Completion without provider evidence was rejected."
+    },
+    {
+      "id": "credential-provider-evidence-transition",
+      "passed": true,
+      "detail": "Provider evidence advanced the evaluation to evaluation_complete."
+    },
+    {
+      "id": "derived-artifact-fact-mutation",
+      "passed": true,
+      "detail": "Grade mutation was rejected while preserving the original artifact."
+    },
+    {
+      "id": "typed-progress-detail-boundary",
+      "passed": true,
+      "detail": "I found the official request route for University of Ibadan. Start it?"
+    },
+    {
+      "id": "institution-direct-official-order",
+      "passed": true,
+      "detail": "The programme requires official evidence through institution_direct."
+    },
+    {
+      "id": "multi-case-evaluation-deduplication",
+      "passed": true,
+      "detail": "1 evaluation case; 3 duplicate actions prevented."
+    },
+    {
+      "id": "translation-and-certification-gate",
+      "passed": true,
+      "detail": "translation_missing, certified_translation_missing"
+    },
+    {
+      "id": "unverified-admissions-score-not-submitted",
+      "passed": true,
+      "detail": "The score exists in context but does not have a verified report or provenance."
+    },
+    {
+      "id": "waiver-before-invalid-score",
+      "passed": true,
+      "detail": "The waiver may be available, but every published evidence criterion is not yet verified."
+    },
+    {
+      "id": "optional-gre-strategy-is-typed",
+      "passed": true,
+      "detail": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application."
+    },
+    {
+      "id": "test-date-selection-is-calendar-safe",
+      "passed": true,
+      "detail": "Choose the latest safe test date."
+    }
+  ],
+  "progressDetailExamples": {
+    "1:academic:academic-case-a:credential_evaluation:benin:application:official-request": {
+      "kind": "confirmation",
+      "question": "I found the official request route for University of Benin. Start it?",
+      "reason": "This is a consequential external request. I will use the institution’s verified route and stop at authentication or payment, then monitor delivery automatically.",
+      "knownContext": [
+        "Recipient: the receiving institution",
+        "Deadline: 2026-10-01T23:59:00.000Z"
+      ]
+    },
+    "2:academic:academic-case-c:transcript:ibadan:application:official-request": {
+      "kind": "confirmation",
+      "question": "I found the official request route for University of Ibadan. Start it?",
+      "reason": "This is a consequential external request. I will use the institution’s verified route and stop at authentication or payment, then monitor delivery automatically.",
+      "knownContext": [
+        "Recipient: Graduate Admissions",
+        "Deadline: 2026-10-01T23:59:00.000Z"
+      ]
+    },
+    "3:academic:academic-case-d:transcript:rwanda:application:attachment": {
+      "kind": "attachment_request",
+      "question": "I’m missing your University of Rwanda transcript.",
+      "reason": "I checked the applicant profile, canonical CV, stored documents, previous applications, Gmail attachments, and reusable academic history first.",
+      "knownContext": [
+        "University of Rwanda: unknown"
+      ]
+    },
+    "4:academic:academic-case-e:english_language_test:cambridge:application:waiver": {
+      "kind": "attachment_request",
+      "question": "I may be able to waive the English test, but I need the published evidence.",
+      "reason": "I checked the waiver rule before recommending any test. Attach the institutional confirmation if you already have it, or I can prepare the request route.",
+      "knownContext": [
+        "Applicants must provide complete transcripts, degree evidence, and the exact published test or evaluation result before the application is complete."
+      ]
+    },
+    "5:academic:academic-case-f:english_language_test:oxford:application:test-choice": {
+      "kind": "single_choice",
+      "question": "A new English test is required. Which accepted test should I prepare?",
+      "reason": "I checked published waiver criteria, existing score reports, validity, overall minimums, subsection minimums, and accepted test versions first.",
+      "knownContext": [
+        "Accepted tests: Book IELTS, Book TOEFL iBT",
+        "Latest application deadline: 2026-10-01T23:59:00.000Z"
+      ]
+    },
+    "6:academic:academic-case-g:admissions_test:chicago:application:optional-score": {
+      "kind": "single_choice",
+      "question": "The GRE is optional for this programme.",
+      "reason": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application.",
+      "knownContext": [
+        "Recommendation: WITHHOLD",
+        "Source evidence: benchmark:official:academic-guide"
+      ]
+    },
+    "7:academic-case-f:english-language-test:date-choice": {
+      "kind": "date",
+      "question": "Choose the latest safe test date.",
+      "reason": "I removed dates that conflict with Calendar or cannot return scores before the source-backed deadlines and safety buffer.",
+      "knownContext": [
+        "12 September — Lagos: 2026-09-12T09:00:00.000Z — Lagos"
+      ]
+    }
+  },
+  "examples": {
+    "primaryPlan": {
+      "version": "academic-evidence@1.0.0",
+      "nextAction": {
+        "kind": "request_official_document",
+        "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+        "applicationCaseId": "academic-case-a",
+        "label": "Request official credential evaluation",
+        "rationale": "The programme requires either evidence through provider_direct.",
+        "idempotencyKey": "official-request:academic:academic-case-a:credential_evaluation:benin:application",
+        "consequential": true
+      },
+      "interaction": {
+        "id": "academic:academic-case-a:credential_evaluation:benin:application:official-request",
+        "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+        "question": "I found the official request route for University of Benin. Start it?",
+        "reason": "This is a consequential external request. I will use the institution’s verified route and stop at authentication or payment, then monitor delivery automatically.",
+        "knownContext": [
+          "Recipient: the receiving institution",
+          "Deadline: 2026-10-01T23:59:00.000Z"
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic:academic-case-a:credential_evaluation:benin:application",
+        "kind": "confirmation",
+        "priority": 1,
+        "approvalScope": "completion",
+        "confirmLabel": "Approve and continue",
+        "cancelLabel": "Not now"
+      },
+      "requirements": [
+        {
+          "id": "academic:academic-case-a:transcript:benin:application",
+          "institution": "University of Benin",
+          "type": "transcript",
+          "status": "artifact_ready",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": "artifact:transcript:benin"
+        },
+        {
+          "id": "academic:academic-case-a:degree_certificate:benin:application",
+          "institution": "University of Benin",
+          "type": "degree_certificate",
+          "status": "artifact_ready",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": "artifact:degree:benin"
+        },
+        {
+          "id": "academic:academic-case-a:credential_evaluation:benin:application",
+          "institution": "University of Benin",
+          "type": "credential_evaluation",
+          "status": "provider_selected",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        },
+        {
+          "id": "academic:academic-case-a:english_language_test:benin:application",
+          "institution": "University of Benin",
+          "type": "english_language_test",
+          "status": "score_ready",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        },
+        {
+          "id": "academic:academic-case-a:admissions_test:benin:application",
+          "institution": "University of Benin",
+          "type": "admissions_test",
+          "status": "score_ready",
+          "requiredness": "optional",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        },
+        {
+          "id": "academic:academic-case-b:transcript:lagos:application",
+          "institution": "University of Lagos",
+          "type": "transcript",
+          "status": "artifact_ready",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": "artifact:transcript:lagos"
+        },
+        {
+          "id": "academic:academic-case-b:degree_certificate:lagos:application",
+          "institution": "University of Lagos",
+          "type": "degree_certificate",
+          "status": "missing",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        },
+        {
+          "id": "academic:academic-case-b:credential_evaluation:lagos:application",
+          "institution": "University of Lagos",
+          "type": "credential_evaluation",
+          "status": "provider_selected",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        },
+        {
+          "id": "academic:academic-case-b:admissions_test:lagos:application",
+          "institution": "University of Lagos",
+          "type": "admissions_test",
+          "status": "score_ready",
+          "requiredness": "optional",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        },
+        {
+          "id": "academic:academic-case-b:english_language_test:lagos:application",
+          "institution": "University of Lagos",
+          "type": "english_language_test",
+          "status": "waiver_evidence_needed",
+          "requiredness": "required",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        },
+        {
+          "id": "academic:academic-case-b:admissions_test:lagos:application",
+          "institution": "University of Lagos",
+          "type": "admissions_test",
+          "status": "complete",
+          "requiredness": "not_accepted",
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ],
+          "artifactId": null
+        }
+      ],
+      "credentialEvaluationCases": [
+        {
+          "id": "credential-evaluation:1:wes:course-by-course",
+          "applicantId": "academic-benchmark-applicant",
+          "provider": "WES",
+          "evaluationType": "course_by_course",
+          "applicationCaseIds": [
+            "academic-case-a",
+            "academic-case-b"
+          ],
+          "requirementIds": [
+            "academic:academic-case-a:credential_evaluation:benin:application",
+            "academic:academic-case-b:credential_evaluation:lagos:application"
+          ],
+          "recipientInstitutions": [
+            "University of Benin",
+            "University of Lagos"
+          ],
+          "requiredDocuments": [
+            "transcript",
+            "degree_certificate"
+          ],
+          "requiredDeliveryRoute": "",
+          "referenceNumber": null,
+          "reportId": null,
+          "translationRules": [],
+          "deadline": null,
+          "expectedProcessingTime": null,
+          "cost": {
+            "amount": 205,
+            "currency": "USD",
+            "known": true,
+            "sourceEvidenceIds": [
+              "benchmark:official:academic-guide"
+            ]
+          },
+          "state": "provider_selected",
+          "institutionDeliveries": [
+            {
+              "institution": "University of Benin",
+              "requiredDocumentTypes": [
+                "transcript",
+                "degree_certificate"
+              ],
+              "deliveryMode": "institution_direct",
+              "state": "not_started",
+              "providerId": null,
+              "trackingId": null,
+              "recipient": null,
+              "commitmentAt": null,
+              "commitmentDueAt": null,
+              "evidence": [],
+              "blocker": null
+            },
+            {
+              "institution": "University of Lagos",
+              "requiredDocumentTypes": [
+                "transcript",
+                "degree_certificate"
+              ],
+              "deliveryMode": "institution_direct",
+              "state": "not_started",
+              "providerId": null,
+              "trackingId": null,
+              "recipient": null,
+              "commitmentAt": null,
+              "commitmentDueAt": null,
+              "evidence": [],
+              "blocker": null
+            }
+          ],
+          "reportDispatchState": "not_started",
+          "universityReceiptStates": {},
+          "sourceEvidence": [
+            {
+              "id": "benchmark:official:academic-guide",
+              "url": "https://admissions.example.edu/graduate/academic-records",
+              "authority": "official_programme_page",
+              "sourceType": "official_academic_guide",
+              "excerpt": "Applicants must provide complete transcripts, degree evidence, and the exact published test or evaluation result before the application is complete.",
+              "claims": [
+                "complete_transcript",
+                "degree_evidence",
+                "published_test_policy"
+              ],
+              "retrievedAt": "2026-08-12T00:00:00.000Z"
+            }
+          ],
+          "blocker": null,
+          "idempotencyKey": "credential-evaluation:wes:course-by-course"
+        }
+      ],
+      "coverageMap": {
+        "entries": [
+          {
+            "evidenceId": "artifact:transcript:benin",
+            "label": "benchmark_transcript_benin.pdf",
+            "kind": "transcript",
+            "applicationCaseIds": [
+              "academic-case-a"
+            ],
+            "requirementIds": [
+              "academic:academic-case-a:transcript:benin:application"
+            ],
+            "coverageCount": 1,
+            "avoidedDuplicateCost": null
+          },
+          {
+            "evidenceId": "artifact:degree:benin",
+            "label": "artifact:degree:benin.pdf",
+            "kind": "degree_certificate",
+            "applicationCaseIds": [
+              "academic-case-a"
+            ],
+            "requirementIds": [
+              "academic:academic-case-a:degree_certificate:benin:application"
+            ],
+            "coverageCount": 1,
+            "avoidedDuplicateCost": null
+          },
+          {
+            "evidenceId": "artifact:transcript:lagos",
+            "label": "benchmark_transcript_lagos.pdf",
+            "kind": "transcript",
+            "applicationCaseIds": [
+              "academic-case-b"
+            ],
+            "requirementIds": [
+              "academic:academic-case-b:transcript:lagos:application"
+            ],
+            "coverageCount": 1,
+            "avoidedDuplicateCost": null
+          },
+          {
+            "evidenceId": "credential-evaluation:1:wes:course-by-course",
+            "label": "WES course_by_course",
+            "kind": "credential_evaluation",
+            "applicationCaseIds": [
+              "academic-case-a",
+              "academic-case-b"
+            ],
+            "requirementIds": [
+              "academic:academic-case-a:credential_evaluation:benin:application",
+              "academic:academic-case-b:credential_evaluation:lagos:application"
+            ],
+            "coverageCount": 2,
+            "avoidedDuplicateCost": {
+              "amount": 205,
+              "currency": "USD",
+              "known": true,
+              "sourceEvidenceIds": [
+                "benchmark:official:academic-guide"
+              ]
+            }
+          }
+        ],
+        "duplicateActionsPrevented": 1,
+        "avoidedCost": [
+          {
+            "amount": 205,
+            "currency": "USD",
+            "known": true,
+            "sourceEvidenceIds": [
+              "benchmark:official:academic-guide"
+            ]
+          }
+        ]
+      }
+    },
+    "missingOfficialDocumentPlan": {
+      "nextAction": {
+        "kind": "request_official_document",
+        "requirementId": "academic:academic-case-c:transcript:ibadan:application",
+        "applicationCaseId": "academic-case-c",
+        "label": "Request official transcript",
+        "rationale": "The programme requires official evidence through institution_direct.",
+        "idempotencyKey": "official-request:academic:academic-case-c:transcript:ibadan:application",
+        "consequential": true
+      },
+      "interaction": {
+        "id": "academic:academic-case-c:transcript:ibadan:application:official-request",
+        "requirementId": "academic:academic-case-c:transcript:ibadan:application",
+        "question": "I found the official request route for University of Ibadan. Start it?",
+        "reason": "This is a consequential external request. I will use the institution’s verified route and stop at authentication or payment, then monitor delivery automatically.",
+        "knownContext": [
+          "Recipient: Graduate Admissions",
+          "Deadline: 2026-10-01T23:59:00.000Z"
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic:academic-case-c:transcript:ibadan:application",
+        "kind": "confirmation",
+        "priority": 1,
+        "approvalScope": "completion",
+        "confirmLabel": "Approve and continue",
+        "cancelLabel": "Not now"
+      },
+      "blockers": []
+    },
+    "missingTranscriptPlan": {
+      "nextAction": {
+        "kind": "attach_artifact",
+        "requirementId": "academic:academic-case-d:transcript:rwanda:application",
+        "applicationCaseId": "academic-case-d",
+        "label": "Attach University of Rwanda transcript",
+        "rationale": "I searched the applicant profile, stored records, previous applications, and uploads but did not find an acceptable copy.",
+        "idempotencyKey": "attach:academic:academic-case-d:transcript:rwanda:application",
+        "consequential": false
+      },
+      "interaction": {
+        "id": "academic:academic-case-d:transcript:rwanda:application:attachment",
+        "requirementId": "academic:academic-case-d:transcript:rwanda:application",
+        "question": "I’m missing your University of Rwanda transcript.",
+        "reason": "I checked the applicant profile, canonical CV, stored documents, previous applications, Gmail attachments, and reusable academic history first.",
+        "knownContext": [
+          "University of Rwanda: unknown"
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic:academic-case-d:transcript:rwanda:application",
+        "kind": "attachment_request",
+        "priority": 4,
+        "acceptedMimeTypes": [
+          "application/pdf",
+          "image/png",
+          "image/jpeg"
+        ],
+        "minimumFiles": 1,
+        "maximumFiles": 10,
+        "attachmentPrompt": "Attach the University of Rwanda transcript."
+      },
+      "blockers": []
+    },
+    "waiverPlan": {
+      "requirement": {
+        "id": "academic:academic-case-e:english_language_test:cambridge:application",
+        "applicationCaseId": "academic-case-e",
+        "institution": "University of Cambridge",
+        "programme": "MPhil Data Intensive Science",
+        "requirementType": "english_language_test",
+        "requiredness": "required",
+        "required": true,
+        "stage": "application",
+        "officialStatus": "either",
+        "deadline": "2026-10-01T23:59:00.000Z",
+        "deadlineTimezone": "Africa/Lagos",
+        "acceptedEvidenceTypes": [],
+        "submissionMethod": {
+          "mode": "applicant_upload",
+          "recipient": null,
+          "institutionCode": null,
+          "departmentCode": null,
+          "provider": null,
+          "instructions": ""
+        },
+        "sourceEvidence": [
+          {
+            "id": "benchmark:official:academic-guide",
+            "url": "https://admissions.example.edu/graduate/academic-records",
+            "authority": "official_programme_page",
+            "sourceType": "official_academic_guide",
+            "excerpt": "Applicants must provide complete transcripts, degree evidence, and the exact published test or evaluation result before the application is complete.",
+            "claims": [
+              "complete_transcript",
+              "degree_evidence",
+              "published_test_policy"
+            ],
+            "retrievedAt": "2026-08-12T00:00:00.000Z"
+          }
+        ],
+        "confidence": "high",
+        "dependencies": [],
+        "dependencyIds": [],
+        "currentArtifact": null,
+        "currentArtifactIds": [],
+        "status": "waiver_evidence_needed",
+        "blocker": "Published waiver criteria exist, but their evidence is not yet verified.",
+        "externalProvider": null,
+        "cost": null,
+        "approvalRequirement": "none",
+        "completionEvidence": [],
+        "exactRule": {
+          "acceptedTests": [
+            {
+              "type": "IELTS",
+              "minimumOverall": 7,
+              "minimumSections": {
+                "writing": 6.5
+              }
+            }
+          ],
+          "waiverCriteria": [
+            {
+              "id": "english-medium-degree",
+              "label": "Degree taught in English"
+            }
+          ]
+        },
+        "idempotencyKey": "academic:academic-case-e:english_language_test:cambridge:application"
+      },
+      "nextAction": {
+        "kind": "request_waiver_evidence",
+        "requirementId": "academic:academic-case-e:english_language_test:cambridge:application",
+        "applicationCaseId": "academic-case-e",
+        "label": "Resolve waiver evidence",
+        "rationale": "A published waiver may avoid a paid test, but the required evidence is missing.",
+        "idempotencyKey": "waiver-evidence:academic:academic-case-e:english_language_test:cambridge:application",
+        "consequential": false
+      },
+      "interaction": {
+        "id": "academic:academic-case-e:english_language_test:cambridge:application:waiver",
+        "requirementId": "academic:academic-case-e:english_language_test:cambridge:application",
+        "question": "I may be able to waive the English test, but I need the published evidence.",
+        "reason": "I checked the waiver rule before recommending any test. Attach the institutional confirmation if you already have it, or I can prepare the request route.",
+        "knownContext": [
+          "Applicants must provide complete transcripts, degree evidence, and the exact published test or evaluation result before the application is complete."
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic:academic-case-e:english_language_test:cambridge:application",
+        "kind": "attachment_request",
+        "priority": 4,
+        "acceptedMimeTypes": [
+          "application/pdf",
+          "image/png",
+          "image/jpeg",
+          "message/rfc822"
+        ],
+        "minimumFiles": 1,
+        "maximumFiles": 10,
+        "attachmentPrompt": "Attach the official waiver evidence."
+      },
+      "decision": {
+        "eligible": false,
+        "state": "evidence_missing",
+        "missingCriteria": [
+          "english-medium-degree"
+        ],
+        "evidenceIds": [],
+        "rationale": "The waiver may be available, but every published evidence criterion is not yet verified."
+      }
+    },
+    "testSelectionPlan": {
+      "requirement": {
+        "id": "academic:academic-case-f:english_language_test:oxford:application",
+        "applicationCaseId": "academic-case-f",
+        "institution": "University of Oxford",
+        "programme": "MSc Statistical Science",
+        "requirementType": "english_language_test",
+        "requiredness": "required",
+        "required": true,
+        "stage": "application",
+        "officialStatus": "either",
+        "deadline": "2026-10-01T23:59:00.000Z",
+        "deadlineTimezone": "Africa/Lagos",
+        "acceptedEvidenceTypes": [],
+        "submissionMethod": {
+          "mode": "applicant_upload",
+          "recipient": null,
+          "institutionCode": null,
+          "departmentCode": null,
+          "provider": null,
+          "instructions": ""
+        },
+        "sourceEvidence": [
+          {
+            "id": "benchmark:official:academic-guide",
+            "url": "https://admissions.example.edu/graduate/academic-records",
+            "authority": "official_programme_page",
+            "sourceType": "official_academic_guide",
+            "excerpt": "Applicants must provide complete transcripts, degree evidence, and the exact published test or evaluation result before the application is complete.",
+            "claims": [
+              "complete_transcript",
+              "degree_evidence",
+              "published_test_policy"
+            ],
+            "retrievedAt": "2026-08-12T00:00:00.000Z"
+          }
+        ],
+        "confidence": "high",
+        "dependencies": [],
+        "dependencyIds": [],
+        "currentArtifact": null,
+        "currentArtifactIds": [],
+        "status": "missing",
+        "blocker": null,
+        "externalProvider": null,
+        "cost": null,
+        "approvalRequirement": "none",
+        "completionEvidence": [],
+        "exactRule": {
+          "acceptedTests": [
+            {
+              "type": "IELTS",
+              "resultDays": 13
+            },
+            {
+              "type": "TOEFL iBT",
+              "resultDays": 8
+            }
+          ]
+        },
+        "idempotencyKey": "academic:academic-case-f:english_language_test:oxford:application"
+      },
+      "nextAction": {
+        "kind": "select_language_test",
+        "requirementId": "academic:academic-case-f:english_language_test:oxford:application",
+        "applicationCaseId": "academic-case-f",
+        "label": "Choose an accepted English test",
+        "rationale": "The waiver and existing score checks did not produce a valid result.",
+        "idempotencyKey": "language-choice:academic:academic-case-f:english_language_test:oxford:application",
+        "consequential": false
+      },
+      "interaction": {
+        "id": "academic:academic-case-f:english_language_test:oxford:application:test-choice",
+        "requirementId": "academic:academic-case-f:english_language_test:oxford:application",
+        "question": "A new English test is required. Which accepted test should I prepare?",
+        "reason": "I checked published waiver criteria, existing score reports, validity, overall minimums, subsection minimums, and accepted test versions first.",
+        "knownContext": [
+          "Accepted tests: Book IELTS, Book TOEFL iBT",
+          "Latest application deadline: 2026-10-01T23:59:00.000Z"
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic:academic-case-f:english_language_test:oxford:application",
+        "kind": "single_choice",
+        "priority": 2,
+        "options": [
+          {
+            "value": "IELTS",
+            "label": "Book IELTS",
+            "description": "13 days to results"
+          },
+          {
+            "value": "TOEFL iBT",
+            "label": "Book TOEFL iBT",
+            "description": "8 days to results"
+          }
+        ],
+        "allowOther": false
+      },
+      "recommendedTest": {
+        "testType": "TOEFL iBT",
+        "resultDays": 8,
+        "preparationScore": 4,
+        "cost": {
+          "amount": 245,
+          "currency": "USD",
+          "known": true,
+          "sourceEvidenceIds": [
+            "benchmark:official:academic-guide"
+          ]
+        },
+        "coverageApplicationCaseIds": [
+          "academic-case-a",
+          "academic-case-b"
+        ],
+        "coverageCount": 2,
+        "feasible": true,
+        "score": 226.55,
+        "latestDeadline": "2026-10-01T23:59:00.000Z"
+      },
+      "rankedTests": [
+        {
+          "testType": "TOEFL iBT",
+          "resultDays": 8,
+          "preparationScore": 4,
+          "cost": {
+            "amount": 245,
+            "currency": "USD",
+            "known": true,
+            "sourceEvidenceIds": [
+              "benchmark:official:academic-guide"
+            ]
+          },
+          "coverageApplicationCaseIds": [
+            "academic-case-a",
+            "academic-case-b"
+          ],
+          "coverageCount": 2,
+          "feasible": true,
+          "score": 226.55,
+          "latestDeadline": "2026-10-01T23:59:00.000Z"
+        },
+        {
+          "testType": "IELTS",
+          "resultDays": 13,
+          "preparationScore": 8,
+          "cost": {
+            "amount": 250,
+            "currency": "USD",
+            "known": true,
+            "sourceEvidenceIds": [
+              "benchmark:official:academic-guide"
+            ]
+          },
+          "coverageApplicationCaseIds": [
+            "academic-case-a"
+          ],
+          "coverageCount": 1,
+          "feasible": true,
+          "score": 130.5,
+          "latestDeadline": "2026-10-01T23:59:00.000Z"
+        }
+      ]
+    },
+    "optionalGrePlan": {
+      "requirement": {
+        "id": "academic:academic-case-g:admissions_test:chicago:application",
+        "applicationCaseId": "academic-case-g",
+        "institution": "University of Chicago",
+        "programme": "MS Computer Science",
+        "requirementType": "admissions_test",
+        "requiredness": "optional",
+        "required": false,
+        "stage": "application",
+        "officialStatus": "either",
+        "deadline": "2026-10-01T23:59:00.000Z",
+        "deadlineTimezone": "Africa/Lagos",
+        "acceptedEvidenceTypes": [],
+        "submissionMethod": {
+          "mode": "applicant_upload",
+          "recipient": null,
+          "institutionCode": null,
+          "departmentCode": null,
+          "provider": null,
+          "instructions": ""
+        },
+        "sourceEvidence": [
+          {
+            "id": "benchmark:official:academic-guide",
+            "url": "https://admissions.example.edu/graduate/academic-records",
+            "authority": "official_programme_page",
+            "sourceType": "official_academic_guide",
+            "excerpt": "Applicants must provide complete transcripts, degree evidence, and the exact published test or evaluation result before the application is complete.",
+            "claims": [
+              "complete_transcript",
+              "degree_evidence",
+              "published_test_policy"
+            ],
+            "retrievedAt": "2026-08-12T00:00:00.000Z"
+          }
+        ],
+        "confidence": "high",
+        "dependencies": [],
+        "dependencyIds": [],
+        "currentArtifact": null,
+        "currentArtifactIds": [
+          "artifact:gre-report"
+        ],
+        "status": "score_ready",
+        "blocker": null,
+        "externalProvider": null,
+        "cost": null,
+        "approvalRequirement": "none",
+        "completionEvidence": [],
+        "exactRule": {
+          "acceptedTestTypes": [
+            "GRE"
+          ],
+          "publishedRanges": [
+            {
+              "testType": "GRE",
+              "section": "overall",
+              "low": 330,
+              "high": 340,
+              "sourceEvidenceIds": [
+                "benchmark:official:academic-guide"
+              ]
+            }
+          ],
+          "selectedAttemptId": "gre:academic-benchmark:2026-03-01",
+          "scoreEvaluation": {
+            "state": "satisfies",
+            "reasons": []
+          }
+        },
+        "idempotencyKey": "academic:academic-case-g:admissions_test:chicago:application"
+      },
+      "nextAction": {
+        "kind": "submit_optional_score",
+        "requirementId": "academic:academic-case-g:admissions_test:chicago:application",
+        "applicationCaseId": "academic-case-g",
+        "label": "Do not submit optional score",
+        "rationale": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application.",
+        "idempotencyKey": "optional-score:academic:academic-case-g:admissions_test:chicago:application:gre:academic-benchmark:2026-03-01",
+        "consequential": true
+      },
+      "interaction": {
+        "id": "academic:academic-case-g:admissions_test:chicago:application:optional-score",
+        "requirementId": "academic:academic-case-g:admissions_test:chicago:application",
+        "question": "The GRE is optional for this programme.",
+        "reason": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application.",
+        "knownContext": [
+          "Recommendation: WITHHOLD",
+          "Source evidence: benchmark:official:academic-guide"
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic:academic-case-g:admissions_test:chicago:application",
+        "kind": "single_choice",
+        "priority": 2,
+        "options": [
+          {
+            "value": "submit",
+            "label": "Submit score",
+            "description": "Use the verified official reporting route."
+          },
+          {
+            "value": "withhold",
+            "label": "Do not submit",
+            "description": "Leave the optional score out."
+          }
+        ],
+        "allowOther": false
+      }
+    },
+    "transcriptMatrix": [
+      {
+        "applicationCaseId": "academic-case-a",
+        "institution": "University of Benin",
+        "type": "transcript",
+        "requiredness": "required",
+        "status": "artifact_ready",
+        "officialStatus": "official",
+        "artifactId": "artifact:transcript:benin",
+        "submissionMethod": "applicant_upload"
+      },
+      {
+        "applicationCaseId": "academic-case-a",
+        "institution": "University of Benin",
+        "type": "degree_certificate",
+        "requiredness": "required",
+        "status": "artifact_ready",
+        "officialStatus": "official",
+        "artifactId": "artifact:degree:benin",
+        "submissionMethod": "applicant_upload"
+      },
+      {
+        "applicationCaseId": "academic-case-b",
+        "institution": "University of Lagos",
+        "type": "transcript",
+        "requiredness": "required",
+        "status": "artifact_ready",
+        "officialStatus": "official",
+        "artifactId": "artifact:transcript:lagos",
+        "submissionMethod": "applicant_upload"
+      },
+      {
+        "applicationCaseId": "academic-case-b",
+        "institution": "University of Lagos",
+        "type": "degree_certificate",
+        "requiredness": "required",
+        "status": "missing",
+        "officialStatus": "official",
+        "artifactId": null,
+        "submissionMethod": "applicant_upload"
+      }
+    ],
+    "credentialEvaluationTracking": {
+      "provider": "WES",
+      "evaluationType": "course_by_course",
+      "requiredDocuments": [
+        "transcript",
+        "degree_certificate"
+      ],
+      "institutionDeliveries": [
+        {
+          "institution": "University of Benin",
+          "requiredDocumentTypes": [
+            "transcript",
+            "degree_certificate"
+          ],
+          "deliveryMode": "institution_direct",
+          "state": "accepted",
+          "providerId": null,
+          "trackingId": null,
+          "recipient": null,
+          "commitmentAt": null,
+          "commitmentDueAt": null,
+          "evidence": [
+            {
+              "id": "evidence:registrar-order:1",
+              "kind": "registrar_confirmation",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "Registrar confirmed the University of Benin delivery order."
+            },
+            {
+              "id": "evidence:registrar-dispatched:1",
+              "kind": "delivery_acknowledgement",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "WES confirms University of Benin documents were dispatched."
+            },
+            {
+              "id": "evidence:registrar-delivered:1",
+              "kind": "delivery_acknowledgement",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "WES confirms receipt of University of Benin documents."
+            },
+            {
+              "id": "evidence:registrar-accepted:1",
+              "kind": "provider_confirmation",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "WES accepts University of Benin documents."
+            }
+          ],
+          "blocker": null
+        },
+        {
+          "institution": "University of Lagos",
+          "requiredDocumentTypes": [
+            "transcript",
+            "degree_certificate"
+          ],
+          "deliveryMode": "institution_direct",
+          "state": "accepted",
+          "providerId": null,
+          "trackingId": null,
+          "recipient": null,
+          "commitmentAt": null,
+          "commitmentDueAt": null,
+          "evidence": [
+            {
+              "id": "evidence:registrar-order:2",
+              "kind": "registrar_confirmation",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "Registrar confirmed the University of Lagos delivery order."
+            },
+            {
+              "id": "evidence:registrar-dispatched:2",
+              "kind": "delivery_acknowledgement",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "WES confirms University of Lagos documents were dispatched."
+            },
+            {
+              "id": "evidence:registrar-delivered:2",
+              "kind": "delivery_acknowledgement",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "WES confirms receipt of University of Lagos documents."
+            },
+            {
+              "id": "evidence:registrar-accepted:2",
+              "kind": "provider_confirmation",
+              "verified": true,
+              "applicationCaseId": "academic-case-a",
+              "requirementId": "academic:academic-case-a:credential_evaluation:benin:application",
+              "provider": "WES",
+              "providerId": "WES-BENCHMARK",
+              "recipient": "WES",
+              "artifactId": null,
+              "checksum": null,
+              "capturedAt": "2026-08-12T00:00:00.000Z",
+              "excerpt": "WES accepts University of Lagos documents."
+            }
+          ],
+          "blocker": null
+        }
+      ],
+      "events": [
+        {
+          "state": "provider_selected",
+          "evidence": null
+        },
+        {
+          "state": "evaluation_order_ready",
+          "evidence": null
+        },
+        {
+          "state": "ordered",
+          "evidence": null
+        },
+        {
+          "state": "reference_number_issued",
+          "evidence": null
+        },
+        {
+          "state": "documents_requested",
+          "evidence": null
+        },
+        {
+          "state": "awaiting_institution_documents",
+          "evidence": null
+        },
+        {
+          "state": "documents_received",
+          "evidence": null
+        },
+        {
+          "state": "evaluation_in_progress",
+          "evidence": null
+        },
+        {
+          "state": "evaluation_complete",
+          "evidence": "evidence:wes-evaluation-complete"
+        },
+        {
+          "state": "report_dispatch_pending",
+          "evidence": null
+        },
+        {
+          "state": "report_sent",
+          "evidence": "evidence:wes-report-sent"
+        },
+        {
+          "state": "university_received",
+          "evidence": "evidence:university-received"
+        },
+        {
+          "state": "complete",
+          "evidence": "evidence:university-accepted"
+        }
+      ],
+      "finalState": "complete",
+      "reportDispatchState": "dispatched",
+      "universityReceiptStates": {
+        "University of Benin": "accepted",
+        "University of Lagos": "accepted"
+      }
+    },
+    "languageDecision": {
+      "benin": {
+        "id": "academic:academic-case-a:english_language_test:benin:application",
+        "applicationCaseId": "academic-case-a",
+        "institution": "University of Benin",
+        "programme": "MSc Data Science",
+        "requirementType": "english_language_test",
+        "requiredness": "required",
+        "required": true,
+        "stage": "application",
+        "officialStatus": "either",
+        "deadline": "2026-10-01T23:59:00.000Z",
+        "deadlineTimezone": "Africa/Lagos",
+        "acceptedEvidenceTypes": [],
+        "submissionMethod": {
+          "mode": "applicant_upload",
+          "recipient": null,
+          "institutionCode": null,
+          "departmentCode": null,
+          "provider": null,
+          "instructions": ""
+        },
+        "sourceEvidence": [
+          {
+            "id": "benchmark:official:academic-guide",
+            "url": "https://admissions.example.edu/graduate/academic-records",
+            "authority": "official_programme_page",
+            "sourceType": "official_academic_guide",
+            "excerpt": "Applicants must provide complete transcripts, degree evidence, and the exact published test or evaluation result before the application is complete.",
+            "claims": [
+              "complete_transcript",
+              "degree_evidence",
+              "published_test_policy"
+            ],
+            "retrievedAt": "2026-08-12T00:00:00.000Z"
+          }
+        ],
+        "confidence": "high",
+        "dependencies": [],
+        "dependencyIds": [],
+        "currentArtifact": null,
+        "currentArtifactIds": [
+          "artifact:ielts-report"
+        ],
+        "status": "score_ready",
+        "blocker": null,
+        "externalProvider": null,
+        "cost": null,
+        "approvalRequirement": "none",
+        "completionEvidence": [],
+        "exactRule": {
+          "acceptedTests": [
+            {
+              "type": "IELTS",
+              "minimumOverall": 7,
+              "minimumSections": {
+                "reading": 6.5,
+                "writing": 6.5
+              },
+              "validityMonths": 24
+            }
+          ],
+          "selectedAttemptId": "ielts:academic-benchmark:2026-04-01",
+          "scoreEvaluation": {
+            "state": "satisfies",
+            "attemptId": "ielts:academic-benchmark:2026-04-01",
+            "reasons": [],
+            "relevantDate": null,
+            "acceptedTest": "IELTS"
+          }
+        },
+        "idempotencyKey": "academic:academic-case-a:english_language_test:benin:application"
+      },
+      "cambridgeWaiver": {
+        "eligible": false,
+        "state": "evidence_missing",
+        "missingCriteria": [
+          "english-medium-degree"
+        ],
+        "evidenceIds": [],
+        "rationale": "The waiver may be available, but every published evidence criterion is not yet verified."
+      },
+      "newTestChoice": {
+        "ranked": [
+          {
+            "testType": "TOEFL iBT",
+            "resultDays": 8,
+            "preparationScore": 4,
+            "cost": {
+              "amount": 245,
+              "currency": "USD",
+              "known": true,
+              "sourceEvidenceIds": [
+                "benchmark:official:academic-guide"
+              ]
+            },
+            "coverageApplicationCaseIds": [
+              "academic-case-a",
+              "academic-case-b"
+            ],
+            "coverageCount": 2,
+            "feasible": true,
+            "score": 226.55,
+            "latestDeadline": "2026-10-01T23:59:00.000Z"
+          },
+          {
+            "testType": "IELTS",
+            "resultDays": 13,
+            "preparationScore": 8,
+            "cost": {
+              "amount": 250,
+              "currency": "USD",
+              "known": true,
+              "sourceEvidenceIds": [
+                "benchmark:official:academic-guide"
+              ]
+            },
+            "coverageApplicationCaseIds": [
+              "academic-case-a"
+            ],
+            "coverageCount": 1,
+            "feasible": true,
+            "score": 130.5,
+            "latestDeadline": "2026-10-01T23:59:00.000Z"
+          }
+        ],
+        "recommendation": {
+          "testType": "TOEFL iBT",
+          "resultDays": 8,
+          "preparationScore": 4,
+          "cost": {
+            "amount": 245,
+            "currency": "USD",
+            "known": true,
+            "sourceEvidenceIds": [
+              "benchmark:official:academic-guide"
+            ]
+          },
+          "coverageApplicationCaseIds": [
+            "academic-case-a",
+            "academic-case-b"
+          ],
+          "coverageCount": 2,
+          "feasible": true,
+          "score": 226.55,
+          "latestDeadline": "2026-10-01T23:59:00.000Z"
+        }
+      }
+    },
+    "optionalGreDecision": {
+      "recommendation": "WITHHOLD",
+      "rationale": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application.",
+      "sourceEvidenceIds": [
+        "benchmark:official:academic-guide"
+      ],
+      "output": {
+        "kind": "submit_optional_score",
+        "requirementId": "academic:academic-case-g:admissions_test:chicago:application",
+        "applicationCaseId": "academic-case-g",
+        "label": "Do not submit optional score",
+        "rationale": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application.",
+        "idempotencyKey": "optional-score:academic:academic-case-g:admissions_test:chicago:application:gre:academic-benchmark:2026-03-01",
+        "consequential": true
+      },
+      "interaction": {
+        "id": "academic:academic-case-g:admissions_test:chicago:application:optional-score",
+        "requirementId": "academic:academic-case-g:admissions_test:chicago:application",
+        "question": "The GRE is optional for this programme.",
+        "reason": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application.",
+        "knownContext": [
+          "Recommendation: WITHHOLD",
+          "Source evidence: benchmark:official:academic-guide"
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic:academic-case-g:admissions_test:chicago:application",
+        "kind": "single_choice",
+        "priority": 2,
+        "options": [
+          {
+            "value": "submit",
+            "label": "Submit score",
+            "description": "Use the verified official reporting route."
+          },
+          {
+            "value": "withhold",
+            "label": "Do not submit",
+            "description": "Leave the optional score out."
+          }
+        ],
+        "allowOther": false
+      }
+    },
+    "testDateSelection": {
+      "rankedDates": [
+        {
+          "id": "ielts-2026-09-12",
+          "label": "12 September — Lagos",
+          "date": "2026-09-12T09:00:00.000Z",
+          "resultDate": "2026-09-25",
+          "location": "Lagos"
+        }
+      ],
+      "interaction": {
+        "id": "academic-case-f:english-language-test:date-choice",
+        "requirementId": "academic-case-f:english-language-test",
+        "question": "Choose the latest safe test date.",
+        "reason": "I removed dates that conflict with Calendar or cannot return scores before the source-backed deadlines and safety buffer.",
+        "knownContext": [
+          "12 September — Lagos: 2026-09-12T09:00:00.000Z — Lagos"
+        ],
+        "reusableContextKeys": [],
+        "required": true,
+        "mapsToRequirement": "academic-case-f:english-language-test",
+        "kind": "date",
+        "priority": 3,
+        "timezone": "Africa/Lagos",
+        "currentValue": null,
+        "minimumDate": "2026-09-12"
+      }
+    },
+    "forcedFailures": {
+      "transcriptFailure": [
+        "missing_page",
+        "grading_legend_missing"
+      ],
+      "translationFailure": [
+        "translation_missing",
+        "certified_translation_missing"
+      ],
+      "languageFailure": {
+        "state": "fails_subscore",
+        "attemptId": "ielts:academic-benchmark:2026-04-01",
+        "reasons": [
+          "Required subsection minimums are not met: writing."
+        ],
+        "relevantDate": null,
+        "acceptedTest": "IELTS"
+      },
+      "unverifiedAdmissionsScore": {
+        "state": "verification_needed",
+        "reasons": [
+          "The score exists in context but does not have a verified report or provenance."
+        ]
+      },
+      "optionalDecision": {
+        "recommendation": "WITHHOLD",
+        "rationale": "The verified score is below at least one published recent range, so it is unlikely to strengthen this optional application.",
+        "sourceEvidenceIds": [
+          "benchmark:official:academic-guide"
+        ]
+      },
+      "illegalTransition": true,
+      "completedTransition": true,
+      "derivedFailure": true
+    }
+  }
+}

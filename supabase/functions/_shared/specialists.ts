@@ -134,6 +134,7 @@ const davidTools = [
   'application.record_evidence',
   'application.record_communication',
   'application.create_human_assignment',
+  'application.coordinate_academic_evidence',
   'application.build_referee_support_pack',
   'application.build_readiness_report',
   'application.generate_document',
