@@ -469,23 +469,31 @@ export class PortalHarness {
 
   async saveSection(step: string) {
     const target = this.submitTarget()
+    const confirmedState = this.state
+    let observedState = this.state
     try {
       const result = await submitPublicPage(this.state, target, this.domains, async assetId => {
         const asset = this.assets.get(assetId)
         if (!asset) throw new BrowserExecutionError('browser_asset_inaccessible', 'The benchmark artifact is not available.', false)
         return asset
       })
+      observedState = result.state
       this.state = result.state
       this.browserActions += 1
       this.world.trace(this.caseId, event('browser', 'section_save_observed', this.caseId, { step, target, confirmationObserved: result.confirmationObserved, observation: this.state.observation }))
       if (/save failed|validation error|session expired/i.test(this.state.observation.text)) {
-        throw new BrowserExecutionError(/validation/i.test(this.state.observation.text) ? 'browser_validation_failed' : 'browser_save_failed', this.state.observation.text, true)
+        // The portal's failure page is a new, non-resumable document. Keep the
+        // exact pre-submit state as the retry checkpoint so a worker restart
+        // replays the confirmed field actions instead of an empty error page.
+        const failureText = this.state.observation.text
+        this.state = confirmedState
+        throw new BrowserExecutionError(/validation/i.test(failureText) ? 'browser_validation_failed' : 'browser_save_failed', failureText, true)
       }
       if (!/section saved/i.test(this.state.observation.text)) throw new BrowserExecutionError('browser_save_unverified', 'The portal did not show a section-save confirmation.', true)
       this.world.addEvidence(this.caseId, { kind: 'saved_section', verified: true, details: { step, fields: this.state.observation.fields } })
       return this.state
     } catch (error) {
-      this.world.trace(this.caseId, event('harness', 'section_save_failed', this.caseId, { step, error: browserError(error), lastState: this.state }))
+      this.world.trace(this.caseId, event('harness', 'section_save_failed', this.caseId, { step, error: browserError(error), lastState: observedState, retryCheckpoint: this.state }))
       throw error
     }
   }

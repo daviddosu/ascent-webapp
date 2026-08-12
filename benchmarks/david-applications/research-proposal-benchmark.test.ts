@@ -26,5 +26,5 @@ describe('canonical research-proposal benchmark', () => {
       'infeasible_methodology',
     ]))
     expect(report.cases.every(result => readFileSync(result.outputPaths.pdf).subarray(0, 4).toString() === '%PDF')).toBe(true)
-  })
+  }, 90_000)
 })

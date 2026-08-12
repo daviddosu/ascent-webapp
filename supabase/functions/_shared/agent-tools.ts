@@ -12,7 +12,7 @@ export type AgentToolDefinition = {
 
 type ToolPolicy = {
   risk: AgentRisk
-  approvalKind: 'send_email' | 'calendar_write' | 'browser_submit' | null
+  approvalKind: 'send_email' | 'calendar_write' | 'browser_submit' | 'payment' | null
 }
 
 export type AgentExecutionDateContext = {
@@ -497,6 +497,85 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'application.coordinate_fee',
+    description: 'Run the canonical application-fee lifecycle for exactly one ApplicationCase. Reverify the authoritative current-cycle fee and waiver policy, resolve eligibility only from verified applicant facts, validate reusable evidence, prepare the legitimate portal or Roon waiver route, and return structured Progress Detail when the applicant must provide a fact or attachment. This tool never infers financial hardship, collects payment credentials, or treats a fee amount or provider acknowledgement as completion.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Exact durable ApplicationCase ID.', 80),
+        fee_requirement: { type: 'object', additionalProperties: true, description: 'Current canonical ApplicationFeeRequirement projection, including authoritative source provenance.' },
+        policy: { type: ['object', 'null'], additionalProperties: true, description: 'Authoritative current-cycle waiver policy, or null when no route is available.' },
+        applicant_facts: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 80, description: 'Verified reusable facts only; never infer hardship or eligibility from nationality, geography, or employment.' },
+        workflow_event: { type: ['object', 'null'], additionalProperties: true, description: 'One bounded fee lifecycle observation or transition event.' },
+        interaction_response: { type: ['object', 'null'], additionalProperties: true, description: 'Structured Progress Detail response supplied by the user, or null.' },
+        idempotency_key: stringValue('Stable workflow event key for retries.', 300),
+      },
+      required: ['application_case_id', 'fee_requirement', 'policy', 'applicant_facts', 'workflow_event', 'interaction_response', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.record_fee_waiver_result',
+    description: 'Record a classified waiver decision and verify the resulting application-portal state for one ApplicationCase. Admissions approval alone cannot clear the fee; the resulting state needs scoped evidence. A denial or unresolved portal fee returns the case to payment preparation.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Exact durable ApplicationCase ID.', 80),
+        fee_requirement_id: stringValue('Exact persisted fee requirement ID.', 240),
+        decision: { type: ['object', 'null'], additionalProperties: true, description: 'Redacted classified waiver decision from an authoritative message or portal.' },
+        portal_verification: { type: 'object', additionalProperties: true, description: 'Read-after-write portal observation showing fee cleared, zero fee, or a remaining payable fee.' },
+        source_evidence_ids: { type: 'array', items: stringValue('Scoped evidence ID.', 240), minItems: 1, maxItems: 30 },
+        idempotency_key: stringValue('Stable result-verification key for retries.', 300),
+      },
+      required: ['application_case_id', 'fee_requirement_id', 'decision', 'portal_verification', 'source_evidence_ids', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.execute_fee_payment',
+    description: 'Claim and hand off exactly one approved application-fee payment to the institution or payment provider. The server re-reads the current amount, currency, requirement version, authorization, and durable payment lock. ShotCount never receives card numbers, CVV, bank passwords, PINs, or OTPs; ambiguous results must be reconciled before retry.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Exact durable ApplicationCase ID.', 80),
+        fee_requirement_id: stringValue('Exact persisted fee requirement ID.', 240),
+        payment_authorization_id: stringValue('Exact one-time user approval ID.', 240),
+        session_id: { type: ['string', 'null'], description: 'Task-owned browser session ID, if the portal handoff is browser-based.' },
+        handoff_url: { type: ['string', 'null'], description: 'Provider-hosted HTTPS handoff URL; never include credentials in the URL.' },
+        provider: stringValue('Institution or provider name.', 160),
+        amount: { type: 'number', minimum: 0 },
+        currency: stringValue('ISO currency code.', 3),
+        idempotency_key: stringValue('Stable one-attempt payment key for retries.', 300),
+      },
+      required: ['application_case_id', 'fee_requirement_id', 'payment_authorization_id', 'session_id', 'handoff_url', 'provider', 'amount', 'currency', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
+    name: 'application.reconcile_fee_payment',
+    description: 'Reconcile an application-fee attempt from scoped portal, provider, Gmail, or bank-return observations. It blocks duplicate retries while the result is ambiguous and only captures a receipt after verified resulting-state evidence.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Exact durable ApplicationCase ID.', 80),
+        fee_requirement_id: stringValue('Exact persisted fee requirement ID.', 240),
+        observations: { type: 'array', items: { type: 'object', additionalProperties: true }, maxItems: 30 },
+        receipt_evidence: { type: ['object', 'null'], additionalProperties: true, description: 'Non-sensitive receipt metadata only, after a verified paid or fee-cleared state.' },
+        idempotency_key: stringValue('Stable reconciliation key for retries.', 300),
+      },
+      required: ['application_case_id', 'fee_requirement_id', 'observations', 'receipt_evidence', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: false,
+  },
+  {
+    type: 'function',
     name: 'application.build_referee_support_pack',
     description: 'Build and persist a source-linked referee support pack for one application. This prepares the referee workflow; first contact remains approval-gated through Roon.',
     parameters: objectSchema({
@@ -704,7 +783,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
       type: 'object',
       properties: {
         application_case_id: stringValue('Durable ApplicationCase ID.', 64),
-        request_kind: { type: 'string', enum: ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'] },
+        request_kind: { type: 'string', enum: ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery', 'send_fee_waiver_request', 'monitor_fee_waiver', 'admissions_clarification', 'post_submission_response'] },
         payload: { type: 'object', additionalProperties: true, description: 'Typed request payload. Never include passwords, payment data, or a raw OTP.' },
         idempotency_key: stringValue('Stable request key for retries.', 300),
       },
@@ -1165,6 +1244,10 @@ const policies: Record<string, ToolPolicy> = {
   'application.coordinate_recommendations': { risk: 'prepare', approvalKind: null },
   'application.coordinate_academic_evidence': { risk: 'prepare', approvalKind: null },
   'application.coordinate_work_samples': { risk: 'prepare', approvalKind: null },
+  'application.coordinate_fee': { risk: 'prepare', approvalKind: null },
+  'application.record_fee_waiver_result': { risk: 'prepare', approvalKind: null },
+  'application.execute_fee_payment': { risk: 'external_write', approvalKind: 'payment' },
+  'application.reconcile_fee_payment': { risk: 'prepare', approvalKind: null },
   'application.build_referee_support_pack': { risk: 'prepare', approvalKind: null },
   'application.build_readiness_report': { risk: 'prepare', approvalKind: null },
   'application.generate_document': { risk: 'prepare', approvalKind: null },
@@ -1432,6 +1515,38 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         typeof value.reusable_context_consent === 'boolean' &&
         validateStringArray(value.applicant_asset_ids, 80, 120) &&
         (value.upload_verification === null || isRecord(value.upload_verification)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.coordinate_fee':
+      return validateString(value.application_case_id, 80) &&
+        isRecord(value.fee_requirement) &&
+        (value.policy === null || isRecord(value.policy)) &&
+        Array.isArray(value.applicant_facts) && value.applicant_facts.length <= 80 && value.applicant_facts.every(isRecord) &&
+        (value.workflow_event === null || isRecord(value.workflow_event)) &&
+        (value.interaction_response === null || isRecord(value.interaction_response)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.record_fee_waiver_result':
+      return validateString(value.application_case_id, 80) &&
+        validateString(value.fee_requirement_id, 240) &&
+        (value.decision === null || isRecord(value.decision)) &&
+        isRecord(value.portal_verification) &&
+        validateStringArray(value.source_evidence_ids, 30, 240, 1) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.execute_fee_payment':
+      if (Object.keys(value).some(key => /card|cvv|cvc|security|billing|bank|password|pin|otp|verification/i.test(key))) return false
+      return validateString(value.application_case_id, 80) &&
+        validateString(value.fee_requirement_id, 240) &&
+        validateString(value.payment_authorization_id, 240) &&
+        (value.session_id === null || validateString(value.session_id, 120)) &&
+        (value.handoff_url === null || validateHttpUrl(value.handoff_url)) &&
+        validateString(value.provider, 160) &&
+        typeof value.amount === 'number' && Number.isFinite(value.amount) && value.amount >= 0 &&
+        /^[A-Z]{3}$/.test(String(value.currency)) &&
+        validateString(value.idempotency_key, 300)
+    case 'application.reconcile_fee_payment':
+      return validateString(value.application_case_id, 80) &&
+        validateString(value.fee_requirement_id, 240) &&
+        Array.isArray(value.observations) && value.observations.length <= 30 && value.observations.every(isRecord) &&
+        (value.receipt_evidence === null || isRecord(value.receipt_evidence)) &&
         validateString(value.idempotency_key, 300)
     case 'application.build_readiness_report':
       return validateString(value.application_case_id, 64) && validateStringArray(value.referee_status, 20, 500) &&
@@ -1753,7 +1868,7 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateString(value.package_checksum, 128)
     case 'application.request_roon':
       return validateString(value.application_case_id, 64) &&
-        ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(String(value.request_kind)) &&
+        ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery', 'send_fee_waiver_request', 'monitor_fee_waiver', 'admissions_clarification', 'post_submission_response'].includes(String(value.request_kind)) &&
         isRecord(value.payload) &&
         validateString(value.idempotency_key, 300)
     default:

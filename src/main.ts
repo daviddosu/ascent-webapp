@@ -951,7 +951,7 @@ function projectionInteractionFromRun(task: Task, run: AgentRun | null, approval
     applicationCaseId: approvalCaseId,
     requirementId,
     taskId: task.id,
-    kind: approval.kind === 'browser_submit' ? 'approve' : approval.kind === 'send_email' ? 'approve' : 'approve',
+    kind: approval.kind === 'payment' ? 'payment_approval' : 'approve',
     question: approval.title || 'Review and approve the prepared action',
     reason: approval.summary || 'ShotCount is ready for your approval before anything consequential happens.',
     status: 'pending',
@@ -3368,6 +3368,10 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
   const destination = approvalPreviewValue(approval, 'destination')
   const browserTarget = approvalPreviewValue(approval, 'target')
   const browserEffect = approvalPreviewValue(approval, 'expected_effect')
+  const paymentAmount = approvalPreviewValue(approval, 'amount')
+  const paymentCurrency = approvalPreviewValue(approval, 'currency')
+  const paymentMerchant = approvalPreviewValue(approval, 'merchant')
+  const paymentDeadline = approvalPreviewValue(approval, 'deadline')
   const preparedValues = approvalPreviewValue(approval, 'prepared_values')
   const attachment = approvalPreviewValue(approval, 'attachment') as { name?: string; mime_type?: string; size?: number } | null
   const safety = approvalPreviewValue(approval, 'safety') as { warnings?: unknown } | null
@@ -3377,6 +3381,8 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
     ? 'Send'
     : approval.kind === 'calendar_write'
       ? 'Confirm'
+      : approval.kind === 'payment'
+        ? 'Approve payment'
       : 'Submit'
   return `<section class="task-agent-card task-agent-card--approval">
     <header>${specialistHeader(task, agentRuns.get(task.id))}<em><i aria-hidden="true">!</i> Approval needed</em></header>
@@ -3388,6 +3394,7 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ${approval.kind === 'send_email' && attachment?.name ? `<dl><dt>Attachment</dt><dd>${escapeHtml(String(attachment.name))}${attachment.size ? ` (${Math.ceil(Number(attachment.size) / 1024)} KB)` : ''}</dd></dl>` : ''}
       ${approval.kind === 'calendar_write' && Array.isArray(calendarAttendees) && calendarAttendees.length ? `<dl><dt>Attendees</dt><dd>${escapeHtml(calendarAttendees.join(', '))}</dd></dl>` : ''}
       ${approval.kind === 'calendar_write' && typeof notifyAttendees === 'boolean' ? `<dl><dt>Notifications</dt><dd>${notifyAttendees ? 'Attendees will be notified.' : 'No attendee notifications.'}</dd></dl>` : ''}
+      ${approval.kind === 'payment' ? `<dl><dt>Application fee</dt><dd>${escapeHtml(String(paymentCurrency ?? ''))} ${escapeHtml(Number(paymentAmount ?? 0).toFixed(2))}</dd></dl><dl><dt>Merchant</dt><dd>${escapeHtml(String(paymentMerchant ?? 'Institution or payment provider'))}</dd></dl>${paymentDeadline ? `<dl><dt>Deadline</dt><dd>${escapeHtml(String(paymentDeadline))}</dd></dl>` : ''}<div class="task-agent-waiting-detail"><span>Card details, bank authentication, 3DS, and OTP stay on the secure provider surface. ShotCount will verify the resulting portal state and receipt before marking this complete.</span></div>` : ''}
       ${title || approval.kind === 'calendar_write' ? approval.kind === 'send_email'
         ? `<label class="task-agent-email-field"><span>Subject</span><input type="text" data-agent-email-subject="${escapeHtml(task.id)}" value="${escapeHtml(String(title))}" maxlength="998" aria-label="Email subject" ${busy || undoing ? 'disabled' : ''}></label>`
         : approval.kind === 'calendar_write'

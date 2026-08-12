@@ -16,13 +16,13 @@ than a false Connected state.
 Requested scopes:
 
 - `openid`
-- `email`
-- `profile`
-- `gmail.readonly`
-- `gmail.compose`
-- `calendar.events`
-- `calendar.events.freebusy`
-- `contacts.readonly`
+- `https://www.googleapis.com/auth/userinfo.email`
+- `https://www.googleapis.com/auth/userinfo.profile`
+- `https://www.googleapis.com/auth/gmail.readonly`
+- `https://www.googleapis.com/auth/gmail.compose`
+- `https://www.googleapis.com/auth/calendar.events`
+- `https://www.googleapis.com/auth/calendar.events.freebusy`
+- `https://www.googleapis.com/auth/contacts.readonly`
 
 ## Verification and release status
 
@@ -35,14 +35,12 @@ The production Google Auth Platform project contains the `Ascent Shotcount
 Supabase` web client, and the Supabase OAuth start/callback functions are
 deployed. The production Data access configuration now includes the complete
 execution scope set listed above, including Gmail, Calendar, and Contacts. The
-Gmail and Calendar/Contacts execution scopes are still unverified and cannot be
-offered to general users until Google completes data-access verification. The
-scope justifications and demo-video link are retained for resubmission. The
-OAuth audience is temporarily in `Testing` while data-access verification is
-not approved; only explicitly configured test users
-can authorize the sensitive scopes. Returning the audience to `In production`
-withdraws the current verification application, so the verification request
-must be resubmitted before public release. Google’s verification is not
+Gmail and Calendar/Contacts execution scopes are still under data-access review
+and cannot be offered to general users until Google completes that review. The
+scope justifications and the current demo video (`https://youtu.be/9NdB7rjzPNI`)
+are retained for resubmission. The
+OAuth audience remains `In production` during review; changing it to `Testing`
+would cancel the current verification request. Google’s verification is not
 inherited by newly added scopes or by later consent-screen changes.
 
 The investor-demo OAuth client remains in the dedicated

@@ -1,0 +1,39 @@
+% SHOTCOUNT_CANONICAL_RESEARCH_PROPOSAL
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+
+\usepackage{booktabs}
+\usepackage{tabu}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+%\usepackage{apacite}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+% Controlled ATS extraction for the compiled PDF.
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+\title{Write the research-proposal title here}
+\author{Write Your Name Here \\ Write Your Student ID}
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{paper}
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

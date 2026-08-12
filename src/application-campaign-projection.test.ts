@@ -12,6 +12,7 @@ import type {
   Opportunity,
   Requirement,
 } from '../supabase/functions/_shared/david-applications'
+import { createApplicationFeeRequirement, type ApplicationFeeRequirement } from '../supabase/functions/_shared/application-fee-workflow'
 
 const now = '2026-11-26T12:00:00.000Z'
 
@@ -43,6 +44,32 @@ function evidenceFor(applicationCaseId: string, id: string, capturedAt = now): E
 
 function campaign(): ApplicationCampaign {
   return { id: 'campaign-1', userId: 'user-1', taskId: 'task-1', ownerSpecialistId: 'david', objective: 'Apply to graduate programmes', applicationKind: 'phd', targetFields: ['Physics'], targetCountries: ['US'], degreeLevel: 'PhD', intakeYear: 2027, fundingRequirements: ['full'], quantityTarget: 8, searchCriteria: {}, approvedStrategy: null, status: 'executing', opportunityIds: [], applicationCaseIds: [], deadlines: [], progress: { completed: 0, total: 1, label: '', nextAction: '', blockers: [], evidenceCount: 0 }, executionEvidenceIds: [], createdAt: now, updatedAt: now }
+}
+
+function feeRequirement(overrides: Partial<ApplicationFeeRequirement> = {}): ApplicationFeeRequirement {
+  return {
+    ...createApplicationFeeRequirement({ applicationCaseId: 'case-fee', applicantId: 'user-1', university: 'Northbridge University', programme: 'Physics PhD', applicationCycle: '2027', now }),
+    feeRequired: true,
+    feeAmount: 120,
+    currency: 'USD',
+    processingServiceFee: 5,
+    totalPayable: 125,
+    paymentDeadline: '2026-12-20T23:59:00.000Z',
+    deadlineTimezone: 'UTC',
+    paymentStage: 'PREPARE_PAYMENT',
+    paymentMethod: 'portal_hosted',
+    waiverAvailability: 'available',
+    waiverType: 'need_based',
+    waiverEligibilityState: 'REQUEST_SUBMITTED',
+    waiverEvidenceRequirements: [],
+    waiverSubmissionMethod: 'portal_form',
+    waiverDeadline: '2026-12-01T23:59:00.000Z',
+    waiverDecisionState: 'REQUEST_SUBMITTED',
+    paymentState: 'BLOCKED_ON_WAIVER',
+    sourceProvenance: [{ id: 'fee-source', kind: 'official_fee_guidance', url: 'https://northbridge.example.edu/fees', excerpt: 'USD 125 total application fee.', retrievedAt: now, applicationCycle: '2027', authoritative: true, sourceHash: 'fee-source-hash' }],
+    amountRetrievedAt: now,
+    ...overrides,
+  }
 }
 
 function baseInput(overrides: Partial<ApplicationCampaignProjectionInput> = {}): ApplicationCampaignProjectionInput {
@@ -156,5 +183,26 @@ describe('canonical application campaign projection', () => {
     const contaminated = projectCampaign({ ...base, interactions: [{ id: 'orphan', applicationCaseId: 'case-not-in-campaign', requirementId: 'req-approval', taskId: 'task-1', kind: 'approve', question: 'Orphan', reason: 'Invalid scope.', status: 'pending' }] })
     expect(contaminated.integrity.valid).toBe(false)
     expect(contaminated.integrity.issues).toContain('orphan_interaction:orphan')
+  })
+
+  it('projects fee-waiver waits, one-time payment approval, reconciliation risk, and verified waiver completion', () => {
+    const waiverWait = applicationCase('case-fee', 'opp-fee', [], { feeRequirement: feeRequirement({ waiverDecisionState: 'UNDER_REVIEW', paymentState: 'BLOCKED_ON_WAIVER', paymentStage: 'MONITOR_WAIVER_DECISION' }) })
+    const approval = applicationCase('case-payment-approval', 'opp-payment-approval', [], { feeRequirement: feeRequirement({ id: 'application-fee:case-payment-approval', applicationCaseId: 'case-payment-approval', waiverDecisionState: 'DENIED', waiverEligibilityState: 'DENIED', paymentState: 'AWAITING_USER_APPROVAL', paymentStage: 'PAYMENT_APPROVAL', blocker: 'One exact payment approval is required.' }) })
+    const ambiguous = applicationCase('case-payment-ambiguous', 'opp-payment-ambiguous', [], { feeRequirement: feeRequirement({ id: 'application-fee:case-payment-ambiguous', applicationCaseId: 'case-payment-ambiguous', waiverDecisionState: 'DENIED', waiverEligibilityState: 'DENIED', paymentState: 'RECONCILIATION_REQUIRED', paymentStage: 'VERIFY_PAYMENT', blocker: 'Reconcile before retry.' }) })
+    const waived = applicationCase('case-fee-waived', 'opp-fee-waived', [], { feeRequirement: feeRequirement({ id: 'application-fee:case-fee-waived', applicationCaseId: 'case-fee-waived', waiverDecisionState: 'APPROVED', waiverEligibilityState: 'APPROVED', paymentState: 'NOT_REQUIRED', paymentStage: 'UPDATE_APPLICATION_REQUIREMENT', verificationEvidenceIds: ['e-fee-waived'] }) })
+    const projection = projectCampaign(baseInput({
+      opportunities: [
+        opportunity('opp-fee', 'Northbridge', 'Physics PhD', '2026-12-20T23:59:00Z'),
+        opportunity('opp-payment-approval', 'Southbank', 'Physics PhD', '2026-12-20T23:59:00Z'),
+        opportunity('opp-payment-ambiguous', 'Eastlake', 'Physics PhD', '2026-12-20T23:59:00Z'),
+        opportunity('opp-fee-waived', 'Westfield', 'Physics PhD', '2026-12-20T23:59:00Z'),
+      ],
+      cases: [waiverWait, approval, ambiguous, waived],
+      evidence: [evidenceFor('case-fee-waived', 'e-fee-waived')],
+    }))
+    expect(projection.waitingExternal).toMatchObject([{ label: 'Waiting on Admissions office', applicationCaseIds: ['case-fee'] }])
+    expect(projection.userActions).toMatchObject([{ label: 'Approve USD 125.00 application fee for Northbridge University?', applicationCaseIds: ['case-payment-approval'], interaction: { kind: 'payment_approval' } }])
+    expect(projection.risks.find(item => item.applicationCaseId === 'case-payment-ambiguous')).toMatchObject({ reasonCodes: expect.arrayContaining(['PAYMENT_RECONCILIATION_REQUIRED']) })
+    expect(projection.recentlyCompleted).toMatchObject([{ label: 'Application fee waived', applicationCaseId: 'case-fee-waived', evidenceIds: ['e-fee-waived'] }])
   })
 })

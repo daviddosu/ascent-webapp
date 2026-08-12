@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { validateCanonicalLatex } from '../supabase/functions/_shared/cv.js'
+import { RESEARCH_PROPOSAL_LATEX_MARKER, validateResearchProposalAuxiliaryFiles, validateResearchProposalLatex } from '../supabase/functions/_shared/research-proposal-pdf.js'
 
 const execFile = promisify(execFileCallback)
 const maximumLatexBytes = 220_000
@@ -15,6 +16,7 @@ type CompilerOptions = {
   expectedName?: string
   expectedEmail?: string
   compilerPath?: string
+  auxiliaryFiles?: Array<{ filename: string; content: string }>
 }
 
 export type CompiledCv = {
@@ -84,6 +86,20 @@ async function runCompiler(binary: string, directory: string) {
   })
 }
 
+async function runBibliography(binary: string, directory: string) {
+  return execFile(binary, ['main'], {
+    cwd: directory,
+    timeout: 10_000,
+    maxBuffer: 2_000_000,
+    windowsHide: true,
+    env: {
+      PATH: process.env.PATH ?? '',
+      TEXMFOUTPUT: directory,
+      SOURCE_DATE_EPOCH: '0',
+    },
+  })
+}
+
 async function extractPdf(binary: string, pdfPath: string) {
   const textResult = await execFile(binary, [pdfPath, '-'], { timeout: 5_000, maxBuffer: 2_000_000, windowsHide: true })
   return textResult.stdout
@@ -117,7 +133,14 @@ async function renderPreview(binary: string, pdfPath: string, directory: string)
 
 export async function compileLatex(latex: string, options: CompilerOptions = {}): Promise<CompiledCv> {
   if (Buffer.byteLength(latex, 'utf8') > maximumLatexBytes) throw new Error('The generated LaTeX is too large.')
-  const staticIssues = validateCanonicalLatex(latex)
+  const proposalAuxiliaryFiles = options.auxiliaryFiles ?? []
+  const auxiliaryIssues = latex.startsWith(RESEARCH_PROPOSAL_LATEX_MARKER)
+    ? validateResearchProposalAuxiliaryFiles(proposalAuxiliaryFiles)
+    : proposalAuxiliaryFiles.length ? ['Auxiliary files are supported only for canonical research proposals.'] : []
+  if (auxiliaryIssues.length) throw new Error('Research-proposal auxiliary-file validation failed: ' + auxiliaryIssues.join('; '))
+  const staticIssues = latex.startsWith(RESEARCH_PROPOSAL_LATEX_MARKER)
+    ? validateResearchProposalLatex(latex)
+    : validateCanonicalLatex(latex)
   if (staticIssues.length) throw new Error(`LaTeX safety validation failed: ${staticIssues.join('; ')}`)
   const directory = await mkdtemp(join(tmpdir(), 'shotcount-cv-'))
   const compiler = options.compilerPath ?? process.env.PDFLATEX_BIN ?? 'pdflatex'
@@ -127,24 +150,41 @@ export async function compileLatex(latex: string, options: CompilerOptions = {})
   let recovered = false
   try {
     await writeFile(join(directory, 'main.tex'), latex, 'utf8')
+    for (const file of proposalAuxiliaryFiles) await writeFile(join(directory, file.filename), file.content, 'utf8')
     // A TeX installation normally provides the approved file globally. The
     // controlled local fallback keeps the isolated worker deterministic when
     // that support file is not installed.
     await writeFile(join(directory, 'glyphtounicode.tex'), fallbackGlyphUnicode, 'utf8')
-    try {
-      const first = await runCompiler(compiler, directory)
-      compilationLog = `${first.stdout}\n${first.stderr}`
-    } catch (error) {
-      compilationLog = safeCompilerError(error)
-      if (!/glyphtounicode|unicode|inputenc|undefined control sequence/i.test(compilationLog)) throw new Error(`LaTeX compilation failed: ${compilationLog.slice(-4_000)}`)
-      // The renderer already owns factual content. Recovery is limited to a
-      // second deterministic compile using the generated, controlled glyph
-      // fallback; it never asks the model to rewrite the template or facts.
-      recovered = true
-      const retry = await runCompiler(compiler, directory).catch(retryError => {
-        throw new Error(`LaTeX recovery failed: ${safeCompilerError(retryError).slice(-4_000)}`)
-      })
-      compilationLog = `${compilationLog}\n[bounded recovery]\n${retry.stdout}\n${retry.stderr}`
+    const compilePass = async () => {
+      try {
+        const result = await runCompiler(compiler, directory)
+        return result.stdout + '\n' + result.stderr
+      } catch (error) {
+        const firstFailure = safeCompilerError(error)
+        if (!/glyphtounicode|unicode|inputenc|undefined control sequence/i.test(firstFailure)) throw new Error('LaTeX compilation failed: ' + firstFailure.slice(-4_000))
+        // The renderer already owns factual content. Recovery is limited to a
+        // second deterministic compile using the generated, controlled glyph
+        // fallback; it never asks the model to rewrite the template or facts.
+        recovered = true
+        const retry = await runCompiler(compiler, directory).catch(retryError => {
+          throw new Error('LaTeX recovery failed: ' + safeCompilerError(retryError).slice(-4_000))
+        })
+        return firstFailure + '\n[bounded recovery]\n' + retry.stdout + '\n' + retry.stderr
+      }
+    }
+    compilationLog = await compilePass()
+    const bibliography = proposalAuxiliaryFiles.find(file => file.filename === 'refs.bib')
+    if (bibliography && /@\w+\s*\{/i.test(bibliography.content)) {
+      const bibtex = process.env.BIBTEX_BIN ?? 'bibtex'
+      try {
+        const result = await runBibliography(bibtex, directory)
+        compilationLog += '\n[bibtex]\n' + result.stdout + '\n' + result.stderr
+      } catch (error) {
+        throw new Error('BibTeX compilation failed: ' + safeCompilerError(error).slice(-4_000))
+      }
+      compilationLog += '\n' + await compilePass() + '\n' + await compilePass()
+    } else {
+      compilationLog += '\n' + await compilePass()
     }
     const logFile = await readFile(logPath, 'utf8').catch(() => '')
     compilationLog = `${compilationLog}\n${logFile}`.slice(-120_000)
@@ -203,6 +243,13 @@ export default async function handler(request: Request, response: Response) {
     const result = await compileLatex(latex, {
       expectedName: typeof body.expected_name === 'string' ? body.expected_name : '',
       expectedEmail: typeof body.expected_email === 'string' ? body.expected_email : '',
+      auxiliaryFiles: Array.isArray(body.auxiliary_files)
+        ? body.auxiliary_files.flatMap(item => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+          const row = item as Record<string, unknown>
+          return typeof row.filename === 'string' && typeof row.content === 'string' ? [{ filename: row.filename, content: row.content }] : []
+        })
+        : [],
     })
     response.status(200).json({
       ok: true,

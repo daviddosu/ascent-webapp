@@ -6,6 +6,7 @@ export const applicationRoonRequestKinds: InterAgentRequestKind[] = [
   'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply',
   'detect_application_messages', 'search_otp', 'request_academic_document',
   'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery',
+  'send_fee_waiver_request', 'monitor_fee_waiver', 'admissions_clarification', 'post_submission_response',
 ]
 
 export function safeApplicationRequestKind(value: unknown): InterAgentRequestKind | null {

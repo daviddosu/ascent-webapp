@@ -69,6 +69,8 @@ export const riskReasonCodes = [
   'FEE_WAIVER_PENDING',
   'PAYMENT_RECONCILIATION_REQUIRED',
   'DUPLICATE_PAYMENT_BLOCKED',
+  'ADMISSIONS_CLARIFICATION_PENDING',
+  'POST_SUBMISSION_RECOVERY_PENDING',
 ] as const
 export type RequirementRiskReasonCode = typeof riskReasonCodes[number]
 
@@ -318,6 +320,8 @@ const leadTimeByType: Record<string, number> = {
   portal: 1 * 24 * 60 * 60 * 1_000,
   submission: 1 * 24 * 60 * 60 * 1_000,
   approval: 1 * 24 * 60 * 60 * 1_000,
+  admissions: 3 * 24 * 60 * 60 * 1_000,
+  post_submission: 3 * 24 * 60 * 60 * 1_000,
 }
 
 const safetyBufferByType: Record<string, number> = {
@@ -327,6 +331,8 @@ const safetyBufferByType: Record<string, number> = {
   referee: 2 * 24 * 60 * 60 * 1_000,
   writer: 2 * 24 * 60 * 60 * 1_000,
   test: 3 * 24 * 60 * 60 * 1_000,
+  admissions: 1 * 24 * 60 * 60 * 1_000,
+  post_submission: 1 * 24 * 60 * 60 * 1_000,
   default: 1 * 24 * 60 * 60 * 1_000,
 }
 
@@ -495,7 +501,15 @@ function actorFor(entry: RequirementEntry, contacts: ApplicationContact[], assig
   const dependency = dependencies.find(item => item.requirementId === entry.requirement.id)
   if (dependency) return dependency.actor
   const key = requirementKey(entry.requirement)
+  const type = requirementTypeOf(entry.requirement)
   const fee = feeRequirementFor(entry.applicationCase)
+  if (type === 'admissions_clarification' || /admissions clarification/.test(key)) {
+    return { id: `admissions:${entry.applicationCase.id}`, kind: 'admissions_office' as const, name: 'Admissions office' }
+  }
+  if (type === 'post_submission_request' || /additional document|post submission|post-submission/.test(key)) {
+    if (/portal|upload|checklist/.test(key)) return { id: `portal:${entry.applicationCase.id}`, kind: 'application_portal' as const, name: 'Application portal' }
+    return { id: `admissions:${entry.applicationCase.id}`, kind: 'admissions_office' as const, name: 'Admissions office' }
+  }
   if (fee && entry.requirement.id === fee.id) {
     if (fee.waiverDecisionState === 'REQUEST_SUBMITTED' || fee.waiverDecisionState === 'UNDER_REVIEW') return { id: `admissions:${entry.applicationCase.id}`, kind: 'admissions_office' as const, name: 'Admissions office' }
     if (fee.paymentState === 'PAYMENT_HANDOFF_REQUIRED' || fee.paymentState === 'PROCESSING' || fee.paymentState === 'AMBIGUOUS' || fee.paymentState === 'RECONCILIATION_REQUIRED') return { id: `payment-provider:${entry.applicationCase.id}`, kind: 'payment_provider' as const, name: 'Payment provider' }
@@ -529,6 +543,8 @@ function labelFor(requirement: Requirement, bucket: CampaignBucket, actor: Proje
   const key = requirementKey(requirement)
   const type = requirementTypeOf(requirement)
   if (bucket === 'DONE') {
+    if (type === 'admissions_clarification' || /admissions clarification/.test(key)) return 'Admissions clarification resolved'
+    if (type === 'post_submission_request' || /post submission|post-submission|additional document/.test(key)) return 'Additional information accepted'
     if (/submission/.test(key)) return 'Application submitted'
     if (/recommend|referee/.test(key)) return 'Recommendation received'
     if (/transcript/.test(key)) return 'Transcript accepted'
@@ -539,6 +555,8 @@ function labelFor(requirement: Requirement, bucket: CampaignBucket, actor: Proje
     return text(requirement.name, 160) || 'Requirement completed'
   }
   if (bucket === 'NEEDS_YOU') {
+    if (type === 'admissions_clarification' || /admissions clarification/.test(key)) return 'Approve admissions clarification'
+    if (type === 'post_submission_request' || /post submission|post-submission|additional document/.test(key)) return `Provide ${text(requirement.name, 120) || 'the requested information'}`
     if (/fee|waiver|payment/.test(key)) {
       if (/attachment|evidence/.test(key) || requirement.status === 'awaiting_user') return 'Attach fee-waiver evidence'
       if (/payment|fee/.test(key)) return 'Approve application fee'
@@ -548,6 +566,8 @@ function labelFor(requirement: Requirement, bucket: CampaignBucket, actor: Proje
     return text(requirement.name, 160) || 'Review the application detail'
   }
   if (bucket === 'WAITING') {
+    if (type === 'admissions_clarification' || /admissions clarification/.test(key)) return 'Waiting for admissions reply'
+    if (type === 'post_submission_request' || /post submission|post-submission|additional document/.test(key)) return 'Waiting for institution checklist update'
     if (/fee|waiver|payment/.test(key)) {
       if (/reconcil|ambiguous/.test(key)) return 'Reconciling application payment'
       if (/waiver|fee/.test(key)) return 'Waiting on admissions for fee waiver'
@@ -568,6 +588,8 @@ function labelFor(requirement: Requirement, bucket: CampaignBucket, actor: Proje
   if (/portal|form|field|section|submission/.test(key)) return 'Completing application form'
   if (/document|cv|resume/.test(key)) return 'Preparing application documents'
   if (/fee|waiver|payment/.test(key)) return /waiver/.test(key) ? 'Checking fee-waiver eligibility' : 'Preparing application fee'
+  if (type === 'admissions_clarification' || /admissions clarification/.test(key)) return 'Preparing admissions clarification'
+  if (type === 'post_submission_request' || /post submission|post-submission|additional document/.test(key)) return 'Recovering requested post-submission information'
   return text(requirement.name, 160) || 'Preparing application requirement'
 }
 
@@ -686,6 +708,8 @@ function riskFor(
   if (/transcript|registrar|official document/.test(key) && evaluation.bucket === 'WAITING') reasonCodes.push('EXTERNAL_REGISTRAR_WAIT')
   if (evaluation.actor?.kind === 'recommender' && evaluation.bucket === 'WAITING') reasonCodes.push('EXTERNAL_RECOMMENDER_WAIT')
   if (evaluation.actor?.kind === 'writer' && evaluation.bucket === 'WAITING') reasonCodes.push('EXTERNAL_WRITER_WAIT')
+  if (evaluation.requirement.requirementType === 'admissions_clarification' && evaluation.bucket === 'WAITING') reasonCodes.push('ADMISSIONS_CLARIFICATION_PENDING')
+  if (evaluation.requirement.requirementType === 'post_submission_request' && !evaluation.complete) reasonCodes.push('POST_SUBMISSION_RECOVERY_PENDING')
   if (evaluation.bucket === 'WAITING' && !reasonCodes.length) reasonCodes.push('EXTERNAL_INSTITUTION_WAIT')
   if (evaluation.interaction?.kind === 'attachment') reasonCodes.push('USER_ATTACHMENT_REQUIRED')
   if (evaluation.interaction?.kind === 'approve' || evaluation.interaction?.kind === 'payment_approval') reasonCodes.push('USER_APPROVAL_REQUIRED')

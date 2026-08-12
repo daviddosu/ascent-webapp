@@ -145,7 +145,7 @@ export type AgentApproval = {
   runId: string
   actionId: string
   status: 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled'
-  kind: 'send_email' | 'calendar_write' | 'browser_submit'
+  kind: 'send_email' | 'calendar_write' | 'browser_submit' | 'payment'
   title: string
   summary: string
   payload: Record<string, unknown>

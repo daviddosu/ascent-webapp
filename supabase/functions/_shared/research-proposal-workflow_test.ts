@@ -164,6 +164,16 @@ Deno.test('passes exact deterministic and semantic quality gates for a grounded 
   assertEquals(interaction.inputMode, 'approve')
 })
 
+Deno.test('allows a human writer source file before enforcing the final rendered PDF format', () => {
+  const req = requirement({ formatRequirements: { fileTypes: ['.pdf'], font: null, fontSize: null, margins: null, lineSpacing: null, header: null, filenamePattern: null, maxFileSizeBytes: null, other: [] }, pageLimit: 3 })
+  const sourceDraft = { id: 'draft-source', version: 1, applicationCaseId: 'case-proposal-1', applicantName: 'Ada Example', institution: 'Northbridge University', programme: 'DPhil Computational Physics', degree: 'DPhil', supervisor: 'Professor Grace Nwosu', proposalType: 'full_research_proposal' as const, filename: 'writer-draft.docx', fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', body: 'Background\nA grounded problem.\nResearch question\nHow can calibrated models preserve useful flow statistics?\nMethodology\nWe will evaluate calibrated models against numerical baselines.\nExpected contribution\nA bounded extension.\nReferences\nCalibrated surrogate models for turbulent flow.', sections: ['Background', 'Research question', 'Methodology', 'Expected contribution'], pageCount: null, citations: papers().map(paper => paper.citation), sourceFactIds: [], sourceEvidenceIds: ['programme-theme', 'paper-source'], formatMetadata: {}, artifactId: null, checksum: null, receivedAt: '2026-08-12T00:00:00.000Z' }
+  const sourceValidation = validateResearchProposalDraft({ draft: sourceDraft, requirement: req, checkRenderedFormat: false, expected: { applicantName: 'Ada Example', institution: 'Northbridge University', programme: 'DPhil Computational Physics', supervisor: 'Professor Grace Nwosu', proposalType: 'full_research_proposal' }, verifiedEvidenceIds: ['programme-theme', 'paper-source'], sourcePapers: papers(), evidence: dossier().sources })
+  assertEquals(sourceValidation.hardFailures.some(issue => issue.code === 'wrong_file_type'), false)
+  assertEquals(sourceValidation.hardFailures.some(issue => issue.code === 'page_limit_exceeded'), false)
+  const finalValidation = validateResearchProposalDraft({ draft: { ...sourceDraft, filename: 'Ada_Example_proposal.pdf', fileType: 'application/pdf', pageCount: 2 }, requirement: req, expected: { applicantName: 'Ada Example', institution: 'Northbridge University', programme: 'DPhil Computational Physics', supervisor: 'Professor Grace Nwosu', proposalType: 'full_research_proposal' }, verifiedEvidenceIds: ['programme-theme', 'paper-source'], sourcePapers: papers(), evidence: dossier().sources })
+  assertEquals(finalValidation.valid, true)
+})
+
 Deno.test('interprets supervisor scope feedback into concrete revision work and preserves conservative novelty language', () => {
   const feedback = interpretResearchProposalFeedback({ messageId: 'msg-1', threadId: 'thread-1', body: 'The scope is too broad. Please focus only on detector calibration rather than both calibration and reconstruction. Add the recent paper on uncertainty coverage.', evidenceIds: ['gmail-msg-1'] })
   assert(feedback.some(item => item.category === 'scope_change'))

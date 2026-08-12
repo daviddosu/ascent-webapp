@@ -821,6 +821,105 @@ export type Database = {
           },
         ]
       }
+      application_admissions_clarifications: {
+        Row: {
+          admissions_contact: Json | null
+          application_case_id: string
+          campaign_id: string | null
+          conflicting_evidence: Json
+          contact_source: string | null
+          created_at: string
+          deadline_at: string | null
+          deadline_relevance: string | null
+          deadline_timezone: string | null
+          drafted_question: string
+          evidence_ids: string[]
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
+          id: string
+          institution: string
+          idempotency_key: string
+          programme: string
+          question_category: string
+          resulting_requirement_updates: Json
+          resolved_interpretation: Json | null
+          requirement_id: string
+          risk: string
+          sources_checked: string[]
+          status: string
+          task_id: string | null
+          unresolved_issue: string
+          unresolved_reason: string
+          updated_at: string
+          user_id: string
+          why_necessary: string
+        }
+        Insert: {
+          admissions_contact?: Json | null
+          application_case_id: string
+          campaign_id?: string | null
+          conflicting_evidence?: Json
+          contact_source?: string | null
+          created_at?: string
+          deadline_at?: string | null
+          deadline_relevance?: string | null
+          deadline_timezone?: string | null
+          drafted_question: string
+          evidence_ids?: string[]
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          institution: string
+          idempotency_key: string
+          programme: string
+          question_category: string
+          resulting_requirement_updates?: Json
+          resolved_interpretation?: Json | null
+          requirement_id: string
+          risk?: string
+          sources_checked?: string[]
+          status?: string
+          task_id?: string | null
+          unresolved_issue: string
+          unresolved_reason: string
+          updated_at?: string
+          user_id: string
+          why_necessary: string
+        }
+        Update: {
+          admissions_contact?: Json | null
+          application_case_id?: string
+          campaign_id?: string | null
+          conflicting_evidence?: Json
+          contact_source?: string | null
+          created_at?: string
+          deadline_at?: string | null
+          deadline_relevance?: string | null
+          deadline_timezone?: string | null
+          drafted_question?: string
+          evidence_ids?: string[]
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          institution?: string
+          idempotency_key?: string
+          programme?: string
+          question_category?: string
+          resulting_requirement_updates?: Json
+          resolved_interpretation?: Json | null
+          requirement_id?: string
+          risk?: string
+          sources_checked?: string[]
+          status?: string
+          task_id?: string | null
+          unresolved_issue?: string
+          unresolved_reason?: string
+          updated_at?: string
+          user_id?: string
+          why_necessary?: string
+        }
+        Relationships: []
+      }
       application_campaigns: {
         Row: {
           application_kind: string
@@ -1798,6 +1897,646 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      application_fee_audit_events: {
+        Row: {
+          application_case_id: string
+          created_at: string
+          event_type: string
+          fee_requirement_id: string
+          id: string
+          idempotency_key: string
+          non_sensitive_data: Json
+          user_id: string
+        }
+        Insert: {
+          application_case_id: string
+          created_at?: string
+          event_type: string
+          fee_requirement_id: string
+          id?: string
+          idempotency_key: string
+          non_sensitive_data?: Json
+          user_id: string
+        }
+        Update: {
+          application_case_id?: string
+          created_at?: string
+          event_type?: string
+          fee_requirement_id?: string
+          id?: string
+          idempotency_key?: string
+          non_sensitive_data?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_fee_audit_events_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_audit_events_fee_requirement_id_fkey"
+            columns: ["fee_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_fee_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_fee_interactions: {
+        Row: {
+          application_case_id: string
+          created_at: string
+          deadline: string | null
+          exact_amount: Json | null
+          fee_requirement_id: string
+          id: string
+          idempotency_key: string
+          interaction_key: string
+          interaction_kind: string
+          known_context: Json
+          options: Json
+          question: string
+          reason: string
+          response: Json | null
+          sensitive: boolean
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_case_id: string
+          created_at?: string
+          deadline?: string | null
+          exact_amount?: Json | null
+          fee_requirement_id: string
+          id?: string
+          idempotency_key: string
+          interaction_key: string
+          interaction_kind: string
+          known_context?: Json
+          options?: Json
+          question: string
+          reason?: string
+          response?: Json | null
+          sensitive?: boolean
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_case_id?: string
+          created_at?: string
+          deadline?: string | null
+          exact_amount?: Json | null
+          fee_requirement_id?: string
+          id?: string
+          idempotency_key?: string
+          interaction_key?: string
+          interaction_kind?: string
+          known_context?: Json
+          options?: Json
+          question?: string
+          reason?: string
+          response?: Json | null
+          sensitive?: boolean
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_fee_interactions_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_interactions_fee_requirement_id_fkey"
+            columns: ["fee_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_fee_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_fee_payment_attempts: {
+        Row: {
+          application_case_id: string
+          authorization_id: string
+          claimed_at: string
+          completed_at: string | null
+          created_at: string
+          fee_requirement_id: string
+          id: string
+          idempotency_key: string
+          lock_owner: string | null
+          locked_at: string
+          provider_transaction_id: string | null
+          state: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_case_id: string
+          authorization_id: string
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          fee_requirement_id: string
+          id?: string
+          idempotency_key: string
+          lock_owner?: string | null
+          locked_at?: string
+          provider_transaction_id?: string | null
+          state?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_case_id?: string
+          authorization_id?: string
+          claimed_at?: string
+          completed_at?: string | null
+          created_at?: string
+          fee_requirement_id?: string
+          id?: string
+          idempotency_key?: string
+          lock_owner?: string | null
+          locked_at?: string
+          provider_transaction_id?: string | null
+          state?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_fee_payment_attempts_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_payment_attempts_authorization_id_fkey"
+            columns: ["authorization_id"]
+            isOneToOne: false
+            referencedRelation: "application_fee_payment_authorizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_payment_attempts_fee_requirement_id_fkey"
+            columns: ["fee_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_fee_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_fee_payment_authorizations: {
+        Row: {
+          amount: number
+          application_case_id: string
+          authorization_key: string
+          authorized_at: string
+          created_at: string
+          currency: string
+          expires_at: string
+          fee_requirement_id: string
+          id: string
+          idempotency_key: string
+          maximum_authorized_amount: number
+          merchant: string
+          reason: string
+          requirement_version: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          application_case_id: string
+          authorization_key: string
+          authorized_at?: string
+          created_at?: string
+          currency: string
+          expires_at: string
+          fee_requirement_id: string
+          id?: string
+          idempotency_key: string
+          maximum_authorized_amount: number
+          merchant?: string
+          reason?: string
+          requirement_version: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          application_case_id?: string
+          authorization_key?: string
+          authorized_at?: string
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          fee_requirement_id?: string
+          id?: string
+          idempotency_key?: string
+          maximum_authorized_amount?: number
+          merchant?: string
+          reason?: string
+          requirement_version?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_fee_payment_authorizations_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_payment_authorizations_fee_requirement_id_fkey"
+            columns: ["fee_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_fee_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_fee_payment_evidence: {
+        Row: {
+          amount: number
+          application_case_id: string
+          checksum: string | null
+          created_at: string
+          currency: string
+          evidence_source: string
+          fee_requirement_id: string
+          id: string
+          institution: string
+          payment_date_time: string
+          portal_state: string
+          provider: string | null
+          receipt_artifact_id: string | null
+          receipt_number: string | null
+          source_evidence_ids: string[]
+          transaction_id: string | null
+          user_id: string
+          metadata: Json
+        }
+        Insert: {
+          amount: number
+          application_case_id: string
+          checksum?: string | null
+          created_at?: string
+          currency: string
+          evidence_source: string
+          fee_requirement_id: string
+          id?: string
+          institution?: string
+          payment_date_time: string
+          portal_state: string
+          provider?: string | null
+          receipt_artifact_id?: string | null
+          receipt_number?: string | null
+          source_evidence_ids?: string[]
+          transaction_id?: string | null
+          user_id: string
+          metadata?: Json
+        }
+        Update: {
+          amount?: number
+          application_case_id?: string
+          checksum?: string | null
+          created_at?: string
+          currency?: string
+          evidence_source?: string
+          fee_requirement_id?: string
+          id?: string
+          institution?: string
+          payment_date_time?: string
+          portal_state?: string
+          provider?: string | null
+          receipt_artifact_id?: string | null
+          receipt_number?: string | null
+          source_evidence_ids?: string[]
+          transaction_id?: string | null
+          user_id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_fee_payment_evidence_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_payment_evidence_fee_requirement_id_fkey"
+            columns: ["fee_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "application_fee_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_payment_evidence_receipt_artifact_id_fkey"
+            columns: ["receipt_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "file_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_fee_requirements: {
+        Row: {
+          amount_retrieved_at: string | null
+          application_case_id: string
+          application_cycle: string
+          blocker: string | null
+          campaign_id: string | null
+          created_at: string
+          currency: string | null
+          deadline_timezone: string | null
+          fee_amount: number | null
+          fee_required: boolean | null
+          id: string
+          institution: string
+          programme: string
+          payment_deadline: string | null
+          payment_method: string | null
+          payment_stage: string
+          payment_state: string
+          processing_service_fee: number | null
+          provider_portal_transaction_id: string | null
+          receipt_artifact_id: string | null
+          requirement_key: string
+          risk_state: string
+          source_provenance: Json
+          total_payable: number | null
+          task_id: string | null
+          updated_at: string
+          user_id: string
+          verification_evidence_ids: string[]
+          version: number
+          waiver_availability: string
+          waiver_code: string | null
+          waiver_deadline: string | null
+          waiver_decision_state: string
+          waiver_eligibility_state: string
+          waiver_evidence_requirements: Json
+          waiver_submission_method: string | null
+          waiver_type: string | null
+          workflow: Json
+        }
+        Insert: {
+          amount_retrieved_at?: string | null
+          application_case_id: string
+          application_cycle?: string
+          blocker?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string | null
+          deadline_timezone?: string | null
+          fee_amount?: number | null
+          fee_required?: boolean | null
+          id?: string
+          institution?: string
+          programme?: string
+          payment_deadline?: string | null
+          payment_method?: string | null
+          payment_stage?: string
+          payment_state?: string
+          processing_service_fee?: number | null
+          provider_portal_transaction_id?: string | null
+          receipt_artifact_id?: string | null
+          requirement_key: string
+          risk_state?: string
+          source_provenance?: Json
+          total_payable?: number | null
+          task_id?: string | null
+          updated_at?: string
+          user_id: string
+          verification_evidence_ids?: string[]
+          version?: number
+          waiver_availability?: string
+          waiver_code?: string | null
+          waiver_deadline?: string | null
+          waiver_decision_state?: string
+          waiver_eligibility_state?: string
+          waiver_evidence_requirements?: Json
+          waiver_submission_method?: string | null
+          waiver_type?: string | null
+          workflow?: Json
+        }
+        Update: {
+          amount_retrieved_at?: string | null
+          application_case_id?: string
+          application_cycle?: string
+          blocker?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string | null
+          deadline_timezone?: string | null
+          fee_amount?: number | null
+          fee_required?: boolean | null
+          id?: string
+          institution?: string
+          programme?: string
+          payment_deadline?: string | null
+          payment_method?: string | null
+          payment_stage?: string
+          payment_state?: string
+          processing_service_fee?: number | null
+          provider_portal_transaction_id?: string | null
+          receipt_artifact_id?: string | null
+          requirement_key?: string
+          risk_state?: string
+          source_provenance?: Json
+          total_payable?: number | null
+          task_id?: string | null
+          updated_at?: string
+          user_id?: string
+          verification_evidence_ids?: string[]
+          version?: number
+          waiver_availability?: string
+          waiver_code?: string | null
+          waiver_deadline?: string | null
+          waiver_decision_state?: string
+          waiver_eligibility_state?: string
+          waiver_evidence_requirements?: Json
+          waiver_submission_method?: string | null
+          waiver_type?: string | null
+          workflow?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_fee_requirements_application_case_id_fkey"
+            columns: ["application_case_id"]
+            isOneToOne: false
+            referencedRelation: "application_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_requirements_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "application_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_requirements_receipt_artifact_id_fkey"
+            columns: ["receipt_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "file_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_fee_requirements_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_post_submission_requests: {
+        Row: {
+          acceptance_evidence: string[]
+          applicant_action_required: boolean
+          application_case_id: string
+          artifact_candidates: string[]
+          campaign_id: string | null
+          certified_translation_required: boolean
+          created_at: string
+          deadline_at: string | null
+          deadline_timezone: string | null
+          degree_conferral_required: boolean
+          exact_request_text: string
+          external_commitment_due_at: string | null
+          final_version_required: boolean
+          history: Json
+          id: string
+          idempotency_key: string
+          institution: string
+          institution_direct_delivery_required: boolean
+          normalized_requirement: string
+          programme: string
+          requirement_id: string | null
+          recipient: string | null
+          rejection_reason: string | null
+          request_type: string
+          requested_artifact_data_type: string | null
+          response_evidence: string[]
+          source_message_id: string
+          source_provider: string
+          source_thread_id: string | null
+          source_url: string | null
+          status: string
+          submission_method: string
+          task_id: string | null
+          translation_required: boolean
+          updated_at: string
+          urgency: string
+          user_id: string
+          version: number
+          official_status_required: boolean
+        }
+        Insert: {
+          acceptance_evidence?: string[]
+          applicant_action_required?: boolean
+          application_case_id: string
+          artifact_candidates?: string[]
+          campaign_id?: string | null
+          certified_translation_required?: boolean
+          created_at?: string
+          deadline_at?: string | null
+          deadline_timezone?: string | null
+          degree_conferral_required?: boolean
+          exact_request_text: string
+          external_commitment_due_at?: string | null
+          final_version_required?: boolean
+          history?: Json
+          id?: string
+          idempotency_key: string
+          institution: string
+          institution_direct_delivery_required?: boolean
+          normalized_requirement: string
+          programme: string
+          requirement_id?: string | null
+          recipient?: string | null
+          rejection_reason?: string | null
+          request_type: string
+          requested_artifact_data_type?: string | null
+          response_evidence?: string[]
+          source_message_id: string
+          source_provider: string
+          source_thread_id?: string | null
+          source_url?: string | null
+          status?: string
+          submission_method?: string
+          task_id?: string | null
+          translation_required?: boolean
+          updated_at?: string
+          urgency?: string
+          user_id: string
+          version?: number
+          official_status_required?: boolean
+        }
+        Update: {
+          acceptance_evidence?: string[]
+          applicant_action_required?: boolean
+          application_case_id?: string
+          artifact_candidates?: string[]
+          campaign_id?: string | null
+          certified_translation_required?: boolean
+          created_at?: string
+          deadline_at?: string | null
+          deadline_timezone?: string | null
+          degree_conferral_required?: boolean
+          exact_request_text?: string
+          external_commitment_due_at?: string | null
+          final_version_required?: boolean
+          history?: Json
+          id?: string
+          idempotency_key?: string
+          institution?: string
+          institution_direct_delivery_required?: boolean
+          normalized_requirement?: string
+          programme?: string
+          requirement_id?: string | null
+          recipient?: string | null
+          rejection_reason?: string | null
+          request_type?: string
+          requested_artifact_data_type?: string | null
+          response_evidence?: string[]
+          source_message_id?: string
+          source_provider?: string
+          source_thread_id?: string | null
+          source_url?: string | null
+          status?: string
+          submission_method?: string
+          task_id?: string | null
+          translation_required?: boolean
+          updated_at?: string
+          urgency?: string
+          user_id?: string
+          version?: number
+          official_status_required?: boolean
+        }
+        Relationships: []
       }
       application_inter_agent_requests: {
         Row: {
@@ -4149,6 +4888,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      claim_application_fee_payment: {
+        Args: {
+          p_authorization_id: string
+          p_case_id: string
+          p_fee_requirement_id: string
+          p_idempotency_key: string
+          p_lock_owner: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       claim_application_submission: {
         Args: {

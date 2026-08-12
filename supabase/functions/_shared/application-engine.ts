@@ -34,7 +34,7 @@ export type RequirementType =
   | 'document' | 'writer' | 'research_proposal' | 'referee' | 'professor' | 'communication' | 'portal_field'
   | 'portal_section' | 'supplemental_question' | 'artifact_upload' | 'transcript' | 'degree_certificate' | 'proof_of_graduation'
   | 'credential_evaluation' | 'english_language_test' | 'admissions_test' | 'academic_evidence'
-  | 'approval' | 'submission' | 'post_submission' | 'calendar'
+  | 'approval' | 'submission' | 'post_submission' | 'calendar' | 'application_fee' | 'fee_waiver' | 'payment'
 
 export type ResolutionTier = 0 | 1 | 2 | 3 | 4 | 5
 

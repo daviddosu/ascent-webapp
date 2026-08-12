@@ -1,7 +1,7 @@
 export const googleExecutionScopes = [
   'openid',
-  'email',
-  'profile',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.compose',
   'https://www.googleapis.com/auth/calendar.events',
@@ -9,15 +9,15 @@ export const googleExecutionScopes = [
   'https://www.googleapis.com/auth/contacts.readonly',
 ] as const
 
-const identityScopeAliases: Record<string, string> = {
-  email: 'https://www.googleapis.com/auth/userinfo.email',
-  profile: 'https://www.googleapis.com/auth/userinfo.profile',
+const identityScopeAliases: Record<string, string[]> = {
+  'https://www.googleapis.com/auth/userinfo.email': ['email'],
+  'https://www.googleapis.com/auth/userinfo.profile': ['profile'],
 }
 
 export function missingGoogleExecutionScopes(grantedScopes: string[]) {
   const granted = new Set(grantedScopes)
   return googleExecutionScopes.filter(scope =>
     !granted.has(scope) &&
-    !(identityScopeAliases[scope] && granted.has(identityScopeAliases[scope]!))
+    !(identityScopeAliases[scope] ?? []).some(alias => granted.has(alias))
   )
 }

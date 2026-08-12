@@ -12,6 +12,7 @@ import {
   generateRecommendationRequestEmail,
   type RecommenderCandidate,
 } from './recommendation-workflow.ts'
+import type { ApplicationFeeRequirement, ApplicationFeeWorkflow, FeeApplicantFact } from './application-fee-workflow.ts'
 
 export const DAVID_APPLICATION_SCHEMA_VERSION = 1 as const
 
@@ -150,6 +151,8 @@ export type ApplicantProfile = {
   referees: ApplicantFactCollection<ContactReference>
   reusableStories: ApplicantFactCollection<PersonalStory>
   identityDocumentMetadata: ApplicantFactCollection<IdentityDocumentMetadata>
+  /** Verified, reusable facts that may be used only when an authoritative waiver policy asks for them. */
+  feeWaiverFacts?: FeeApplicantFact[]
   consent: ReusableContextConsent
   createdAt: string
   updatedAt: string
@@ -419,6 +422,9 @@ export type ApplicationCase = {
   applicationId: string | null
   submissionAttemptKey: string | null
   submittedAt: string | null
+  /** Canonical fee lifecycle projection for this application case. */
+  feeRequirement?: ApplicationFeeRequirement | null
+  feeWorkflow?: ApplicationFeeWorkflow | null
   createdAt: string
   updatedAt: string
 }
@@ -622,6 +628,10 @@ export type InterAgentRequestKind =
   | 'request_credential_evaluation_delivery'
   | 'monitor_academic_delivery'
   | 'monitor_test_score_delivery'
+  | 'send_fee_waiver_request'
+  | 'monitor_fee_waiver'
+  | 'admissions_clarification'
+  | 'post_submission_response'
 
 export type InterAgentRequestStatus = 'queued' | 'running' | 'waiting_user' | 'completed' | 'failed' | 'cancelled'
 
@@ -1080,7 +1090,7 @@ export function createInterAgentRequest(input: Omit<InterAgentRequest, 'status' 
 }
 
 export function isRoonRequestAllowed(kind: InterAgentRequestKind) {
-  return ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(kind)
+  return ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery', 'send_fee_waiver_request', 'monitor_fee_waiver', 'admissions_clarification', 'post_submission_response'].includes(kind)
 }
 
 export function matchApplicationOtp(request: OtpRequest, messages: OtpMessage[]): MatchedOtp | null {
@@ -1270,6 +1280,8 @@ function slug(value: string) {
 export * from './recommendation-workflow.ts'
 export * from './research-proposal-workflow.ts'
 export * from './academic-evidence.ts'
+export * from './application-fee-workflow.ts'
+export * from './application-recovery.ts'
 
 export function hasOnlyGroundedSubmittedValues(values: SubmittedValue[]) {
   return values.every(value => canUseFactForSubmission({ value: value.value, provenance: value.provenance }))

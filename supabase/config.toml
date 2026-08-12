@@ -12,9 +12,6 @@ verify_jwt = true
 [functions.agent-watch-sweep]
 verify_jwt = false
 
-[functions.agent-benchmark-fixtures]
-verify_jwt = false
-
 [functions.send-scheduled-reminders]
 verify_jwt = false
 

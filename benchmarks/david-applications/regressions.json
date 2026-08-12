@@ -546,5 +546,53 @@
     "reproduction": {
       "command": "npm run benchmark:david -- --case e2e-five-application-campaign"
     }
+  },
+  {
+    "key": "david_application_engine_v3:worker-restart-checkpoint:validation_failure",
+    "caseId": "worker-restart-checkpoint",
+    "title": "Preserve checkpoint after worker restart",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260810012603-2b5840",
+    "failureClass": "validation_failure",
+    "expected": {
+      "state": "saved",
+      "checkpointPreserved": true
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case worker-restart-checkpoint"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:work-sample-academic-northbridge:coverage",
+    "caseId": "work-sample-academic-northbridge",
+    "title": "work sample academic northbridge",
+    "source": "canonical writing-sample / portfolio qualification",
+    "failureClass": "official_requirement,candidate_ranking,thesis_excerpt,page_limit,session_recovery",
+    "status": "covered",
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case work-sample-academic-northbridge"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:work-sample-code-northbridge:coverage",
+    "caseId": "work-sample-code-northbridge",
+    "title": "work sample code northbridge",
+    "source": "canonical writing-sample / portfolio qualification",
+    "failureClass": "repository_url,secret_scan,safe_submission_snapshot,url_readback",
+    "status": "covered",
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case work-sample-code-northbridge"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:work-sample-portfolio-northbridge:coverage",
+    "caseId": "work-sample-portfolio-northbridge",
+    "title": "work sample portfolio northbridge",
+    "source": "canonical writing-sample / portfolio qualification",
+    "failureClass": "multi_project_strategy,broken_url,typed_choice,wrong_filename,duplicate_prevention",
+    "status": "covered",
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case work-sample-portfolio-northbridge"
+    }
   }
 ]

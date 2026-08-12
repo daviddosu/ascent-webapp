@@ -20,6 +20,15 @@ import type {
   PortalCheckpoint,
   Requirement,
 } from '../../supabase/functions/_shared/david-applications'
+import type { AdmissionsClarification, PostSubmissionRequest } from '../../supabase/functions/_shared/application-recovery'
+import {
+  admissionsClarificationToApprovalInteraction,
+  admissionsClarificationToRequirement,
+  planPostSubmissionResponse,
+  postSubmissionRequestToRequirement,
+  progressInteractionToProjectionInteraction,
+} from '../../supabase/functions/_shared/application-recovery'
+import { createApplicationFeeRequirement, normalizeFeeRequirement, type ApplicationFeeRequirement } from '../../supabase/functions/_shared/application-fee-workflow'
 import {
   projectCampaign,
   type ApplicationCampaignProjection,
@@ -148,6 +157,8 @@ export type ApplicationWorkspaceState = {
   assignments: HumanAssignment[]
   checkpoints: PortalCheckpoint[]
   communications: ApplicationCommunication[]
+  admissionsClarifications: AdmissionsClarification[]
+  postSubmissionRequests: PostSubmissionRequest[]
   interactions: ProjectionUserInteraction[]
   state: DavidApplicationState | null
 }
@@ -292,6 +303,56 @@ function mapRequirement(row: Record<string, unknown>): Requirement {
   }
 }
 
+function mapFeeRequirement(row: Record<string, unknown>): ApplicationFeeRequirement {
+  const workflow = record(row.workflow)
+  const storedRequirement = record(workflow.requirement)
+  const base = createApplicationFeeRequirement({
+    applicationCaseId: text(row.application_case_id, 80),
+    applicantId: text(row.user_id, 80),
+    university: text(row.institution, 500),
+    programme: text(row.programme, 800),
+    applicationCycle: text(row.application_cycle, 160),
+  })
+  return normalizeFeeRequirement({
+    ...base,
+    ...storedRequirement,
+    id: text(storedRequirement.id ?? row.requirement_key, 240) || base.id,
+    applicationCaseId: text(row.application_case_id, 80),
+    applicantId: text(storedRequirement.applicantId ?? row.user_id, 80),
+    university: text(storedRequirement.university ?? row.institution, 500),
+    programme: text(storedRequirement.programme ?? row.programme, 800),
+    applicationCycle: text(storedRequirement.applicationCycle ?? row.application_cycle, 160),
+    feeRequired: typeof storedRequirement.feeRequired === 'boolean' ? storedRequirement.feeRequired : typeof row.fee_required === 'boolean' ? row.fee_required : null,
+    feeAmount: storedRequirement.feeAmount ?? row.fee_amount ?? null,
+    currency: storedRequirement.currency ?? row.currency ?? null,
+    processingServiceFee: storedRequirement.processingServiceFee ?? row.processing_service_fee ?? null,
+    totalPayable: storedRequirement.totalPayable ?? row.total_payable ?? null,
+    paymentDeadline: storedRequirement.paymentDeadline ?? row.payment_deadline ?? null,
+    deadlineTimezone: storedRequirement.deadlineTimezone ?? row.deadline_timezone ?? null,
+    paymentStage: storedRequirement.paymentStage ?? row.payment_stage ?? 'APPLICATION',
+    paymentMethod: storedRequirement.paymentMethod ?? row.payment_method ?? null,
+    waiverAvailability: storedRequirement.waiverAvailability ?? row.waiver_availability ?? 'unknown',
+    waiverType: storedRequirement.waiverType ?? row.waiver_type ?? null,
+    waiverEligibilityState: storedRequirement.waiverEligibilityState ?? row.waiver_eligibility_state ?? 'NOT_RESEARCHED',
+    waiverDecisionState: storedRequirement.waiverDecisionState ?? row.waiver_decision_state ?? 'NOT_RESEARCHED',
+    waiverEvidenceRequirements: storedRequirement.waiverEvidenceRequirements ?? row.waiver_evidence_requirements ?? [],
+    waiverSubmissionMethod: storedRequirement.waiverSubmissionMethod ?? row.waiver_submission_method ?? null,
+    waiverDeadline: storedRequirement.waiverDeadline ?? row.waiver_deadline ?? null,
+    waiverCode: storedRequirement.waiverCode ?? row.waiver_code ?? null,
+    paymentState: storedRequirement.paymentState ?? row.payment_state ?? 'NOT_REQUIRED',
+    providerPortalTransactionId: storedRequirement.providerPortalTransactionId ?? row.provider_portal_transaction_id ?? null,
+    receiptArtifactId: storedRequirement.receiptArtifactId ?? row.receipt_artifact_id ?? null,
+    verificationEvidenceIds: storedRequirement.verificationEvidenceIds ?? row.verification_evidence_ids ?? [],
+    blocker: storedRequirement.blocker ?? row.blocker ?? null,
+    riskState: storedRequirement.riskState ?? row.risk_state ?? 'NONE',
+    sourceProvenance: storedRequirement.sourceProvenance ?? row.source_provenance ?? [],
+    amountRetrievedAt: storedRequirement.amountRetrievedAt ?? row.amount_retrieved_at ?? null,
+    version: storedRequirement.version ?? row.version ?? 1,
+    createdAt: storedRequirement.createdAt ?? row.created_at ?? new Date().toISOString(),
+    updatedAt: storedRequirement.updatedAt ?? row.updated_at ?? new Date().toISOString(),
+  } as ApplicationFeeRequirement)
+}
+
 function mapArtifact(row: Record<string, unknown>): Artifact {
   const author = text(row.author_type, 40)
   const validAuthors = ['david', 'user', 'writer', 'editor', 'referee', 'institution'] as const
@@ -363,18 +424,106 @@ function mapCommunication(row: Record<string, unknown>): ApplicationCommunicatio
   }
 }
 
+function mapAdmissionsClarification(row: Record<string, unknown>): AdmissionsClarification {
+  const contact = row.admissions_contact && typeof row.admissions_contact === 'object' && !Array.isArray(row.admissions_contact)
+    ? row.admissions_contact as AdmissionsClarification['admissionsContact']
+    : null
+  return {
+    id: text(row.id, 80),
+    applicationCaseId: text(row.application_case_id, 80),
+    programme: text(row.programme, 800),
+    institution: text(row.institution, 500),
+    underlyingRequirementId: text(row.requirement_id, 80),
+    questionCategory: text(row.question_category, 80) as AdmissionsClarification['questionCategory'],
+    unresolvedIssue: text(row.unresolved_issue, 4_000),
+    sourcesAlreadyChecked: stringArray(row.sources_checked),
+    conflictingEvidence: Array.isArray(row.conflicting_evidence) ? row.conflicting_evidence as AdmissionsClarification['conflictingEvidence'] : [],
+    whyClarificationIsNecessary: text(row.why_necessary, 4_000),
+    unresolvedReason: text(row.unresolved_reason, 80) as AdmissionsClarification['unresolvedReason'],
+    admissionsContact: contact,
+    contactSource: text(row.contact_source, 300) || null,
+    deadlineRelevance: text(row.deadline_relevance, 1_000) || null,
+    deadline: mapDeadline(row),
+    risk: text(row.risk, 40) as AdmissionsClarification['risk'],
+    draftedQuestion: text(row.drafted_question, 2_000),
+    gmailThreadId: text(row.gmail_thread_id, 256) || null,
+    gmailMessageId: text(row.gmail_message_id, 256) || null,
+    status: text(row.status, 80) as AdmissionsClarification['status'],
+    resolvedInterpretation: row.resolved_interpretation && typeof row.resolved_interpretation === 'object' && !Array.isArray(row.resolved_interpretation) ? row.resolved_interpretation as AdmissionsClarification['resolvedInterpretation'] : null,
+    resultingRequirementUpdates: Array.isArray(row.resulting_requirement_updates) ? row.resulting_requirement_updates as AdmissionsClarification['resultingRequirementUpdates'] : [],
+    evidenceIds: stringArray(row.evidence_ids),
+    idempotencyKey: text(row.idempotency_key, 300),
+    createdAt: text(row.created_at, 80),
+    updatedAt: text(row.updated_at, 80),
+  }
+}
+
+function mapPostSubmissionRequest(row: Record<string, unknown>): PostSubmissionRequest {
+  return {
+    id: text(row.id, 80),
+    applicationCaseId: text(row.application_case_id, 80),
+    institution: text(row.institution, 500),
+    programme: text(row.programme, 800),
+    sourceMessageId: text(row.source_message_id, 256),
+    sourceThreadId: text(row.source_thread_id, 256) || null,
+    sourceProvider: text(row.source_provider, 120),
+    sourceUrl: text(row.source_url, 2_000) || null,
+    exactRequestText: text(row.exact_request_text, 8_000),
+    normalizedRequirement: text(row.normalized_requirement, 2_000),
+    requestType: text(row.request_type, 80) as PostSubmissionRequest['requestType'],
+    requestedArtifactDataType: text(row.requested_artifact_data_type, 160) || null,
+    officialStatusRequired: row.official_status_required === true,
+    finalVersionRequired: row.final_version_required === true,
+    degreeConferralRequired: row.degree_conferral_required === true,
+    translationRequired: row.translation_required === true,
+    certifiedTranslationRequired: row.certified_translation_required === true,
+    institutionDirectDeliveryRequired: row.institution_direct_delivery_required === true,
+    deadline: mapDeadline(row),
+    urgency: text(row.urgency, 40) as PostSubmissionRequest['urgency'],
+    submissionMethod: text(row.submission_method, 80) as PostSubmissionRequest['submissionMethod'],
+    recipient: text(row.recipient, 320) || null,
+    applicantActionRequired: row.applicant_action_required === true,
+    artifactCandidates: stringArray(row.artifact_candidates),
+    status: text(row.status, 80) as PostSubmissionRequest['status'],
+    responseEvidence: stringArray(row.response_evidence),
+    acceptanceEvidence: stringArray(row.acceptance_evidence),
+    rejectionReason: text(row.rejection_reason, 2_000) || null,
+    externalCommitmentDueAt: text(row.external_commitment_due_at, 80) || null,
+    version: Number(row.version ?? 1),
+    history: Array.isArray(row.history) ? row.history as PostSubmissionRequest['history'] : [],
+    idempotencyKey: text(row.idempotency_key, 300),
+    createdAt: text(row.created_at, 80),
+    updatedAt: text(row.updated_at, 80),
+  }
+}
+
 function interactionKind(value: unknown): ProjectionInteractionKind {
   const kind = text(value, 60)
   const map: Record<string, ProjectionInteractionKind> = { approval: 'approve', single_choice: 'choose_one', multiple_choice: 'choose_several', confirmation: 'confirm', correction: 'correction', email: 'email', date: 'date', contact_select: 'contact', attachment_request: 'attachment', attachment_selection: 'attachment', fact: 'short_text', short_text: 'short_text', secure_authentication: 'secure_authentication', payment_approval: 'payment_approval' }
   return map[kind] ?? 'short_text'
 }
 
-function mapInteractions(rows: Array<Record<string, unknown>>, questions: Array<Record<string, unknown>>, taskId: string): ProjectionUserInteraction[] {
+function mapInteractions(rows: Array<Record<string, unknown>>, questions: Array<Record<string, unknown>>, feeRows: Array<Record<string, unknown>>, feeByDbId: Map<string, ApplicationFeeRequirement>, taskId: string): ProjectionUserInteraction[] {
   const recommendationInteractions = rows.map(row => ({ id: text(row.interaction_id, 300), applicationCaseId: text(row.application_case_id, 80), requirementId: text(row.requirement_id, 300) || null, taskId, kind: interactionKind(row.kind), question: text(row.question, 2_000), reason: text(row.reason, 2_000), status: text(row.status, 40) as ProjectionUserInteraction['status'], dedupeKey: text(row.idempotency_key, 300) || text(row.interaction_id, 300) || null, deadline: null }))
   const questionInteractions = questions
     .filter(row => text(row.status, 60) === 'awaiting_user')
     .map(row => ({ id: `question:${text(row.id, 80)}`, applicationCaseId: text(row.application_case_id, 80), requirementId: text(row.application_requirement_id, 300) || null, taskId, kind: interactionKind(row.input_type === 'file' ? 'attachment' : row.approval_requirement === 'submission' ? 'approval' : row.input_type === 'date' ? 'date' : 'short_text'), question: text(row.exact_prompt, 2_000), reason: text(row.last_error, 2_000) || 'This portal question needs your confirmed answer.', status: 'pending' as const, dedupeKey: text(row.question_key, 300) || text(row.id, 80), deadline: null }))
-  return [...recommendationInteractions, ...questionInteractions]
+  const feeInteractions = feeRows.map(row => {
+    const requirement = feeByDbId.get(text(row.fee_requirement_id, 80))
+    return {
+      id: text(row.interaction_key ?? row.id, 300),
+      applicationCaseId: text(row.application_case_id, 80),
+      requirementId: requirement?.id ?? null,
+      taskId,
+      kind: interactionKind(row.interaction_kind),
+      question: text(row.question, 2_000),
+      reason: text(row.reason, 2_000),
+      status: text(row.status, 40) === 'open' ? 'pending' as const : text(row.status, 40) === 'answered' ? 'answered' as const : 'invalid' as const,
+      dedupeKey: text(row.idempotency_key, 300) || text(row.interaction_key, 300) || null,
+      deadline: mapDeadline(row),
+    }
+  })
+  return [...recommendationInteractions, ...questionInteractions, ...feeInteractions]
 }
 
 function mapExternalCommitments(evidence: Evidence[]): ProjectionExternalCommitment[] {
@@ -398,7 +547,7 @@ function mapExternalCommitments(evidence: Evidence[]): ProjectionExternalCommitm
   })
 }
 
-function mapCase(row: Record<string, unknown>, requirements: Requirement[], contacts: ApplicationContact[], assignments: HumanAssignment[], checkpoints: PortalCheckpoint[], evidence: Evidence[], communications: ApplicationCommunication[]): ApplicationCase {
+function mapCase(row: Record<string, unknown>, requirements: Requirement[], contacts: ApplicationContact[], assignments: HumanAssignment[], checkpoints: PortalCheckpoint[], evidence: Evidence[], communications: ApplicationCommunication[], feeRequirement?: ApplicationFeeRequirement | null): ApplicationCase {
   const data = record(row.data)
   return {
     ...data,
@@ -409,6 +558,7 @@ function mapCase(row: Record<string, unknown>, requirements: Requirement[], cont
     writerAssignmentIds: assignments.map(assignment => assignment.id), communications: communications.map(communication => communication.id), approvalIds: stringArray(data.approvalIds ?? data.approval_ids), deadlines: Array.isArray(data.deadlines) ? data.deadlines as ApplicationCase['deadlines'] : [],
     submittedValues: Array.isArray(data.submittedValues) ? data.submittedValues as ApplicationCase['submittedValues'] : [], portalCheckpoints: checkpoints.map(checkpoint => checkpoint.id), evidenceIds: evidence.map(item => item.id), blockers: stringArray(data.blockers),
     nextAction: text(row.next_action, 500), finalOutcome: text(row.final_outcome, 500) || null, applicationId: text(row.application_id, 255) || null, submissionAttemptKey: text(row.submission_attempt_key, 300) || null, submittedAt: text(row.submitted_at, 80) || null, createdAt: text(row.created_at, 80), updatedAt: text(row.updated_at, 80),
+    feeRequirement: feeRequirement ?? null,
   }
 }
 
@@ -416,7 +566,7 @@ function mapCase(row: Record<string, unknown>, requirements: Requirement[], cont
 export async function loadApplicationWorkspace(taskId: string): Promise<ApplicationWorkspaceState> {
   const client = await getCloudClient()
   const user = await currentUser()
-  if (!client || !user) return { campaign: null, opportunities: [], cases: [], artifacts: [], evidence: [], contacts: [], assignments: [], checkpoints: [], communications: [], interactions: [], state: null }
+  if (!client || !user) return { campaign: null, opportunities: [], cases: [], artifacts: [], evidence: [], contacts: [], assignments: [], checkpoints: [], communications: [], admissionsClarifications: [], postSubmissionRequests: [], interactions: [], state: null }
 
   const campaignResult = await client
     .from('application_campaigns')
@@ -427,9 +577,9 @@ export async function loadApplicationWorkspace(taskId: string): Promise<Applicat
     .limit(1)
     .maybeSingle<Record<string, unknown>>()
   if (campaignResult.error) throw new Error(campaignResult.error.message)
-  if (!campaignResult.data) return { campaign: null, opportunities: [], cases: [], artifacts: [], evidence: [], contacts: [], assignments: [], checkpoints: [], communications: [], interactions: [], state: null }
+  if (!campaignResult.data) return { campaign: null, opportunities: [], artifacts: [], evidence: [], contacts: [], assignments: [], checkpoints: [], communications: [], admissionsClarifications: [], postSubmissionRequests: [], interactions: [], cases: [], state: null }
   const campaignId = text(campaignResult.data.id, 80)
-  const [opportunityResult, caseResult, requirementResult, contactResult, assignmentResult, checkpointResult, evidenceResult, communicationResult, artifactResult, recommendationInteractionResult, questionResult] = await Promise.all([
+  const [opportunityResult, caseResult, requirementResult, contactResult, assignmentResult, checkpointResult, evidenceResult, communicationResult, artifactResult, recommendationInteractionResult, questionResult, feeRequirementResult, feeInteractionResult, admissionsClarificationResult, postSubmissionResult] = await Promise.all([
     client.from('application_opportunities').select('*').eq('user_id', user.id).eq('campaign_id', campaignId).order('created_at'),
     client.from('application_cases').select('*').eq('user_id', user.id).eq('campaign_id', campaignId).order('created_at'),
     client.from('application_requirements').select('*').eq('user_id', user.id),
@@ -441,8 +591,13 @@ export async function loadApplicationWorkspace(taskId: string): Promise<Applicat
     client.from('application_artifacts').select('*').eq('user_id', user.id),
     client.from('application_recommendation_interactions').select('*').eq('user_id', user.id),
     client.from('application_questions').select('*').eq('user_id', user.id),
+    client.from('application_fee_requirements').select('*').eq('user_id', user.id).eq('campaign_id', campaignId),
+    client.from('application_fee_interactions').select('*').eq('user_id', user.id),
+    client.from('application_admissions_clarifications').select('*').eq('user_id', user.id).eq('campaign_id', campaignId),
+    client.from('application_post_submission_requests').select('*').eq('user_id', user.id).eq('campaign_id', campaignId),
   ])
-  for (const result of [opportunityResult, caseResult, requirementResult, contactResult, assignmentResult, checkpointResult, evidenceResult, communicationResult, artifactResult, recommendationInteractionResult, questionResult]) {
+  for (const result of [opportunityResult, caseResult, requirementResult, contactResult, assignmentResult, checkpointResult, evidenceResult, communicationResult, artifactResult, recommendationInteractionResult, questionResult, feeRequirementResult, feeInteractionResult, admissionsClarificationResult, postSubmissionResult]) {
+    if (result.error?.code === '42P01' && [feeRequirementResult, feeInteractionResult, admissionsClarificationResult, postSubmissionResult].includes(result)) continue
     if (result.error) throw new Error(result.error.message)
   }
   const campaign = mapCampaign(campaignResult.data)
@@ -464,17 +619,45 @@ export async function loadApplicationWorkspace(taskId: string): Promise<Applicat
   const recommendationInteractions = (recommendationInteractionResult.data ?? []) as Array<Record<string, unknown>>
   const questions = (questionResult.data ?? []) as Array<Record<string, unknown>>
   const caseIds = new Set(caseRows.map(row => text(row.id, 80)))
+  const feeRequirementRows = feeRequirementResult.error?.code === '42P01' ? [] : (feeRequirementResult.data ?? []) as Array<Record<string, unknown>>
+  const feeInteractionRows = feeInteractionResult.error?.code === '42P01' ? [] : (feeInteractionResult.data ?? []) as Array<Record<string, unknown>>
+  const admissionsClarificationRows = admissionsClarificationResult.error?.code === '42P01' ? [] : (admissionsClarificationResult.data ?? []) as Array<Record<string, unknown>>
+  const postSubmissionRows = postSubmissionResult.error?.code === '42P01' ? [] : (postSubmissionResult.data ?? []) as Array<Record<string, unknown>>
+  const admissionsClarifications = admissionsClarificationRows.filter(row => caseIds.has(text(row.application_case_id, 80))).map(mapAdmissionsClarification)
+  const postSubmissionRequests = postSubmissionRows.filter(row => caseIds.has(text(row.application_case_id, 80))).map(mapPostSubmissionRequest)
+  for (const clarification of admissionsClarifications) {
+    const caseId = clarification.applicationCaseId
+    requirementsByCase.set(caseId, [...(requirementsByCase.get(caseId) ?? []), admissionsClarificationToRequirement(clarification)])
+  }
+  for (const request of postSubmissionRequests) {
+    const caseId = request.applicationCaseId
+    requirementsByCase.set(caseId, [...(requirementsByCase.get(caseId) ?? []), postSubmissionRequestToRequirement(request)])
+  }
+  const mappedFeeRequirements = feeRequirementRows.filter(row => caseIds.has(text(row.application_case_id, 80))).map(row => ({ row, requirement: mapFeeRequirement(row) }))
+  const feeByCase = new Map(mappedFeeRequirements.map(item => [text(item.row.application_case_id, 80), item.requirement]))
+  const feeByDbId = new Map(mappedFeeRequirements.map(item => [text(item.row.id, 80), item.requirement]))
   const mappedEvidence = evidence.filter(row => caseIds.has(text(row.application_case_id, 80))).map(mapEvidence)
   const mappedArtifacts = artifacts.filter(row => !row.application_case_id || caseIds.has(text(row.application_case_id, 80))).map(mapArtifact)
   const mappedContacts = contacts.filter(row => caseIds.has(text(row.application_case_id, 80))).map(row => mapContact(row, text(row.application_case_id, 80)))
   const mappedAssignments = assignments.filter(row => caseIds.has(text(row.application_case_id, 80))).map(mapAssignment)
   const mappedCheckpoints = checkpoints.filter(row => caseIds.has(text(row.application_case_id, 80))).map(mapCheckpoint)
   const mappedCommunications = communications.filter(row => caseIds.has(text(row.application_case_id, 80))).map(mapCommunication)
+  const recoveryInteractions = [
+    ...admissionsClarifications.map(clarification => ({ ...admissionsClarificationToApprovalInteraction(clarification), taskId: campaign.taskId })),
+    ...postSubmissionRequests.flatMap(request => {
+      if (!request.applicantActionRequired || ['complete', 'accepted'].includes(request.status)) return []
+      const plan = planPostSubmissionResponse({ request, artifacts: mappedArtifacts.filter(artifact => artifact.applicationCaseId === request.applicationCaseId) })
+      return plan.action === 'USER_HANDOFF' ? [{ ...progressInteractionToProjectionInteraction(plan.interaction), taskId: campaign.taskId }] : []
+    }),
+  ] as ProjectionUserInteraction[]
   const mappedInteractions = mapInteractions(
     recommendationInteractions.filter(row => caseIds.has(text(row.application_case_id, 80))),
     questions.filter(row => caseIds.has(text(row.application_case_id, 80))),
+    feeInteractionRows.filter(row => caseIds.has(text(row.application_case_id, 80))),
+    feeByDbId,
     campaign.taskId,
   )
+  mappedInteractions.push(...recoveryInteractions)
   return {
     campaign,
     opportunities,
@@ -484,6 +667,8 @@ export async function loadApplicationWorkspace(taskId: string): Promise<Applicat
     assignments: mappedAssignments,
     checkpoints: mappedCheckpoints,
     communications: mappedCommunications,
+    admissionsClarifications,
+    postSubmissionRequests,
     interactions: mappedInteractions,
     cases: caseRows.map(row => {
       const caseId = text(row.id, 80)
@@ -492,7 +677,7 @@ export async function loadApplicationWorkspace(taskId: string): Promise<Applicat
       const caseCheckpoints = checkpoints.filter(checkpoint => text(checkpoint.application_case_id, 80) === caseId).map(mapCheckpoint)
       const caseEvidence = mappedEvidence.filter(item => item.applicationCaseId === caseId)
       const caseCommunications = communications.filter(item => text(item.application_case_id, 80) === caseId).map(mapCommunication)
-      return mapCase(row, requirementsByCase.get(caseId) ?? [], caseContacts, caseAssignments, caseCheckpoints, caseEvidence, caseCommunications)
+      return mapCase(row, requirementsByCase.get(caseId) ?? [], caseContacts, caseAssignments, caseCheckpoints, caseEvidence, caseCommunications, feeByCase.get(caseId) ?? null)
     }),
     state: null,
   }

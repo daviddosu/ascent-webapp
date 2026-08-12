@@ -14,12 +14,12 @@ Deno.test('Google execution requires every Gmail, Calendar, contacts, and identi
   )
 })
 
-Deno.test('Google identity scope URLs satisfy the email and profile aliases', () => {
+Deno.test('Google identity aliases satisfy the canonical identity scope URLs', () => {
   const scopes: string[] = googleExecutionScopes
-    .filter(scope => scope !== 'email' && scope !== 'profile')
+    .filter(scope => !scope.startsWith('https://www.googleapis.com/auth/userinfo.'))
   scopes.push(
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
+    'email',
+    'profile',
   )
   assertEquals(missingGoogleExecutionScopes(scopes), [])
 })

@@ -1293,6 +1293,7 @@ export function validateResearchProposalDraft(input: {
   draft: ProposalDraft
   requirement: ResearchProposalRequirement
   expected: { applicantName: string; institution: string; programme: string; supervisor?: string | null; proposalType?: ResearchProposalType }
+  checkRenderedFormat?: boolean
   verifiedFactIds?: string[]
   verifiedEvidenceIds?: string[]
   verifiedFacts?: Array<{ id: string; value: string }>
@@ -1309,6 +1310,7 @@ export function validateResearchProposalDraft(input: {
   const words = wordCount(draft.body)
   const characters = [...draft.body].length
   const extension = proposalExtension(draft.filename)
+  const checkRenderedFormat = input.checkRenderedFormat !== false
   if (draft.applicationCaseId !== requirement.applicationCaseId) add('wrong_application_case', 'The proposal draft belongs to a different ApplicationCase.')
   if (normalized(draft.applicantName) !== normalized(expected.applicantName)) add('wrong_applicant', 'The proposal draft applicant does not match the verified applicant.')
   if (normalized(draft.institution) !== normalized(expected.institution)) add('wrong_institution', 'The proposal draft names the wrong institution.')
@@ -1316,12 +1318,12 @@ export function validateResearchProposalDraft(input: {
   if (expected.supervisor && normalized(draft.supervisor ?? '') !== normalized(expected.supervisor)) add('wrong_supervisor', 'The proposal draft names the wrong supervisor.')
   if (expected.proposalType && draft.proposalType !== expected.proposalType) add('wrong_proposal_type', 'The proposal draft has the wrong programme-specific proposal type.')
   if (requirement.wordLimit !== null && words > requirement.wordLimit) add('word_limit_exceeded', `The proposal has ${words} words; the programme limit is ${requirement.wordLimit}.`)
-  if (requirement.pageLimit !== null && (draft.pageCount === null || draft.pageCount > requirement.pageLimit)) add('page_limit_exceeded', `The proposal page count does not satisfy the ${requirement.pageLimit}-page limit.`)
+  if (checkRenderedFormat && requirement.pageLimit !== null && (draft.pageCount === null || draft.pageCount > requirement.pageLimit)) add('page_limit_exceeded', `The proposal page count does not satisfy the ${requirement.pageLimit}-page limit.`)
   for (const section of requirement.requiredSections) if (!sectionAppears(draft.body, section)) add('required_section_missing', `Required section missing: ${section}.`)
   for (const section of requirement.prohibitedSections) if (sectionAppears(draft.body, section)) add('prohibited_section_present', `Prohibited section present: ${section}.`)
-  if (requirement.formatRequirements.fileTypes.length && !requirement.formatRequirements.fileTypes.includes(extension)) add('wrong_file_type', `The file type ${extension || 'unknown'} is not one of the required formats.`)
-  if (!draft.filename || /[\\/\n\r]/.test(draft.filename)) add('invalid_filename', 'The proposal filename is missing or unsafe.')
-  if (requirement.formatRequirements.filenamePattern && !new RegExp(requirement.formatRequirements.filenamePattern).test(draft.filename)) add('filename_requirement_failed', 'The filename does not satisfy the programme pattern.')
+  if (checkRenderedFormat && requirement.formatRequirements.fileTypes.length && !requirement.formatRequirements.fileTypes.includes(extension)) add('wrong_file_type', `The file type ${extension || 'unknown'} is not one of the required formats.`)
+  if (checkRenderedFormat && (!draft.filename || /[\\/\n\r]/.test(draft.filename))) add('invalid_filename', 'The proposal filename is missing or unsafe.')
+  if (checkRenderedFormat && requirement.formatRequirements.filenamePattern && !new RegExp(requirement.formatRequirements.filenamePattern).test(draft.filename)) add('filename_requirement_failed', 'The filename does not satisfy the programme pattern.')
   if (/\b(?:lorem ipsum|insert (?:citation|name|text)|todo|tbd|placeholder|your name here|xxx+)\b/i.test(draft.body)) add('placeholder_text', 'The proposal contains placeholder text.')
   if (!new TextEncoder().encode(draft.body).length) add('empty_document', 'The proposal body is empty.')
   const knownFactIds = new Set(input.verifiedFactIds ?? [])

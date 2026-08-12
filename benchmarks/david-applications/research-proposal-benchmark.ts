@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { createPdf } from '../../supabase/functions/_shared/pdf.ts'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { renderResearchProposalLatex } from '../../supabase/functions/_shared/research-proposal-pdf.ts'
 import {
   applyProposalRevisionPlan,
   buildProposalArtifactIdentity,
@@ -62,7 +63,8 @@ export type ResearchProposalBenchmarkCaseResult = {
   userInterventions: number
   contextResolvedPercentage: number
   trace: Array<Record<string, unknown>>
-  outputPaths: { source: string; pdf: string; brief: string; manifest: string }
+  formatMetadata: ReturnType<typeof renderResearchProposalLatex>['formatMetadata']
+  outputPaths: { source: string; pdf: string; tex: string; paper?: string; refs?: string; compileLog: string; atsText: string; brief: string; manifest: string }
 }
 
 export type ResearchProposalBenchmarkReport = {
@@ -177,6 +179,43 @@ function writeJson(path: string, value: unknown) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
 }
 
+function compileResearchProposalLatex(latex: string, auxiliaryFiles: Array<{ filename: string; content: string }>) {
+  const directory = mkdtempSync(join(resolve(process.env.TMPDIR ?? '/tmp'), 'shotcount-research-proposal-'))
+  const texPath = join(directory, 'main.tex')
+  const pdfPath = join(directory, 'main.pdf')
+  const compiler = process.env.PDFLATEX_BIN ?? 'pdflatex'
+  try {
+    writeFileSync(texPath, latex, 'utf8')
+    for (const file of auxiliaryFiles) writeFileSync(join(directory, file.filename), file.content, 'utf8')
+    const logs: string[] = []
+    const compilePass = () => {
+      try {
+        return execFileSync(compiler, ['-interaction=nonstopmode', '-halt-on-error', '-file-line-error', '-no-shell-escape', '-output-directory', directory, texPath], { cwd: directory, encoding: 'utf8', maxBuffer: 2_000_000 })
+      } catch (error) {
+        const detail = error && typeof error === 'object' ? error as { stdout?: string; stderr?: string; message?: string } : {}
+        throw new Error([detail.stdout, detail.stderr, detail.message].filter(Boolean).join('\n').slice(-6_000))
+      }
+    }
+    logs.push(compilePass())
+    const bibliography = auxiliaryFiles.find(file => file.filename === 'refs.bib')
+    if (bibliography && /@\w+\s*\{/i.test(bibliography.content)) {
+      logs.push(execFileSync(process.env.BIBTEX_BIN ?? 'bibtex', ['main'], { cwd: directory, encoding: 'utf8', maxBuffer: 2_000_000 }))
+      logs.push(compilePass())
+      logs.push(compilePass())
+    } else {
+      logs.push(compilePass())
+    }
+    const pdf = readFileSync(pdfPath)
+    const atsText = execFileSync(process.env.PDFTOTEXT_BIN ?? 'pdftotext', [pdfPath, '-'], { encoding: 'utf8', maxBuffer: 2_000_000 })
+    const info = execFileSync(process.env.PDFINFO_BIN ?? 'pdfinfo', [pdfPath], { encoding: 'utf8', maxBuffer: 500_000 })
+    const pageCount = Number(info.match(/^Pages:\s+(\d+)/mi)?.[1] ?? 0)
+    if (!Number.isInteger(pageCount) || pageCount < 1) throw new Error('The compiled research-proposal page count could not be verified.')
+    return { pdf, atsText, pageCount, compilationLog: logs.join('\n') }
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+}
+
 function profileSources(caseId: string) {
   return [
     { id: `profile:${caseId}`, kind: 'applicant_profile' as const, title: 'ApplicantProfile', verified: true, facts: [
@@ -251,7 +290,7 @@ function makeDraft(input: { caseId: string; requirement: ResearchProposalRequire
 
 function publicResult(result: ResearchProposalBenchmarkCaseResult) {
   return {
-    caseId: result.caseId, title: result.title, success: result.success, requirement: result.requirement, requirementEvidenceBacked: result.requirementEvidenceBacked, recommendedDirection: result.recommendedDirection, interaction: result.interaction, writerBrief: result.brief.briefText, supervisorFeedback: result.supervisorFeedback, revisionPlan: result.revisionPlan, finalProposalPreview: result.finalProposalPreview, artifact: result.artifact, delivery: result.delivery, failuresRecovered: result.failuresRecovered, userInterventions: result.userInterventions, contextResolvedPercentage: result.contextResolvedPercentage, outputPaths: result.outputPaths,
+    caseId: result.caseId, title: result.title, success: result.success, requirement: result.requirement, requirementEvidenceBacked: result.requirementEvidenceBacked, recommendedDirection: result.recommendedDirection, interaction: result.interaction, writerBrief: result.brief.briefText, supervisorFeedback: result.supervisorFeedback, revisionPlan: result.revisionPlan, finalProposalPreview: result.finalProposalPreview, artifact: result.artifact, delivery: result.delivery, failuresRecovered: result.failuresRecovered, userInterventions: result.userInterventions, contextResolvedPercentage: result.contextResolvedPercentage, formatMetadata: result.formatMetadata, outputPaths: result.outputPaths,
   }
 }
 
@@ -334,9 +373,16 @@ function runCase(testCase: ResearchProposalBenchmarkCase, outputRoot: string): R
     workflow = transitionResearchProposalWorkflow(workflow, { type: 'applicant_approved' })
     workflow = transitionResearchProposalWorkflow(workflow, { type: 'supervisor_feedback_received', feedback: [{ id: `approval:${caseId}`, sourceMessageId: `approval:${caseId}`, sourceThreadId: null, category: 'approval', requestedChange: 'No supervisor changes were required in this controlled case.', severity: 'informational', clarificationRequired: false, revisionPriority: 4, evidenceIds: [`approval:${caseId}`], revisionRequirements: [], affectsStrategy: false }] })
   }
-  const pdfBytes = createPdf('Research Proposal', currentDraft.body)
+  const rendered = renderResearchProposalLatex({ draft: currentDraft, requirement: detected.requirement, proposalTitle: selected.workingTitle })
+  const compiled = compileResearchProposalLatex(rendered.latex, rendered.auxiliaryFiles)
+  currentDraft = { ...currentDraft, fileType: 'application/pdf', pageCount: compiled.pageCount, formatMetadata: { ...currentDraft.formatMetadata, ...rendered.formatMetadata, compiled: true } }
+  validation = validateResearchProposalDraft({ draft: currentDraft, requirement: detected.requirement, expected: { applicantName: 'Ada Okafor', institution: 'Northbridge University', programme: 'DPhil Computational Physics', supervisor: 'Professor Grace Nwosu', proposalType: detected.requirement.proposalType }, verifiedFactIds: context.verifiedFacts.map(fact => fact.id), verifiedEvidenceIds: [...researchDossier.sources.map(item => item.id), ...researchDossier.relevantRecentPapers.flatMap(item => item.citation.sourceEvidenceIds)], verifiedFacts: context.verifiedFacts.map(fact => ({ id: fact.id, value: fact.value })), sourcePapers: researchDossier.relevantRecentPapers, evidence: researchDossier.sources, consistencyClaims: [{ field: 'research experience', value: 'Built uncertainty-aware surrogate models for turbulent flow.', sourceFactId: 'fact:research-experience' }] })
+  quality = evaluateResearchProposalQuality({ draft: currentDraft, validation, strategy: currentStrategy, reviewer: 'david' })
+  if (!quality.passed) throw new Error(`${caseId} formatted proposal failed final quality gate: ${quality.hardFailures.map(issue => issue.code).join(', ')}`)
+  trace.push({ event: 'canonical_latex_rendered', templateId: rendered.templateId, templateVersion: rendered.templateVersion, rendererVersion: rendered.rendererVersion, pageCount: compiled.pageCount, sections: rendered.sectionsRendered, formatMetadata: rendered.formatMetadata })
+  const pdfBytes = compiled.pdf
   const checksum = sha256(pdfBytes)
-  const artifact = buildProposalArtifactIdentity({ applicationCaseId: caseId, institution: currentDraft.institution, programme: currentDraft.programme, supervisor: currentDraft.supervisor, proposalVersion: currentDraft.version, sourceArtifactId: currentDraft.id, renderedArtifactId: `artifact:${caseId}:v${currentDraft.version}`, sourceFilename: `${safeFilename(currentDraft.filename.replace(/\.pdf$/i, ''))}.txt`, renderedFilename: currentDraft.filename, checksum, provenanceSourceIds: [...new Set([...currentDraft.sourceFactIds, ...currentDraft.sourceEvidenceIds])], approvalState: 'approved', uploadState: 'uploaded' })
+  const artifact = buildProposalArtifactIdentity({ applicationCaseId: caseId, institution: currentDraft.institution, programme: currentDraft.programme, supervisor: currentDraft.supervisor, proposalVersion: currentDraft.version, sourceArtifactId: currentDraft.id, renderedArtifactId: `artifact:${caseId}:v${currentDraft.version}`, sourceFilename: `${safeFilename(currentDraft.filename.replace(/\.pdf$/i, ''))}.tex`, renderedFilename: currentDraft.filename, checksum, provenanceSourceIds: [...new Set([...currentDraft.sourceFactIds, ...currentDraft.sourceEvidenceIds])], approvalState: 'approved', uploadState: 'uploaded' })
   let artifactCheck = verifyApprovedProposalArtifact({ artifact, expected: { applicationCaseId: caseId, institution: currentDraft.institution, programme: currentDraft.programme, supervisor: currentDraft.supervisor, proposalVersion: currentDraft.version, checksum } })
   if (testCase.failure === 'stale_artifact') {
     artifactCheck = verifyApprovedProposalArtifact({ artifact, expected: { applicationCaseId: caseId, institution: currentDraft.institution, programme: currentDraft.programme, supervisor: currentDraft.supervisor, proposalVersion: currentDraft.version + 1, checksum } })
@@ -364,15 +410,26 @@ function runCase(testCase: ResearchProposalBenchmarkCase, outputRoot: string): R
   const outputDir = resolve(outputRoot, caseId)
   const sourcePath = resolve(outputDir, `${safeFilename(currentDraft.filename.replace(/\.pdf$/i, ''))}.txt`)
   const pdfPath = resolve(outputDir, currentDraft.filename)
+  const texPath = resolve(outputDir, `${safeFilename(currentDraft.filename.replace(/\.pdf$/i, ''))}.tex`)
+  const paperPath = resolve(outputDir, 'paper.tex')
+  const refsPath = resolve(outputDir, 'refs.bib')
+  const compileLogPath = resolve(outputDir, `${safeFilename(currentDraft.filename.replace(/\.pdf$/i, ''))}.compile.log.txt`)
+  const atsTextPath = resolve(outputDir, `${safeFilename(currentDraft.filename.replace(/\.pdf$/i, ''))}.ats.txt`)
   const briefPath = resolve(outputDir, 'writer-brief.txt')
   const manifestPath = resolve(outputDir, 'production-output.json')
   mkdirSync(outputDir, { recursive: true })
   writeFileSync(sourcePath, `${currentDraft.body}\n`, 'utf8')
+  writeFileSync(texPath, rendered.latex, 'utf8')
+  for (const file of rendered.auxiliaryFiles) writeFileSync(resolve(outputDir, file.filename), file.content, 'utf8')
+  writeFileSync(compileLogPath, compiled.compilationLog, 'utf8')
+  writeFileSync(atsTextPath, compiled.atsText, 'utf8')
   writeFileSync(pdfPath, pdfBytes)
   writeFileSync(briefPath, `${formatResearchProposalBrief(brief)}\n`, 'utf8')
   const result: ResearchProposalBenchmarkCaseResult = {
-    caseId, title: testCase.title, success: detected.evidenceBacked && validation.valid && quality.passed && artifactCheck.valid && delivery.valid && workflow.currentState === 'complete', requirement: detected.requirement, requirementEvidenceBacked: detected.evidenceBacked, recommendedDirection: selected, interaction, brief, writerAssignment: writer.assignment, supervisorFeedback, revisionPlan, finalProposalPreview: currentDraft.body.slice(0, 2_400), artifact, delivery, failuresRecovered, userInterventions: workflow.userInterventions, contextResolvedPercentage: Math.round(context.autonomousResolutionRate * 100), trace: [...trace, { event: 'proposal_complete', state: workflow.currentState, artifactId: artifact.renderedArtifactId, checksum, wordCount: validation.wordCount, pageCount: validation.pageCount }], outputPaths: { source: sourcePath, pdf: pdfPath, brief: briefPath, manifest: manifestPath },
+    caseId, title: testCase.title, success: detected.evidenceBacked && validation.valid && quality.passed && artifactCheck.valid && delivery.valid && workflow.currentState === 'complete', requirement: detected.requirement, requirementEvidenceBacked: detected.evidenceBacked, recommendedDirection: selected, interaction, brief, writerAssignment: writer.assignment, supervisorFeedback, revisionPlan, finalProposalPreview: currentDraft.body.slice(0, 2_400), artifact, delivery, failuresRecovered, userInterventions: workflow.userInterventions, contextResolvedPercentage: Math.round(context.autonomousResolutionRate * 100), formatMetadata: rendered.formatMetadata, trace: [...trace, { event: 'proposal_complete', state: workflow.currentState, artifactId: artifact.renderedArtifactId, checksum, wordCount: validation.wordCount, pageCount: validation.pageCount }], outputPaths: { source: sourcePath, pdf: pdfPath, tex: texPath, compileLog: compileLogPath, atsText: atsTextPath, brief: briefPath, manifest: manifestPath },
   }
+  result.outputPaths.paper = paperPath
+  result.outputPaths.refs = refsPath
   writeJson(manifestPath, publicResult(result))
   return result
 }

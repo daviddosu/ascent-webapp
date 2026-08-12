@@ -90,6 +90,7 @@ import {
   type ResearchProposalStrategy,
   type ResearchProposalWorkflow,
 } from '../_shared/research-proposal-workflow.ts'
+import { renderResearchProposalLatex } from '../_shared/research-proposal-pdf.ts'
 import {
   createInterAgentRequest,
   buildReadinessReport,
@@ -106,6 +107,37 @@ import {
   submissionIdempotencyKey,
   type DavidApplicationState,
 } from '../_shared/david-applications.ts'
+import {
+  admissionsClarificationRow,
+  admissionsQuestionCategories,
+  createAdmissionsClarification,
+  findRelevantAdmissionsThread,
+  generateAdmissionsClarificationEmail,
+  researchAdmissionsRequirement,
+  resolveAdmissionsContact,
+  type AdmissionsQuestionCategory,
+} from '../_shared/application-recovery.ts'
+import {
+  applyFeeWorkflowEvent,
+  createApplicationFeeRequirement,
+  createApplicationFeeWorkflow,
+  createPaymentAuthorization,
+  evaluateFeeWaiverEligibility,
+  feeRequirementId,
+  normalizeFeeRequirement,
+  planApplicationFeeWorkflow,
+  reconcilePaymentObservations,
+  safePaymentHandoffPayload,
+  type ApplicationFeePaymentEvidence,
+  type ApplicationFeeRequirement,
+  type ApplicationFeeWorkflow,
+  type FeeApplicantFact,
+  type FeePaymentObservation,
+  type FeeProgressInteraction,
+  type FeeWaiverDecision,
+  type FeeWaiverPolicy,
+  type FeeWorkflowEvent,
+} from '../_shared/application-fee-workflow.ts'
 import {
   applyRecommendationInteraction,
   buildRecommendationRequirementGraph,
@@ -1128,9 +1160,9 @@ async function hashValue(value: unknown) {
     .join('')
 }
 
-async function compileApplicationCv(latex: string, expectedName: string, expectedEmail: string) {
+async function compileApplicationLatex(latex: string, expectedName: string, expectedEmail = '', auxiliaryFiles: Array<{ filename: string; content: string }> = []) {
   const endpoint = Deno.env.get('SHOTCOUNT_LATEX_COMPILER_URL')
-  if (!endpoint) throw new Error('The LaTeX compiler service is not configured. Set SHOTCOUNT_LATEX_COMPILER_URL before generating a canonical CV.')
+  if (!endpoint) throw new Error('The LaTeX compiler service is not configured. Set SHOTCOUNT_LATEX_COMPILER_URL before generating a canonical application document.')
   const token = Deno.env.get('SHOTCOUNT_LATEX_COMPILER_TOKEN') ?? ''
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30_000)
@@ -1141,11 +1173,11 @@ async function compileApplicationCv(latex: string, expectedName: string, expecte
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ latex, expected_name: expectedName, expected_email: expectedEmail }),
+      body: JSON.stringify({ latex, expected_name: expectedName, expected_email: expectedEmail, auxiliary_files: auxiliaryFiles }),
       signal: controller.signal,
     })
     const result = await response.json().catch(() => ({})) as Record<string, unknown>
-    if (!response.ok || result.ok !== true) throw new Error(safeString(result.error, 4_000) || 'The LaTeX compiler rejected the CV.')
+    if (!response.ok || result.ok !== true) throw new Error(safeString(result.error, 4_000) || 'The LaTeX compiler rejected the application document.')
     const encodedPdf = safeString(result.pdf_base64, 30_000_000)
     const binary = encodedPdf ? atob(encodedPdf) : ''
     const pdf = Uint8Array.from(binary, character => character.charCodeAt(0))
@@ -1162,7 +1194,7 @@ async function compileApplicationCv(latex: string, expectedName: string, expecte
       recovered: result.recovered === true,
     }
   } catch (error) {
-    if (controller.signal.aborted) throw new Error('The LaTeX compiler timed out. Retry the canonical CV pipeline.')
+    if (controller.signal.aborted) throw new Error('The LaTeX compiler timed out. Retry the canonical application-document pipeline.')
     throw error
   } finally {
     clearTimeout(timeout)
@@ -1258,7 +1290,7 @@ async function actionIdempotencyKey(run: AgentRunRow, toolName: string, argument
   const consequential = new Set([
     'gmail.create_draft', 'gmail.send_message',
     'calendar.create_event', 'calendar.update_event', 'calendar.delete_event',
-    'browser.select_flight', 'browser.submit', 'application.submit', 'application.generate_cv', 'application.generate_supervisor_outreach',
+    'browser.select_flight', 'browser.submit', 'application.submit', 'application.generate_cv', 'application.generate_supervisor_outreach', 'application.execute_fee_payment',
   ])
   // Consequential writes must retain one identity across approval/resume and
   // same-run continuation. Including current_step lets a stale callback turn
@@ -1273,6 +1305,7 @@ function approvalTitle(toolName: string) {
   if (toolName === 'calendar.update_event') return 'Update this calendar event?'
   if (toolName === 'calendar.delete_event') return 'Cancel this calendar event?'
   if (toolName === 'application.submit') return 'Submit this application?'
+  if (toolName === 'application.execute_fee_payment') return 'Approve this application-fee payment?'
   return 'Submit this action?'
 }
 
@@ -1288,6 +1321,9 @@ function approvalSummary(toolName: string, argumentsValue: Record<string, unknow
   }
   if (toolName === 'application.submit') {
     return `Submit the approved application package once. The final portal action for ${safeString(argumentsValue.application_case_id, 120)} remains idempotent.`
+  }
+  if (toolName === 'application.execute_fee_payment') {
+    return `Authorize one application-fee payment of ${safeString(argumentsValue.currency, 3)} ${Number(argumentsValue.amount).toFixed(2)} for ${safeString(argumentsValue.application_case_id, 120)}. Card and bank authentication stay on the secure provider surface.`
   }
   return safeString(argumentsValue.expected_effect, 500) || 'Perform the exact browser action shown here.'
 }
@@ -1432,6 +1468,58 @@ async function approvalPayload(
       entryUrl: safeString(state.entryUrl, 2000),
       currentUrl: safeString(state.currentUrl, 2000),
       actions: state.actions,
+    }
+  } else if (toolName === 'application.execute_fee_payment') {
+    const applicationCaseId = safeString(argumentsValue.application_case_id, 80)
+    const feeRequirementId = safeString(argumentsValue.fee_requirement_id, 240)
+    const authorizationId = safeString(argumentsValue.payment_authorization_id, 240)
+    const [feeResult, authorizationResult] = await Promise.all([
+      admin.from('application_fee_requirements')
+        .select('id,application_case_id,total_payable,currency,payment_state,payment_stage,version,institution,programme,payment_deadline,deadline_timezone')
+        .eq('id', feeRequirementId)
+        .eq('application_case_id', applicationCaseId)
+        .eq('user_id', run.user_id)
+        .maybeSingle(),
+      admin.from('application_fee_payment_authorizations')
+        .select('id,application_case_id,fee_requirement_id,amount,currency,maximum_authorized_amount,requirement_version,status,expires_at,merchant,reason')
+        .eq('id', authorizationId)
+        .eq('application_case_id', applicationCaseId)
+        .eq('fee_requirement_id', feeRequirementId)
+        .eq('user_id', run.user_id)
+        .maybeSingle(),
+    ])
+    if (feeResult.error?.code === '42P01' || authorizationResult.error?.code === '42P01') throw new Error('The canonical application-fee migration is not applied.')
+    if (feeResult.error || authorizationResult.error || !feeResult.data || !authorizationResult.data) throw new Error('The current application-fee authorization could not be re-read.')
+    const fee = feeResult.data
+    const authorization = authorizationResult.data
+    const exactAmount = Number(fee.total_payable)
+    const requestedAmount = Number(argumentsValue.amount)
+    if (!Number.isFinite(exactAmount) || exactAmount !== requestedAmount || safeString(fee.currency, 3) !== safeString(argumentsValue.currency, 3) || Number(authorization.amount) !== exactAmount || safeString(authorization.currency, 3) !== safeString(fee.currency, 3)) {
+      throw new Error('The current application-fee amount or currency changed. Prepare a new approval.')
+    }
+    if (!['AWAITING_USER_APPROVAL', 'APPROVED', 'PAYMENT_HANDOFF_REQUIRED'].includes(safeString(fee.payment_state, 80))) throw new Error('The application fee is not at the approval or secure-handoff boundary.')
+    if (!['pending', 'approved'].includes(safeString(authorization.status, 80))) throw new Error('The one-time application-fee approval is no longer active.')
+    if (Number(authorization.maximum_authorized_amount) < exactAmount || Number(authorization.requirement_version) > Number(fee.version) || Date.parse(safeString(authorization.expires_at, 80)) <= Date.now()) throw new Error('The application-fee approval is stale, expired, or below the current amount.')
+    const handoff = safePaymentHandoffPayload({
+      applicationCaseId,
+      feeRequirementId,
+      authorizationId,
+      sessionId: safeString(argumentsValue.session_id, 120) || null,
+      handoffUrl: safeString(argumentsValue.handoff_url, 2000) || null,
+      provider: safeString(argumentsValue.provider, 160),
+      stage: 'secure_payment_handoff',
+      amount: exactAmount,
+      currency: safeString(fee.currency, 3),
+      idempotencyKey: safeString(argumentsValue.idempotency_key, 300),
+    })
+    payload.preview = {
+      ...handoff,
+      merchant: safeString(authorization.merchant, 240),
+      reason: safeString(authorization.reason, 1000),
+      deadline: safeString(fee.payment_deadline, 80) || null,
+      exact_amount_reverified: true,
+      payment_result: 'not_yet_known',
+      receipt_required: true,
     }
   } else {
     payload.preview = argumentsValue
@@ -4146,6 +4234,8 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     'application.record_proposal_delivery': ['PORTAL_OBSERVATION'],
     'application.generate_supervisor_outreach': ['DOCUMENT_CHECKSUM', 'OFFICIAL_SOURCE'],
     'application.coordinate_work_samples': ['DOCUMENT_CHECKSUM'],
+    'application.record_fee_waiver_result': ['PORTAL_OBSERVATION'],
+    'application.reconcile_fee_payment': ['PORTAL_OBSERVATION'],
     'application.build_readiness_report': ['PORTAL_SAVE_CONFIRMATION'],
     'application.submit': ['SUBMISSION_CONFIRMATION', 'APPLICATION_ID'],
   }
@@ -4163,6 +4253,10 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     'application.coordinate_recommendations': 'referee',
     'application.coordinate_academic_evidence': 'academic_evidence',
     'application.coordinate_work_samples': 'document',
+    'application.coordinate_fee': 'fee_waiver',
+    'application.record_fee_waiver_result': 'fee_waiver',
+    'application.execute_fee_payment': 'payment',
+    'application.reconcile_fee_payment': 'payment',
     'application.build_referee_support_pack': 'referee',
     'application.build_readiness_report': 'readiness',
     'application.generate_document': 'document',
@@ -4182,6 +4276,9 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     'application.coordinate_recommendations': 'REFEREE_EXECUTION',
     'application.coordinate_academic_evidence': 'DOCUMENT_PREPARATION',
     'application.coordinate_work_samples': 'DOCUMENT_PREPARATION',
+    'application.coordinate_fee': 'DOCUMENT_PREPARATION',
+    'application.record_fee_waiver_result': 'DOCUMENT_PREPARATION',
+    'application.reconcile_fee_payment': 'DOCUMENT_PREPARATION',
     'application.build_referee_support_pack': 'REFEREE_EXECUTION',
     'application.build_readiness_report': 'SUBMISSION_APPROVAL',
     'application.submit': 'POST_SUBMISSION',
@@ -4202,7 +4299,7 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
   if (toolName === 'application.generate_document') requiredFactIds.push(...stringArray(argumentsValue.source_fact_ids, 300))
   if (toolName === 'application.finalize_research_proposal') requiredFactIds.push(...stringArray(argumentsValue.source_fact_ids, 240))
   const completingRequirement = toolName === 'application.update_requirement' && ['verified', 'ready', 'approved', 'submitted'].includes(safeString(argumentsValue.status, 80))
-  const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.generate_supervisor_outreach', 'application.finalize_research_proposal', 'application.record_proposal_delivery', 'application.submit'].includes(toolName) || completingRequirement
+  const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.generate_supervisor_outreach', 'application.finalize_research_proposal', 'application.record_proposal_delivery', 'application.submit', 'application.execute_fee_payment'].includes(toolName) || completingRequirement
   if (completingRequirement) {
     if (safeString(argumentsValue.linked_artifact_id, 80)) evidenceByTool[toolName] = ['DOCUMENT_CHECKSUM']
     else if (stringArray(argumentsValue.verification_evidence_ids, 120).length) evidenceByTool[toolName] = ['PORTAL_OBSERVATION']
@@ -4252,6 +4349,9 @@ function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) 
     referee: ['application.coordinate_recommendations', 'application.build_referee_support_pack', 'application.request_roon', 'application.update_requirement'],
     professor: ['application.record_contact', 'application.generate_supervisor_outreach', 'application.request_roon', 'application.update_requirement'],
     communication: ['application.request_roon', 'application.record_communication', 'application.update_requirement'],
+    application_fee: ['application.coordinate_fee', 'application.record_fee_waiver_result', 'application.reconcile_fee_payment', 'application.update_requirement', 'application.record_evidence', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.execute_fee_payment'],
+    fee_waiver: ['application.coordinate_fee', 'application.record_fee_waiver_result', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'agent.request_context'],
+    payment: ['application.coordinate_fee', 'application.execute_fee_payment', 'application.reconcile_fee_payment', 'application.record_evidence', 'application.update_requirement', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'],
     portal_field: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint'],
     portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint'],
     supplemental_question: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.resolve_supplemental_questions', 'application.record_portal_checkpoint', 'application.create_human_assignment', 'agent.request_context'],
@@ -4261,6 +4361,380 @@ function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) 
     post_submission: ['application.request_roon', 'application.record_evidence', 'application.update_requirement'],
   }
   return new Set(byType[requirement?.type ?? 'official_requirement'] ?? ['application.update_requirement'])
+}
+
+type PersistedFeeWorkflow = {
+  row: Record<string, unknown>
+  workflow: ApplicationFeeWorkflow
+}
+
+function feeRequirementFromRow(row: Record<string, unknown>, applicationCaseId: string, userId: string): ApplicationFeeRequirement {
+  const sourceProvenance = Array.isArray(row.source_provenance) ? row.source_provenance : []
+  const evidenceRequirements = Array.isArray(row.waiver_evidence_requirements) ? row.waiver_evidence_requirements : []
+  return normalizeFeeRequirement({
+    ...createApplicationFeeRequirement({
+      applicationCaseId,
+      applicantId: userId,
+      university: safeString(row.institution, 500),
+      programme: safeString(row.programme, 800),
+      applicationCycle: safeString(row.application_cycle, 160),
+    }),
+    id: safeString(row.requirement_key, 240) || feeRequirementId(applicationCaseId),
+    feeRequired: typeof row.fee_required === 'boolean' ? row.fee_required : null,
+    feeAmount: typeof row.fee_amount === 'number' ? row.fee_amount : Number.isFinite(Number(row.fee_amount)) ? Number(row.fee_amount) : null,
+    currency: safeString(row.currency, 12) || null,
+    processingServiceFee: typeof row.processing_service_fee === 'number' ? row.processing_service_fee : Number.isFinite(Number(row.processing_service_fee)) ? Number(row.processing_service_fee) : null,
+    totalPayable: typeof row.total_payable === 'number' ? row.total_payable : Number.isFinite(Number(row.total_payable)) ? Number(row.total_payable) : null,
+    paymentDeadline: safeString(row.payment_deadline, 80) || null,
+    deadlineTimezone: safeString(row.deadline_timezone, 120) || null,
+    paymentStage: safeString(row.payment_stage, 80) as ApplicationFeeRequirement['paymentStage'] || 'APPLICATION',
+    paymentMethod: safeString(row.payment_method, 80) as ApplicationFeeRequirement['paymentMethod'] || null,
+    waiverAvailability: safeString(row.waiver_availability, 80) as ApplicationFeeRequirement['waiverAvailability'] || 'unknown',
+    waiverType: safeString(row.waiver_type, 120) as ApplicationFeeRequirement['waiverType'] || null,
+    waiverEligibilityState: safeString(row.waiver_eligibility_state, 80) as ApplicationFeeRequirement['waiverEligibilityState'] || 'NOT_RESEARCHED',
+    waiverDecisionState: safeString(row.waiver_decision_state, 80) as ApplicationFeeRequirement['waiverDecisionState'] || 'NOT_RESEARCHED',
+    waiverEvidenceRequirements: evidenceRequirements as ApplicationFeeRequirement['waiverEvidenceRequirements'],
+    waiverSubmissionMethod: safeString(row.waiver_submission_method, 80) as ApplicationFeeRequirement['waiverSubmissionMethod'] || null,
+    waiverDeadline: safeString(row.waiver_deadline, 80) || null,
+    waiverCode: safeString(row.waiver_code, 1_000) || null,
+    paymentState: safeString(row.payment_state, 80) as ApplicationFeeRequirement['paymentState'] || 'NOT_REQUIRED',
+    providerPortalTransactionId: safeString(row.provider_portal_transaction_id, 256) || null,
+    receiptArtifactId: safeString(row.receipt_artifact_id, 80) || null,
+    verificationEvidenceIds: stringArray(row.verification_evidence_ids, 240),
+    blocker: safeString(row.blocker, 2_000) || null,
+    riskState: safeString(row.risk_state, 40) as ApplicationFeeRequirement['riskState'] || 'NONE',
+    sourceProvenance: sourceProvenance as ApplicationFeeRequirement['sourceProvenance'],
+    amountRetrievedAt: safeString(row.amount_retrieved_at, 80) || null,
+    version: Number.isFinite(Number(row.version)) ? Number(row.version) : 1,
+    createdAt: safeString(row.created_at, 80) || new Date().toISOString(),
+    updatedAt: safeString(row.updated_at, 80) || new Date().toISOString(),
+  })
+}
+
+function feeWorkflowFromRow(row: Record<string, unknown>, applicationCaseId: string, userId: string): ApplicationFeeWorkflow {
+  const stored = recordValue(row.workflow)
+  if (stored.version === 'application-fee-waiver-payment@1' && stored.requirement && typeof stored.requirement === 'object') return stored as unknown as ApplicationFeeWorkflow
+  return createApplicationFeeWorkflow({ requirement: feeRequirementFromRow(row, applicationCaseId, userId) })
+}
+
+async function loadPersistedFeeWorkflow(admin: AdminClient, run: AgentRunRow, applicationCaseId: string): Promise<PersistedFeeWorkflow | null> {
+  const result = await admin.from('application_fee_requirements')
+    .select('*')
+    .eq('application_case_id', applicationCaseId)
+    .eq('user_id', run.user_id)
+    .maybeSingle()
+  if (result.error?.code === '42P01') throw new Error('The canonical application-fee migration is not applied.')
+  if (result.error) throw new Error(result.error.message)
+  if (!result.data) return null
+  const row = recordValue(result.data)
+  return { row, workflow: feeWorkflowFromRow(row, applicationCaseId, run.user_id) }
+}
+
+function feeWorkflowRow(workflow: ApplicationFeeWorkflow, run: AgentRunRow, caseRow: Record<string, unknown>, existingId?: string | null) {
+  const requirement = workflow.requirement
+  const uuidOrNull = (value: string | null) => value && /^[0-9a-f-]{36}$/i.test(value) ? value : null
+  return {
+    ...(existingId && uuidOrNull(existingId) ? { id: existingId } : {}),
+    user_id: run.user_id,
+    application_case_id: requirement.applicationCaseId,
+    task_id: safeString(caseRow.task_id, 80) || run.task_id,
+    campaign_id: safeString(caseRow.campaign_id, 80) || null,
+    requirement_key: requirement.id,
+    institution: requirement.university,
+    programme: requirement.programme,
+    application_cycle: requirement.applicationCycle,
+    fee_required: requirement.feeRequired,
+    fee_amount: requirement.feeAmount,
+    currency: requirement.currency,
+    processing_service_fee: requirement.processingServiceFee,
+    total_payable: requirement.totalPayable,
+    payment_deadline: requirement.paymentDeadline,
+    deadline_timezone: requirement.deadlineTimezone,
+    payment_stage: requirement.paymentStage,
+    payment_method: requirement.paymentMethod,
+    waiver_availability: requirement.waiverAvailability,
+    waiver_type: requirement.waiverType,
+    waiver_eligibility_state: requirement.waiverEligibilityState,
+    waiver_decision_state: requirement.waiverDecisionState,
+    waiver_submission_method: requirement.waiverSubmissionMethod,
+    waiver_deadline: requirement.waiverDeadline,
+    waiver_code: requirement.waiverCode,
+    payment_state: requirement.paymentState,
+    provider_portal_transaction_id: requirement.providerPortalTransactionId,
+    receipt_artifact_id: uuidOrNull(requirement.receiptArtifactId),
+    verification_evidence_ids: requirement.verificationEvidenceIds,
+    blocker: requirement.blocker,
+    risk_state: requirement.riskState,
+    source_provenance: requirement.sourceProvenance,
+    waiver_evidence_requirements: requirement.waiverEvidenceRequirements,
+    workflow,
+    amount_retrieved_at: requirement.amountRetrievedAt,
+    version: requirement.version,
+  }
+}
+
+async function persistFeeWorkflow(admin: AdminClient, run: AgentRunRow, workflow: ApplicationFeeWorkflow, caseRow: Record<string, unknown>, existingId?: string | null) {
+  const saved = await admin.from('application_fee_requirements')
+    .upsert(feeWorkflowRow(workflow, run, caseRow, existingId), { onConflict: 'user_id,application_case_id' })
+    .select('id')
+    .single()
+  if (saved.error?.code === '42P01') throw new Error('The canonical application-fee migration is not applied.')
+  if (saved.error || !saved.data) throw new Error(saved.error?.message ?? 'The application-fee requirement could not be persisted.')
+  const feeRequirementId = safeString(saved.data.id, 80)
+  let paymentAuthorizationId: string | null = null
+  if (workflow.paymentAuthorization) {
+    const authorization = workflow.paymentAuthorization
+    const authorizationResult = await admin.from('application_fee_payment_authorizations').upsert({
+      user_id: run.user_id,
+      application_case_id: authorization.applicationCaseId,
+      fee_requirement_id: feeRequirementId,
+      authorization_key: authorization.id,
+      merchant: authorization.merchant,
+      amount: authorization.amount,
+      currency: authorization.currency,
+      maximum_authorized_amount: authorization.maximumAuthorizedAmount,
+      reason: authorization.reason,
+      requirement_version: authorization.requirementVersion,
+      status: authorization.status,
+      authorized_at: authorization.authorizedAt,
+      expires_at: authorization.expiresAt,
+      idempotency_key: authorization.idempotencyKey,
+    }, { onConflict: 'user_id,authorization_key' }).select('id').single()
+    if (authorizationResult.error?.code === '42P01') throw new Error('The canonical application-fee migration is not applied.')
+    if (authorizationResult.error || !authorizationResult.data) throw new Error(authorizationResult.error?.message ?? 'The application-fee payment authorization could not be persisted.')
+    paymentAuthorizationId = safeString(authorizationResult.data.id, 80) || null
+  }
+  if (workflow.auditTrail.length) {
+    const auditRows = workflow.auditTrail.map(event => ({
+      user_id: run.user_id,
+      application_case_id: event.applicationCaseId,
+      fee_requirement_id: feeRequirementId,
+      event_type: event.type,
+      idempotency_key: event.idempotencyKey,
+      non_sensitive_data: event.nonSensitiveData,
+    }))
+    const auditResult = await admin.from('application_fee_audit_events').upsert(auditRows, { onConflict: 'user_id,idempotency_key' })
+    if (auditResult.error) throw new Error(auditResult.error.message)
+  }
+  return { feeRequirementId, paymentAuthorizationId }
+}
+
+async function persistFeeInteraction(admin: AdminClient, run: AgentRunRow, applicationCaseId: string, feeRequirementDbId: string, interaction: FeeProgressInteraction | null) {
+  if (!interaction) return
+  const result = await admin.from('application_fee_interactions').upsert({
+    user_id: run.user_id,
+    application_case_id: applicationCaseId,
+    fee_requirement_id: feeRequirementDbId,
+    interaction_key: interaction.id,
+    interaction_kind: interaction.kind,
+    status: 'open',
+    question: interaction.question,
+    reason: interaction.reason,
+    options: interaction.options,
+    known_context: interaction.knownContext,
+    exact_amount: interaction.exactAmount ?? null,
+    sensitive: interaction.sensitive,
+    deadline: interaction.deadline,
+    idempotency_key: `fee-interaction:${interaction.id}`,
+  }, { onConflict: 'user_id,interaction_key' })
+  if (result.error) throw new Error(result.error.message)
+}
+
+function feeEventType(value: unknown): value is FeeWorkflowEvent['type'] {
+  return ['fee_detected', 'waiver_policy_researched', 'eligibility_resolved', 'evidence_added', 'waiver_request_submitted', 'waiver_decision_received', 'payment_deadline_decision'].includes(String(value))
+}
+
+function feeDecisionFromInput(value: Record<string, unknown>): FeeWaiverDecision {
+  return {
+    classification: safeString(value.classification, 80) as FeeWaiverDecision['classification'],
+    receivedAt: safeString(value.received_at ?? value.receivedAt, 80) || new Date().toISOString(),
+    sourceEvidenceIds: stringArray(value.source_evidence_ids ?? value.sourceEvidenceIds, 240),
+    providerMessageId: safeString(value.provider_message_id ?? value.providerMessageId, 256) || null,
+    providerThreadId: safeString(value.provider_thread_id ?? value.providerThreadId, 256) || null,
+    commitmentDueAt: safeString(value.commitment_due_at ?? value.commitmentDueAt, 80) || null,
+    additionalEvidenceRequirementIds: stringArray(value.additional_evidence_requirement_ids ?? value.additionalEvidenceRequirementIds, 240),
+    waiverCode: safeString(value.waiver_code ?? value.waiverCode, 1_000) || null,
+  }
+}
+
+async function prepareAdmissionsClarificationHandoff(
+  admin: AdminClient,
+  run: AgentRunRow,
+  applicationCase: Record<string, unknown>,
+  input: Record<string, unknown>,
+) {
+  const caseId = safeString(applicationCase.id, 80)
+  const caseData = recordValue(applicationCase.data)
+  const requirementId = safeString(input.requirement_id ?? input.requirementId, 80)
+  const institution = safeString(input.institution ?? caseData.institution, 500)
+  const programme = safeString(input.programme ?? input.programme_title ?? caseData.programme ?? caseData.programme_title, 800)
+  const requirementText = safeString(input.exact_unresolved_requirement ?? input.unresolved_issue ?? input.requirement, 4_000)
+  const categoryValue = safeString(input.question_category ?? input.questionCategory, 80) as AdmissionsQuestionCategory
+  const sourceValues = (Array.isArray(input.sources) ? input.sources.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map((value, index) => ({
+    ...(value as Record<string, unknown>),
+    id: safeString((value as Record<string, unknown>).id, 300) || `source-${index + 1}`,
+  })) : []) as unknown as Parameters<typeof researchAdmissionsRequirement>[0]['sources']
+  if (!caseId || !requirementId || !institution || !programme || !requirementText || !admissionsQuestionCategories.includes(categoryValue) || !sourceValues.length) {
+    return { status: 'needs_context' as const, code: 'admissions_clarification_context_missing', message: 'Admissions clarification needs the exact ApplicationCase requirement, institution, programme, one question category, and the official sources already checked.' }
+  }
+  const requirementResult = await admin.from('application_requirements').select('id,application_case_id,name,exact_instructions,status,deadline_at,deadline_timezone').eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+  if (requirementResult.error) throw new Error(requirementResult.error.message)
+  if (!requirementResult.data) return { status: 'needs_context' as const, code: 'admissions_requirement_missing', message: 'The admissions clarification requirement does not belong to this ApplicationCase.' }
+  const portalObservation = input.portal_observation && typeof input.portal_observation === 'object' && !Array.isArray(input.portal_observation) ? recordValue(input.portal_observation) : null
+  const research = researchAdmissionsRequirement({
+    requirementId,
+    questionCategory: categoryValue,
+    unresolvedIssue: requirementText,
+    sources: sourceValues,
+    portalObservation: portalObservation ? {
+      issue: safeString(portalObservation.issue, 2_000) || null,
+      answer: safeString(portalObservation.answer, 2_000) || null,
+      contradictsGuidance: portalObservation.contradicts_guidance === true || portalObservation.contradictsGuidance === true,
+      applicantSpecific: portalObservation.applicant_specific === true || portalObservation.applicantSpecific === true,
+    } : null,
+    applicantSpecificException: input.applicant_specific_exception === true || input.applicantSpecificException === true,
+    now: new Date().toISOString(),
+  })
+  if (research.status === 'RESOLVED') {
+    const updated = await admin.from('application_requirements').update({ status: 'verified', blocker_reason: null, exact_instructions: research.answer ? `${requirementText}\nAuthoritative answer: ${research.answer}`.slice(0, 4_000) : requirementText }).eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id)
+    if (updated.error) throw new Error(updated.error.message)
+    return { status: 'resolved' as const, answer: research.answer, sourceIds: research.selectedSourceIds, requirementId }
+  }
+  const candidateValues = Array.isArray(input.contacts ?? input.contact_candidates)
+    ? (input.contacts ?? input.contact_candidates) as unknown[]
+    : input.contact && typeof input.contact === 'object' && !Array.isArray(input.contact) ? [input.contact] : []
+  const candidates = candidateValues.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(value => {
+    const candidate = value as Record<string, unknown>
+    return {
+      id: safeString(candidate.id, 80) || null,
+      name: safeString(candidate.name, 240) || 'Admissions team',
+      email: safeString(candidate.email, 320),
+      office: safeString(candidate.office, 240) || 'Admissions',
+      role: safeString(candidate.role, 240) || 'Admissions administrator',
+      institution: safeString(candidate.institution, 500) || institution,
+      programme: safeString(candidate.programme, 800) || null,
+      sourceId: safeString(candidate.source_id ?? candidate.sourceId, 300),
+      sourceUrl: safeString(candidate.source_url ?? candidate.sourceUrl, 2_000),
+      sourceKind: safeString(candidate.source_kind ?? candidate.sourceKind, 120) || 'official',
+      verified: candidate.verified === true,
+      current: candidate.current !== false,
+      contactType: safeString(candidate.contact_type ?? candidate.contactType, 80) as 'programme_admissions' | 'graduate_admissions' | 'department_administrator' | 'international_admissions' | 'credential_office' | 'financial_aid' | 'technical_support' | 'general' || 'general',
+    }
+  })
+  const contactResolution = resolveAdmissionsContact({ institution, programme, category: categoryValue, candidates })
+  if (!contactResolution.verified || !contactResolution.contact) {
+    return { status: 'needs_context' as const, code: 'admissions_verified_contact_missing', message: 'Research found no current verified official admissions contact. Provide a contact candidate directly sourced from the institution or let David continue official contact research.', rejected: contactResolution.rejected }
+  }
+  const deadlineInput = input.deadline && typeof input.deadline === 'object' && !Array.isArray(input.deadline) ? recordValue(input.deadline) : {}
+  const deadline = safeString(deadlineInput.dateTime ?? input.deadline_at ?? input.deadlineAt, 120)
+    ? parseDeadline(safeString(deadlineInput.dateTime ?? input.deadline_at ?? input.deadlineAt, 120), safeString(deadlineInput.timezone ?? input.deadline_timezone ?? input.deadlineTimezone, 120) || 'UTC', safeString(deadlineInput.sourceUrl ?? input.deadline_source_url, 2_000) || null)
+    : null
+  const communicationResult = await admin.from('application_communications').select('id,application_case_id,provider_message_id,provider_thread_id,direction,data,created_at').eq('user_id', run.user_id).eq('application_case_id', caseId).eq('provider', 'gmail').order('created_at', { ascending: false }).limit(50)
+  if (communicationResult.error) throw new Error(communicationResult.error.message)
+  const communications = (communicationResult.data ?? []).map(row => {
+    const data = recordValue(row.data)
+    return {
+      id: safeString(row.id, 80),
+      applicationCaseId: safeString(row.application_case_id, 80),
+      providerMessageId: safeString(row.provider_message_id, 256) || null,
+      providerThreadId: safeString(row.provider_thread_id, 256) || null,
+      direction: safeString(row.direction, 40) as 'inbound' | 'outbound',
+      excerpt: safeString(data.excerpt, 2_000) || null,
+      createdAt: safeString(row.created_at, 80),
+      institution: safeString(data.institution, 500) || null,
+      programme: safeString(data.programme, 800) || null,
+      contactEmail: safeString(data.to ?? data.contact_email ?? data.contactEmail ?? data.from, 320) || null,
+    }
+  })
+  const clarificationBase = {
+    applicationCaseId: caseId,
+    programme,
+    institution,
+    underlyingRequirementId: requirementId,
+    questionCategory: categoryValue,
+    unresolvedIssue: requirementText,
+    sourcesAlreadyChecked: research.sourcesChecked,
+    conflictingEvidence: research.conflictingEvidence,
+    whyClarificationIsNecessary: research.whyClarificationIsNecessary ?? 'The requirement remains unresolved after authoritative research.',
+    unresolvedReason: research.reason ?? 'UNKNOWN',
+    admissionsContact: contactResolution.contact,
+    deadline,
+  }
+  const thread = findRelevantAdmissionsThread({ clarification: clarificationBase, contactEmail: contactResolution.contact.email, communications })
+  const applicantName = safeString(input.applicant_name ?? input.applicantName ?? run.context.applicant_name, 240) || 'the applicant'
+  const email = generateAdmissionsClarificationEmail({
+    clarification: { ...clarificationBase, gmailThreadId: thread?.threadId ?? null, gmailMessageId: thread?.inReplyToMessageId ?? null },
+    requirement: { name: safeString(requirementResult.data.name, 500) || requirementText, exactInstructions: requirementText, id: requirementId },
+    programme,
+    institution,
+    applicantName,
+    applicationId: safeString(applicationCase.application_id, 255) || null,
+    intake: safeString(input.intake, 120) || null,
+    deadline,
+    contact: contactResolution.contact,
+    sources: sourceValues,
+    conflictingSources: research.conflictingEvidence.map(item => ({ title: item.sourceId, excerpt: item.excerpt ?? undefined, answer: item.answer })),
+    question: safeString(input.question, 1_500) || undefined,
+  })
+  const clarification = createAdmissionsClarification({
+    id: crypto.randomUUID(),
+    applicationCaseId: caseId,
+    programme,
+    institution,
+    requirementId,
+    category: categoryValue,
+    unresolvedIssue: requirementText,
+    research,
+    contact: contactResolution,
+    email,
+    deadline,
+    approvalRequired: true,
+    risk: ['critical', 'high', 'medium', 'low'].includes(safeString(input.risk, 40)) ? safeString(input.risk, 40) as 'low' | 'medium' | 'high' | 'critical' : undefined,
+    idempotencyKey: safeString(input.idempotency_key ?? input.idempotencyKey, 300) || undefined,
+  })
+  const contactRow = await admin.from('application_contacts').upsert({
+    user_id: run.user_id,
+    application_case_id: caseId,
+    task_id: run.task_id,
+    campaign_id: safeString(applicationCase.campaign_id, 80) || null,
+    agent_run_id: run.id,
+    kind: 'admissions',
+    name: contactResolution.contact.name,
+    email: contactResolution.contact.email,
+    provider_contact_id: contactResolution.contact.id,
+    consent_to_contact: input.consent_to_contact === true || input.consentToContact === true,
+    data: { source_id: contactResolution.contact.sourceId, source_url: contactResolution.contact.sourceUrl, verified: true, current: true },
+    idempotency_key: `admissions-contact:${caseId}:${contactResolution.contact.email}`,
+  }, { onConflict: 'user_id,idempotency_key' }).select('id,email').maybeSingle()
+  if (contactRow.error) throw new Error(contactRow.error.message)
+  const saved = await admin.from('application_admissions_clarifications').upsert({
+    ...admissionsClarificationRow(clarification, run.user_id),
+    task_id: run.task_id,
+    campaign_id: safeString(applicationCase.campaign_id, 80) || null,
+  }, { onConflict: 'user_id,idempotency_key' }).select('id,status').maybeSingle()
+  if (saved.error?.code === '42P01') throw new Error('The admissions clarification migration is not applied.')
+  if (saved.error) throw new Error(saved.error.message)
+  return {
+    status: 'prepared' as const,
+    clarification,
+    payload: {
+      ...input,
+      to: [contactResolution.contact.email],
+      contact_id: safeString(contactRow.data?.id, 80) || null,
+      contact_kind: 'admissions',
+      subject: email.subject,
+      body_text: email.textPlain,
+      body_html: email.textHtml,
+      thread_id: email.threadId,
+      in_reply_to_message_id: email.inReplyToMessageId,
+      clarification_id: clarification.id,
+      sources_checked: research.sourcesChecked,
+      evidence_map: email.evidenceMap,
+      approved_for_send: input.approved_for_send === true || input.approvedForSend === true,
+    },
+    existingThread: thread,
+    savedId: safeString(saved.data?.id, 80) || clarification.id,
+  }
 }
 
 async function executeProviderTool(
@@ -6373,7 +6847,7 @@ async function executeProviderTool(
       const row = recordValue(item)
       return { field: safeString(row.field, 300), value: safeString(row.value, 4_000), sourceFactId: safeString(row.sourceFactId ?? row.source_fact_id, 240) }
     }).filter(item => item.field && item.value && item.sourceFactId)
-    const validation = validateResearchProposalDraft({ draft, requirement, expected: { applicantName: safeString(recordValue(argumentsValue.expected).applicantName ?? recordValue(argumentsValue.expected).applicant_name, 240) || draft.applicantName, institution: safeString(recordValue(argumentsValue.expected).institution, 300) || requirement.institution, programme: safeString(recordValue(argumentsValue.expected).programme, 500) || requirement.programme, supervisor: safeString(recordValue(argumentsValue.expected).supervisor, 300) || dossier.supervisor, proposalType: requirement.proposalType }, verifiedFactIds, verifiedEvidenceIds, verifiedFacts, sourcePapers, evidence, consistencyClaims, otherProgrammeNames: stringArray(recordValue(argumentsValue.expected).otherProgrammeNames ?? recordValue(argumentsValue.expected).other_programme_names, 500), otherSupervisorNames: stringArray(recordValue(argumentsValue.expected).otherSupervisorNames ?? recordValue(argumentsValue.expected).other_supervisor_names, 500) })
+    const validation = validateResearchProposalDraft({ draft, requirement, checkRenderedFormat: false, expected: { applicantName: safeString(recordValue(argumentsValue.expected).applicantName ?? recordValue(argumentsValue.expected).applicant_name, 240) || draft.applicantName, institution: safeString(recordValue(argumentsValue.expected).institution, 300) || requirement.institution, programme: safeString(recordValue(argumentsValue.expected).programme, 500) || requirement.programme, supervisor: safeString(recordValue(argumentsValue.expected).supervisor, 300) || dossier.supervisor, proposalType: requirement.proposalType }, verifiedFactIds, verifiedEvidenceIds, verifiedFacts, sourcePapers, evidence, consistencyClaims, otherProgrammeNames: stringArray(recordValue(argumentsValue.expected).otherProgrammeNames ?? recordValue(argumentsValue.expected).other_programme_names, 500), otherSupervisorNames: stringArray(recordValue(argumentsValue.expected).otherSupervisorNames ?? recordValue(argumentsValue.expected).other_supervisor_names, 500) })
     const quality = evaluateResearchProposalQuality({ draft, validation, strategy: workflow.strategy, reviewer: 'david' })
     let nextWorkflow: ResearchProposalWorkflow
     try {
@@ -6436,7 +6910,7 @@ async function executeProviderTool(
     if (!direction || !dossier || !workflow.strategy) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_workflow_incomplete', message: 'The proposal direction, dossier, and strategy must be complete before finalization.', value: { valid: false }, actionStatus: 'failed' }
     const requirement = workflow.requirement
     const verifiedFacts = workflow.context.verifiedFacts.map(fact => ({ id: fact.id, value: fact.value }))
-    const validation = validateResearchProposalDraft({ draft, requirement, expected: { applicantName: draft.applicantName, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalType: requirement.proposalType }, verifiedFactIds: workflow.context.verifiedFacts.map(fact => fact.id), verifiedEvidenceIds: [...dossier.sources.map(source => source.id), ...dossier.relevantRecentPapers.flatMap(paper => paper.sourceEvidenceIds)], verifiedFacts, sourcePapers: dossier.relevantRecentPapers, evidence: dossier.sources })
+    const validation = validateResearchProposalDraft({ draft, requirement, checkRenderedFormat: false, expected: { applicantName: draft.applicantName, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalType: requirement.proposalType }, verifiedFactIds: workflow.context.verifiedFacts.map(fact => fact.id), verifiedEvidenceIds: [...dossier.sources.map(source => source.id), ...dossier.relevantRecentPapers.flatMap(paper => paper.sourceEvidenceIds)], verifiedFacts, sourcePapers: dossier.relevantRecentPapers, evidence: dossier.sources })
     const quality = evaluateResearchProposalQuality({ draft, validation, strategy: workflow.strategy, reviewer: 'david' })
     if (!quality.passed) return { kind: 'pause', status: 'needs_context', code: 'research_proposal_quality_failed', message: 'The exact artifact cannot be finalized until deterministic proposal review passes.', value: { valid: false, validation, quality, workflow_state: workflow.currentState }, actionStatus: 'failed' }
     const approvedByApplicant = argumentsValue.approved === true || run.context?.proposal_approval_response === true || /^(?:approve|approved|true)$/i.test(safeString(run.context?.proposal_approval_response, 80))
@@ -6448,12 +6922,45 @@ async function executeProviderTool(
     }
     const destination = safeString(argumentsValue.destination, 500) || requirement.uploadLocation || 'Research documents'
     const filename = safeString(draft.filename, 300).replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.pdf$/i, '') + '.pdf'
-    const pdf = createPdf('Research Proposal', draft.body)
-    const persisted = await persistApplicationGeneratedAsset(admin, run, { bytes: pdf, filename, mimeType: 'application/pdf', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'programme_derivative', sourceAssetIds: [], templateVersion: 'research-proposal-pdf@1', promptVersion: workflow.version, metadata: { artifact_role: 'research_proposal_final', workflow_version: workflow.version, proposal_type: requirement.proposalType, requirement_state: requirement.requirementState, proposal_version: draft.version, source_fact_ids: stringArray(argumentsValue.source_fact_ids, 240), source_evidence_ids: stringArray(argumentsValue.source_evidence_ids, 240), deterministic_validation: validation, quality_review: quality } })
-    const approvedArtifactRow = await admin.from('application_artifacts').update({ approval_status: 'approved', final_submission_destination: destination, metadata: { artifact_role: 'research_proposal_final', workflow_version: workflow.version, proposal_type: requirement.proposalType, deterministic_validation: validation, quality_review: quality } }).eq('id', persisted.artifactId).eq('application_case_id', caseId).eq('user_id', run.user_id).select('id').single()
+    let rendered
+    let compiled
+    try {
+      rendered = renderResearchProposalLatex({ draft, requirement, proposalTitle: direction.workingTitle })
+      compiled = await compileApplicationLatex(rendered.latex, draft.applicantName, '', rendered.auxiliaryFiles)
+    } catch (error) {
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_latex_render_failed', message: error instanceof Error ? error.message.slice(0, 4_000) : 'The validated proposal could not be formatted into the canonical LaTeX PDF.', value: { valid: false, renderer: 'latex', template_id: 'uc_shss_research_proposal_v1' }, actionStatus: 'failed' }
+    }
+    if (!Number.isInteger(compiled.pageCount) || compiled.pageCount < 1 || compiled.pageCount > 40) {
+      return { kind: 'pause', status: 'needs_context', code: 'research_proposal_rendered_page_count_invalid', message: 'The formatted proposal did not produce a safe, verifiable page count.', value: { valid: false, page_count: compiled.pageCount }, actionStatus: 'failed' }
+    }
+    const formattedDraft: ProposalDraft = {
+      ...draft,
+      filename,
+      fileType: 'application/pdf',
+      pageCount: compiled.pageCount,
+      formatMetadata: { ...draft.formatMetadata, ...rendered.formatMetadata, compiled: true, compilationRecovered: compiled.recovered },
+    }
+    const formattedValidation = validateResearchProposalDraft({ draft: formattedDraft, requirement, expected: { applicantName: draft.applicantName, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalType: requirement.proposalType }, verifiedFactIds: workflow.context.verifiedFacts.map(fact => fact.id), verifiedEvidenceIds: [...dossier.sources.map(source => source.id), ...dossier.relevantRecentPapers.flatMap(paper => paper.sourceEvidenceIds)], verifiedFacts, sourcePapers: dossier.relevantRecentPapers, evidence: dossier.sources })
+    const formattedQuality = evaluateResearchProposalQuality({ draft: formattedDraft, validation: formattedValidation, strategy: workflow.strategy, reviewer: 'david' })
+    if (!formattedQuality.passed) return { kind: 'pause', status: 'needs_context', code: 'research_proposal_formatted_artifact_failed', message: 'The formatted proposal did not pass the final deterministic review gate.', value: { valid: false, validation: formattedValidation, quality: formattedQuality, page_count: compiled.pageCount, format_metadata: rendered.formatMetadata }, actionStatus: 'failed' }
+    const sourceAssetIds = stringArray(argumentsValue.source_asset_ids, 240)
+    const templateVersion = `${rendered.templateId}@${rendered.templateVersion}`
+    const texFilename = filename.replace(/\.pdf$/i, '.tex')
+    const logFilename = filename.replace(/\.pdf$/i, '.compile.log.txt')
+    const atsFilename = filename.replace(/\.pdf$/i, '.ats.txt')
+    const previewFilename = filename.replace(/\.pdf$/i, '.preview.png')
+    const tex = await persistApplicationGeneratedAsset(admin, run, { bytes: new TextEncoder().encode(rendered.latex), filename: texFilename, mimeType: 'text/plain', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'generated_derivative', sourceAssetIds, templateVersion, promptVersion: workflow.version, metadata: { artifact_role: 'research_proposal_latex_source', workflow_version: workflow.version, template_id: rendered.templateId, template_version: rendered.templateVersion, renderer_version: rendered.rendererVersion, format_metadata: rendered.formatMetadata } })
+    const auxiliaryAssets = await Promise.all(rendered.auxiliaryFiles.map(file => persistApplicationGeneratedAsset(admin, run, { bytes: new TextEncoder().encode(file.content), filename: file.filename, mimeType: file.filename.endsWith('.bib') ? 'text/x-bibtex' : 'text/plain', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'generated_derivative', sourceAssetIds, templateVersion, promptVersion: workflow.version, metadata: { artifact_role: 'research_proposal_auxiliary_source', workflow_version: workflow.version, template_id: rendered.templateId, template_version: rendered.templateVersion, renderer_version: rendered.rendererVersion, auxiliary_filename: file.filename } })))
+    const auxiliaryArtifactIds = Object.fromEntries(rendered.auxiliaryFiles.map((file, index) => [file.filename, auxiliaryAssets[index]?.artifactId ?? null]))
+    const log = await persistApplicationGeneratedAsset(admin, run, { bytes: new TextEncoder().encode(compiled.compilationLog), filename: logFilename, mimeType: 'text/plain', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'generated_derivative', sourceAssetIds, templateVersion, promptVersion: workflow.version, metadata: { artifact_role: 'research_proposal_compilation_log', workflow_version: workflow.version, template_id: rendered.templateId, template_version: rendered.templateVersion, renderer_version: rendered.rendererVersion } })
+    const ats = await persistApplicationGeneratedAsset(admin, run, { bytes: new TextEncoder().encode(compiled.atsText), filename: atsFilename, mimeType: 'text/plain', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'generated_derivative', sourceAssetIds, templateVersion, promptVersion: workflow.version, metadata: { artifact_role: 'research_proposal_ats_text', workflow_version: workflow.version, template_id: rendered.templateId, page_count: compiled.pageCount } })
+    const preview = compiled.preview?.length ? await persistApplicationGeneratedAsset(admin, run, { bytes: compiled.preview, filename: previewFilename, mimeType: 'image/png', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'generated_derivative', sourceAssetIds, templateVersion, promptVersion: workflow.version, metadata: { artifact_role: 'research_proposal_preview', workflow_version: workflow.version, template_id: rendered.templateId, page_count: compiled.pageCount } }) : null
+    const artifactMetadata = { artifact_role: 'research_proposal_final', workflow_version: workflow.version, template_id: rendered.templateId, template_version: rendered.templateVersion, renderer_version: rendered.rendererVersion, proposal_type: requirement.proposalType, requirement_state: requirement.requirementState, proposal_version: draft.version, page_count: compiled.pageCount, format_metadata: rendered.formatMetadata, compilation_recovered: compiled.recovered, latex_artifact_id: tex.artifactId, auxiliary_artifact_ids: auxiliaryArtifactIds, compilation_log_artifact_id: log.artifactId, ats_text_artifact_id: ats.artifactId, preview_artifact_id: preview?.artifactId ?? null, source_fact_ids: stringArray(argumentsValue.source_fact_ids, 240), source_evidence_ids: stringArray(argumentsValue.source_evidence_ids, 240), deterministic_validation: formattedValidation, quality_review: formattedQuality }
+    const persisted = await persistApplicationGeneratedAsset(admin, run, { bytes: compiled.pdf, filename, mimeType: 'application/pdf', applicationCaseId: caseId, opportunityId: context.opportunity.id, kind: 'programme_derivative', sourceAssetIds, templateVersion, promptVersion: workflow.version, metadata: artifactMetadata })
+    const approvedArtifactRow = await admin.from('application_artifacts').update({ approval_status: 'approved', final_submission_destination: destination, metadata: artifactMetadata }).eq('id', persisted.artifactId).eq('application_case_id', caseId).eq('user_id', run.user_id).select('id').single()
     if (approvedArtifactRow.error || !approvedArtifactRow.data) throw new Error(approvedArtifactRow.error?.message ?? 'The proposal artifact approval record could not be persisted.')
     await admin.from('file_assets').update({ approval_status: 'approved' }).eq('id', persisted.assetId).eq('user_id', run.user_id)
-    const artifact = buildProposalArtifactIdentity({ applicationCaseId: caseId, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalVersion: draft.version, sourceArtifactId: draft.id, renderedArtifactId: persisted.artifactId, sourceFilename: null, renderedFilename: filename, checksum: persisted.checksum, provenanceSourceIds: [...new Set([...draft.sourceFactIds, ...draft.sourceEvidenceIds, ...stringArray(argumentsValue.source_evidence_ids, 240)])], approvalState: 'approved', uploadState: 'not_uploaded' })
+    const artifact = buildProposalArtifactIdentity({ applicationCaseId: caseId, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalVersion: draft.version, sourceArtifactId: draft.id, renderedArtifactId: persisted.artifactId, sourceFilename: texFilename, renderedFilename: filename, checksum: persisted.checksum, provenanceSourceIds: [...new Set([...draft.sourceFactIds, ...draft.sourceEvidenceIds, ...sourceAssetIds, ...stringArray(argumentsValue.source_evidence_ids, 240)])], approvalState: 'approved', uploadState: 'not_uploaded' })
     const artifactCheck = verifyApprovedProposalArtifact({ artifact, expected: { applicationCaseId: caseId, institution: requirement.institution, programme: requirement.programme, supervisor: dossier.supervisor, proposalVersion: draft.version, checksum: persisted.checksum } })
     if (!artifactCheck.valid) return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_artifact_invalid', message: 'The rendered artifact did not match the approved proposal identity.', value: { artifact, issues: artifactCheck.issues }, actionStatus: 'failed' }
     const requirementRows = await admin.from('application_requirements').select('id,name').eq('application_case_id', caseId).eq('user_id', run.user_id)
@@ -6469,15 +6976,15 @@ async function executeProviderTool(
     try {
       if (nextWorkflow.currentState === 'awaiting_applicant_decision') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'supervisor_feedback_received', feedback: [{ id: `approval:${caseId}`, sourceMessageId: `approval:${caseId}`, sourceThreadId: null, category: 'approval', requestedChange: 'Applicant approved the exact proposal after deterministic review.', severity: 'informational', clarificationRequired: false, revisionPriority: 4, evidenceIds: [approvalEvidence.data.id], revisionRequirements: [], affectsStrategy: false }] })
       if (nextWorkflow.currentState === 'supervisor_review') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'supervisor_feedback_received', feedback: [{ id: `approval:${caseId}`, sourceMessageId: `approval:${caseId}`, sourceThreadId: null, category: 'approval', requestedChange: 'No additional supervisor changes were required before finalization.', severity: 'informational', clarificationRequired: false, revisionPriority: 4, evidenceIds: [approvalEvidence.data.id], revisionRequirements: [], affectsStrategy: false }] })
-      if (nextWorkflow.currentState === 'final_quality_review') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'final_quality_reviewed', review: quality })
+      if (nextWorkflow.currentState === 'final_quality_review') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'final_quality_reviewed', review: formattedQuality })
       if (nextWorkflow.currentState === 'approved') nextWorkflow = transitionResearchProposalWorkflow(nextWorkflow, { type: 'artifact_ready', artifact })
     } catch (error) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'research_proposal_finalization_transition_invalid', message: error instanceof Error ? error.message : 'The proposal artifact was saved but the workflow checkpoint needs recovery.', value: { artifact, workflow_state: workflow.currentState }, actionStatus: 'failed' }
     }
     const nextAction = `Upload ${filename} to ${destination}, then verify the resulting portal state.`
     const applicationState = await persistProposalWorkflow(admin, run, context, nextWorkflow, { status: 'active', stage: 'portal_preparation', nextAction, dataPatch: { proposalFinalArtifact: artifact, proposalApprovalEvidenceId: approvalEvidence.data.id } })
-    const finalInteraction = createProposalFinalApprovalInteraction({ applicationCaseId: caseId, programme: requirement.programme, supervisor: dossier.supervisor, wordCount: validation.wordCount, artifact, quality })
-    return { kind: 'output', value: { application_case_id: caseId, artifact, artifact_check: artifactCheck, validation, quality, approval_evidence_id: approvalEvidence.data.id, final_interaction: finalInteraction, destination, next_action: nextAction }, providerActionId: persisted.artifactId, publicSummary: `Created the approved, checksum-addressed research-proposal PDF for ${requirement.programme}; it is ready for a verified upload.`, runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_artifact_id: persisted.artifactId, proposal_asset_id: persisted.assetId, proposal_checksum: persisted.checksum, proposal_approval_pending: null, scheduling_options: [] } } }
+    const finalInteraction = createProposalFinalApprovalInteraction({ applicationCaseId: caseId, programme: requirement.programme, supervisor: dossier.supervisor, wordCount: formattedValidation.wordCount, artifact, quality: formattedQuality })
+    return { kind: 'output', value: { application_case_id: caseId, artifact, artifact_check: artifactCheck, validation: formattedValidation, quality: formattedQuality, format: { template_id: rendered.templateId, template_version: rendered.templateVersion, renderer_version: rendered.rendererVersion, page_count: compiled.pageCount, format_metadata: rendered.formatMetadata, latex_artifact_id: tex.artifactId, auxiliary_artifact_ids: auxiliaryArtifactIds, compilation_log_artifact_id: log.artifactId, ats_text_artifact_id: ats.artifactId, preview_artifact_id: preview?.artifactId ?? null, recovered: compiled.recovered }, approval_evidence_id: approvalEvidence.data.id, final_interaction: finalInteraction, destination, next_action: nextAction }, providerActionId: persisted.artifactId, publicSummary: `Created the approved, LaTeX-formatted research-proposal PDF for ${requirement.programme}; it is ready for a verified upload.`, runPatch: { application_state: applicationState, context: { ...(run.context ?? {}), application_case_id: caseId, proposal_workflow_state: nextWorkflow.currentState, proposal_artifact_id: persisted.artifactId, proposal_asset_id: persisted.assetId, proposal_checksum: persisted.checksum, proposal_approval_pending: null, scheduling_options: [] } } }
   }
 
   if (toolName === 'application.record_proposal_delivery') {
@@ -6544,7 +7051,7 @@ async function executeProviderTool(
     } catch (error) {
       return { kind: 'pause', status: 'needs_context', code: 'application_cv_render_invalid', message: error instanceof Error ? error.message.slice(0, 2_000) : 'The structured CV could not be rendered safely.', value: { valid: false }, actionStatus: 'failed' }
     }
-    const compiled = await compileApplicationCv(rendered.latex, cvName, cvEmail)
+    const compiled = await compileApplicationLatex(rendered.latex, cvName, cvEmail)
     if (!Number.isInteger(compiled.pageCount) || compiled.pageCount < 1 || compiled.pageCount > 10) throw new Error('The compiled CV page count is outside the safe range.')
     const promptVersion = safeString(argumentsValue.meta_prompt_version, 80)
     const provenance = Object.values(cvData).reduce((sources, value) => {
@@ -6818,10 +7325,315 @@ async function executeProviderTool(
     return { kind: 'output', value: { ...inserted.data, application_artifact_id: applicationArtifactId, validation }, providerActionId: assetId, publicSummary: `Prepared ${filename}.` }
   }
 
+  if (toolName === 'application.coordinate_fee') {
+    const applicationCaseId = safeString(argumentsValue.application_case_id, 80)
+    const ownedCase = await admin.from('application_cases')
+      .select('id,task_id,campaign_id,user_id,data')
+      .eq('id', applicationCaseId)
+      .eq('user_id', run.user_id)
+      .maybeSingle()
+    if (ownedCase.error) throw new Error(ownedCase.error.message)
+    if (!ownedCase.data || safeString(ownedCase.data.task_id, 80) !== run.task_id) {
+      return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_ownership_invalid', message: 'The fee workflow must belong to the current application task.', value: { valid: false }, actionStatus: 'failed' }
+    }
+    const caseRow = recordValue(ownedCase.data)
+    const persisted = await loadPersistedFeeWorkflow(admin, run, applicationCaseId)
+    const rawRequirement = recordValue(argumentsValue.fee_requirement)
+    const baseRequirement = persisted?.workflow.requirement ?? createApplicationFeeRequirement({
+      applicationCaseId,
+      applicantId: run.user_id,
+      university: safeString(rawRequirement.university ?? rawRequirement.institution, 500),
+      programme: safeString(rawRequirement.programme ?? rawRequirement.programme_title, 800),
+      applicationCycle: safeString(rawRequirement.applicationCycle ?? rawRequirement.application_cycle, 160),
+    })
+    const requirement = normalizeFeeRequirement({
+      ...baseRequirement,
+      ...rawRequirement,
+      applicationCaseId,
+      applicantId: safeString(rawRequirement.applicantId ?? rawRequirement.applicant_id, 160) || baseRequirement.applicantId || run.user_id,
+      id: safeString(rawRequirement.id, 240) || baseRequirement.id,
+      university: safeString(rawRequirement.university ?? rawRequirement.institution, 500) || baseRequirement.university,
+      programme: safeString(rawRequirement.programme ?? rawRequirement.programme_title, 800) || baseRequirement.programme,
+      applicationCycle: safeString(rawRequirement.applicationCycle ?? rawRequirement.application_cycle, 160) || baseRequirement.applicationCycle,
+      sourceProvenance: Array.isArray(rawRequirement.sourceProvenance) ? rawRequirement.sourceProvenance : baseRequirement.sourceProvenance,
+      waiverEvidenceRequirements: Array.isArray(rawRequirement.waiverEvidenceRequirements) ? rawRequirement.waiverEvidenceRequirements : baseRequirement.waiverEvidenceRequirements,
+    } as ApplicationFeeRequirement)
+    const applicantFacts = Array.isArray(argumentsValue.applicant_facts)
+      ? argumentsValue.applicant_facts.map(recordValue).filter(fact => safeString(fact.id, 240) && safeString(fact.key, 240) && fact.verified === true) as unknown as FeeApplicantFact[]
+      : []
+    let workflow: ApplicationFeeWorkflow = persisted?.workflow ?? createApplicationFeeWorkflow({ requirement, applicantFacts })
+    workflow = { ...workflow, requirement, applicantFacts: applicantFacts.length ? applicantFacts : workflow.applicantFacts }
+    const workflowEvent = recordValue(argumentsValue.workflow_event)
+    if (feeEventType(workflowEvent.type)) {
+      workflow = applyFeeWorkflowEvent(workflow, workflowEvent as unknown as FeeWorkflowEvent)
+    }
+    if (Object.prototype.hasOwnProperty.call(argumentsValue, 'policy')) {
+      const policy = argumentsValue.policy === null ? null : recordValue(argumentsValue.policy) as unknown as FeeWaiverPolicy
+      if (workflowEvent.type !== 'waiver_policy_researched') {
+        workflow = applyFeeWorkflowEvent(workflow, { type: 'waiver_policy_researched', policy, at: new Date().toISOString() })
+      }
+    }
+    const interactionResponse = recordValue(argumentsValue.interaction_response)
+    const responseKey = safeString(interactionResponse.fact_key ?? interactionResponse.factKey ?? interactionResponse.key, 240)
+    const responseValue = safeString(interactionResponse.value, 80)
+    if (responseKey === 'fee_deadline_decision' && (responseValue === 'pay_now' || responseValue === 'keep_waiting')) {
+      workflow = applyFeeWorkflowEvent(workflow, { type: 'payment_deadline_decision', choice: responseValue, at: new Date().toISOString() })
+    }
+    if (responseKey && responseKey !== 'fee_deadline_decision' && Object.prototype.hasOwnProperty.call(interactionResponse, 'value') && workflow.policy) {
+      const explicitValue = interactionResponse.value === 'true' ? true : interactionResponse.value === 'false' ? false : interactionResponse.value
+      const fact: FeeApplicantFact = {
+        id: safeString(interactionResponse.fact_id ?? interactionResponse.factId, 240) || `fee-fact:${applicationCaseId}:${responseKey}`,
+        key: responseKey,
+        value: explicitValue,
+        verified: true,
+        reusable: interactionResponse.reusable !== false,
+        sensitive: interactionResponse.sensitive === true || workflow.policy.category === 'financial_hardship' || workflow.policy.category === 'need_based',
+        provenance: { kind: 'user_statement', sourceIds: [], sourceAssetIds: [], confirmedAt: new Date().toISOString() },
+      }
+      const facts = [...workflow.applicantFacts.filter(item => item.key !== responseKey), fact]
+      const evaluation = (() => {
+        const policy = workflow.policy
+        if (!policy) return null
+        // Eligibility remains a deterministic evaluation over the explicit user answer.
+        return evaluateFeeWaiverEligibility(policy, facts)
+      })()
+      if (evaluation) workflow = applyFeeWorkflowEvent({ ...workflow, applicantFacts: facts }, { type: 'eligibility_resolved', evaluation, at: new Date().toISOString() })
+    }
+    let step = planApplicationFeeWorkflow(workflow)
+    if (step.action === 'prepare_payment') {
+      const source = [...workflow.requirement.sourceProvenance].reverse().find(item => item.authoritative) ?? workflow.requirement.sourceProvenance.at(-1)
+      if (source && workflow.requirement.feeAmount !== null && workflow.requirement.currency && workflow.requirement.totalPayable !== null) {
+        workflow = applyFeeWorkflowEvent(workflow, {
+          type: 'payment_prepared',
+          amount: workflow.requirement.feeAmount,
+          currency: workflow.requirement.currency,
+          processingServiceFee: workflow.requirement.processingServiceFee ?? 0,
+          total: workflow.requirement.totalPayable,
+          source,
+          at: new Date().toISOString(),
+        })
+        step = planApplicationFeeWorkflow(workflow)
+      }
+    }
+    if (step.action === 'request_payment_approval' && !workflow.paymentAuthorization) {
+      const authorization = createPaymentAuthorization({ userId: run.user_id, workflow, reason: `Application fee for ${workflow.requirement.university} ${workflow.requirement.programme}` })
+      workflow = applyFeeWorkflowEvent(workflow, { type: 'payment_authorization_created', authorization, at: new Date().toISOString() })
+      step = planApplicationFeeWorkflow(workflow)
+    }
+    const persistedResult = await persistFeeWorkflow(admin, run, workflow, caseRow, persisted?.row.id ? safeString(persisted.row.id, 80) : null)
+    const persistedId = persistedResult.feeRequirementId
+    await persistFeeInteraction(admin, run, applicationCaseId, persistedId, step.interaction)
+    const roonRequest = step.action === 'submit_waiver' && workflow.requirement.waiverSubmissionMethod === 'email_admissions' ? {
+      request_kind: 'send_fee_waiver_request',
+      payload: { application_case_id: applicationCaseId, fee_requirement_id: persistedId, workflow_kind: 'fee_waiver', submission_method: workflow.requirement.waiverSubmissionMethod, contact_email: workflow.policy?.contactEmail ?? null, evidence_ids: workflow.waiverEvidence.map(item => item.id), idempotency_key: `fee-waiver:${applicationCaseId}:${workflow.requirement.version}` },
+    } : null
+    return {
+      kind: 'output',
+      value: {
+        application_case_id: applicationCaseId,
+        fee_requirement_id: persistedId,
+        fee_requirement: workflow.requirement,
+        stage: step.stage,
+        action: step.action,
+        reason: step.reason,
+        payment_blocked: step.paymentBlocked,
+        interaction: step.interaction,
+        payment_authorization: workflow.paymentAuthorization ? { id: persistedResult.paymentAuthorizationId ?? workflow.paymentAuthorization.id, amount: workflow.paymentAuthorization.amount, currency: workflow.paymentAuthorization.currency, expiresAt: workflow.paymentAuthorization.expiresAt, status: workflow.paymentAuthorization.status, requirementVersion: workflow.paymentAuthorization.requirementVersion } : null,
+        roon_request: roonRequest,
+        metrics: workflow.metrics,
+      },
+      providerActionId: `fee-workflow:${applicationCaseId}:${safeString(argumentsValue.idempotency_key, 300)}`,
+      publicSummary: step.interaction?.question ?? step.reason,
+      runPatch: { context: { ...(run.context ?? {}), application_case_id: applicationCaseId, application_fee_requirement_id: persistedId, application_fee_stage: step.stage } },
+    }
+  }
+
+  if (toolName === 'application.record_fee_waiver_result') {
+    const applicationCaseId = safeString(argumentsValue.application_case_id, 80)
+    const persisted = await loadPersistedFeeWorkflow(admin, run, applicationCaseId)
+    if (!persisted) return { kind: 'pause', status: 'waiting_for_user', code: 'fee_requirement_missing', message: 'Research and persist the canonical application-fee requirement before recording a waiver result.', value: { valid: false }, actionStatus: 'failed' }
+    if (safeString(argumentsValue.fee_requirement_id, 240) !== safeString(persisted.row.id, 240) && safeString(argumentsValue.fee_requirement_id, 240) !== persisted.workflow.requirement.id) throw new Error('The waiver result belongs to another fee requirement.')
+    let workflow = persisted.workflow
+    const decisionInput = argumentsValue.decision && typeof argumentsValue.decision === 'object' && !Array.isArray(argumentsValue.decision) ? recordValue(argumentsValue.decision) : null
+    if (decisionInput) workflow = applyFeeWorkflowEvent(workflow, { type: 'waiver_decision_received', decision: feeDecisionFromInput(decisionInput), at: new Date().toISOString() })
+    const portal = recordValue(argumentsValue.portal_verification)
+    const portalState = safeString(portal.portal_state ?? portal.portalState ?? portal.resulting_state ?? portal.resultingState, 80)
+    const portalAmountValue = portal.portal_fee_amount ?? portal.portalFeeAmount ?? portal.fee_amount ?? portal.feeAmount ?? portal.amount
+    const portalFeeAmount = portalAmountValue === null || portalAmountValue === undefined || portalAmountValue === '' ? null : Number(portalAmountValue)
+    const approved = portal.approved === true || portalState === 'fee_cleared' || portalState === 'submitted_without_fee' || portalFeeAmount === 0
+    if (portal.read_after_write_verified === false || portal.readAfterWriteVerified === false) throw new Error('A waiver decision needs read-after-write portal resulting-state evidence.')
+    workflow = applyFeeWorkflowEvent(workflow, { type: 'waiver_result_verified', approved, sourceEvidenceIds: stringArray(argumentsValue.source_evidence_ids, 240), portalFeeAmount: Number.isFinite(portalFeeAmount) ? portalFeeAmount : null, at: new Date().toISOString() })
+    const persistedResult = await persistFeeWorkflow(admin, run, workflow, { task_id: run.task_id, campaign_id: null }, safeString(persisted.row.id, 80))
+    const persistedId = persistedResult.feeRequirementId
+    const step = planApplicationFeeWorkflow(workflow)
+    return { kind: 'output', value: { application_case_id: applicationCaseId, fee_requirement_id: persistedId, fee_requirement: workflow.requirement, waiver_result: { approved, portal_state: portalState || 'unknown', portal_fee_amount: Number.isFinite(portalFeeAmount) ? portalFeeAmount : null, source_evidence_ids: stringArray(argumentsValue.source_evidence_ids, 240) }, next_step: step }, providerActionId: `fee-waiver-result:${safeString(argumentsValue.idempotency_key, 300)}`, publicSummary: approved ? 'Verified that the application portal cleared the application fee.' : 'Verified that the waiver did not clear the portal fee; payment preparation remains available.' }
+  }
+
+  if (toolName === 'application.execute_fee_payment') {
+    const applicationCaseId = safeString(argumentsValue.application_case_id, 80)
+    const feeRequirementDbId = safeString(argumentsValue.fee_requirement_id, 240)
+    const authorizationId = safeString(argumentsValue.payment_authorization_id, 240)
+    const feeResult = await admin.from('application_fee_requirements').select('*').eq('id', feeRequirementDbId).eq('application_case_id', applicationCaseId).eq('user_id', run.user_id).maybeSingle()
+    const authorizationResult = await admin.from('application_fee_payment_authorizations').select('*').eq('id', authorizationId).eq('application_case_id', applicationCaseId).eq('fee_requirement_id', feeRequirementDbId).eq('user_id', run.user_id).maybeSingle()
+    if (feeResult.error?.code === '42P01' || authorizationResult.error?.code === '42P01') return { kind: 'pause', status: 'waiting_for_user', code: 'application_migration_required', message: 'The canonical application-fee payment tables are not available until the fee migration is applied.', value: { available: false }, actionStatus: 'failed' }
+    if (feeResult.error || authorizationResult.error || !feeResult.data || !authorizationResult.data) throw new Error('The approved application-fee payment could not be loaded.')
+    const fee = recordValue(feeResult.data)
+    const authorization = recordValue(authorizationResult.data)
+    const amount = Number(fee.total_payable)
+    if (amount !== Number(argumentsValue.amount) || safeString(fee.currency, 3) !== safeString(argumentsValue.currency, 3)) throw new Error('The current application-fee amount changed after approval. Prepare a new approval.')
+    if (!['pending', 'approved'].includes(safeString(authorization.status, 80))) throw new Error('The one-time application-fee authorization is no longer active.')
+    if (safeString(fee.payment_state, 80) === 'AWAITING_USER_APPROVAL') {
+      const approved = await admin.from('application_fee_payment_authorizations').update({ status: 'approved' }).eq('id', authorizationId).eq('user_id', run.user_id).in('status', ['pending', 'approved'])
+      if (approved.error) throw new Error(approved.error.message)
+      const promoted = await admin.from('application_fee_requirements').update({ payment_state: 'APPROVED', payment_stage: 'SECURE_PAYMENT_HANDOFF', blocker: 'Complete the secure provider payment step.', version: Number(fee.version) + 1 }).eq('id', feeRequirementDbId).eq('user_id', run.user_id).eq('version', Number(fee.version))
+      if (promoted.error) throw new Error(promoted.error.message)
+    }
+    const claim = await admin.rpc('claim_application_fee_payment', {
+      p_user_id: run.user_id,
+      p_case_id: applicationCaseId,
+      p_fee_requirement_id: feeRequirementDbId,
+      p_authorization_id: authorizationId,
+      p_idempotency_key: safeString(argumentsValue.idempotency_key, 300),
+      p_lock_owner: `${run.id}:${safeString(argumentsValue.session_id, 120) || 'secure-handoff'}`,
+    })
+    if (claim.error) {
+      if (claim.error.code === '42883') return { kind: 'pause', status: 'waiting_for_user', code: 'application_migration_required', message: 'The durable application-fee payment lock is not available until the fee migration is applied.', value: { available: false }, actionStatus: 'failed' }
+      throw new Error(claim.error.message)
+    }
+    const claimData = recordValue(claim.data)
+    const attempt = recordValue(claimData.attempt)
+    const refreshedFeeResult = await admin.from('application_fee_requirements').select('*').eq('id', feeRequirementDbId).eq('application_case_id', applicationCaseId).eq('user_id', run.user_id).maybeSingle()
+    if (refreshedFeeResult.error || !refreshedFeeResult.data) throw new Error(refreshedFeeResult.error?.message ?? 'The claimed application-fee state could not be refreshed.')
+    const refreshedRow = recordValue(refreshedFeeResult.data)
+    const refreshedWorkflow = feeWorkflowFromRow(refreshedRow, applicationCaseId, run.user_id)
+    const syncedAttempt = safeString(attempt.id, 120) ? {
+      id: safeString(attempt.id, 120),
+      applicationCaseId,
+      feeRequirementId: feeRequirementDbId,
+      authorizationId,
+      idempotencyKey: safeString(attempt.idempotency_key, 300),
+      state: safeString(attempt.state, 40) as NonNullable<ApplicationFeeWorkflow['paymentAttempt']>['state'],
+      providerTransactionId: safeString(attempt.provider_transaction_id, 256) || null,
+      claimedAt: safeString(attempt.claimed_at ?? attempt.created_at, 80) || new Date().toISOString(),
+      submittedAt: safeString(attempt.submitted_at, 80) || null,
+      completedAt: safeString(attempt.completed_at, 80) || null,
+      lockOwner: safeString(attempt.lock_owner, 300) || null,
+    } : null
+    const synchronizedWorkflow: ApplicationFeeWorkflow = {
+      ...refreshedWorkflow,
+      requirement: feeRequirementFromRow(refreshedRow, applicationCaseId, run.user_id),
+      paymentAttempt: syncedAttempt ?? refreshedWorkflow.paymentAttempt,
+      paymentAuthorization: refreshedWorkflow.paymentAuthorization
+        ? { ...refreshedWorkflow.paymentAuthorization, status: 'consumed' }
+        : refreshedWorkflow.paymentAuthorization,
+    }
+    const handoff = safePaymentHandoffPayload({
+      applicationCaseId,
+      feeRequirementId: feeRequirementDbId,
+      authorizationId,
+      sessionId: safeString(argumentsValue.session_id, 120) || null,
+      handoffUrl: safeString(argumentsValue.handoff_url, 2_000) || null,
+      provider: safeString(argumentsValue.provider, 160),
+      stage: 'secure_payment_handoff',
+      amount,
+      currency: safeString(fee.currency, 3),
+      idempotencyKey: safeString(argumentsValue.idempotency_key, 300),
+    })
+    synchronizedWorkflow.requirement = normalizeFeeRequirement({ ...synchronizedWorkflow.requirement, paymentState: 'PAYMENT_HANDOFF_REQUIRED', paymentStage: 'SECURE_PAYMENT_HANDOFF', blocker: 'Secure provider authentication is required; payment result must be reconciled before completion.' }, new Date().toISOString())
+    const synchronized = await admin.from('application_fee_requirements').update({ payment_state: 'PAYMENT_HANDOFF_REQUIRED', payment_stage: 'SECURE_PAYMENT_HANDOFF', blocker: 'Secure provider authentication is required; payment result must be reconciled before completion.', workflow: synchronizedWorkflow }).eq('id', feeRequirementDbId).eq('user_id', run.user_id)
+    if (synchronized.error) throw new Error(synchronized.error.message)
+    return {
+      kind: 'pause',
+      status: 'waiting_for_user',
+      code: 'fee_payment_handoff_required',
+      message: 'The exact application-fee payment is approved and locked once. Complete it on the secure institution or provider surface, then return so ShotCount can reconcile the resulting state and receipt.',
+      value: { application_case_id: applicationCaseId, fee_requirement_id: feeRequirementDbId, attempt_id: safeString(attempt.id, 120), handoff, amount, currency: safeString(fee.currency, 3), receipt_required: true, payment_result: 'not_yet_known', duplicate_claim: claimData.duplicate === true },
+      providerActionId: safeString(attempt.id, 120) || `fee-payment:${safeString(argumentsValue.idempotency_key, 300)}`,
+      actionSucceeded: true,
+      actionStatus: 'succeeded',
+      runPatch: { context: { ...(run.context ?? {}), application_fee_attempt_id: safeString(attempt.id, 120), application_fee_payment_state: 'PAYMENT_HANDOFF_REQUIRED' } },
+    }
+  }
+
+  if (toolName === 'application.reconcile_fee_payment') {
+    const applicationCaseId = safeString(argumentsValue.application_case_id, 80)
+    const persisted = await loadPersistedFeeWorkflow(admin, run, applicationCaseId)
+    if (!persisted) return { kind: 'pause', status: 'waiting_for_user', code: 'fee_requirement_missing', message: 'Research and persist the canonical application-fee requirement before reconciliation.', value: { valid: false }, actionStatus: 'failed' }
+    if (safeString(argumentsValue.fee_requirement_id, 240) !== safeString(persisted.row.id, 240) && safeString(argumentsValue.fee_requirement_id, 240) !== persisted.workflow.requirement.id) throw new Error('The payment observations belong to another fee requirement.')
+    const observations: FeePaymentObservation[] = (Array.isArray(argumentsValue.observations) ? argumentsValue.observations : []).map((value, index) => {
+      const observation = recordValue(value)
+      return {
+        id: safeString(observation.id, 240) || `fee-observation:${safeString(argumentsValue.idempotency_key, 300)}:${index}`,
+        applicationCaseId,
+        feeRequirementId: persisted.workflow.requirement.id,
+        source: safeString(observation.source, 40) as FeePaymentObservation['source'],
+        status: safeString(observation.status, 40) as FeePaymentObservation['status'],
+        verified: observation.verified === true,
+        amount: observation.amount === null || observation.amount === undefined ? null : Number(observation.amount),
+        currency: safeString(observation.currency, 12) || null,
+        transactionId: safeString(observation.transaction_id ?? observation.transactionId, 256) || null,
+        receiptNumber: safeString(observation.receipt_number ?? observation.receiptNumber, 256) || null,
+        receiptArtifactId: safeString(observation.receipt_artifact_id ?? observation.receiptArtifactId, 80) || null,
+        observedAt: safeString(observation.observed_at ?? observation.observedAt, 80) || new Date().toISOString(),
+        sourceEvidenceIds: stringArray(observation.source_evidence_ids ?? observation.sourceEvidenceIds, 240),
+      }
+    })
+    let workflow = reconcilePaymentObservations(persisted.workflow, observations)
+    const receiptInput = argumentsValue.receipt_evidence && typeof argumentsValue.receipt_evidence === 'object' && !Array.isArray(argumentsValue.receipt_evidence) ? recordValue(argumentsValue.receipt_evidence) : null
+    let receiptCaptured = false
+    if (receiptInput) {
+      const receipt: ApplicationFeePaymentEvidence = {
+        id: safeString(receiptInput.id, 240) || `fee-receipt:${safeString(argumentsValue.idempotency_key, 300)}`,
+        applicationCaseId,
+        feeRequirementId: workflow.requirement.id,
+        institution: safeString(receiptInput.institution, 500) || workflow.requirement.university,
+        amount: Number(receiptInput.amount ?? workflow.requirement.totalPayable),
+        currency: safeString(receiptInput.currency, 12) || workflow.requirement.currency || '',
+        transactionId: safeString(receiptInput.transaction_id ?? receiptInput.transactionId, 256) || null,
+        paymentDateTime: safeString(receiptInput.payment_date_time ?? receiptInput.paymentDateTime, 80) || new Date().toISOString(),
+        receiptNumber: safeString(receiptInput.receipt_number ?? receiptInput.receiptNumber, 256) || null,
+        provider: safeString(receiptInput.provider, 160) || null,
+        portalState: safeString(receiptInput.portal_state ?? receiptInput.portalState, 80) as ApplicationFeePaymentEvidence['portalState'],
+        receiptArtifactId: safeString(receiptInput.receipt_artifact_id ?? receiptInput.receiptArtifactId, 80) || null,
+        evidenceSource: safeString(receiptInput.evidence_source ?? receiptInput.evidenceSource, 80) as ApplicationFeePaymentEvidence['evidenceSource'],
+        checksum: safeString(receiptInput.checksum, 128) || null,
+        sourceEvidenceIds: stringArray(receiptInput.source_evidence_ids ?? receiptInput.sourceEvidenceIds, 240),
+      }
+      workflow = applyFeeWorkflowEvent(workflow, { type: 'receipt_captured', evidence: receipt, at: new Date().toISOString() })
+      receiptCaptured = true
+    }
+    const persistedResult = await persistFeeWorkflow(admin, run, workflow, { task_id: run.task_id, campaign_id: null }, safeString(persisted.row.id, 80))
+    const persistedId = persistedResult.feeRequirementId
+    if (workflow.paymentEvidence) {
+      const evidence = workflow.paymentEvidence
+      const receiptArtifactId = evidence.receiptArtifactId && /^[0-9a-f-]{36}$/i.test(evidence.receiptArtifactId) ? evidence.receiptArtifactId : null
+      const evidenceResult = await admin.from('application_fee_payment_evidence').upsert({
+        user_id: run.user_id,
+        application_case_id: applicationCaseId,
+        fee_requirement_id: persistedId,
+        institution: evidence.institution,
+        amount: evidence.amount,
+        currency: evidence.currency,
+        transaction_id: evidence.transactionId,
+        payment_date_time: evidence.paymentDateTime,
+        receipt_number: evidence.receiptNumber,
+        provider: evidence.provider,
+        portal_state: evidence.portalState,
+        receipt_artifact_id: receiptArtifactId,
+        evidence_source: evidence.evidenceSource,
+        checksum: evidence.checksum,
+        source_evidence_ids: evidence.sourceEvidenceIds,
+        metadata: { fee_evidence_id: evidence.id },
+      }, { onConflict: 'user_id,application_case_id,checksum' })
+      if (evidenceResult.error) throw new Error(evidenceResult.error.message)
+    }
+    return { kind: 'output', value: { application_case_id: applicationCaseId, fee_requirement_id: persistedId, payment_state: workflow.requirement.paymentState, payment_stage: workflow.requirement.paymentStage, provider_transaction_id: workflow.requirement.providerPortalTransactionId, receipt_captured: receiptCaptured, duplicate_charge_guard: workflow.requirement.paymentState === 'AMBIGUOUS' || workflow.requirement.paymentState === 'RECONCILIATION_REQUIRED', next_step: planApplicationFeeWorkflow(workflow) }, providerActionId: `fee-reconcile:${safeString(argumentsValue.idempotency_key, 300)}`, publicSummary: workflow.requirement.paymentState === 'SUCCEEDED' || workflow.requirement.paymentState === 'COMPLETE' ? 'Reconciled a verified application-fee payment result.' : 'Reconciled the application-fee observations; no retry is allowed until the resulting state is clear.' }
+  }
+
   if (toolName === 'application.request_roon') {
     const requestKind = safeString(argumentsValue.request_kind, 80) as Parameters<typeof isRoonRequestAllowed>[0]
     const applicationCaseId = safeString(argumentsValue.application_case_id, 80)
-    const requestPayload = argumentsValue.payload && typeof argumentsValue.payload === 'object' && !Array.isArray(argumentsValue.payload)
+    let requestPayload = argumentsValue.payload && typeof argumentsValue.payload === 'object' && !Array.isArray(argumentsValue.payload)
       ? argumentsValue.payload as Record<string, unknown>
       : {}
     const payloadKeys = JSON.stringify(requestPayload).match(/"(?:password|passcode|card_number|cvv|cvc|bank_account|verification_code|otp|security_key)"\s*:/i)
@@ -6847,10 +7659,20 @@ async function executeProviderTool(
         actionStatus: 'failed',
       }
     }
-    const ownedCase = await admin.from('application_cases').select('id,task_id,user_id').eq('id', applicationCaseId).eq('user_id', run.user_id).maybeSingle()
+    const ownedCase = await admin.from('application_cases').select('id,task_id,user_id,campaign_id,application_id,data').eq('id', applicationCaseId).eq('user_id', run.user_id).maybeSingle()
     if (ownedCase.error) throw new Error(ownedCase.error.message)
     if (!ownedCase.data || safeString(ownedCase.data.task_id, 80) !== run.task_id) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_ownership_invalid', message: 'The Roon handoff must belong to the current application task.', value: { valid: false }, actionStatus: 'failed' }
+    }
+    if (requestKind === 'admissions_clarification') {
+      const prepared = await prepareAdmissionsClarificationHandoff(admin, run, ownedCase.data as Record<string, unknown>, requestPayload)
+      if (prepared.status === 'needs_context') {
+        return { kind: 'pause', status: 'needs_context', code: prepared.code, message: prepared.message, value: { valid: false, ...(prepared.rejected ? { rejected_contacts: prepared.rejected } : {}) }, actionStatus: 'failed' }
+      }
+      if (prepared.status === 'resolved') {
+        return { kind: 'output', value: { application_case_id: applicationCaseId, requirement_id: prepared.requirementId, status: 'resolved_by_official_research', answer: prepared.answer, source_ids: prepared.sourceIds }, providerActionId: `admissions-research:${prepared.requirementId}:${safeString(argumentsValue.idempotency_key, 300)}`, publicSummary: 'Authoritative admissions research resolved the requirement; no outreach was sent.' }
+      }
+      requestPayload = prepared.payload
     }
     if (['create_draft', 'send_email'].includes(requestKind) && supervisorFirstContactRequiresPackage({ ...requestPayload, request_kind: requestKind }, safeString(requestPayload.contact_kind ?? requestPayload.contactKind, 80) || null)) {
       const packageId = safeString(requestPayload.supervisor_outreach_package_id ?? requestPayload.supervisorOutreachPackageId ?? requestPayload.outreach_package_id, 80)
@@ -11434,7 +12256,7 @@ async function advanceRun(
     }
 
     const policy = policyForAgentTool(toolName)
-    if (policy.risk === 'financial') {
+    if (policy.risk === 'financial' && !policy.approvalKind) {
       current = await updateRun(admin, current, {
         status: 'waiting_for_user',
         waiting_reason: 'Payment must be completed by you.',

@@ -6,11 +6,13 @@ import { describe, expect, it } from 'vitest'
 import { runFrozenSuite, startPortalServer, type BenchmarkRun, type FrozenSpec } from './harness'
 import { failureArtifact } from './failure-report'
 import { runCanonicalEngineCorpus, type CanonicalEngineCase } from './engine-corpus'
-import { runAcademicEvidenceQualification } from './academic-evidence-benchmark'
-import { runWorkSampleQualification, type WorkSampleQualificationReport } from './work-sample-qualification'
 import { runRecommendationQualification } from './recommendation-qualification'
+import { runWorkSampleQualification, type WorkSampleQualificationReport } from './work-sample-qualification'
+import { runAcademicEvidenceQualification } from './academic-evidence-benchmark'
 import { researchProposalBenchmarkCases, runResearchProposalBenchmark, type ResearchProposalBenchmarkReport } from './research-proposal-benchmark'
 import { runCampaignSummaryQualification, type CampaignSummaryQualificationReport } from './campaign-summary-qualification'
+import { runApplicationRecoveryQualification, type ApplicationRecoveryQualificationReport } from './application-recovery-benchmark'
+import { runFeeWaiverPaymentQualification, type FeeWaiverPaymentQualificationReport } from './fee-waiver-payment-benchmark'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -42,10 +44,14 @@ function writeArtifacts(run: BenchmarkRun) {
   mkdirSync(traceDir, { recursive: true })
   mkdirSync(failureDir, { recursive: true })
   writeFileSync(resolve(resultDir, `${run.runId}.json`), `${JSON.stringify(run, null, 2)}\n`)
-  if (run.academicEvidence) writeFileSync(resolve(resultDir, 'academic-evidence-latest.json'), `${JSON.stringify(run.academicEvidence, null, 2)}\n`)
   writeFileSync(resolve(resultDir, 'latest.json'), `${JSON.stringify(run, null, 2)}\n`)
+  if (run.academicEvidence) writeFileSync(resolve(resultDir, 'academic-evidence-latest.json'), `${JSON.stringify(run.academicEvidence, null, 2)}\n`)
+  const feeWorkflowArtifact = (run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow
+  if (feeWorkflowArtifact) writeFileSync(resolve(resultDir, 'application-fee-latest.json'), `${JSON.stringify(feeWorkflowArtifact, null, 2)}\n`)
   const campaignSummaryArtifact = (run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary
   if (campaignSummaryArtifact) writeFileSync(resolve(resultDir, 'campaign-summary-latest.json'), `${JSON.stringify(campaignSummaryArtifact, null, 2)}\n`)
+  const applicationRecoveryArtifact = (run as BenchmarkRun & { applicationRecovery?: ApplicationRecoveryQualificationReport }).applicationRecovery
+  if (applicationRecoveryArtifact) writeFileSync(resolve(resultDir, 'application-recovery-latest.json'), `${JSON.stringify(applicationRecoveryArtifact, null, 2)}\n`)
   writeFileSync(resolve(here, 'routing-statistics.json'), `${JSON.stringify({ benchmarkVersion: run.benchmarkVersion, runId: run.runId, codeCommit: run.codeCommit, generatedAt: run.generatedAt, ...run.routingStatistics }, null, 2)}\n`)
   const rows = run.results.map(result => ({
     benchmark_version: run.benchmarkVersion,
@@ -135,7 +141,7 @@ function writeArtifacts(run: BenchmarkRun) {
   const m = run.metrics
   const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
   const campaignSummary = (run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary
-  const workSample = (run as BenchmarkRun & { workSample?: WorkSampleQualificationReport }).workSample
+  const applicationRecovery = (run as BenchmarkRun & { applicationRecovery?: ApplicationRecoveryQualificationReport }).applicationRecovery
   const engineMetrics = run.engine?.metrics ?? {}
   const stochastic = optionalJson(resolve(here, 'results/stochastic-latest.json'))
   const comparison = (kind: 'primitive' | 'harness' | 'adaptive') => {
@@ -211,7 +217,8 @@ Run **${run.runId}** at ${run.generatedAt}; evaluated commit **${run.codeCommit}
 - Fabricated facts / false completions / contamination: ${String(stochastic?.fabricatedFacts ?? 0)} / ${String(stochastic?.falseCompletions ?? 0)} / ${String(stochastic?.contamination ?? 0)}
 - Total cost / average cost per E2E decision: $${Number(stochastic?.totalCostUsd ?? 0).toFixed(6)} / $${Number(stochastic?.averageCostPerE2ECaseUsd ?? 0).toFixed(6)}
 - Average model latency: ${Number(stochastic?.averageE2ETimeMs ?? 0).toFixed(0)} ms
-\n## Canonical research-proposal execution
+
+## Canonical research-proposal execution
 
 ${proposal ? `- Qualification: ${proposal.metrics.passed}/${proposal.metrics.cases} cases passed (${proposal.version})
 - Requirement evidence-backed / formatting / citation verification: ${percent(proposal.metrics.requirementEvidenceBackedRate)} / ${percent(proposal.metrics.formattingGateRate)} / ${percent(proposal.metrics.citationVerificationRate)}
@@ -224,18 +231,16 @@ ${proposal ? `- Qualification: ${proposal.metrics.passed}/${proposal.metrics.cas
 
 ## Canonical recommendation-letter qualification
 
-\${run.recommendation ? \`- Qualification: \${run.recommendation.passed ? 'PASS' : 'FAIL'} (\${run.recommendation.suiteVersion})
-- Auto-resolved facts / typed questions / broad free-text questions: \${String(run.recommendation.metrics.autoResolvedFacts)} / \${String(run.recommendation.metrics.typedQuestions)} / \${String(run.recommendation.metrics.broadFreeTextQuestions)}
-- Candidates discovered / requirement graph nodes: \${String(run.recommendation.metrics.candidatesDiscovered)} / \${String(run.recommendation.metrics.requirementGraphNodes)}
-- Automatic continuation rate: \${percent(run.recommendation.metrics.automaticContinuationRate)}
-- Duplicate request keys / portal invitations / fabricated facts: \${String(run.recommendation.metrics.duplicateRequestKeys)} / \${String(run.recommendation.metrics.duplicatePortalInvitations)} / \${String(run.recommendation.metrics.fabricatedFacts)}
-- Interaction mix: \${Object.entries(run.recommendation.interactionMix).map(([kind, count]) => \\\`\${kind}=\${count}\\\`).join(', ') || 'none'}
-- UI payload kind: \${run.recommendation.uiPayload.interaction && typeof run.recommendation.uiPayload.interaction === 'object' ? String((run.recommendation.uiPayload.interaction as Record<string, unknown>).kind) : 'not generated'}
-- Progress Detail examples: \${Object.keys(run.recommendation.progressDetailExamples).join(', ')}
-- Final recommendation status: \${String(run.recommendation.finalStatus.state ?? 'unknown')} (\${String(run.recommendation.finalStatus.recommender ?? 'unknown')})
-- Email/support-pack/CV examples: \${run.recommendation.cv.pdfPath}, \${run.recommendation.cv.latexPath}, and the qualification report in the same output directory.\` : 'Not run for a selected non-recommendation case.'}
-
-
+${run.recommendation ? `- Qualification: ${run.recommendation.passed ? 'PASS' : 'FAIL'} (${run.recommendation.suiteVersion})
+- Auto-resolved facts / typed questions / broad free-text questions: ${String(run.recommendation.metrics.autoResolvedFacts)} / ${String(run.recommendation.metrics.typedQuestions)} / ${String(run.recommendation.metrics.broadFreeTextQuestions)}
+- Candidates discovered / requirement graph nodes: ${String(run.recommendation.metrics.candidatesDiscovered)} / ${String(run.recommendation.metrics.requirementGraphNodes)}
+- Automatic continuation rate: ${percent(run.recommendation.metrics.automaticContinuationRate)}
+- Duplicate request keys / portal invitations / fabricated facts: ${String(run.recommendation.metrics.duplicateRequestKeys)} / ${String(run.recommendation.metrics.duplicatePortalInvitations)} / ${String(run.recommendation.metrics.fabricatedFacts)}
+- Interaction mix: ${Object.entries(run.recommendation.interactionMix).map(([kind, count]) => `${kind}=${count}`).join(', ') || 'none'}
+- UI payload kind: ${run.recommendation.uiPayload.interaction && typeof run.recommendation.uiPayload.interaction === 'object' ? String((run.recommendation.uiPayload.interaction as Record<string, unknown>).kind) : 'not generated'}
+- Progress Detail examples: ${Object.keys(run.recommendation.progressDetailExamples).join(', ')}
+- Final recommendation status: ${String(run.recommendation.finalStatus.state ?? 'unknown')} (${String(run.recommendation.finalStatus.recommender ?? 'unknown')})
+- Email/support-pack/CV examples: ${run.recommendation.cv.pdfPath}, ${run.recommendation.cv.latexPath}, and the qualification report in the same output directory.` : 'Not run for a selected non-recommendation case.'}
 
 ## Canonical Academic Records & Testing qualification
 
@@ -245,6 +250,15 @@ ${run.academicEvidence ? `- Qualification: ${run.academicEvidence.passed ? 'PASS
 - Typed Progress Detail interactions / sensitive interaction rejections: ${String(run.academicEvidence.metrics.typedInteractions)} / ${String(run.academicEvidence.metrics.sensitiveInteractionsRejected)}
 - Forced-failure regressions: ${String(run.academicEvidence.metrics.passedRegressionCases)}/${String(run.academicEvidence.metrics.forcedFailureCases)}; false completions: ${String(run.academicEvidence.metrics.falseCompletions)}
 - Generated examples: \`results/academic-evidence-latest.json\`.` : 'Not run.'}
+
+## Canonical application fee-waiver and payment qualification
+
+${(run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow ? `- Qualification: ${(run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.passed ? 'PASS' : 'FAIL'} (${(run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.suiteVersion})
+- Cases / passed cases / failed assertions: ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.cases)} / ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.passedCases)} / ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.failedAssertions)}
+- No-inference passes / evidence checks / exact approval checks / duplicate guards: ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.noInferencePasses)} / ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.evidenceChecks)} / ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.approvalChecks)} / ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.duplicateChargeGuards)}
+- Generated manual waiver email examples: ${String((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow!.metrics.generatedEmailExamples)}
+- Production-generated examples: \`results/application-fee-latest.json\`.` : 'Not run.'}
+
 ## Canonical user-facing campaign summary qualification
 
 ${campaignSummary ? `- Qualification: ${campaignSummary.passed ? 'PASS' : 'FAIL'} (${campaignSummary.suiteVersion})
@@ -253,14 +267,25 @@ ${campaignSummary ? `- Qualification: ${campaignSummary.passed ? 'PASS' : 'FAIL'
 - Integrity: ${campaignSummary.metrics.integrityValid ? 'valid' : 'invalid'}
 - Production-generated examples: \`results/campaign-summary-latest.json\`.` : 'Not run.'}
 
-${workSample ? [
-  '## Canonical writing-sample / portfolio qualification',
-  `- Qualification: ${String(workSample.metrics.passed ?? 0)}/${String(workSample.metrics.cases ?? 0)} cases passed (${workSample.version})`,
-  `- Requirement evidence / inspection / exact artifact / read-back: ${percent(workSample.metrics.requirementEvidenceBackedRate)} / ${percent(workSample.metrics.candidateInspectionRate)} / ${percent(workSample.metrics.exactArtifactMatchRate)} / ${percent(workSample.metrics.readBackVerificationRate)}`,
-  `- Automatic continuation / clarification-free completion: ${percent(workSample.metrics.automaticContinuationRate)} / ${percent(workSample.metrics.completedWithoutClarificationRate)}`,
-  `- Recovery and security blocks: ${String(workSample.metrics.failuresRecovered ?? 0)} recovered / ${String(workSample.metrics.secretLeakageBlocked ?? 0)} secret blocks`,
-  `- Qualification report: ${workSample.outputRoot}`,
-].join('\n') : ['## Canonical writing-sample / portfolio qualification', '', '- Not run for a selected non-work-sample case.'].join('\n')}
+## Canonical admissions clarification and post-submission recovery qualification
+
+${applicationRecovery ? `- Qualification: ${applicationRecovery.qualified ? 'PASS' : 'FAIL'} (${applicationRecovery.version})
+- Cases / passed cases: ${String(applicationRecovery.metrics.cases)} / ${String(applicationRecovery.metrics.passed)}
+- Admissions research resolved without email / targeted approvals: ${String(applicationRecovery.metrics.admissionsResearchResolvedWithoutEmail)} / ${String(applicationRecovery.metrics.clarificationsRequiringApproval)}
+- Typed post-submission requests / automatic artifact resolution / attachment handoffs: ${String(applicationRecovery.metrics.postSubmissionRequestsDetected)} / ${String(applicationRecovery.metrics.artifactsResolvedAutomatically)} / ${String(applicationRecovery.metrics.attachmentHandoffs)}
+- Duplicate actions prevented / false completions / cross-case contamination: ${String(applicationRecovery.metrics.duplicateActionsPrevented)} / ${String(applicationRecovery.metrics.falseCompletions)} / ${String(applicationRecovery.metrics.crossCaseContamination)}
+- Rejection recovery cases / admissions escalations: ${String(applicationRecovery.metrics.rejectionRecoveryCases)} / ${String(applicationRecovery.metrics.deliveryEscalations)}
+- Production-generated examples: \`results/application-recovery-latest.json\`.` : 'Not run.'}
+
+## Canonical writing-sample / portfolio qualification
+
+${run.workSample ? `- Qualification: ${String(run.workSample.metrics.passed ?? 0)}/${String(run.workSample.metrics.cases ?? 0)} cases passed (${run.workSample.version})
+- Requirement evidence-backed / candidate inspection / exact artifact match / portal read-back: ${percent(run.workSample.metrics.requirementEvidenceBackedRate)} / ${percent(run.workSample.metrics.candidateInspectionRate)} / ${percent(run.workSample.metrics.exactArtifactMatchRate)} / ${percent(run.workSample.metrics.readBackVerificationRate)}
+- Automatic continuation / completed without clarification: ${percent(run.workSample.metrics.automaticContinuationRate)} / ${percent(run.workSample.metrics.completedWithoutClarificationRate)}
+- Approvals / structured choices / free-text questions / uploads: ${String(run.workSample.metrics.approvalCount ?? 0)} / ${String(run.workSample.metrics.structuredQuestionCount ?? 0)} / ${String(run.workSample.metrics.freeTextQuestionCount ?? 0)} / ${String(run.workSample.metrics.uploadsCompleted ?? 0)}
+- Secret blocks / wrong artifacts blocked / duplicate uploads blocked / false completions: ${String(run.workSample.metrics.secretLeakageBlocked ?? 0)} / ${String(run.workSample.metrics.wrongArtifactBlocked ?? 0)} / ${String(run.workSample.metrics.duplicateUploadsBlocked ?? 0)} / ${String(run.workSample.metrics.falseCompletions ?? 0)}
+- Qualification report: ${run.workSample.outputRoot}/qualification-report.md
+- Production outputs: ${run.workSample.cases.map(item => String((item.outputPaths as Record<string, unknown> | undefined)?.derived ?? (item.outputPaths as Record<string, unknown> | undefined)?.supplement ?? '')).filter(Boolean).join(', ')}` : 'Not run for a selected non-work-sample case.'}
 
 ## Deployment and live gate
 
@@ -327,6 +352,10 @@ async function execute() {
     run.academicEvidence = academicEvidence as BenchmarkRun['academicEvidence']
     const campaignSummary = runCampaignSummaryQualification()
     ;(run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary = campaignSummary
+    const applicationRecovery = runApplicationRecoveryQualification()
+    ;(run as BenchmarkRun & { applicationRecovery?: ApplicationRecoveryQualificationReport }).applicationRecovery = applicationRecovery
+    const feeWorkflow = runFeeWaiverPaymentQualification()
+    ;(run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow = feeWorkflow
     run.atomicCases += engine.results.filter(item => item.level !== 'end_to_end').length
     run.endToEndCases += engine.results.filter(item => item.level === 'end_to_end').length
     run.metrics = {
@@ -347,12 +376,21 @@ async function execute() {
       campaignSummaryPassed: campaignSummary.passed,
       campaignSummaryCases: campaignSummary.metrics.cases,
       campaignSummaryFailedAssertions: campaignSummary.metrics.failedAssertions,
+      applicationRecoveryPassed: applicationRecovery.qualified,
+      applicationRecoveryCases: applicationRecovery.metrics.cases,
+      applicationRecoveryFalseCompletions: applicationRecovery.metrics.falseCompletions,
+      applicationRecoveryCrossCaseContamination: applicationRecovery.metrics.crossCaseContamination,
+      applicationFeeQualificationPassed: feeWorkflow.passed,
+      applicationFeeQualificationCases: feeWorkflow.metrics.cases,
+      applicationFeeFailedAssertions: feeWorkflow.metrics.failedAssertions,
+      applicationFeeDuplicateGuards: feeWorkflow.metrics.duplicateChargeGuards,
     }
     const selectedValues = selectedCase ? selectedCase.split(',').map(value => value.trim()).filter(Boolean) : []
     const proposalCaseSelection = selectedValues.length
       ? researchProposalBenchmarkCases.filter(item => selectedValues.includes(item.id)).map(item => item.id)
       : undefined
-    const proposal = !selectedValues.length || proposalCaseSelection?.length
+    const shouldRunProposalBenchmark = !selectedValues.length || Boolean(proposalCaseSelection?.length)
+    const proposal = shouldRunProposalBenchmark
       ? runResearchProposalBenchmark({ selectedCase: proposalCaseSelection?.join(',') })
       : null
     const runWithProposal = run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }
@@ -427,7 +465,7 @@ async function execute() {
     )
     const deterministicGatePassed = engine.results.every(item => item.success) &&
       engine.metrics.fabricatedFacts === 0 && engine.metrics.falseCompletions === 0 &&
-      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0 && proposalGatePassed && workSampleGatePassed && academicEvidence.passed && campaignSummary.passed
+      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0 && proposalGatePassed && workSampleGatePassed && academicEvidence.passed && campaignSummary.passed && applicationRecovery.qualified && feeWorkflow.passed
     run.productionReadiness = {
       qualified: false,
       deterministicGatePassed,
@@ -440,6 +478,8 @@ async function execute() {
     if (workSample && !workSampleGatePassed) run.blockers.push('Canonical writing-sample / portfolio qualification failed.')
     if (!academicEvidence.passed) run.blockers.push('Canonical Academic Records & Testing qualification failed.')
     if (!campaignSummary.passed) run.blockers.push('Canonical user-facing campaign summary qualification failed.')
+    if (!applicationRecovery.qualified) run.blockers.push('Canonical admissions clarification and post-submission recovery qualification failed.')
+    if (!feeWorkflow.passed) run.blockers.push('Canonical application fee-waiver and payment qualification failed.')
     const liveWeb = optionalJson(resolve(here, 'results/live-web-latest.json'))
     const liveGmail = optionalJson(resolve(here, 'results/live-gmail-latest.json'))
     if (liveWeb) run.liveReadOnlyWeb = { status: 'completed_separate_suite', ...liveWeb }
@@ -472,11 +512,10 @@ describe.skipIf(!enabled)('david_application_engine_v3', () => {
     expect(failures, failures.map(result => `${result.caseId}: ${result.rootCauseCategory} ${result.escalationReason ?? ''}`).join('\n')).toHaveLength(0)
     const engineFailures = run.engine?.results.filter(result => result.success !== true) ?? []
     expect(engineFailures).toHaveLength(0)
-    const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
-    expect(proposal?.metrics.passed).toBe(proposal?.metrics.cases)
     expect(run.academicEvidence?.passed).toBe(true)
-    expect((run as BenchmarkRun & { workSample?: WorkSampleQualificationReport }).workSample?.metrics.passed).toBe((run as BenchmarkRun & { workSample?: WorkSampleQualificationReport }).workSample?.metrics.cases)
     expect((run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary?.passed).toBe(true)
+    expect((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow?.passed).toBe(true)
+    expect((run as BenchmarkRun & { applicationRecovery?: ApplicationRecoveryQualificationReport }).applicationRecovery?.qualified).toBe(true)
   }, 900_000)
 })
 

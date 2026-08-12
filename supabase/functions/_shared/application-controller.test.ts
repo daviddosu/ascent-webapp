@@ -62,6 +62,26 @@ describe('David application controller v2.1', () => {
     ]))
   })
 
+  it('allows a verified portal checkpoint while documents are still being prepared', () => {
+    const checkpoint: ProposedApplicationAction = {
+      id: 'portal-checkpoint',
+      kind: 'portal',
+      toolName: 'application.record_portal_checkpoint',
+      caseId: 'case-1',
+      expectedEvidenceTypes: ['PORTAL_SAVE_CONFIRMATION', 'PORTAL_OBSERVATION'],
+      consequential: true,
+      idempotencyKey: 'portal:case-1:identity',
+    }
+    const errors = validateApplicationAction({
+      state: 'DOCUMENT_PREPARATION',
+      currentCaseId: 'case-1',
+      action: checkpoint,
+      facts: [],
+      requirements,
+    })
+    expect(errors.map(error => error.code)).not.toContain('action_outside_current_state')
+  })
+
   it('validates plan order, state, fact, case, evidence, readiness, and approval', () => {
     const unresolved = resolveApplicationFact('major_gpa', [])
     const submit: ProposedApplicationAction = {
@@ -103,9 +123,11 @@ describe('David application controller v2.1', () => {
     const context = buildAuthoritativeApplicationContext({
       objective: 'Prepare one application', campaignId: 'campaign-1', caseId: 'case-1', state: 'PORTAL_EXECUTION', nextAction: 'Complete education', requirements,
       facts: [resolveApplicationFact('degree', [source('BEng')]), resolveApplicationFact('major_gpa', [])],
+      verifiedOpportunities: [{ id: 'opportunity-1', institution: 'Example University', programmeTitle: 'Example PhD', officialUrl: 'https://example.edu/phd', applicationUrl: null, verificationStatus: 'verified', confidence: 90, fitScore: 80 }],
       artifacts: [], writer: [], referee: [], professor: [], gmail: [], checkpoint: null, approvals: [],
     })
     expect(context.verifiedFacts.map(fact => fact.factId)).toEqual(['degree'])
     expect(context.unresolvedRequirements.map(node => node.id)).toEqual(['education', 'review'])
+    expect(context.verifiedOpportunities[0]?.id).toBe('opportunity-1')
   })
 })

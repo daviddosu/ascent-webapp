@@ -6,6 +6,8 @@ import { persistedEmailArguments } from '../_shared/email-integrity.ts'
 import { constantTimeEqual } from '../_shared/crypto.ts'
 import { validateFirstContactSupervisorOutreachPayload, validateSupervisorOutreachPackage, supervisorFirstContactRequiresPackage, type SupervisorOutreachPackage } from '../_shared/supervisor-outreach.ts'
 import { classifyRecommendationReply, recommendationStateForReply, recommendationReplyIsPositive } from '../_shared/recommendation-workflow.ts'
+import { classifyAdmissionsReply, detectPostSubmissionRequests, interpretAdmissionsReply, postSubmissionRequestRow } from '../_shared/application-recovery.ts'
+import { APPLICATION_FEE_WORKFLOW_VERSION, applyFeeWorkflowEvent, buildFeeWaiverRequestEmail, classifyFeeWaiverReply, type ApplicationFeeWorkflow, type FeeWaiverDecision, type FeeWaiverRequest } from '../_shared/application-fee-workflow.ts'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -67,6 +69,46 @@ type ApplicationRequestContext = {
 
 function recordValue(value: unknown) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function feeWorkflowFromRow(row: Record<string, unknown>) {
+  const workflow = recordValue(row.workflow)
+  if (workflow.version !== APPLICATION_FEE_WORKFLOW_VERSION || !workflow.requirement || typeof workflow.requirement !== 'object') return null
+  return workflow as unknown as ApplicationFeeWorkflow
+}
+
+function feeRequirementUpdate(workflow: ApplicationFeeWorkflow) {
+  const requirement = workflow.requirement
+  return {
+    fee_required: requirement.feeRequired,
+    fee_amount: requirement.feeAmount,
+    currency: requirement.currency,
+    processing_service_fee: requirement.processingServiceFee,
+    total_payable: requirement.totalPayable,
+    payment_deadline: requirement.paymentDeadline,
+    deadline_timezone: requirement.deadlineTimezone,
+    payment_stage: requirement.paymentStage,
+    payment_method: requirement.paymentMethod,
+    waiver_availability: requirement.waiverAvailability,
+    waiver_type: requirement.waiverType,
+    waiver_eligibility_state: requirement.waiverEligibilityState,
+    waiver_evidence_requirements: requirement.waiverEvidenceRequirements,
+    waiver_submission_method: requirement.waiverSubmissionMethod,
+    waiver_deadline: requirement.waiverDeadline,
+    waiver_decision_state: requirement.waiverDecisionState,
+    waiver_code: requirement.waiverCode,
+    payment_state: requirement.paymentState,
+    provider_portal_transaction_id: requirement.providerPortalTransactionId,
+    receipt_artifact_id: requirement.receiptArtifactId,
+    verification_evidence_ids: requirement.verificationEvidenceIds,
+    blocker: requirement.blocker,
+    risk_state: requirement.riskState,
+    source_provenance: requirement.sourceProvenance,
+    amount_retrieved_at: requirement.amountRetrievedAt,
+    version: requirement.version,
+    workflow,
+    updated_at: requirement.updatedAt,
+  }
 }
 
 function stringArray(value: unknown, maximum = 120) {
@@ -649,20 +691,71 @@ async function resolveApplicationContact(admin: AdminClient, context: Applicatio
   return { result, waiting: false, contact: contact.data }
 }
 
+async function feeWaiverEmailPayload(admin: AdminClient, context: ApplicationRequestContext, rawPayload: Record<string, unknown>) {
+  const feeRequirementId = safeString(rawPayload.fee_requirement_id ?? rawPayload.feeRequirementId, 80)
+  if (!feeRequirementId) throw new Error('A fee-waiver Gmail request must identify its canonical fee requirement.')
+  const result = await admin.from('application_fee_requirements')
+    .select('id,workflow,application_case_id,user_id')
+    .eq('id', feeRequirementId)
+    .eq('application_case_id', context.request.application_case_id)
+    .eq('user_id', context.request.user_id)
+    .maybeSingle()
+  if (result.error?.code === '42P01') throw new Error('The canonical application-fee migration is not applied.')
+  if (result.error || !result.data) throw new Error(result.error?.message ?? 'The canonical fee requirement was not found.')
+  const workflow = feeWorkflowFromRow(result.data as Record<string, unknown>)
+  if (!workflow?.policy?.offered) throw new Error('A fee-waiver request needs an authoritative waiver policy saved on the fee workflow.')
+  const policy = workflow.policy
+  const requestedEmail = normalizeEmail(rawPayload.contact_email ?? rawPayload.contactEmail)
+  const policyEmail = normalizeEmail(policy.contactEmail)
+  if (requestedEmail && policyEmail && requestedEmail !== policyEmail) throw new Error('The fee-waiver recipient does not match the authoritative admissions contact.')
+  const contactEmail = policyEmail || requestedEmail
+  if (!contactEmail) throw new Error('The fee-waiver workflow has no verified admissions contact email.')
+  const caseData = recordValue(context.applicationCase.data)
+  const applicantProfile = recordValue(caseData.applicantProfile ?? caseData.applicant_profile)
+  const applicantName = safeString(caseData.applicantName ?? caseData.applicant_name ?? applicantProfile.fullName ?? applicantProfile.full_name ?? applicantProfile.name, 240) || 'Applicant'
+  const applicantEmail = normalizeEmail(caseData.applicantEmail ?? caseData.applicant_email ?? applicantProfile.email)
+  const eligibilityBasis = workflow.applicantFacts
+    .filter(fact => fact.verified)
+    .map(fact => `${fact.key}: ${typeof fact.value === 'string' ? fact.value : JSON.stringify(fact.value)}`)
+    .slice(0, 8)
+  const email = buildFeeWaiverRequestEmail({
+    requirement: workflow.requirement,
+    policy,
+    applicantName,
+    applicantEmail: applicantEmail || null,
+    eligibilityBasis,
+    evidenceIds: workflow.waiverEvidence.map(evidence => evidence.id),
+    prompt: safeString(rawPayload.prompt, 1_000) || null,
+    explanation: safeString(rawPayload.explanation, 2_000) || null,
+  })
+  return {
+    ...rawPayload,
+    to: [contactEmail],
+    subject: safeString(rawPayload.subject, 998) || email.subject,
+    body_text: safeString(rawPayload.body_text ?? rawPayload.body, 30_000) || email.bodyText,
+    body_html: safeString(rawPayload.body_html, 30_000) || email.bodyHtml,
+    contact_kind: 'admissions',
+    fee_requirement_id: feeRequirementId,
+  }
+}
+
 async function processApplicationEmailRequest(admin: AdminClient, context: ApplicationRequestContext) {
   const request = context.request
   const rawPayload = recordValue(request.payload)
   const requestKind = safeApplicationRequestKind(request.request_kind)
-  if (!requestKind || !['create_draft', 'send_email', 'follow_up'].includes(requestKind)) throw new Error('Unsupported application email request.')
-  const payload = ['create_draft', 'send_email'].includes(requestKind) ? applicationRefereeDraftPayload(context, rawPayload) : rawPayload
+  if (!requestKind || !['create_draft', 'send_email', 'follow_up', 'send_fee_waiver_request', 'admissions_clarification', 'post_submission_response'].includes(requestKind)) throw new Error('Unsupported application email request.')
+  const payload = (requestKind === 'send_fee_waiver_request'
+    ? await feeWaiverEmailPayload(admin, context, rawPayload)
+    : ['create_draft', 'send_email'].includes(requestKind) ? applicationRefereeDraftPayload(context, rawPayload) : rawPayload) as Record<string, unknown>
   if (JSON.stringify(payload).match(/"(?:password|passcode|secret|card_number|cvv|cvc|bank_account|verification_code|otp|security_key)"\s*:/i)) throw new Error('Application email payload contains a sensitive value.')
   if (requestKind === 'follow_up' && !applicationFollowUpAllowed(payload)) {
     await recordApplicationWorkerEvent(admin, context, 'application_follow_up_stopped', 'succeeded', 'Roon stopped the follow-up cadence because the contact or application is no longer eligible for another message.', {})
     return { status: 'completed', result: { kind: 'follow_up', stopped: true, reason: 'follow_up_limit_or_contact_state' } }
   }
   if (!payload.supervisor_outreach_package && !payload.supervisorOutreachPackage && !payload.outreach_package && isGenericProfessorOutreach(payload)) throw new Error('Professor outreach needs evidence from the professor’s official work and a matching personalised passage.')
+  const isFeeWaiverRequest = requestKind === 'send_fee_waiver_request'
   const payloadTo = Array.isArray(payload.to) ? payload.to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(payload.to)].filter(Boolean)
-  let contactId = safeString(payload.contact_id ?? payload.contactId, 80) || null
+  let contactId = isFeeWaiverRequest ? null : safeString(payload.contact_id ?? payload.contactId, 80) || null
   let to = payloadTo
   if (!to.length) {
     const resolved = await resolveApplicationContact(admin, context, payload)
@@ -671,7 +764,7 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     contactId = safeString((resolved.contact as Record<string, unknown>).id, 80) || null
   }
   if (!to.length || to.length > 50) throw new Error('The application email needs one or more verified recipients.')
-  if (!contactId) {
+  if (!contactId && !isFeeWaiverRequest) {
     if (to.length !== 1) throw new Error('Each application recipient must be resolved to a case contact before sending.')
     const resolved = await resolveApplicationContact(admin, context, {
       ...payload,
@@ -696,7 +789,7 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   if (Boolean(threadId) !== Boolean(inReplyTo)) throw new Error('A threaded application reply must include both the Gmail thread and the message it answers.')
   if (requestKind === 'follow_up' && !threadId) throw new Error('Follow-ups must stay on the existing Gmail thread.')
   const sendRequested = requestKind !== 'create_draft' && payload.send_mode !== 'draft' && payload.sendMode !== 'draft'
-  if (sendRequested && contactId) {
+  if (sendRequested && contactId && !isFeeWaiverRequest) {
     const contact = await admin.from('application_contacts').select('id,kind,email,consent_to_contact').eq('id', contactId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id).maybeSingle()
     if (contact.error) throw new Error(contact.error.message)
     if (!contact.data || !normalizeEmail(contact.data.email) || !to.includes(normalizeEmail(contact.data.email))) throw new Error('The application recipient does not match the verified case contact.')
@@ -761,7 +854,7 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     excerpt: redactApplicationExcerpt(bodyText),
     idempotencyKey: `application-draft:${request.id}`,
     humanAssignmentId: assignmentId || null,
-    data: { status: 'draft', draft_id: safeString(draft.draft_id, 256), asset_ids: assetIds, action_id: draftActionId, reused: Boolean(providedDraftId) },
+    data: { status: 'draft', draft_id: safeString(draft.draft_id, 256), asset_ids: assetIds, action_id: draftActionId, reused: Boolean(providedDraftId), to: to[0] ?? null, contact_email: to[0] ?? null, contact_kind: payload.contact_kind ?? payload.contactKind ?? null },
   })
   if (!sendRequested) {
     return { status: 'completed', result: { kind: 'email_draft', draft_id: safeString(draft.draft_id, 256), message_id: safeString(draft.message_id, 256), thread_id: safeString(draft.thread_id, 256) || threadId, attachment_count: Array.isArray(draft.attachments) ? draft.attachments.length : attachments.length, reused: Boolean(providedDraftId) } }
@@ -802,6 +895,33 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   const sendActionId = await persistApplicationAction(admin, context, 'gmail.send_message', sendArguments, sent, `application-roon-send:${request.id}`, safeString(sentResult.providerActionId, 256), 'Gmail confirmed the application email was sent.')
   const sentMessageId = safeString(sent.message_id, 256) || null
   const sentThreadId = safeString(sent.thread_id, 256) || threadId
+  if (requestKind === 'send_fee_waiver_request') {
+    const currentFee = await admin.from('application_fee_requirements').select('id,workflow').eq('id', safeString(payload.fee_requirement_id, 80)).eq('application_case_id', context.request.application_case_id).eq('user_id', context.request.user_id).maybeSingle()
+    if (currentFee.error || !currentFee.data) throw new Error(currentFee.error?.message ?? 'The fee-waiver workflow disappeared before the request was sent.')
+    const feeWorkflow = feeWorkflowFromRow(currentFee.data as Record<string, unknown>)
+    if (!feeWorkflow) throw new Error('The fee-waiver workflow could not be restored after sending.')
+    const waiverRequest: FeeWaiverRequest = {
+      id: `fee-waiver-request:${context.request.id}`,
+      applicationCaseId: context.request.application_case_id,
+      requirementId: feeWorkflow.requirement.id,
+      applicantId: feeWorkflow.requirement.applicantId,
+      category: feeWorkflow.policy?.category ?? 'other',
+      submissionMethod: 'email_admissions',
+      portalFormId: null,
+      admissionsEmail: to[0] ?? null,
+      subject,
+      bodyText,
+      bodyHtml: bodyHtml || null,
+      evidenceIds: feeWorkflow.waiverEvidence.map(evidence => evidence.id),
+      idempotencyKey: `fee-waiver-request:${context.request.id}`,
+      submittedAt: new Date().toISOString(),
+      providerMessageId: sentMessageId,
+      providerThreadId: sentThreadId,
+    }
+    const updatedWorkflow = applyFeeWorkflowEvent(feeWorkflow, { type: 'waiver_request_submitted', request: waiverRequest, at: waiverRequest.submittedAt ?? undefined })
+    const updated = await admin.from('application_fee_requirements').update(feeRequirementUpdate(updatedWorkflow)).eq('id', feeWorkflow.requirement.id).eq('application_case_id', context.request.application_case_id).eq('user_id', context.request.user_id)
+    if (updated.error) throw new Error(updated.error.message)
+  }
   await persistApplicationCommunication(admin, context, {
     contactId,
     direction: 'outbound',
@@ -811,9 +931,9 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     excerpt: redactApplicationExcerpt(bodyText),
     idempotencyKey: `application-sent:${request.id}`,
     humanAssignmentId: assignmentId || null,
-    data: { status: 'sent', draft_id: safeString(draft.draft_id, 256), action_id: sendActionId, sent_at: new Date().toISOString() },
+    data: { status: 'sent', draft_id: safeString(draft.draft_id, 256), action_id: sendActionId, sent_at: new Date().toISOString(), to: to[0] ?? null, contact_email: to[0] ?? null, contact_kind: payload.contact_kind ?? payload.contactKind ?? null },
   })
-  await persistApplicationEvidence(admin, context, {
+  const sentEvidenceId = await persistApplicationEvidence(admin, context, {
     kind: 'sent_message',
     providerMessageId: sentMessageId,
     providerThreadId: sentThreadId,
@@ -821,6 +941,58 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     metadata: { subject, sent_at: new Date().toISOString(), request_kind: requestKind, draft_id: safeString(draft.draft_id, 256) },
     idempotencyKey: `application-sent-evidence:${request.id}`,
   })
+  if (requestKind === 'admissions_clarification') {
+    const clarificationId = safeString(payload.clarification_id ?? payload.clarificationId, 80)
+    if (clarificationId) {
+      const clarification = await admin.from('application_admissions_clarifications')
+        .select('id,status,evidence_ids')
+        .eq('id', clarificationId)
+        .eq('user_id', context.request.user_id)
+        .eq('application_case_id', context.request.application_case_id)
+        .maybeSingle()
+      if (clarification.error) throw new Error(clarification.error.message)
+      if (clarification.data) {
+        const status = ['resolved', 'closed'].includes(safeString(clarification.data.status, 40))
+          ? clarification.data.status
+          : 'monitoring'
+        const updatedClarification = await admin.from('application_admissions_clarifications').update({
+          status,
+          gmail_message_id: sentMessageId,
+          gmail_thread_id: sentThreadId,
+          evidence_ids: [...new Set([...stringArray(clarification.data.evidence_ids), sentEvidenceId])],
+        }).eq('id', clarificationId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id)
+        if (updatedClarification.error) throw new Error(updatedClarification.error.message)
+      }
+    }
+  }
+  if (requestKind === 'post_submission_response') {
+    const postRequestIds = [...new Set([
+      ...stringArray(payload.post_submission_request_ids ?? payload.postSubmissionRequestIds, 80),
+      safeString(payload.post_submission_request_id ?? payload.postSubmissionRequestId, 80),
+    ].filter(Boolean))]
+    for (const postRequestId of postRequestIds) {
+      const postRequest = await admin.from('application_post_submission_requests')
+        .select('id,status,response_evidence,history,version')
+        .eq('id', postRequestId)
+        .eq('user_id', context.request.user_id)
+        .eq('application_case_id', context.request.application_case_id)
+        .maybeSingle()
+      if (postRequest.error) throw new Error(postRequest.error.message)
+      if (!postRequest.data) continue
+      const priorHistory = Array.isArray(postRequest.data.history) ? postRequest.data.history : []
+      const status = ['accepted', 'complete'].includes(safeString(postRequest.data.status, 40))
+        ? postRequest.data.status
+        : 'sent_to_institution'
+      const updatedPostRequest = await admin.from('application_post_submission_requests').update({
+        status,
+        response_evidence: [...new Set([...stringArray(postRequest.data.response_evidence), sentEvidenceId])],
+        applicant_action_required: false,
+        version: Number(postRequest.data.version ?? 1) + 1,
+        history: [...priorHistory, { at: new Date().toISOString(), event: 'response_sent', messageId: sentMessageId, threadId: sentThreadId, evidenceIds: [sentEvidenceId] }],
+      }).eq('id', postRequestId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id)
+      if (updatedPostRequest.error) throw new Error(updatedPostRequest.error.message)
+    }
+  }
   await updateApplicationContact(admin, context, contactId ?? '', sentThreadId, sentMessageId)
   if (supervisorGate) {
     const sentPackage = { ...supervisorGate.packageValue, status: 'sent' as const, sent_message_id: sentMessageId, sent_thread_id: sentThreadId }
@@ -905,6 +1077,100 @@ async function applicationMessagesForRequest(admin: AdminClient, context: Applic
   return { requestedAt: requestedDate, messages }
 }
 
+async function processFeeWaiverMonitorRequest(admin: AdminClient, context: ApplicationRequestContext) {
+  const payload = recordValue(context.request.payload)
+  const feeRequirementId = safeString(payload.fee_requirement_id ?? payload.feeRequirementId, 80)
+  if (!feeRequirementId) throw new Error('A fee-waiver monitor must identify its canonical fee requirement.')
+  const feeResult = await admin.from('application_fee_requirements')
+    .select('id,workflow,application_case_id,user_id')
+    .eq('id', feeRequirementId)
+    .eq('application_case_id', context.request.application_case_id)
+    .eq('user_id', context.request.user_id)
+    .maybeSingle()
+  if (feeResult.error?.code === '42P01') throw new Error('The canonical application-fee migration is not applied.')
+  if (feeResult.error || !feeResult.data) throw new Error(feeResult.error?.message ?? 'The canonical fee requirement was not found.')
+  const workflow = feeWorkflowFromRow(feeResult.data as Record<string, unknown>)
+  if (!workflow) throw new Error('The saved fee workflow is unavailable for waiver monitoring.')
+  const contactEmail = normalizeEmail(payload.contact_email ?? payload.contactEmail ?? workflow.policy?.contactEmail)
+  if (!contactEmail) throw new Error('A fee-waiver monitor needs the verified admissions contact email.')
+  const effectivePayload: Record<string, unknown> = {
+    ...payload,
+    destination_email: contactEmail,
+    subject_clues: Array.from(new Set([
+      ...stringArray(payload.subject_clues ?? payload.subjectClues),
+      'fee waiver',
+      workflow.requirement.programme,
+    ])).slice(0, 8),
+  }
+  const { requestedAt, messages } = await applicationMessagesForRequest(admin, context, effectivePayload)
+  const integration = await admin.from('agent_integrations').select('account_email').eq('user_id', context.request.user_id).eq('provider', 'google').maybeSingle()
+  if (integration.error) throw new Error(integration.error.message)
+  const accountEmail = safeString(integration.data?.account_email, 320)
+  const expectedThread = safeString(effectivePayload.thread_id ?? effectivePayload.threadId, 256)
+  const candidate = messages
+    .filter(message => messageDateAfter(message.date, requestedAt.toISOString()))
+    .filter(message => !messageFromUser(message.from, accountEmail))
+    .filter(message => !expectedThread || safeString(message.thread_id ?? message.threadId, 256) === expectedThread)
+    .sort((left, right) => Date.parse(safeString(right.date, 240)) - Date.parse(safeString(left.date, 240)))[0]
+  if (!candidate) {
+    return { status: 'queued', result: { code: 'fee_waiver_decision_not_found_yet', searched_after: requestedAt.toISOString() }, nextAttemptAt: new Date(Date.now() + 5 * 60 * 1000).toISOString() }
+  }
+  const messageId = safeString(candidate.id, 256)
+  const threadId = safeString(candidate.thread_id ?? candidate.threadId, 256) || null
+  const subject = safeString(candidate.subject, 998)
+  const excerpt = redactApplicationExcerpt(candidate.body_text ?? candidate.body ?? candidate.snippet)
+  const classification = classifyFeeWaiverReply(subject, excerpt)
+  const evidenceId = await persistApplicationEvidence(admin, context, {
+    kind: 'status_email',
+    providerMessageId: messageId,
+    providerThreadId: threadId,
+    excerpt,
+    metadata: { fee_requirement_id: feeRequirementId, classification, received_at: safeString(candidate.date, 80), request_kind: 'monitor_fee_waiver' },
+    idempotencyKey: `fee-waiver-decision-evidence:${context.request.id}:${messageId}`,
+  })
+  await persistApplicationCommunication(admin, context, {
+    contactId: safeString(payload.contact_id ?? payload.contactId, 80) || null,
+    direction: 'inbound',
+    providerMessageId: messageId,
+    providerThreadId: threadId,
+    classification,
+    subject,
+    excerpt,
+    idempotencyKey: `fee-waiver-decision:${context.request.id}:${messageId}`,
+    data: { fee_requirement_id: feeRequirementId, received_at: safeString(candidate.date, 80), evidence_id: evidenceId },
+  })
+  const decision: FeeWaiverDecision = {
+    classification,
+    receivedAt: safeString(candidate.date, 80) || new Date().toISOString(),
+    sourceEvidenceIds: [evidenceId, ...stringArray(payload.source_evidence_ids ?? payload.sourceEvidenceIds, 240)],
+    providerMessageId: messageId || null,
+    providerThreadId: threadId,
+    commitmentDueAt: safeString(payload.commitment_due_at ?? payload.commitmentDueAt, 80) || null,
+    additionalEvidenceRequirementIds: stringArray(payload.additional_evidence_requirement_ids ?? payload.additionalEvidenceRequirementIds, 240),
+    waiverCode: null,
+  }
+  const updatedWorkflow = applyFeeWorkflowEvent(workflow, { type: 'waiver_decision_received', decision, at: new Date().toISOString() })
+  const updated = await admin.from('application_fee_requirements')
+    .update(feeRequirementUpdate(updatedWorkflow))
+    .eq('id', feeRequirementId)
+    .eq('application_case_id', context.request.application_case_id)
+    .eq('user_id', context.request.user_id)
+  if (updated.error) throw new Error(updated.error.message)
+  return {
+    status: 'completed',
+    result: {
+      kind: 'fee_waiver_decision',
+      fee_requirement_id: feeRequirementId,
+      classification,
+      message_id: messageId,
+      thread_id: threadId,
+      evidence_id: evidenceId,
+      payment_state: updatedWorkflow.requirement.paymentState,
+      next_step: updatedWorkflow.requirement.paymentStage,
+    },
+  }
+}
+
 function classifyApplicationContactReply(subject: string, body: string, contactKind: string) {
   const textValue = `${subject} ${body}`.toLocaleLowerCase()
   if (contactKind === 'professor') {
@@ -915,6 +1181,132 @@ function classifyApplicationContactReply(subject: string, body: string, contactK
     if (/\b(?:interested|intrigued|sounds promising|would be happy|let's discuss)\b/.test(textValue)) return 'professor_interest'
   }
   return classifyApplicationReply(subject, body)
+}
+
+async function postSubmissionCaseCandidates(admin: AdminClient, context: ApplicationRequestContext) {
+  const casesResult = await admin.from('application_cases')
+    .select('id,application_id,submitted_at,portal_account,opportunity_id,data,status,current_stage')
+    .eq('user_id', context.request.user_id)
+    .eq('task_id', context.request.task_id)
+  if (casesResult.error) throw new Error(casesResult.error.message)
+  const rows = (casesResult.data ?? []) as Array<Record<string, unknown>>
+  const opportunityIds = [...new Set(rows.map(row => safeString(row.opportunity_id, 80)).filter(Boolean))]
+  const opportunitiesResult = opportunityIds.length
+    ? await admin.from('application_opportunities').select('id,institution,programme_title,data').eq('user_id', context.request.user_id).in('id', opportunityIds)
+    : { data: [], error: null }
+  if (opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
+  const opportunities = new Map((opportunitiesResult.data ?? []).map(row => [safeString(row.id, 80), row as Record<string, unknown>]))
+  return rows.map(row => {
+    const data = recordValue(row.data)
+    const portalAccount = recordValue(row.portal_account)
+    const opportunity = opportunities.get(safeString(row.opportunity_id, 80))
+    const opportunityData = recordValue(opportunity?.data)
+    const caseId = safeString(row.id, 80)
+    return {
+      applicationCaseId: caseId,
+      institution: safeString(data.institution ?? opportunity?.institution ?? opportunityData.institution, 500) || (caseId === context.request.application_case_id ? safeString(context.applicationCase.data && recordValue(context.applicationCase.data).institution, 500) : 'Unknown institution'),
+      programme: safeString(data.programme ?? data.programme_title ?? opportunity?.programme_title ?? opportunityData.programmeTitle ?? opportunityData.programme_title, 800) || (caseId === context.request.application_case_id ? safeString(recordValue(context.applicationCase.data).programme, 800) : 'Graduate application'),
+      applicationId: safeString(row.application_id, 255) || null,
+      applicantId: context.request.user_id,
+      submittedAt: safeString(row.submitted_at, 80) || null,
+      portal: safeString(data.portal ?? portalAccount.portal, 240) || null,
+      admissionsDomains: stringArray(data.admissionsDomains ?? data.admissions_domains ?? opportunityData.admissionsDomains ?? opportunityData.admissions_domains, 120),
+    }
+  })
+}
+
+async function persistPostSubmissionDetection(admin: AdminClient, context: ApplicationRequestContext, input: {
+  messageId: string
+  threadId: string | null
+  subject: string
+  body: string
+  receivedAt: string
+  from: string
+  applicationId?: string | null
+  institution?: string | null
+  programme?: string | null
+  sourceUrl?: string | null
+}) {
+  const body = safeString(input.body, 8_000)
+  if (!/missing|required|please provide|please upload|please submit|additional information|deficien|incomplete|incorrect|attach|send us/i.test(`${input.subject} ${body}`)) return []
+  const detection = detectPostSubmissionRequests({
+    source: {
+      messageId: input.messageId,
+      threadId: input.threadId,
+      provider: 'gmail',
+      from: input.from,
+      subject: input.subject,
+      body,
+      receivedAt: input.receivedAt,
+      applicationId: input.applicationId ?? null,
+      institution: input.institution ?? null,
+      programme: input.programme ?? null,
+      sourceUrl: input.sourceUrl ?? null,
+    },
+    cases: await postSubmissionCaseCandidates(admin, context),
+    now: input.receivedAt,
+    idPrefix: `post-submission:${context.request.task_id}`,
+  })
+  if (!detection.requests.length) return []
+  const persisted: string[] = []
+  for (const request of detection.requests) {
+    const row = postSubmissionRequestRow(request, context.request.user_id)
+    const saved = await admin.from('application_post_submission_requests').upsert({
+      ...row,
+      id: crypto.randomUUID(),
+      task_id: context.request.task_id,
+      campaign_id: context.campaign.id,
+    }, { onConflict: 'user_id,idempotency_key' }).select('id').maybeSingle()
+    if (saved.error?.code === '42P01') return []
+    if (saved.error) throw new Error(saved.error.message)
+    if (saved.data?.id) persisted.push(safeString(saved.data.id, 80))
+  }
+  if (detection.case) {
+    const caseData = recordValue(context.applicationCase.data)
+    const requestIds = [...new Set([...stringArray(caseData.postSubmissionRequestIds), ...detection.requests.map(request => request.id)])]
+    const updated = await admin.from('application_cases').update({
+      status: 'additional_documents',
+      current_stage: 'additional_documents',
+      next_action: detection.requests.some(request => request.applicantActionRequired) ? 'Resolve the typed post-submission request and verify the resulting checklist state.' : 'Monitor the institution checklist while the requested document is processed.',
+      data: { ...caseData, postSubmissionRequestIds: requestIds },
+    }).eq('id', detection.case.applicationCaseId).eq('user_id', context.request.user_id)
+    if (updated.error) throw new Error(updated.error.message)
+  }
+  return persisted
+}
+
+async function reconcileAdmissionsReply(admin: AdminClient, context: ApplicationRequestContext, input: { messageId: string; threadId: string | null; subject: string; body: string; evidenceId: string }) {
+  const query = admin.from('application_admissions_clarifications').select('*').eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id).neq('status', 'resolved').neq('status', 'closed')
+  const clarificationResult = input.threadId
+    ? await query.eq('gmail_thread_id', input.threadId).order('updated_at', { ascending: false }).limit(1).maybeSingle()
+    : await query.order('updated_at', { ascending: false }).limit(1).maybeSingle()
+  if (clarificationResult.error?.code === '42P01' || !clarificationResult.data) return null
+  if (clarificationResult.error) throw new Error(clarificationResult.error.message)
+  const clarification = clarificationResult.data as Record<string, unknown>
+  const interpretation = interpretAdmissionsReply({ subject: input.subject, body: input.body, clarification: { underlyingRequirementId: safeString(clarification.requirement_id, 80) } })
+  const priorEvidence = stringArray(clarification.evidence_ids)
+  const status = interpretation.classification === 'REFERS_TO_OTHER_OFFICE' ? 'referred' : interpretation.definitive ? 'resolved' : interpretation.classification === 'REQUESTS_MORE_INFO' ? 'needs_more_info' : 'monitoring'
+  const update = await admin.from('application_admissions_clarifications').update({
+    status,
+    gmail_thread_id: input.threadId ?? (safeString(clarification.gmail_thread_id, 256) || null),
+    gmail_message_id: input.messageId,
+    resolved_interpretation: interpretation,
+    resulting_requirement_updates: interpretation.requirementUpdates.map(item => ({ ...item, evidenceIds: interpretation.definitive ? [input.evidenceId] : [] })),
+    evidence_ids: [...new Set([...priorEvidence, input.evidenceId])],
+  }).eq('id', safeString(clarification.id, 80)).eq('user_id', context.request.user_id)
+  if (update.error) throw new Error(update.error.message)
+  const requirementId = safeString(clarification.requirement_id, 80)
+  if (requirementId && interpretation.requirementUpdates[0]) {
+    const requirementUpdate = interpretation.requirementUpdates[0]
+    const savedRequirement = await admin.from('application_requirements').update({
+      status: requirementUpdate.status,
+      blocker_reason: interpretation.definitive ? null : requirementUpdate.note,
+      verification_evidence_ids: interpretation.definitive ? [input.evidenceId] : [],
+      exact_instructions: interpretation.actualAnswer ? `${safeString(clarification.unresolved_issue, 4_000)}\nInstitution guidance: ${interpretation.actualAnswer}`.slice(0, 4_000) : undefined,
+    }).eq('id', requirementId).eq('application_case_id', context.request.application_case_id).eq('user_id', context.request.user_id)
+    if (savedRequirement.error) throw new Error(savedRequirement.error.message)
+  }
+  return { clarificationId: safeString(clarification.id, 80), classification: interpretation.classification, status }
 }
 
 async function processApplicationMessageMonitorRequest(admin: AdminClient, context: ApplicationRequestContext) {
@@ -944,11 +1336,13 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
   const subject = safeString(candidate.subject, 998)
   const excerpt = redactApplicationExcerpt(candidate.body_text ?? candidate.snippet)
   const contactKind = applicationContactKind(context, payload)
-  const recommendationClassification = contactKind === 'referee' ? classifyRecommendationReply(subject, safeString(candidate.body_text ?? candidate.body, 30_000)) : null
-  const classification = recommendationClassification ?? classifyApplicationContactReply(subject, excerpt, contactKind)
+  const rawBody = safeString(candidate.body_text ?? candidate.body ?? candidate.snippet, 30_000)
+  const recommendationClassification = contactKind === 'referee' ? classifyRecommendationReply(subject, rawBody) : null
+  const admissionsClassification = kind === 'admissions_clarification' ? classifyAdmissionsReply(subject, excerpt) : null
+  const classification = recommendationClassification ?? (admissionsClassification ? 'portal_update' : classifyApplicationContactReply(subject, excerpt, contactKind))
   let replyArtifactIds: string[] = []
   let replyAssetIds: string[] = []
-  if (['writer', 'editor', 'referee', 'administrator'].includes(contactKind)) {
+  if (['writer', 'editor', 'referee', 'administrator', 'admissions'].includes(contactKind)) {
     const attachmentMetadata = Array.isArray(candidate.attachments) ? candidate.attachments as Array<Record<string, unknown>> : []
     if (attachmentMetadata.length) {
       const attachmentResult = await executeGoogleTool(admin, context.request.user_id, 'gmail.read_attachments', {
@@ -970,7 +1364,7 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
     excerpt,
     idempotencyKey: `application-inbound:${context.request.id}:${messageId}`,
     humanAssignmentId: safeString(payload.human_assignment_id ?? payload.humanAssignmentId, 80) || safeString(context.assignment?.id, 80) || null,
-    data: { received_at: safeString(candidate.date, 80), from: safeString(candidate.from, 320), request_kind: kind, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, ...(recommendationClassification ? { recommendation_classification: recommendationClassification, positive_response: recommendationReplyIsPositive(recommendationClassification) } : {}) },
+    data: { received_at: safeString(candidate.date, 80), from: safeString(candidate.from, 320), request_kind: kind, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, ...(recommendationClassification ? { recommendation_classification: recommendationClassification, positive_response: recommendationReplyIsPositive(recommendationClassification) } : {}), ...(admissionsClassification ? { admissions_classification: admissionsClassification } : {}) },
   })
   const evidenceId = await persistApplicationEvidence(admin, context, {
     kind: 'received_message',
@@ -1001,6 +1395,23 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
   }
   const updatedCase = await admin.from('application_cases').update({ status: contactKind === 'referee' && recommendationClassification ? (recommendationReplyIsPositive(recommendationClassification) ? 'awaiting_referee' : stateChange.status) : stateChange.status, current_stage: contactKind === 'referee' && recommendationClassification ? 'referee_coordination' : stateChange.currentStage, next_action: contactKind === 'referee' && recommendationCampaign.nextAction ? recommendationCampaign.nextAction : contactKind === 'professor' && classification === 'meeting_request' ? 'Ask Roon to schedule the approved professor meeting.' : stateChange.nextAction, data: { ...caseData, [outcomeKey]: outcomes, latestReplyClassification: classification, ...(Object.keys(recommendationCampaign).length ? { recommendationCampaign } : {}), ...(contactKind === 'referee' && replyArtifactIds.length ? { refereeArtifactIds: [...new Set([...priorReferenceArtifacts, ...replyArtifactIds])] } : {}) } }).eq('id', context.request.application_case_id).eq('user_id', context.request.user_id)
   if (updatedCase.error) throw new Error(updatedCase.error.message)
+  const recoveryRequestIds = kind === 'admissions_clarification'
+    ? []
+    : await persistPostSubmissionDetection(admin, context, {
+      messageId,
+      threadId,
+      subject,
+      body: rawBody,
+      receivedAt: safeString(candidate.date, 80) || new Date().toISOString(),
+      from: safeString(candidate.from, 320),
+      applicationId: safeString(payload.application_id ?? payload.applicationId ?? context.applicationCase.application_id, 255) || null,
+      institution: safeString(payload.institution, 500) || null,
+      programme: safeString(payload.programme ?? payload.program, 800) || null,
+      sourceUrl: safeString(payload.source_url ?? payload.sourceUrl, 2_000) || null,
+    })
+  const admissionsReply = admissionsClassification
+    ? await reconcileAdmissionsReply(admin, context, { messageId, threadId, subject, body: excerpt, evidenceId })
+    : null
   if (contactKind === 'referee' && replyArtifactIds.length) {
     const requirement = await admin.from('application_requirements').select('id').eq('application_case_id', context.request.application_case_id).eq('user_id', context.request.user_id).eq('category', 'reference').in('status', ['unknown', 'in_progress', 'awaiting_referee', 'ready']).order('created_at', { ascending: true }).limit(1).maybeSingle()
     if (requirement.error) throw new Error(requirement.error.message)
@@ -1025,7 +1436,7 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
     if (assignmentUpdate.error) throw new Error(assignmentUpdate.error.message)
   }
   await recordApplicationWorkerEvent(admin, context, 'application_message_received', 'succeeded', 'Roon attached and classified the application message on the existing case.', { message_id: messageId, thread_id: threadId, classification, evidence_id: evidenceId })
-  return { status: 'completed', result: { kind: 'application_reply', classification, ...(recommendationClassification ? { recommendation_classification: recommendationClassification, positive_response: recommendationReplyIsPositive(recommendationClassification), continuation: recommendationReplyIsPositive(recommendationClassification) ? 'support_pack_and_portal_preparation' : 'semantic_follow_up' } : {}), message_id: messageId, thread_id: threadId, subject, received_at: safeString(candidate.date, 80), excerpt, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, evidence_id: evidenceId } }
+  return { status: 'completed', result: { kind: 'application_reply', classification, ...(recommendationClassification ? { recommendation_classification: recommendationClassification, positive_response: recommendationReplyIsPositive(recommendationClassification), continuation: recommendationReplyIsPositive(recommendationClassification) ? 'support_pack_and_portal_preparation' : 'semantic_follow_up' } : {}), ...(admissionsReply ? { admissions_reply: admissionsReply } : {}), ...(recoveryRequestIds.length ? { post_submission_request_ids: recoveryRequestIds } : {}), message_id: messageId, thread_id: threadId, subject, received_at: safeString(candidate.date, 80), excerpt, writer_artifact_ids: replyArtifactIds, reply_artifact_ids: replyArtifactIds, evidence_id: evidenceId } }
 }
 
 async function processApplicationDeadlineRequest(admin: AdminClient, context: ApplicationRequestContext) {
@@ -1119,7 +1530,7 @@ async function queuedApplicationRoonRequests(admin: AdminClient, kinds: string[]
 }
 
 async function processApplicationRoonRequests(admin: AdminClient) {
-  const kinds = ['create_draft', 'send_email', 'follow_up', 'resolve_contact', 'monitor_thread', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery']
+  const kinds = ['create_draft', 'send_email', 'follow_up', 'admissions_clarification', 'post_submission_response', 'resolve_contact', 'monitor_thread', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery', 'send_fee_waiver_request', 'monitor_fee_waiver']
   const queued = await queuedApplicationRoonRequests(admin, kinds, 16)
   const counts = { checked: queued.length, completed: 0, pending: 0, failed: 0 }
   for (const row of queued) {
@@ -1130,15 +1541,16 @@ async function processApplicationRoonRequests(admin: AdminClient) {
       context = await loadApplicationRequestContext(admin, claimed)
       const kind = safeApplicationRequestKind(claimed.request_kind)
       let result: { status: string; result: Record<string, unknown>; nextAttemptAt?: string }
-      if (['create_draft', 'send_email', 'follow_up'].includes(kind ?? '')) result = await processApplicationEmailRequest(admin, context)
+      if (['create_draft', 'send_email', 'follow_up', 'send_fee_waiver_request', 'admissions_clarification', 'post_submission_response'].includes(kind ?? '')) result = await processApplicationEmailRequest(admin, context)
       else if (kind === 'resolve_contact') result = await processApplicationContactRequest(admin, context)
       else if (['schedule_interview', 'schedule_meeting', 'create_calendar_reminder'].includes(kind ?? '')) result = await processApplicationCalendarRequest(admin, context)
       else if (['monitor_writer_deadline', 'monitor_referee_deadline'].includes(kind ?? '')) result = await processApplicationDeadlineRequest(admin, context)
       else if (['request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(kind ?? '')) result = await processAcademicDeliveryRequest(admin, context)
+      else if (kind === 'monitor_fee_waiver') result = await processFeeWaiverMonitorRequest(admin, context)
       else result = await processApplicationMessageMonitorRequest(admin, context)
       await updateApplicationRequest(admin, claimed.id, result.status, result.result, {
         next_attempt_at: result.nextAttemptAt ?? null,
-        completion_evidence: { provider: ['create_draft', 'send_email', 'follow_up', 'resolve_contact', 'monitor_thread', 'read_application_reply', 'monitor_professor_reply', 'detect_application_messages'].includes(kind ?? '') ? 'gmail' : ['schedule_interview', 'schedule_meeting', 'create_calendar_reminder'].includes(kind ?? '') ? 'calendar' : 'application_state', completed_at: result.status === 'completed' ? new Date().toISOString() : null },
+        completion_evidence: { provider: ['create_draft', 'send_email', 'follow_up', 'send_fee_waiver_request', 'admissions_clarification', 'post_submission_response', 'resolve_contact', 'monitor_thread', 'read_application_reply', 'monitor_professor_reply', 'detect_application_messages', 'monitor_fee_waiver'].includes(kind ?? '') ? 'gmail' : ['schedule_interview', 'schedule_meeting', 'create_calendar_reminder'].includes(kind ?? '') ? 'calendar' : 'application_state', completed_at: result.status === 'completed' ? new Date().toISOString() : null },
         provider_action_id: safeString(result.result.message_id ?? result.result.event_id ?? result.result.contact_id, 256) || null,
       })
       if (result.status === 'completed') counts.completed += 1

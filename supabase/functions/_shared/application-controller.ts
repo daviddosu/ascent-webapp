@@ -305,7 +305,7 @@ export const applicationStateMachine: Record<ApplicationControllerState, StateDe
   OPPORTUNITY_VERIFICATION: stateDefinition(['SHORTLIST_APPROVAL', 'BLOCKED'], ['research', 'requirement'], ['official_sources'], ['requirements_and_deadlines_verified'], 'OPPORTUNITY_RESEARCH'),
   SHORTLIST_APPROVAL: stateDefinition(['CASE_CREATION', 'BLOCKED'], ['approval', 'request_context'], ['verified_opportunities'], ['shortlist_approved'], 'SHORTLIST_APPROVAL'),
   CASE_CREATION: stateDefinition(['DOCUMENT_PREPARATION', 'BLOCKED'], ['case', 'requirement'], ['approved_shortlist'], ['case_and_requirement_graph_created'], 'CASE_CREATION'),
-  DOCUMENT_PREPARATION: stateDefinition(['WRITER_EXECUTION', 'REFEREE_EXECUTION', 'PROFESSOR_OUTREACH', 'PORTAL_ACCOUNT', 'PORTAL_EXECUTION', 'READINESS_REVIEW', 'BLOCKED'], ['document', 'writer', 'referee', 'professor', 'communication', 'evidence', 'requirement', 'request_context'], ['case', 'verified_facts', 'requirement_graph'], ['required_documents_ready_or_delegated'], 'DOCUMENT_PREPARATION'),
+  DOCUMENT_PREPARATION: stateDefinition(['WRITER_EXECUTION', 'REFEREE_EXECUTION', 'PROFESSOR_OUTREACH', 'PORTAL_ACCOUNT', 'PORTAL_EXECUTION', 'READINESS_REVIEW', 'BLOCKED'], ['document', 'writer', 'referee', 'professor', 'portal', 'communication', 'evidence', 'requirement', 'request_context'], ['case', 'verified_facts', 'requirement_graph'], ['required_documents_ready_or_delegated'], 'DOCUMENT_PREPARATION'),
   WRITER_EXECUTION: stateDefinition(['DOCUMENT_PREPARATION', 'REFEREE_EXECUTION', 'PORTAL_EXECUTION', 'BLOCKED'], ['writer', 'communication', 'document'], ['case', 'writer_brief', 'source_fact_ids'], ['writer_artifact_verified'], 'WRITER_EXECUTION'),
   REFEREE_EXECUTION: stateDefinition(['DOCUMENT_PREPARATION', 'PROFESSOR_OUTREACH', 'PORTAL_EXECUTION', 'BLOCKED'], ['referee', 'communication'], ['case', 'verified_referee', 'requirements'], ['referee_request_verified_or_waiting'], 'REFEREE_EXECUTION'),
   PROFESSOR_OUTREACH: stateDefinition(['DOCUMENT_PREPARATION', 'PORTAL_EXECUTION', 'BLOCKED'], ['professor', 'communication'], ['case', 'verified_faculty', 'approval'], ['outreach_verified_or_waiting'], 'PROFESSOR_OUTREACH'),
@@ -571,7 +571,8 @@ export type AuthoritativeApplicationContext = {
   caseId: string | null
   state: ApplicationControllerState
   nextAction: string | null
-  unresolvedRequirements: Array<Pick<RequirementNode, 'id' | 'name' | 'status' | 'dependencyIds' | 'responsible' | 'deadline' | 'blocker'>>
+  verifiedOpportunities: Array<{ id: string; institution: string; programmeTitle: string; officialUrl: string; applicationUrl: string | null; verificationStatus: string; confidence: number | null; fitScore: number | null }>
+  unresolvedRequirements: Array<Pick<RequirementNode, 'id' | 'name' | 'status' | 'dependencyIds' | 'responsible' | 'deadline' | 'evidenceIds' | 'blocker'>>
   verifiedFacts: Array<Pick<FactResolution, 'factId' | 'value' | 'confidence' | 'provenance'>>
   artifacts: Array<{ id: string; checksum: string | null; status: string; caseId: string }>
   writer: Array<{ id: string; status: string; deadline: string | null }>
@@ -591,7 +592,7 @@ export function buildAuthoritativeApplicationContext(input: Omit<AuthoritativeAp
     .filter(node => node.required && !requirementIsComplete(node))
     .toSorted((left, right) => deadlineRisk(left.deadline, new Date().toISOString()) - deadlineRisk(right.deadline, new Date().toISOString()))
     .slice(0, 12)
-    .map(({ id, name, status, dependencyIds, responsible, deadline, blocker }) => ({ id, name, status, dependencyIds, responsible, deadline, blocker }))
+    .map(({ id, name, status, dependencyIds, responsible, deadline, evidenceIds, blocker }) => ({ id, name, status, dependencyIds, responsible, deadline, evidenceIds, blocker }))
   const verifiedFacts = input.facts
     .filter(fact => fact.verification === 'VERIFIED')
     .slice(0, 60)
@@ -603,6 +604,7 @@ export function buildAuthoritativeApplicationContext(input: Omit<AuthoritativeAp
     caseId: input.caseId,
     state: input.state,
     nextAction: input.nextAction,
+    verifiedOpportunities: input.verifiedOpportunities.filter(opportunity => opportunity.verificationStatus === 'verified').slice(0, 12),
     unresolvedRequirements,
     verifiedFacts,
     artifacts: input.artifacts.slice(0, 30),
@@ -624,6 +626,7 @@ export function serializeAuthoritativeApplicationContext(context: AuthoritativeA
   return [
     'AUTHORITATIVE_APPLICATION_CONTEXT_V2_1',
     'Use only VERIFIED applicant facts. UNRESOLVED required facts block downstream execution.',
+    'The verifiedOpportunities array contains the authoritative durable opportunity IDs for the current campaign. Use those IDs exactly when creating ApplicationCases; do not invent replacements.',
     'The harness controls state advancement. NO_EVIDENCE => NO_COMPLETION.',
     JSON.stringify(context),
   ].join('\n')

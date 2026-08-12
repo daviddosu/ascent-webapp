@@ -215,7 +215,11 @@ function buildProfile(userId, assetIds, now) {
     fundingRequirements: [],
     programmePreferences: [],
     professors: [],
-    referees: [],
+    referees: [
+      fact({ name: 'Dr. Amina Bello', email: 'amina.bello@simulated.test', institution: null, relationship: 'MSc supervisor', specialty: null, providerContactId: null }, [], 'user_statement', 'controlled synthetic applicant profile'),
+      fact({ name: 'Dr. Samuel Adeyemi', email: 'samuel.adeyemi@simulated.test', institution: null, relationship: 'Research Engineer manager', specialty: null, providerContactId: null }, [], 'user_statement', 'controlled synthetic applicant profile'),
+      fact({ name: 'Professor Grace Nwosu', email: 'grace.nwosu@simulated.test', institution: null, relationship: 'Undergraduate project supervisor', specialty: null, providerContactId: null }, [], 'user_statement', 'controlled synthetic applicant profile'),
+    ],
     reusableStories: [],
     identityDocumentMetadata: [],
     consent,
@@ -274,7 +278,7 @@ async function seedTaskAndDocuments(session, keys, runNumber) {
     assetEvidence.push({ id: assetId, kind, filename, sizeBytes: bytes.byteLength, sha256: digest(bytes) })
   }
 
-  const existingProfile = await restGet(`applicant_profiles?user_id=eq.${encodeURIComponent(session.userId)}&select=id,consent_granted,updated_at`, userKey(session, keys))
+  const existingProfile = await restGet(`applicant_profiles?user_id=eq.${encodeURIComponent(session.userId)}&select=id,consent_granted,updated_at,profile`, userKey(session, keys))
   let profileSeeded = false
   if (!existingProfile.length) {
     const now = new Date().toISOString()
@@ -288,6 +292,20 @@ async function seedTaskAndDocuments(session, keys, runNumber) {
       consent_granted: true,
     }, userKey(session, keys))
     profileSeeded = true
+  } else {
+    const existing = existingProfile[0]
+    const existingProfileValue = existing?.profile && typeof existing.profile === 'object' && !Array.isArray(existing.profile)
+      ? existing.profile
+      : {}
+    if (!Array.isArray(existingProfileValue.referees) || !existingProfileValue.referees.length) {
+      const now = new Date().toISOString()
+      const seeded = buildProfile(session.userId, assetIds, now)
+      await restPatch(`applicant_profiles?user_id=eq.${encodeURIComponent(session.userId)}`, {
+        profile: { ...existingProfileValue, referees: seeded.referees, updatedAt: now },
+        updated_at: now,
+      }, userKey(session, keys))
+      profileSeeded = true
+    }
   }
   return { taskId, title, description, dueDate, assetIds, assetEvidence, profileSeeded, runNumber }
 }
@@ -317,7 +335,7 @@ function factAnswer(waitingReason) {
   if (/phone|telephone|mobile/.test(value)) return { key: 'phone', value: '+234 803 555 0198' }
   if (/career|goal|future|aspir/.test(value)) return { key: 'career-goal', value: 'Lead an applied research group building reliable computational tools for climate and physical science.' }
   if (/requirements? completed|completion date|degree.*(?:complete|completion)|completed.*degree/.test(value)) return { key: 'degree-requirements-completed', value: '2024-06-28' }
-  if (/referee|reference|recommender/.test(value)) return { key: 'primary-referee-email', value: 'amina.bello@simulated.test' }
+  if (/referee|reference|recommender/.test(value)) return { key: 'primary-referee-identity', value: 'For this controlled qualification, the authorised referee is Dr. Amina Bello (amina.bello@simulated.test), my MSc supervisor. I authorise David to contact her for the application.' }
   if (/professor|supervisor|research area|preferred area|speciali[sz]ation/.test(value)) return { key: 'preferred-research-area', value: 'scientific machine learning and uncertainty quantification' }
   if (/funding|stipend|tuition/.test(value)) return { key: 'funding-requirement', value: 'I can only accept a programme with tuition coverage and a living stipend.' }
   if (/country|geograph|location|where/.test(value)) return { key: 'geographic-preference', value: 'United Kingdom and Canada' }
@@ -325,23 +343,23 @@ function factAnswer(waitingReason) {
 }
 
 function contextAnswer(waitingReason) {
+  const value = String(waitingReason || '').toLocaleLowerCase()
+  if (/shortlist|strategy approval|approve the (?:exact )?(?:three|selected)|approve.*programme|approve creating|controlled .*case|no real-portal submission|no payment|create (?:the )?application cases|create cases|all three|proceed with|first controlled application case|top-ranked/.test(value)) {
+    return { key: 'shortlist-approval', value: 'I approve the exact three verified applications and the proposed controlled qualification strategy.' }
+  }
+  if (/semantic decision|evidence_invalid|semantic.*evidence|no web\/browser provider|requires web evidence|official .*evidence|evidence.*retriev/.test(value)) {
+    return { key: 'semantic-evidence-recovery', value: 'Use the persisted official requirement evidence from the verified programme sources. Cite only evidence IDs supplied in the current controller context and continue the controlled qualification.' }
+  }
   const factAnswerValue = factAnswer(waitingReason)
   if (factAnswerValue) return factAnswerValue
-  const value = String(waitingReason || '').toLocaleLowerCase()
   if (/which .*programme should be created first|which .*created first|which .*first/.test(value)) {
     return { key: 'case-order', value: 'Create the UBC Computer Science PhD case first, then the University of Toronto Computer Science PhD case, then the University of Edinburgh IML case. Complete the controlled qualification for all three.' }
   }
   if (/campaign .*could not be found|campaign .*missing|invalid campaign/.test(value)) {
     return { key: 'campaign-recovery', value: 'Continue this same AgentRun using its canonical production campaign and the exact approved three-programme shortlist.' }
   }
-  if (/shortlist|strategy approval|approve the (?:exact )?(?:three|selected)|approve.*programme|approve creating|controlled .*case|no real-portal submission|no payment|create (?:the )?application cases|create cases|all three|proceed with|first controlled application case|top-ranked/.test(value)) {
-    return { key: 'shortlist-approval', value: 'I approve the exact three verified applications and the proposed controlled qualification strategy.' }
-  }
   if (/required application item|application requirements?|requirements?.*(?:case|explicit)|explicitly before creating the case/.test(value)) {
     return { key: 'explicit-application-requirements', value: 'Create the controlled application case with every required item represented explicitly from the verified official programme sources. Use the existing approved shortlist and do not ask the same question again.' }
-  }
-  if (/semantic decision|evidence_invalid|semantic.*evidence/.test(value)) {
-    return { key: 'semantic-evidence-recovery', value: 'Use the persisted official requirement evidence from the verified programme sources. Cite only evidence IDs supplied in the current controller context and continue the controlled qualification.' }
   }
   if (/human assignment|deadline monitor|monitor .*deadline/.test(value)) {
     return { key: 'human-assignment-recovery', value: 'Do not queue a deadline monitor without an existing human assignment. Continue the controlled application preparation step, or create the explicit assignment before requesting Roon monitoring.' }
@@ -352,8 +370,51 @@ function contextAnswer(waitingReason) {
   return null
 }
 
+function applicationCampaignId(run) {
+  return String(
+    run?.application_state?.campaignId
+      || run?.application_state?.campaign_id
+      || run?.applicationState?.campaignId
+      || run?.applicationState?.campaign_id
+      || run?.context?.application_campaign_id
+      || run?.context?.applicationCampaignId
+      || '',
+  ).trim()
+}
+
+async function contextAnswerForRun(waitingReason, run, session, keys) {
+  const directAnswer = contextAnswer(waitingReason)
+  if (directAnswer) return directAnswer
+
+  const value = String(waitingReason || '').toLocaleLowerCase()
+  if (!/durable opportunity id|opportunity ids|opportunity records/.test(value)) return null
+
+  const campaignId = applicationCampaignId(run)
+  if (!campaignId) {
+    return {
+      key: 'opportunity-id-recovery',
+      value: 'Use the durable opportunity records already persisted for this AgentRun campaign. Do not invent or replace opportunity IDs.',
+    }
+  }
+
+  const rows = await restGet(
+    `application_opportunities?campaign_id=eq.${encodeURIComponent(campaignId)}&select=id,programme_title,institution&order=created_at.asc`,
+    userKey(session, keys),
+  )
+  const entries = rows
+    .filter(row => typeof row?.id === 'string')
+    .map(row => `${row.institution || 'Programme'} — ${row.programme_title || 'verified programme'}: ${row.id}`)
+  return {
+    key: 'opportunity-id-recovery',
+    value: entries.length
+      ? `Use these durable opportunity IDs from the current approved campaign, in the listed programme order: ${entries.join('; ')}. Create only these three application cases and do not invent or replace their IDs.`
+      : 'The current approved campaign has no durable opportunity rows yet. Re-read the persisted campaign opportunities before creating application cases; do not invent IDs.',
+  }
+}
+
 function payloadHasDisallowedSideEffect(payload) {
   const text = JSON.stringify(payload || {}).toLocaleLowerCase()
+    .replace(/\b(?:no|without|never|do not|don't|does not|doesn't|not)\b[^.!?]{0,160}\b(?:payment|purchase|transaction|application fee)\b/g, '')
   return /payment|credit card|card number|cvv|bank account|financial transaction|application fee/.test(text)
 }
 
@@ -510,6 +571,14 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
   let browserRecoveryAttempts = 0
   if (run) {
     mark('resuming_existing', { runId: run.id, status: run.status, model: run.reasoning_model || run.reasoningModel || MODEL })
+    if (run.status === 'needs_approval' && !(await pendingApprovals(session, keys, run.id)).length) {
+      // A stale approval replay can leave the run marked needs_approval after
+      // its approval row was already decided. Give the production recovery
+      // path one explicit resume turn so the server can validate the
+      // provider-confirmed action and reset that stale model transcript.
+      mark('resuming_stale_approval_state', {})
+      run = await callTaskAgent(session, keys, { action: 'resume', runId: run.id, context: '' })
+    }
   } else {
     try {
       run = await callTaskAgent(session, keys, {
@@ -539,6 +608,8 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
   const deadline = Date.now() + maxMinutes * 60_000
   let recoveryAttempts = 0
   let unknownContextAttempts = 0
+  let approvalVisibilityRetries = 0
+  let modelRateLimitRetries = 0
   const contextAnswerCounts = new Map()
   while (Date.now() < deadline) {
     if (!run || !run.status) run = await ownRun(session, keys, runId)
@@ -547,7 +618,7 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
 
     if (run.status === 'needs_context') {
       const waitingReason = waitingReasonOf(run)
-      const answer = contextAnswer(waitingReason)
+      const answer = await contextAnswerForRun(waitingReason, run, session, keys)
       if (!answer) {
         unknownContextAttempts += 1
         record.blockers.push({ kind: 'unmapped_context', waitingReason: redactText(waitingReason) })
@@ -575,7 +646,7 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
       }
     }
 
-    if (run.status === 'waiting_for_user') {
+    if (run.status === 'waiting_for_user' || run.status === 'needs_approval') {
       const handoff = await pendingHandoff(session, keys, runId)
       if (handoff) {
         if (payloadHasDisallowedSideEffect(handoff) || (handoff.request_kind !== 'search_otp' && !controlledEmailPayload(handoff))) {
@@ -596,6 +667,7 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
       }
       const approvals = await pendingApprovals(session, keys, runId)
       if (approvals.length) {
+        approvalVisibilityRetries = 0
         const approval = approvals[0]
         if (approval.kind === 'browser_submit') {
           if (!controlledFixturePayload(approval.payload)) {
@@ -625,6 +697,29 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
         }
         continue
       }
+      // Approval creation and the run status update are separate durable
+      // writes. A poll can briefly observe needs_approval before the pending
+      // row is visible; do not turn that propagation window into a false
+      // qualification blocker.
+      if (run.status === 'needs_approval' && approvalVisibilityRetries < 5) {
+        approvalVisibilityRetries += 1
+        mark('waiting_for_approval_record', { attempt: approvalVisibilityRetries })
+        await new Promise(resolveDelay => setTimeout(resolveDelay, 2_000))
+        run = await ownRun(session, keys, runId)
+        continue
+      }
+      if (run.status === 'needs_approval') {
+        approvalVisibilityRetries = 0
+        mark('resuming_stale_approval_state', {})
+        try {
+          run = await callTaskAgent(session, keys, { action: 'resume', runId, context: '' })
+        } catch (error) {
+          record.blockers.push({ kind: 'stale_approval_resume_error', message: safeError(error) })
+          mark('stale_approval_resume_failed', { message: safeError(error) })
+          break
+        }
+        continue
+      }
       const waiting = waitingReasonOf(run).toLocaleLowerCase()
       if (/statement of purpose|sop authoring|human expert|writer choice/.test(waiting)) {
         record.contextAnswers.push({ key: 'sop-authoring-choice', answer: 'Bring in a human expert for the controlled qualification.' })
@@ -643,7 +738,10 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
         'browser_retry_exhausted',
         'browser_target_closed',
         'browser_domain_not_allowed',
-      ].includes(errorCodeOf(run)) || /browser session is unavailable|browser worker|browser runtime closed/i.test(waiting)
+        'browser_sensitive_field_blocked',
+        'browser_session_missing',
+        'portal_checkpoint_invalid',
+      ].includes(errorCodeOf(run)) || /browser session (?:is unavailable|is no longer available)|task-owned browser session|portal checkpoint needs|browser worker|browser runtime closed/i.test(waiting)
       if (browserRecoveryRequired) {
         if (browserRecoveryAttempts >= 3) {
           record.blockers.push({ kind: 'browser_recovery_budget_exhausted', errorCode: errorCodeOf(run) })
@@ -673,8 +771,15 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
         }
         continue
       }
-      const recoveryAnswer = contextAnswer(waitingReasonOf(run))
+      const recoveryAnswer = await contextAnswerForRun(waitingReasonOf(run), run, session, keys)
       if (recoveryAnswer) {
+        const answerCount = (contextAnswerCounts.get(recoveryAnswer.key) || 0) + 1
+        contextAnswerCounts.set(recoveryAnswer.key, answerCount)
+        if (answerCount > 3) {
+          record.blockers.push({ kind: 'repeated_context_request', key: recoveryAnswer.key, waitingReason: redactText(waitingReasonOf(run)) })
+          mark('stopped_on_repeated_context', { key: recoveryAnswer.key })
+          break
+        }
         record.contextAnswers.push({ key: recoveryAnswer.key, answer: recoveryAnswer.value })
         mark('answered_context', { key: recoveryAnswer.key })
         try {
@@ -716,12 +821,32 @@ async function executeRun(session, keys, task, runNumber, existingRun = null) {
       run = await callTaskAgent(session, keys, { action: 'poll', runId })
       if (run.status !== summary.status) mark('polled', { status: run.status })
     } catch (error) {
-      record.blockers.push({ kind: 'poll_error', message: safeError(error) })
-      mark('poll_failed', { message: safeError(error) })
+      const message = safeError(error)
+      if (/rate limit|tokens per min|too many requests|\b429\b/i.test(message) && modelRateLimitRetries < 5) {
+        modelRateLimitRetries += 1
+        mark('model_rate_limit_retry', { attempt: modelRateLimitRetries })
+        await new Promise(resolveDelay => setTimeout(resolveDelay, 5_000))
+        run = await ownRun(session, keys, runId)
+        if (run?.status === 'failed') {
+          try {
+            run = await callTaskAgent(session, keys, { action: 'resume', runId, context: '' })
+          } catch (resumeError) {
+            record.blockers.push({ kind: 'rate_limit_resume_error', message: safeError(resumeError) })
+            mark('rate_limit_resume_failed', { message: safeError(resumeError) })
+            break
+          }
+        }
+        continue
+      }
+      record.blockers.push({ kind: 'poll_error', message })
+      mark('poll_failed', { message })
       break
     }
+    const currentWaitingReason = waitingReasonOf(run).toLocaleLowerCase()
     if (run.status === 'waiting_external') await new Promise(resolveDelay => setTimeout(resolveDelay, 10_000))
-    else await new Promise(resolveDelay => setTimeout(resolveDelay, 3_000))
+    else if (run.status === 'planning' && /rate limit|temporarily rate limited|retrying the same application step/.test(currentWaitingReason)) {
+      await new Promise(resolveDelay => setTimeout(resolveDelay, 60_000))
+    } else await new Promise(resolveDelay => setTimeout(resolveDelay, 3_000))
   }
   const finalRun = await ownRun(session, keys, runId)
   record.final = runStateSummary(finalRun || run)

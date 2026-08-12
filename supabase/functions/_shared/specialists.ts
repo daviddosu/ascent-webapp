@@ -134,6 +134,7 @@ const davidTools = [
   'application.record_evidence',
   'application.record_communication',
   'application.create_human_assignment',
+  'application.coordinate_recommendations',
   'application.coordinate_academic_evidence',
   'application.coordinate_work_samples',
   'application.build_referee_support_pack',
@@ -146,6 +147,7 @@ const davidTools = [
   'browser.navigate',
   'browser.observe',
   'browser.act',
+  'browser.submit',
 ] as const
 
 function requiredEffectsForRoon(objective: string, taskContract: TaskContract): RequiredEffect[] {
@@ -236,7 +238,7 @@ export const specialistRegistry: Readonly<Record<SpecialistId, SpecialistRegistr
     requiredEffectDerivation: requiredEffectsForDavid,
     approvalRules: {
       'application.submit': 'require_approval',
-      'browser.submit': 'deny',
+      'browser.submit': 'require_approval',
       'application.generate_document': 'allow',
       'application.generate_cv': 'allow',
       'application.register_writer': 'allow',
