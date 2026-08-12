@@ -32,8 +32,7 @@ dist-ssr
 /supabase/.temp/
 
 # Generated qualification traces, reports, and local output
-/benchmarks/**/results/*.json
-/benchmarks/**/results/*.csv
+/benchmarks/**/results/
 /benchmarks/**/traces/
 /benchmarks/**/failures/
 /benchmarks/**/routing-statistics.json
