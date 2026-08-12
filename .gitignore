@@ -30,3 +30,13 @@ dist-ssr
 # Local QA captures and Supabase CLI connection/cache files
 /artifacts/
 /supabase/.temp/
+
+# Generated qualification traces, reports, and local output
+/benchmarks/**/results/*.json
+/benchmarks/**/results/*.csv
+/benchmarks/**/traces/
+/benchmarks/**/failures/
+/benchmarks/**/routing-statistics.json
+/benchmarks/**/report.md
+/output/
+/tmp/
