@@ -7,6 +7,7 @@ import { runFrozenSuite, startPortalServer, type BenchmarkRun, type FrozenSpec }
 import { failureArtifact } from './failure-report'
 import { runCanonicalEngineCorpus, type CanonicalEngineCase } from './engine-corpus'
 import { runRecommendationQualification } from './recommendation-qualification'
+import { researchProposalBenchmarkCases, runResearchProposalBenchmark, type ResearchProposalBenchmarkReport } from './research-proposal-benchmark'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -114,6 +115,7 @@ function writeArtifacts(run: BenchmarkRun) {
   writeFileSync(regressionsPath, `${JSON.stringify(next, null, 2)}\n`)
 
   const m = run.metrics
+  const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
   const engineMetrics = run.engine?.metrics ?? {}
   const stochastic = optionalJson(resolve(here, 'results/stochastic-latest.json'))
   const comparison = (kind: 'primitive' | 'harness' | 'adaptive') => {
@@ -189,6 +191,17 @@ Run **${run.runId}** at ${run.generatedAt}; evaluated commit **${run.codeCommit}
 - Fabricated facts / false completions / contamination: ${String(stochastic?.fabricatedFacts ?? 0)} / ${String(stochastic?.falseCompletions ?? 0)} / ${String(stochastic?.contamination ?? 0)}
 - Total cost / average cost per E2E decision: $${Number(stochastic?.totalCostUsd ?? 0).toFixed(6)} / $${Number(stochastic?.averageCostPerE2ECaseUsd ?? 0).toFixed(6)}
 - Average model latency: ${Number(stochastic?.averageE2ETimeMs ?? 0).toFixed(0)} ms
+\n## Canonical research-proposal execution
+
+${proposal ? `- Qualification: ${proposal.metrics.passed}/${proposal.metrics.cases} cases passed (${proposal.version})
+- Requirement evidence-backed / formatting / citation verification: ${percent(proposal.metrics.requirementEvidenceBackedRate)} / ${percent(proposal.metrics.formattingGateRate)} / ${percent(proposal.metrics.citationVerificationRate)}
+- Exact artifact / delivery evidence: ${percent(proposal.metrics.exactArtifactRate)} / ${percent(proposal.metrics.deliveryEvidenceRate)}
+- Failures recovered / unresolved hallucinated citations / rejected hallucinated citations: ${proposal.metrics.failuresRecovered} / ${proposal.metrics.hallucinatedCitations} / ${proposal.metrics.hallucinatedCitationsRejected}
+- Fabricated applicant facts / cross-case contamination: ${proposal.metrics.fabricatedApplicantFacts} / ${proposal.metrics.crossCaseContamination}
+- Autonomous context resolution: ${percent(proposal.metrics.autonomousContextResolutionRate)}
+- Readable report: ${proposal.outputRoot}/benchmark-report.md
+- Production outputs: ${proposal.cases.map(item => item.outputPaths.pdf).join(', ')}` : 'Not run for a selected non-proposal case.'}
+
 ## Canonical recommendation-letter qualification
 
 \${run.recommendation ? \`- Qualification: \${run.recommendation.passed ? 'PASS' : 'FAIL'} (\${run.recommendation.suiteVersion})
@@ -278,9 +291,41 @@ async function execute() {
       canonicalContamination: engine.metrics.contamination,
       canonicalUserInterventions: engine.metrics.userInterventions,
     }
+    const selectedValues = selectedCase ? selectedCase.split(',').map(value => value.trim()).filter(Boolean) : []
+    const proposalCaseSelection = selectedValues.length
+      ? researchProposalBenchmarkCases.filter(item => selectedValues.includes(item.id)).map(item => item.id)
+      : undefined
+    const proposal = !selectedValues.length || proposalCaseSelection?.length
+      ? runResearchProposalBenchmark({ selectedCase: proposalCaseSelection?.join(',') })
+      : null
+    const runWithProposal = run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }
+    if (proposal) {
+      runWithProposal.researchProposal = proposal
+      run.atomicCases += proposal.cases.length
+      run.metrics = {
+        ...run.metrics,
+        researchProposalCases: proposal.metrics.cases,
+        researchProposalPassed: proposal.metrics.passed,
+        researchProposalRequirementEvidenceBackedRate: proposal.metrics.requirementEvidenceBackedRate,
+        researchProposalExactArtifactRate: proposal.metrics.exactArtifactRate,
+        researchProposalDeliveryEvidenceRate: proposal.metrics.deliveryEvidenceRate,
+        researchProposalHallucinatedCitations: proposal.metrics.hallucinatedCitations,
+        researchProposalFabricatedApplicantFacts: proposal.metrics.fabricatedApplicantFacts,
+        researchProposalCrossCaseContamination: proposal.metrics.crossCaseContamination,
+        researchProposalFailuresRecovered: proposal.metrics.failuresRecovered,
+      }
+    }
+    const proposalGatePassed = !proposal || (
+      proposal.metrics.passed === proposal.metrics.cases &&
+      proposal.metrics.hallucinatedCitations === 0 &&
+      proposal.metrics.fabricatedApplicantFacts === 0 &&
+      proposal.metrics.crossCaseContamination === 0 &&
+      proposal.metrics.exactArtifactRate === 1 &&
+      proposal.metrics.deliveryEvidenceRate === 1
+    )
     const deterministicGatePassed = engine.results.every(item => item.success) &&
       engine.metrics.fabricatedFacts === 0 && engine.metrics.falseCompletions === 0 &&
-      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0
+      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0 && proposalGatePassed
     run.productionReadiness = {
       qualified: false,
       deterministicGatePassed,
@@ -289,6 +334,7 @@ async function execute() {
       deploymentGatePassed: false,
     }
     run.blockers.push('Live production gate blocked: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SHOTCOUNT_TEST_EMAIL, and SHOTCOUNT_TEST_PASSWORD are unavailable; authenticated RLS, Calendar, durable-restart, and exact-upload smoke were not rerun.')
+    if (proposal && !proposalGatePassed) run.blockers.push('Canonical research-proposal qualification failed.')
     const liveWeb = optionalJson(resolve(here, 'results/live-web-latest.json'))
     const liveGmail = optionalJson(resolve(here, 'results/live-gmail-latest.json'))
     if (liveWeb) run.liveReadOnlyWeb = { status: 'completed_separate_suite', ...liveWeb }
@@ -321,6 +367,8 @@ describe.skipIf(!enabled)('david_application_engine_v3', () => {
     expect(failures, failures.map(result => `${result.caseId}: ${result.rootCauseCategory} ${result.escalationReason ?? ''}`).join('\n')).toHaveLength(0)
     const engineFailures = run.engine?.results.filter(result => result.success !== true) ?? []
     expect(engineFailures).toHaveLength(0)
+    const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
+    expect(proposal?.metrics.passed).toBe(proposal?.metrics.cases)
   }, 900_000)
 })
 

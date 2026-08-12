@@ -1248,6 +1248,7 @@ function slug(value: string) {
 }
 
 export * from './recommendation-workflow.ts'
+export * from './research-proposal-workflow.ts'
 
 export function hasOnlyGroundedSubmittedValues(values: SubmittedValue[]) {
   return values.every(value => canUseFactForSubmission({ value: value.value, provenance: value.provenance }))
