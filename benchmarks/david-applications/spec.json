@@ -39,6 +39,11 @@
     {"id":"e2e-session-expiry-and-upload-recovery","level":"end_to_end","semanticFunction":"classify_application_message","features":["otp","session_expiry","wrong_upload"]},
     {"id":"e2e-five-application-campaign","level":"end_to_end","semanticFunction":"evaluate_programme_eligibility","features":["multi_application_isolation","case_rotation"]}
   ],
+  "workSampleCases": [
+    {"id":"work-sample-academic-northbridge","class":"academic_writing","features":["official_requirement","candidate_ranking","thesis_excerpt","page_limit","session_recovery"]},
+    {"id":"work-sample-code-northbridge","class":"code_portfolio","features":["repository_url","secret_scan","safe_submission_snapshot","url_readback"]},
+    {"id":"work-sample-portfolio-northbridge","class":"project_portfolio","features":["multi_project_strategy","broken_url","typed_choice","wrong_filename","duplicate_prevention"]}
+  ],
   "atomicCases": [
     {"id":"research-programme-masters","category":"research","title":"Find an eligible master's programme","expectedOutcome":{"state":"verified_eligible_masters"},"verification":["official citation","eligibility facts","fit score"]},
   "workSampleCases": [

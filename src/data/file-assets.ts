@@ -3,6 +3,10 @@ import { currentUser, getCloudClient } from './cloud'
 export const acceptedTaskFileTypes = [
   'image/png',
   'image/jpeg',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/json',
+  'application/x-ipynb+json',
   'application/pdf',
   'application/zip',
   'application/x-zip-compressed',

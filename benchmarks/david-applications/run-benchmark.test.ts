@@ -7,6 +7,7 @@ import { runFrozenSuite, startPortalServer, type BenchmarkRun, type FrozenSpec }
 import { failureArtifact } from './failure-report'
 import { runCanonicalEngineCorpus, type CanonicalEngineCase } from './engine-corpus'
 import { runAcademicEvidenceQualification } from './academic-evidence-benchmark'
+import { runWorkSampleQualification, type WorkSampleQualificationReport } from './work-sample-qualification'
 import { runRecommendationQualification } from './recommendation-qualification'
 import { researchProposalBenchmarkCases, runResearchProposalBenchmark, type ResearchProposalBenchmarkReport } from './research-proposal-benchmark'
 import { runCampaignSummaryQualification, type CampaignSummaryQualificationReport } from './campaign-summary-qualification'
@@ -113,6 +114,18 @@ function writeArtifacts(run: BenchmarkRun) {
       reproduction: { command: `npm run benchmark:david -- --case ${item.id}` },
     })
   }
+  for (const item of spec.workSampleCases ?? []) {
+    const key = `david_application_engine_v3:${item.id}:coverage`
+    if (!next.some(entry => entry.key === key)) next.push({
+      key,
+      caseId: item.id,
+      title: item.id.replaceAll('-', ' '),
+      source: 'canonical writing-sample / portfolio qualification',
+      failureClass: item.features.join(','),
+      status: 'covered',
+      reproduction: { command: `pnpm benchmark:david -- --case ${item.id}` },
+    })
+  }
   for (const result of run.results.filter(item => !item.success)) {
     const key = `${run.benchmarkVersion}:${result.caseId}:${result.rootCauseCategory ?? 'unknown'}`
     if (!next.some(item => item.key === key)) next.push({ key, caseId: result.caseId, title: result.title, source: 'frozen benchmark', firstSeenRun: run.runId, failureClass: result.rootCauseCategory, expected: result.expectedResult, reproduction: { command: `pnpm benchmark:david -- --case ${result.caseId}` } })
@@ -122,6 +135,7 @@ function writeArtifacts(run: BenchmarkRun) {
   const m = run.metrics
   const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
   const campaignSummary = (run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary
+  const workSample = (run as BenchmarkRun & { workSample?: WorkSampleQualificationReport }).workSample
   const engineMetrics = run.engine?.metrics ?? {}
   const stochastic = optionalJson(resolve(here, 'results/stochastic-latest.json'))
   const comparison = (kind: 'primitive' | 'harness' | 'adaptive') => {
@@ -225,7 +239,7 @@ ${proposal ? `- Qualification: ${proposal.metrics.passed}/${proposal.metrics.cas
 
 ## Canonical Academic Records & Testing qualification
 
-${run.academicEvidence ? \`- Qualification: ${run.academicEvidence.passed ? 'PASS' : 'FAIL'} (${run.academicEvidence.suiteVersion})
+${run.academicEvidence ? `- Qualification: ${run.academicEvidence.passed ? 'PASS' : 'FAIL'} (${run.academicEvidence.suiteVersion})
 - Institutions / applications / detected requirements: ${String(run.academicEvidence.metrics.institutionsCovered)} / ${String(run.academicEvidence.metrics.applicationsCovered)} / ${String(run.academicEvidence.metrics.requirementsDetected)}
 - Credential-evaluation cases / duplicate costs prevented: ${String(run.academicEvidence.metrics.credentialEvaluationCases)} / ${String(run.academicEvidence.metrics.duplicateCostsPrevented)}
 - Typed Progress Detail interactions / sensitive interaction rejections: ${String(run.academicEvidence.metrics.typedInteractions)} / ${String(run.academicEvidence.metrics.sensitiveInteractionsRejected)}
@@ -238,6 +252,15 @@ ${campaignSummary ? `- Qualification: ${campaignSummary.passed ? 'PASS' : 'FAIL'
 - Generated counts — Doing / Waiting / Needs you / At risk / Submitted: ${String(campaignSummary.metrics.doingItems)} / ${String(campaignSummary.metrics.waitingItems)} / ${String(campaignSummary.metrics.userActions)} / ${String(campaignSummary.metrics.risks)} / ${String(campaignSummary.metrics.submittedApplications)}
 - Integrity: ${campaignSummary.metrics.integrityValid ? 'valid' : 'invalid'}
 - Production-generated examples: \`results/campaign-summary-latest.json\`.` : 'Not run.'}
+
+${workSample ? [
+  '## Canonical writing-sample / portfolio qualification',
+  `- Qualification: ${String(workSample.metrics.passed ?? 0)}/${String(workSample.metrics.cases ?? 0)} cases passed (${workSample.version})`,
+  `- Requirement evidence / inspection / exact artifact / read-back: ${percent(workSample.metrics.requirementEvidenceBackedRate)} / ${percent(workSample.metrics.candidateInspectionRate)} / ${percent(workSample.metrics.exactArtifactMatchRate)} / ${percent(workSample.metrics.readBackVerificationRate)}`,
+  `- Automatic continuation / clarification-free completion: ${percent(workSample.metrics.automaticContinuationRate)} / ${percent(workSample.metrics.completedWithoutClarificationRate)}`,
+  `- Recovery and security blocks: ${String(workSample.metrics.failuresRecovered ?? 0)} recovered / ${String(workSample.metrics.secretLeakageBlocked ?? 0)} secret blocks`,
+  `- Qualification report: ${workSample.outputRoot}`,
+].join('\n') : ['## Canonical writing-sample / portfolio qualification', '', '- Not run for a selected non-work-sample case.'].join('\n')}
 
 ## Deployment and live gate
 
@@ -349,6 +372,41 @@ async function execute() {
         researchProposalFailuresRecovered: proposal.metrics.failuresRecovered,
       }
     }
+    const workSampleCaseSelection = selectedValues.length
+      ? (spec.workSampleCases ?? []).filter(item => selectedValues.includes(item.id)).map(item => item.id)
+      : undefined
+    const shouldRunWorkSampleQualification = !selectedValues.length || Boolean(workSampleCaseSelection?.length)
+    const workSample = shouldRunWorkSampleQualification
+      ? runWorkSampleQualification({ selectedCase: workSampleCaseSelection?.join(',') })
+      : null
+    const runWithWorkSample = run as BenchmarkRun & { workSample?: WorkSampleQualificationReport }
+    if (workSample) {
+      runWithWorkSample.workSample = workSample
+      run.atomicCases += workSample.cases.length
+      run.metrics = {
+        ...run.metrics,
+        workSampleCases: workSample.metrics.cases,
+        workSamplePassed: workSample.metrics.passed,
+        workSampleRequirementEvidenceBackedRate: workSample.metrics.requirementEvidenceBackedRate,
+        workSampleCandidateInspectionRate: workSample.metrics.candidateInspectionRate,
+        workSampleAuthorshipVerificationRate: workSample.metrics.authorshipVerificationRate,
+        workSampleAutomaticSelectionRate: workSample.metrics.automaticSelectionRate,
+        workSampleApprovalCount: workSample.metrics.approvalCount,
+        workSampleStructuredQuestionCount: workSample.metrics.structuredQuestionCount,
+        workSampleFreeTextQuestionCount: workSample.metrics.freeTextQuestionCount,
+        workSampleUploadsCompleted: workSample.metrics.uploadsCompleted,
+        workSampleExactArtifactMatchRate: workSample.metrics.exactArtifactMatchRate,
+        workSampleReadBackVerificationRate: workSample.metrics.readBackVerificationRate,
+        workSampleSecretLeakageBlocked: workSample.metrics.secretLeakageBlocked,
+        workSampleWrongArtifactBlocked: workSample.metrics.wrongArtifactBlocked,
+        workSampleDuplicateUploadsBlocked: workSample.metrics.duplicateUploadsBlocked,
+        workSampleFalseCompletions: workSample.metrics.falseCompletions,
+        workSampleFailuresRecovered: workSample.metrics.failuresRecovered,
+        workSampleUserInterventions: workSample.metrics.userInterventions,
+        workSampleAutomaticContinuationRate: workSample.metrics.automaticContinuationRate,
+        workSampleCompletedWithoutClarificationRate: workSample.metrics.completedWithoutClarificationRate,
+      }
+    }
     const proposalGatePassed = !proposal || (
       proposal.metrics.passed === proposal.metrics.cases &&
       proposal.metrics.hallucinatedCitations === 0 &&
@@ -357,9 +415,19 @@ async function execute() {
       proposal.metrics.exactArtifactRate === 1 &&
       proposal.metrics.deliveryEvidenceRate === 1
     )
+    const workSampleGatePassed = !workSample || (
+      workSample.metrics.passed === workSample.metrics.cases &&
+      workSample.metrics.requirementEvidenceBackedRate === 1 &&
+      workSample.metrics.authorshipVerificationRate === 1 &&
+      workSample.metrics.exactArtifactMatchRate === 1 &&
+      workSample.metrics.readBackVerificationRate === 1 &&
+      workSample.metrics.secretLeakageBlocked > 0 &&
+      workSample.metrics.falseCompletions === 0 &&
+      workSample.metrics.crossCaseContamination === 0
+    )
     const deterministicGatePassed = engine.results.every(item => item.success) &&
       engine.metrics.fabricatedFacts === 0 && engine.metrics.falseCompletions === 0 &&
-      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0 && proposalGatePassed && academicEvidence.passed && campaignSummary.passed
+      engine.metrics.duplicateActions === 0 && engine.metrics.contamination === 0 && proposalGatePassed && workSampleGatePassed && academicEvidence.passed && campaignSummary.passed
     run.productionReadiness = {
       qualified: false,
       deterministicGatePassed,
@@ -369,6 +437,7 @@ async function execute() {
     }
     run.blockers.push('Live production gate blocked: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SHOTCOUNT_TEST_EMAIL, and SHOTCOUNT_TEST_PASSWORD are unavailable; authenticated RLS, Calendar, durable-restart, and exact-upload smoke were not rerun.')
     if (proposal && !proposalGatePassed) run.blockers.push('Canonical research-proposal qualification failed.')
+    if (workSample && !workSampleGatePassed) run.blockers.push('Canonical writing-sample / portfolio qualification failed.')
     if (!academicEvidence.passed) run.blockers.push('Canonical Academic Records & Testing qualification failed.')
     if (!campaignSummary.passed) run.blockers.push('Canonical user-facing campaign summary qualification failed.')
     const liveWeb = optionalJson(resolve(here, 'results/live-web-latest.json'))
@@ -406,6 +475,7 @@ describe.skipIf(!enabled)('david_application_engine_v3', () => {
     const proposal = (run as BenchmarkRun & { researchProposal?: ResearchProposalBenchmarkReport }).researchProposal
     expect(proposal?.metrics.passed).toBe(proposal?.metrics.cases)
     expect(run.academicEvidence?.passed).toBe(true)
+    expect((run as BenchmarkRun & { workSample?: WorkSampleQualificationReport }).workSample?.metrics.passed).toBe((run as BenchmarkRun & { workSample?: WorkSampleQualificationReport }).workSample?.metrics.cases)
     expect((run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary?.passed).toBe(true)
   }, 900_000)
 })
