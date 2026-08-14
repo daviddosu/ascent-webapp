@@ -79,6 +79,7 @@ import {
   type AgentRun,
   type RoonPlanTask,
 } from './data/agent'
+import { agentProgressTimeline } from './data/agent-progress'
 import {
   REASONING_MODEL_ID,
   getSpecialist,
@@ -1142,6 +1143,13 @@ function readAgentRuns() {
         : specialistId && taskContract
           ? specialistRequiredEffects(specialistId, `${run.objective} ${run.context ?? ''}`, taskContract)
           : []
+      const currentProgress = ['planning', 'running', 'waiting_external'].includes(run.status) &&
+        run.currentProgress && getSpecialist(run.currentProgress.specialistId) && run.currentProgress.label?.trim()
+        ? {
+            specialistId: run.currentProgress.specialistId,
+            label: run.currentProgress.label.trim(),
+          }
+        : null
       return [run.taskId, {
         ...run,
         specialistId,
@@ -1157,6 +1165,7 @@ function readAgentRuns() {
         unsatisfiedEffects,
         progressIndex: run.progressIndex ?? run.currentStep ?? -1,
         progress: Array.isArray(run.progress) ? run.progress : [],
+        currentProgress,
         durable: Boolean(run.durable),
       } as AgentRun]
     }))
@@ -1173,26 +1182,6 @@ function persistAgentRuns() {
   }
 }
 
-const agentProgressLabels = [
-  'Opened the task context',
-  'Extracting key sections',
-  'Summarizing main points',
-  'Identifying key takeaways',
-]
-const agentPreviewProgressLabels = [
-  'Opened the report',
-  'Extracting key sections',
-  'Summarizing main points',
-  'Identifying key takeaways',
-]
-const applicationProgressLabels = [
-  'Researching programmes',
-  'Verifying official requirements',
-  'Preparing application documents',
-  'Coordinating writers and referees',
-  'Completing the university portal',
-]
-
 function taskSpecialistRoute(task: Pick<Task, 'title' | 'description'>): SpecialistRoute {
   return routeTask(task.title, task.description)
 }
@@ -1202,9 +1191,10 @@ function specialistForTask(task: Pick<Task, 'title' | 'description'>, run?: Agen
   const providerFailure = run?.status === 'needs_context' && run.capability === 'flight_search' &&
     /live flight-search results were not returned|reconnect flight-search access/i.test(run.waitingReason)
   const contextOwner = run?.status === 'needs_context' && !providerFailure ? run.contextOwnerSpecialistId : null
+  const liveProgressSpecialist = run?.currentProgress?.specialistId
   const assigned = contextOwner
     ? contextOwner
-    : run?.activeSpecialistId ?? run?.specialistId ?? route.primarySpecialistId
+    : run?.activeSpecialistId ?? liveProgressSpecialist ?? run?.specialistId ?? route.primarySpecialistId
   if (assigned) return getSpecialist(assigned)
   // Legacy tasks that were previously delegated to Roon retain a subtle
   // identity treatment in the existing inspector while the server performs
@@ -1218,60 +1208,27 @@ function specialistName(task: Pick<Task, 'title' | 'description'>, run?: AgentRu
 }
 
 function specialistActivity(
-  task: Pick<Task, 'title' | 'description'>,
   run: AgentRun | null | undefined,
-  specialist: NonNullable<ReturnType<typeof getSpecialist>>,
 ) {
+  const liveDetail = run?.currentProgress?.label?.trim()
+  if (liveDetail && ['planning', 'running'].includes(run?.status ?? '')) return liveDetail
   if (run?.status === 'needs_context') {
-    return specialist.id === 'roon'
-      ? 'Asking for one detail at a time'
-      : specialist.id === 'caspian'
-        ? 'Getting the trip details ready'
-      : specialist.id === 'david'
-        ? 'Waiting for the missing application detail'
-        : 'Waiting for the detail that unlocks the next move'
+    return run.waitingReason.trim()
   }
-  if (run?.status === 'needs_approval') return 'Ready for your review before anything changes'
+  if (run?.status === 'needs_approval') return run.waitingReason.trim()
   if (run?.status === 'waiting_external') {
-    return specialist.id === 'caspian'
-      ? 'Checking live flight options'
-      : 'Keeping watch for the next external update'
+    return run.waitingReason.trim()
   }
-  if (run?.status === 'waiting_for_user') return 'Holding the work here for your call'
-  if (run?.status === 'failed') return 'Rechecking the path after an interruption'
+  if (run?.status === 'waiting_for_user') return run.waitingReason.trim()
+  if (run?.status === 'failed') return run.error?.trim() || ''
   if (run?.status === 'completed') return 'Finished the groundwork and left it ready for you'
-
-  const taskText = `${task.title} ${task.description}`.toLocaleLowerCase()
-  const capability = run?.capability ?? (
-    specialist.id === 'caspian' || /\b(?:flight|itinerary|airline|airport)\b/.test(taskText)
-      ? 'flight_search'
-      : specialist.id === 'david' || isApplicationIntent(task.title, task.description)
-        ? 'research_draft'
-        : /\b(?:calendar|schedule|meeting|availability)\b/.test(taskText)
-          ? 'scheduling'
-          : /\b(?:email|gmail|inbox|reply|message)\b/.test(taskText)
-            ? 'gmail'
-            : specialist.id === 'roon'
-              ? 'research'
-              : 'draft'
-  )
-  const activityByCapability: Record<string, string> = {
-    gmail: 'Reviewing threads · preparing the next safe step',
-    calendar: 'Reading your calendar · finding the cleanest opening',
-    scheduling: 'Checking availability · lining up the next move',
-    flight_search: 'Comparing live flights',
-    browser: 'Opening the right page · working through the details',
-    draft: 'Shaping a polished draft · keeping your voice intact',
-    research_draft: 'Researching the signal · building a grounded draft',
-    research: 'Gathering the useful signal · distilling the answer',
-  }
-  return activityByCapability[capability] ?? 'Preparing the next safe move for you'
+  return ''
 }
 
 function specialistHeader(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
   const specialist = specialistForTask(task, run)
   if (!specialist) return '<strong>ShotCount</strong>'
-  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentSparkleIcon()}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialistActivity(task, run, specialist))}</small></span></strong>`
+  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentSparkleIcon()}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialistActivity(run))}</small></span></strong>`
 }
 
 function agentUpdateToast(run: AgentRun) {
@@ -1338,6 +1295,10 @@ async function startAgentRun(task: Task, context = '', interactionResponse?: { i
     existing.context = context
     existing.status = 'planning'
     existing.waitingReason = ''
+    const specialist = getSpecialist(existing.activeSpecialistId ?? existing.specialistId)
+    existing.currentProgress = specialist
+      ? { specialistId: specialist.id, label: `${specialist.displayName} is preparing the next verified operation.` }
+      : null
     persistAgentRuns()
     render()
     try {
@@ -1369,6 +1330,10 @@ async function startAgentRun(task: Task, context = '', interactionResponse?: { i
 
   run.status = 'running'
   run.progressIndex = 0
+  const specialist = getSpecialist(run.activeSpecialistId ?? run.specialistId)
+  run.currentProgress = specialist
+    ? { specialistId: specialist.id, label: `${specialist.displayName} is preparing the first verified operation.` }
+    : null
   persistAgentRuns()
   render()
 
@@ -3200,48 +3165,26 @@ function safeAgentHandoffUrl(value: string) {
   }
 }
 
-function renderAgentProgressPanel(task: Task, progressIndex: number, placeholder = false, run?: AgentRun) {
-  // Provider/realtime retries can report the same checkpoint more than once.
-  // Keep the feed stable rather than visually replaying an already shown step.
-  const completedProgress = (run?.progress.filter(Boolean) ?? []).filter((label, index, steps) =>
-    index === 0 || label !== steps[index - 1],
-  )
-  const fallbackLabels = isApplicationIntent(task.title, task.description)
-    ? applicationProgressLabels
-    : placeholder ? agentPreviewProgressLabels : agentProgressLabels
-  const currentLabel = run?.status === 'planning'
-    ? 'Planning the next safe step'
-    : run?.status === 'waiting_external'
-      ? 'Monitoring for the next update'
-      : 'Continuing the task'
-  const progressLabels = completedProgress.length
-    ? [...completedProgress.slice(-3), currentLabel]
-    : fallbackLabels
-  const activeIndex = completedProgress.length ? progressLabels.length - 1 : progressIndex
-  const owner = specialistForTask(task, run)
-  const ownerMessage = owner?.id === 'caspian'
-    ? 'I’m checking live flights and comparing the best matches.'
-    : owner?.id === 'david'
-      ? 'I’m organizing the application requirements, deadlines, and missing documents.'
-      : ''
+function renderAgentProgressPanel(task: Task, _progressIndex: number, placeholder = false, run?: AgentRun) {
+  const timeline = agentProgressTimeline({
+    completed: run?.progress ?? [],
+    current: run?.currentProgress?.label,
+    waitingReason: run?.waitingReason,
+    status: run?.status,
+  })
+  const progressRows = [
+    ...timeline.completed.map(label => ({ label, state: 'done' as const })),
+    ...(timeline.active ? [{ label: timeline.active, state: 'active' as const }] : []),
+  ]
+  const liveActivity = timeline.active || (run?.status === 'waiting_external' ? run.waitingReason.trim() : '')
   const canCheckExternalWork = run?.status === 'waiting_external' && !placeholder
   const checkExternalBusy = canCheckExternalWork && agentDecisionBusy.has(run?.id ?? '')
-  const capabilityMessage: Record<string, string> = {
-    gmail: 'I’m reviewing the relevant Gmail threads and preparing the next safe step.',
-    calendar: 'I’m checking your calendar and looking for a conflict-free next step.',
-    scheduling: 'I’m checking availability and preparing the scheduling outreach.',
-    flight_search: 'I’m checking live flights and comparing the best matches.',
-    browser: 'I’m working through the relevant website for you.',
-    draft: 'I’m preparing the requested draft for your review.',
-    research_draft: 'I’m researching and preparing the requested draft.',
-    research: 'I’m reading and summarizing the relevant material for you.',
-  }
   return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
     <header>${specialistHeader(task, run)}<em><i aria-hidden="true">◔</i> In progress</em></header>
-    <p>${placeholder ? 'I’m reading and summarizing the report for you.' : escapeHtml(ownerMessage || (capabilityMessage[run?.capability ?? 'research'] ?? capabilityMessage.research))}</p>
+    ${liveActivity ? `<p>${escapeHtml(liveActivity)}</p>` : ''}
     ${renderDavidApplicationStatus(task, run)}
     <div class="task-agent-progress">
-      ${progressLabels.map((label, index) => `<div class="${index < activeIndex ? 'done' : index === activeIndex ? 'active' : ''}"><i>${index < activeIndex ? '✓' : index === activeIndex ? '◔' : ''}</i><span>${escapeHtml(label)}</span></div>`).join('')}
+      ${progressRows.map(row => `<div class="${row.state}"><i>${row.state === 'done' ? '✓' : '◔'}</i><span>${escapeHtml(row.label)}</span></div>`).join('')}
     </div>
     ${renderRoonGeneratedFiles(task)}
     <footer><button type="button" data-action="view-agent-progress" data-task-id="${escapeHtml(task.id)}">View progress</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${escapeHtml(task.id)}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button></footer>
@@ -3639,7 +3582,7 @@ function renderAgentPanel(task: Task) {
         waitingReason: run.error || 'Choose a saved itinerary to retry the provider handoff.',
       })
     }
-    if (isPreviewMode && previewAgentState !== 'error') return renderAgentProgressPanel(task, 2, true)
+    if (isPreviewMode && previewAgentState !== 'error') return renderAgentProgressPanel(task, run.progressIndex, true, run)
     return renderAgentErrorPanel(task, run.error ?? `${specialistName(task, run)} could not complete this task.`)
   }
 

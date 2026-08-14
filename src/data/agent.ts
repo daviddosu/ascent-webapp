@@ -29,6 +29,11 @@ import type { SupplementalProgressInteraction } from '../../supabase/functions/_
 
 export type AgentRunStatus = DurableAgentRunStatus
 
+export type AgentCurrentProgress = {
+  specialistId: SpecialistId
+  label: string
+}
+
 export type AgentSource = {
   title: string
   url: string
@@ -128,6 +133,8 @@ export type AgentRun = {
   waitingReason: string
   progressIndex: number
   progress: string[]
+  /** The one operation currently being performed by the active specialist. */
+  currentProgress: AgentCurrentProgress | null
   result: AgentResult | null
   applicationState?: DavidApplicationState | null
   applicationCaseId?: string | null
@@ -178,6 +185,10 @@ type AgentRunRow = {
     scheduling_options?: AgentRun['schedulingOptions']
     progress_detail_interaction?: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction | null
     flight_context_owner_specialist_id?: SpecialistId | null
+    progress_current?: {
+      specialist_id?: SpecialistId | null
+      label?: string | null
+    } | null
   } | null
   recipientResolution?: AgentRun['recipientResolution']
   contextOwnerSpecialistId?: SpecialistId | null
@@ -232,6 +243,13 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
   const stages = Array.isArray(row.specialist_stages) && row.specialist_stages.length
     ? row.specialist_stages
     : route.stages
+  const rawCurrentProgress = row.context?.progress_current
+  const currentProgressLabel = ['planning', 'running', 'waiting_external'].includes(row.status) && typeof rawCurrentProgress?.label === 'string'
+    ? rawCurrentProgress.label.trim()
+    : ''
+  const currentProgressSpecialist = specialistIdentity(
+    rawCurrentProgress?.specialist_id ?? row.active_specialist_id ?? specialistId,
+  )
   return {
     id: row.id,
     taskId: row.task_id,
@@ -259,6 +277,9 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     waitingReason: row.waiting_reason,
     progressIndex: row.current_step,
     progress: Array.isArray(row.progress) ? row.progress : [],
+    currentProgress: currentProgressLabel && currentProgressSpecialist
+      ? { specialistId: currentProgressSpecialist.id, label: currentProgressLabel }
+      : null,
     applicationState: row.application_state ?? null,
     applicationCaseId: typeof row.context?.application_case_id === 'string' ? row.context.application_case_id : null,
     applicationCaseIds: Array.isArray(row.context?.application_case_ids) ? row.context.application_case_ids.filter((value): value is string => typeof value === 'string') : [],
@@ -363,6 +384,11 @@ export function createAgentRun(task: Task, context = ''): AgentRun {
     waitingReason: '',
     progressIndex: -1,
     progress: [],
+    currentProgress: needsContext && !context && specialist
+      ? null
+      : specialist
+        ? { specialistId: specialist.id, label: `${specialist.name} is preparing the first verified operation.` }
+        : null,
     result: null,
     applicationState: isApplicationIntent(task.title, task.description)
       ? {

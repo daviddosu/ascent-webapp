@@ -717,7 +717,15 @@ describe('agent execution security contract', () => {
 
   it('does not let the background sweep replay isolated flight progress', () => {
     expect(agentWatchSweepFunction).toContain(".neq('capability', 'flight_search')")
-    expect(mainUi).toContain('label !== steps[index - 1]')
+    expect(mainUi).toContain('agentProgressTimeline')
+    expect(mainUi).not.toContain('Continuing the task')
+  })
+
+  it('keeps active recovery work out of the completed progress history', () => {
+    expect(taskAgentFunction).toContain('is correcting the saved portal section after the site reported required fields.')
+    expect(taskAgentFunction).not.toContain('The portal reported required fields; David is correcting the saved section.')
+    expect(taskAgentFunction).toContain('progressCurrent(retryRun, toolProgressLabel(retryRun, toolName))')
+    expect(taskAgentFunction).toContain('progressCurrent(run, toolProgressLabel(run, action.tool_name))')
   })
 
   it('persists browser search and selection evidence on the same run', () => {

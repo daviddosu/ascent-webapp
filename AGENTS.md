@@ -16,6 +16,7 @@ Agent ownership is strict:
 - Caspian owns flight search and stops before payment;
 - deterministic engines own workflow truth; models make bounded semantic judgments;
 - provider tools own external effects, and harnesses own verification and recovery.
+- Agent progress is live state, not a scripted checklist: render only persisted completed summaries and one persisted current operation; the visible specialist and operation must match the active specialist; waiting or approval states must use their exact current reason; never mark an in-progress or waiting message as completed.
 
 ## Required checks
 

@@ -26,10 +26,11 @@ describe('Roon context panel', () => {
     expect(mainSource).toContain('Roon will ask for missing trip or traveler details here, one question at a time.')
   })
 
-  it('keeps Caspian copy simple and action-oriented', () => {
-    expect(mainSource).toContain('Checking live flight options')
-    expect(mainSource).toContain('Comparing live flights')
-    expect(mainSource).toContain('I’m checking live flights and comparing the best matches.')
+  it('uses live specialist state for the flight operation copy', () => {
+    expect(mainSource).toContain('currentProgress')
+    expect(mainSource).toContain("return run.waitingReason.trim()")
+    expect(mainSource).not.toContain('Waiting for the next external update')
+    expect(mainSource).not.toContain('I’m checking live flights and comparing the best matches.')
     expect(mainSource).toContain('The live flight site is taking too long. Your options are saved')
   })
 })

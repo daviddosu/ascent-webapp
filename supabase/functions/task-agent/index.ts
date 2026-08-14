@@ -874,6 +874,118 @@ function specialistMessage(run: AgentRunRow, message: unknown) {
   return rendered
 }
 
+type AgentCurrentProgress = {
+  specialist_id: SpecialistId
+  label: string
+}
+
+function progressCurrent(run: AgentRunRow, label: string, specialistId = run.active_specialist_id): AgentCurrentProgress | null {
+  const specialist = getSpecialist(safeSemanticSpecialist(specialistId) ?? specialistId)
+  const cleanLabel = safeString(label, 1_200).trim()
+  return specialist && cleanLabel
+    ? { specialist_id: specialist.id, label: cleanLabel }
+    : null
+}
+
+function modelProgressLabel(run: AgentRunRow) {
+  return `${activeSpecialistDisplayName(run)} is reviewing the latest result and selecting the next verified operation.`
+}
+
+function toolProgressLabel(run: AgentRunRow, toolName: string) {
+  const specialist = activeSpecialistDisplayName(run)
+  const phraseByTool: Record<string, string> = {
+    web_search: 'researching the relevant official sources',
+    'gmail.search_messages': 'searching Gmail for the relevant messages',
+    'gmail.read_message': 'reading the matched email',
+    'gmail.read_thread': 'reading the conversation',
+    'gmail.create_draft': 'preparing the exact email draft',
+    'gmail.send_message': 'preparing the exact email for approval',
+    'gmail.wait_for_reply': 'setting up the reply watch',
+    'contacts.find_contact': 'checking the saved contact records',
+    'contacts.resolve_recipient': 'resolving the exact recipient',
+    'calendar.list_events': 'reading the relevant Calendar events',
+    'calendar.get_availability': 'checking Calendar availability',
+    'calendar.create_event': 'preparing the Calendar event details',
+    'calendar.update_event': 'preparing the Calendar change',
+    'calendar.delete_event': 'preparing the Calendar removal',
+    'browser.start_session': 'starting the task-owned browser session',
+    'browser.navigate': 'opening the verified website page',
+    'browser.observe': 'reading the current website state',
+    'browser.act': 'completing the next verified website field',
+    'browser.submit': 'preparing the exact public form for approval',
+    'browser.search_flights': 'searching live flight options',
+    'browser.select_flight': 'selecting the verified flight itinerary',
+    'browser.prepare_flight_checkout': 'preparing the traveler details for payment review',
+    'application.evaluate_programme_eligibility': 'checking programme eligibility against verified requirements',
+    'application.resolve_requirement_conflict': 'resolving the requirement conflict against the evidence',
+    'application.map_portal_field': 'mapping the portal field to verified applicant evidence',
+    'application.evaluate_professor_fit': 'checking supervisor fit against the applicant evidence',
+    'application.interpret_email_reply': 'interpreting the application reply against the case state',
+    'application.evaluate_writer_draft': 'reviewing the writer draft against the brief',
+    'application.classify_application_message': 'classifying the application message against the case',
+    'application.evaluate_reference_requirement': 'checking the reference requirement against the evidence',
+    'application.record_opportunity': 'recording the verified opportunity',
+    'application.create_case': 'creating the application case from verified requirements',
+    'application.record_contact': 'recording the approved application contact',
+    'application.register_writer': 'recording the available writer',
+    'application.select_writer': 'selecting the approved writer for the brief',
+    'application.update_requirement': 'updating the requirement with the latest evidence',
+    'application.record_portal_checkpoint': 'recording the verified portal checkpoint',
+    'application.resolve_supplemental_questions': 'resolving the portal questions against applicant evidence',
+    'application.record_evidence': 'recording the verified application evidence',
+    'application.record_communication': 'recording the provider-confirmed communication',
+    'application.create_human_assignment': 'preparing the human expert assignment',
+    'application.coordinate_recommendations': 'coordinating the recommendation request',
+    'application.coordinate_academic_evidence': 'coordinating the academic evidence request',
+    'application.coordinate_work_samples': 'coordinating the work-sample decision',
+    'application.coordinate_fee': 'checking the application fee path',
+    'application.record_fee_waiver_result': 'recording the fee-waiver result',
+    'application.execute_fee_payment': 'preparing the fee payment boundary for your review',
+    'application.reconcile_fee_payment': 'reconciling the provider fee result',
+    'application.build_referee_support_pack': 'building the verified referee support pack',
+    'application.build_readiness_report': 'building the evidence-backed readiness report',
+    'application.generate_document': 'preparing the grounded application document',
+    'application.prepare_research_proposal': 'preparing the research proposal from verified evidence',
+    'application.review_research_proposal': 'reviewing the research proposal against the brief',
+    'application.interpret_research_proposal_feedback': 'interpreting the proposal feedback',
+    'application.finalize_research_proposal': 'finalizing the approved research proposal',
+    'application.record_proposal_delivery': 'recording the verified proposal delivery',
+    'application.generate_cv': 'preparing the grounded application CV',
+    'application.generate_supervisor_outreach': 'preparing the grounded supervisor outreach',
+    'application.submit': 'preparing the exact application submission for approval',
+    'application.request_roon': 'preparing the typed handoff to Roon',
+    'agent.request_context': 'preparing the one missing detail needed to continue',
+    'agent.complete': 'verifying the completion evidence',
+  }
+  return `${specialist} is ${phraseByTool[toolName] ?? 'carrying out the next verified operation'}.`
+}
+
+async function ensureLegacyTaskRecord(
+  admin: AdminClient,
+  run: AgentRunRow,
+) {
+  const taskId = safeString(run.task_id, 120).trim()
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+    throw new Error('Application tasks must use a UUID task ID.')
+  }
+  const due = safeString(run.context?.due, 10).trim()
+  const task = await admin.from('tasks').upsert({
+    id: taskId,
+    user_id: run.user_id,
+    title: run.objective,
+    description: safeString(run.context?.description, 4_000),
+    due_date: /^\d{4}-\d{2}-\d{2}$/.test(due) ? due : null,
+    priority: 'medium',
+    estimate_minutes: 25,
+    recurrence: 'none',
+    top_three: false,
+    carried_count: 0,
+    last_carry_reason: '',
+    position: 0,
+  }, { onConflict: 'id', ignoreDuplicates: true })
+  if (task.error) throw new Error(task.error.message)
+}
+
 async function ensureApplicationCampaign(
   admin: AdminClient,
   run: AgentRunRow,
@@ -882,6 +994,7 @@ async function ensureApplicationCampaign(
   if (!intent.isApplication || run.active_specialist_id !== 'david') return run
   const existingState = run.application_state
   if (existingState?.campaignId) return run
+  await ensureLegacyTaskRecord(admin, run)
   const campaign = await admin.from('application_campaigns').upsert({
     user_id: run.user_id,
     task_id: run.task_id,
@@ -1092,6 +1205,12 @@ async function promoteApplicationArtifactsForSubmission(
 
 function serializeRun(run: AgentRunRow) {
   const context = run.context ?? {}
+  const persistedProgress = recordValue(context.progress_current)
+  const isLiveStatus = ['planning', 'running', 'waiting_external'].includes(run.status)
+  const currentProgressSpecialist = isLiveStatus
+    ? getSpecialist(safeSemanticSpecialist(persistedProgress.specialist_id) ?? run.active_specialist_id)
+    : null
+  const currentProgressLabel = isLiveStatus ? safeString(persistedProgress.label, 1_200).trim() : ''
   return {
     id: run.id,
     taskId: run.task_id,
@@ -1117,6 +1236,9 @@ function serializeRun(run: AgentRunRow) {
     waitingReason: specialistMessage(run, run.waiting_reason),
     progressIndex: run.current_step,
     progress: Array.isArray(run.progress) ? run.progress : [],
+    currentProgress: currentProgressSpecialist && currentProgressLabel
+      ? { specialistId: currentProgressSpecialist.id, label: currentProgressLabel }
+      : null,
     applicationState: run.application_state ?? null,
     result: run.result,
     error: run.error ? specialistMessage(run, run.error) : undefined,
@@ -1668,10 +1790,33 @@ async function updateRun(
   run: AgentRunRow,
   patch: Record<string, unknown>,
 ) {
+  const nextStatus = safeString(patch.status, 80) || run.status
+  const statusChanged = nextStatus !== run.status
+  const patchContext = patch.context && typeof patch.context === 'object' && !Array.isArray(patch.context)
+    ? { ...(patch.context as Record<string, unknown>) }
+    : null
+  const hasExplicitProgressCurrent = Boolean(patchContext && Object.prototype.hasOwnProperty.call(patchContext, 'progress_current'))
+  const nextContext = patchContext ?? (statusChanged ? { ...(run.context ?? {}) } : null)
+  if (nextContext && statusChanged && !hasExplicitProgressCurrent) {
+    if (['planning', 'running'].includes(nextStatus)) {
+      nextContext.progress_current = progressCurrent(run, modelProgressLabel(run))
+    } else if (nextStatus === 'waiting_external') {
+      const waitingReason = safeString(patch.waiting_reason ?? run.waiting_reason, 1_200).trim()
+      nextContext.progress_current = progressCurrent(
+        run,
+        `${activeSpecialistDisplayName(run)} is waiting for the external update${waitingReason ? `: ${waitingReason}` : '.'}`,
+      )
+    } else {
+      nextContext.progress_current = null
+    }
+  }
+  const normalizedPatch = nextContext && (patchContext || statusChanged)
+    ? { ...patch, context: nextContext }
+    : patch
   const { data, error } = await admin
     .from('agent_runs')
     .update({
-      ...patch,
+      ...normalizedPatch,
       version: run.version + 1,
       updated_at: new Date().toISOString(),
     })
@@ -1686,7 +1831,7 @@ async function updateRun(
     // A stale callback must never overwrite a newer execution stage.
     if (current.status !== run.status) return current
     const retried = await admin.from('agent_runs').update({
-      ...patch, version: current.version + 1, updated_at: new Date().toISOString(),
+      ...normalizedPatch, version: current.version + 1, updated_at: new Date().toISOString(),
     }).eq('id', current.id).eq('user_id', current.user_id).eq('version', current.version).select('*').maybeSingle()
     if (retried.error || !retried.data) throw new Error(retried.error?.message ?? 'Agent run changed while it was executing.')
     return retried.data as AgentRunRow
@@ -1973,6 +2118,10 @@ async function pauseForApproval(
   const updated = await updateRun(admin, run, {
     status: 'needs_approval',
     waiting_reason: approvalTitle(toolName),
+    context: {
+      ...(run.context ?? {}),
+      progress_current: progressCurrent(run, `${toolProgressLabel(run, toolName)} Awaiting your approval.`),
+    },
     lease_owner: null,
     lease_expires_at: null,
   })
@@ -2061,6 +2210,10 @@ function canonicalConfiguredBrowserDomain(domain: string, configured: Set<string
   }
   const alias = explicitAlias[domain]
   if (alias && configured.has(alias)) return alias
+  const configuredParent = [...configured]
+    .filter(candidate => domain.endsWith(`.${candidate}`))
+    .sort((left, right) => right.length - left.length)[0]
+  if (configuredParent) return configuredParent
   const wwwAlias = `www.${domain}`
   return configured.has(wwwAlias) ? wwwAlias : domain
 }
@@ -2382,6 +2535,10 @@ async function refreshFlightOptions(
     error_code: null,
     retryable: true,
     external_correlation_id: `browser-session:${queued.sessionId}`,
+    context: {
+      ...(run.context ?? {}),
+      progress_current: progressCurrent(run, `${activeSpecialistDisplayName(run)} is refreshing live flight options.`),
+    },
     lease_owner: null,
     lease_expires_at: null,
   })
@@ -2581,6 +2738,10 @@ async function queueFlightSelectionOperation(
     const waiting = await updateRun(admin, run, {
       status: 'waiting_for_user',
       waiting_reason: queuedMessage,
+      context: {
+        ...(run.context ?? {}),
+        progress_current: null,
+      },
       error_code: 'browser_worker_unavailable',
       error: queuedMessage,
       retryable: true,
@@ -2606,6 +2767,15 @@ async function queueFlightSelectionOperation(
     error_code: null,
     retryable: true,
     external_correlation_id: `browser-session:${queued.sessionId}`,
+    context: {
+      ...(run.context ?? {}),
+      progress_current: progressCurrent(
+        run,
+        `${activeSpecialistDisplayName(run)} is ${automatic
+          ? 'continuing with the best matching itinerary to the payment handoff'
+          : 'preparing the selected itinerary'}.`,
+      ),
+    },
     lease_owner: null,
     lease_expires_at: null,
   })
@@ -8713,6 +8883,11 @@ async function handoffToNextSpecialist(
       ...(run.context ?? {}),
       specialist_handoff: handoff,
       last_handoff_id: inserted.data?.id ?? null,
+      progress_current: progressCurrent(
+        run,
+        `${nextSpecialist.displayName} is ${nextStage.label.toLocaleLowerCase()}.`,
+        nextSpecialist.id,
+      ),
     },
     lease_owner: null,
     lease_expires_at: null,
@@ -9883,7 +10058,13 @@ async function pollBrowserExecutionRun(
         error_code: null,
         retryable: true,
         current_step: run.current_step + 1,
-        progress: [...(Array.isArray(run.progress) ? run.progress : []), 'The portal reported required fields; David is correcting the saved section.'],
+        context: {
+          ...(run.context ?? {}),
+          progress_current: progressCurrent(
+            run,
+            `${activeSpecialistDisplayName(run)} is correcting the saved portal section after the site reported required fields.`,
+          ),
+        },
         external_correlation_id: null,
         lease_owner: null,
         lease_expires_at: null,
@@ -10403,8 +10584,8 @@ async function pollBrowserExecutionRun(
           ...(run.context ?? {}),
           progress_detail_interaction: supplementalObservation.interaction,
           application_question_interaction_id: supplementalObservation.interaction.id,
+          progress_current: null,
         },
-        progress: [...(Array.isArray(run.progress) ? run.progress : []), 'The portal revealed a supplemental question that needs one missing applicant decision.'],
         external_correlation_id: null,
         lease_owner: null,
         lease_expires_at: null,
@@ -11097,6 +11278,17 @@ async function retryWaitingProviderAction(
   if (retryClaim.error) throw new Error(retryClaim.error.message)
   if (!retryClaim.data) return await loadOwnedRun(admin, run.user_id, run.id) ?? run
 
+  retryRun = await updateRun(admin, retryRun, {
+    status: 'running',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    context: {
+      ...(retryRun.context ?? {}),
+      progress_current: progressCurrent(retryRun, toolProgressLabel(retryRun, toolName)),
+    },
+  })
+
   const execution = await executeProviderTool(
     admin,
     retryRun,
@@ -11110,6 +11302,17 @@ async function retryWaitingProviderAction(
     const actionStatus = execution.actionStatus ??
       (actionSucceeded ? 'succeeded' : 'failed')
     const advanceStep = execution.advanceStep ?? actionSucceeded
+    const completedSummary = actionSucceeded ? safeString(execution.publicSummary, 1_200).trim() : ''
+    const executionPatch = execution.runPatch ?? {}
+    const executionPatchContext = recordValue(executionPatch.context)
+    const { context: _ignoredExecutionPatchContext, ...executionPatchWithoutContext } = executionPatch
+    const pauseContext = {
+      ...(retryRun.context ?? {}),
+      ...executionPatchContext,
+      progress_current: execution.status === 'waiting_external'
+        ? progressCurrent(retryRun, `${activeSpecialistDisplayName(retryRun)} is waiting for the external update: ${execution.message}`)
+        : null,
+    }
     await admin.from('agent_actions').update({
       status: actionStatus,
       output: execution.value,
@@ -11142,13 +11345,18 @@ async function retryWaitingProviderAction(
       ...(advanceStep
         ? {
             current_step: retryRun.current_step + 1,
-            progress: [
-              ...(Array.isArray(retryRun.progress) ? retryRun.progress : []),
-              execution.message,
-            ],
+            ...(completedSummary
+              ? {
+                  progress: [
+                    ...(Array.isArray(retryRun.progress) ? retryRun.progress : []),
+                    completedSummary,
+                  ],
+                }
+              : {}),
           }
         : {}),
-      ...(execution.runPatch ?? {}),
+      ...executionPatchWithoutContext,
+      context: pauseContext,
       error_code: execution.status === 'waiting_for_user' ? execution.code : null,
       error: execution.status === 'waiting_for_user' ? execution.message : null,
       retryable: execution.status === 'waiting_external' && !actionSucceeded,
@@ -11197,6 +11405,10 @@ async function retryWaitingProviderAction(
       ...(Array.isArray(retryRun.progress) ? retryRun.progress : []),
       execution.publicSummary,
     ],
+    context: {
+      ...(retryRun.context ?? {}),
+      progress_current: progressCurrent(retryRun, modelProgressLabel(retryRun)),
+    },
     lease_owner: null,
     lease_expires_at: null,
   })
@@ -11866,6 +12078,10 @@ async function advanceRun(
       status: 'running',
       started_at: current.context?.started_at ?? new Date().toISOString(),
       waiting_reason: '',
+      context: {
+        ...(current.context ?? {}),
+        progress_current: progressCurrent(current, modelProgressLabel(current)),
+      },
     })
   }
 
@@ -11917,6 +12133,12 @@ async function advanceRun(
   let semanticRepairAttempts = 0
 
   for (let iteration = 0; iteration < maximumModelSteps; iteration += 1) {
+    current = await updateRun(admin, current, {
+      context: {
+        ...(current.context ?? {}),
+        progress_current: progressCurrent(current, modelProgressLabel(current)),
+      },
+    })
     const applicationController = await loadApplicationControllerSnapshot(admin, current)
     const modelHistory = applicationController
       ? [...history, {
@@ -11986,6 +12208,12 @@ async function advanceRun(
     if (!validateAgentToolArguments(toolName, argumentsValue)) {
       throw new Error(`The agent produced invalid arguments for ${toolName}.`)
     }
+    current = await updateRun(admin, current, {
+      context: {
+        ...(current.context ?? {}),
+        progress_current: progressCurrent(current, toolProgressLabel(current, toolName)),
+      },
+    })
 
     if (applicationController?.engineStep.kind === 'SEMANTIC_DECISION' && toolName.startsWith('application.')) {
       const decision: SemanticDecision = {
@@ -12349,6 +12577,10 @@ async function advanceRun(
         current = await updateRun(admin, current, {
           current_step: current.current_step + 1,
           progress: [...(Array.isArray(current.progress) ? current.progress : []), reusedSummary],
+          context: {
+            ...(current.context ?? {}),
+            progress_current: progressCurrent(current, modelProgressLabel(current)),
+          },
           openai_response_id: response.id ?? null,
         })
         await saveModelHistory(admin, current, history, response.id)
@@ -12436,6 +12668,10 @@ async function advanceRun(
       current = await updateRun(admin, current, {
         current_step: current.current_step + 1,
         progress: [...(Array.isArray(current.progress) ? current.progress : []), reusedSummary],
+        context: {
+          ...(current.context ?? {}),
+          progress_current: progressCurrent(current, modelProgressLabel(current)),
+        },
         openai_response_id: response.id ?? null,
       })
       await saveModelHistory(admin, current, history, response.id)
@@ -12490,6 +12726,17 @@ async function advanceRun(
       const actionStatus = toolOutput.actionStatus ??
         (actionSucceeded ? 'succeeded' : 'failed')
       const advanceStep = toolOutput.advanceStep ?? actionSucceeded
+      const completedSummary = actionSucceeded ? safeString(toolOutput.publicSummary, 1_200).trim() : ''
+      const toolPatch = toolOutput.runPatch ?? {}
+      const toolPatchContext = recordValue(toolPatch.context)
+      const { context: _ignoredToolPatchContext, ...toolPatchWithoutContext } = toolPatch
+      const pauseContext = {
+        ...(current.context ?? {}),
+        ...toolPatchContext,
+        progress_current: toolOutput.status === 'waiting_external'
+          ? progressCurrent(current, `${activeSpecialistDisplayName(current)} is waiting for the external update: ${toolOutput.message}`)
+          : null,
+      }
       await admin.from('agent_actions').update({
         status: actionStatus,
         output: toolOutput.value,
@@ -12518,10 +12765,13 @@ async function advanceRun(
         ...(advanceStep
           ? {
               current_step: current.current_step + 1,
-              progress: [...(Array.isArray(current.progress) ? current.progress : []), toolOutput.message],
+              ...(completedSummary
+                ? { progress: [...(Array.isArray(current.progress) ? current.progress : []), completedSummary] }
+                : {}),
             }
           : {}),
-        ...(toolOutput.runPatch ?? {}),
+        ...toolPatchWithoutContext,
+        context: pauseContext,
         error_code: toolOutput.status === 'waiting_for_user' ? toolOutput.code : null,
         error: toolOutput.status === 'waiting_for_user' ? toolOutput.message : null,
         lease_owner: null,
@@ -12604,23 +12854,29 @@ async function advanceRun(
       call_id: safeString(call.call_id, 256),
       output: JSON.stringify(toolOutput.value),
     })
+    const toolPatch = toolOutput.runPatch ?? {}
+    const toolPatchContext = recordValue(toolPatch.context)
+    const { context: _ignoredToolPatchContext, ...toolPatchWithoutContext } = toolPatch
+    const nextContext = {
+      ...(current.context ?? {}),
+      ...toolPatchContext,
+      ...(resolvedRecipient
+        ? {
+            recipient_resolutions: [
+              ...((Array.isArray(current.context?.recipient_resolutions)
+                ? current.context.recipient_resolutions
+                : []) as unknown[]),
+              resolvedRecipient,
+            ].slice(-20),
+          }
+        : {}),
+      progress_current: progressCurrent(current, modelProgressLabel(current)),
+    }
     current = await updateRun(admin, current, {
       current_step: current.current_step + 1,
       progress: [...(Array.isArray(current.progress) ? current.progress : []), toolOutput.publicSummary],
-      ...(resolvedRecipient
-        ? {
-            context: {
-              ...(current.context ?? {}),
-              recipient_resolutions: [
-                ...((Array.isArray(current.context?.recipient_resolutions)
-                  ? current.context.recipient_resolutions
-                  : []) as unknown[]),
-                resolvedRecipient,
-              ].slice(-20),
-            },
-        }
-        : {}),
-      ...(toolOutput.runPatch ?? {}),
+      ...toolPatchWithoutContext,
+      context: nextContext,
       openai_response_id: response.id ?? null,
     })
     await saveModelHistory(admin, current, history, response.id)
@@ -12775,7 +13031,16 @@ async function approveOrReject(
 
   const startedAction = await admin.from('agent_actions').update({ status: 'running', started_at: new Date().toISOString() }).eq('id', action.id).eq('status', 'awaiting_approval').select('id').maybeSingle()
   if (startedAction.error || !startedAction.data) throw new Error(startedAction.error?.message ?? 'The approved email action changed before execution.')
-  run = await updateRun(admin, run, { status: 'running', waiting_reason: '', error: null, error_code: null })
+  run = await updateRun(admin, run, {
+    status: 'running',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    context: {
+      ...(run.context ?? {}),
+      progress_current: progressCurrent(run, toolProgressLabel(run, action.tool_name)),
+    },
+  })
   await addEvent(admin, run, 'agent_approval_granted', run.status, approval.summary, { action_id: action.id })
 
   const negotiationGuard = schedulingToolGuard(run, action.tool_name)
@@ -12880,6 +13145,17 @@ async function approveOrReject(
     const actionSucceeded = execution.actionSucceeded || execution.status === 'needs_context'
     const actionStatus = execution.actionStatus ?? (actionSucceeded ? 'succeeded' : 'failed')
     const advanceStep = execution.advanceStep ?? actionSucceeded
+    const completedSummary = actionSucceeded ? safeString(execution.publicSummary, 1_200).trim() : ''
+    const executionPatch = execution.runPatch ?? {}
+    const executionPatchContext = recordValue(executionPatch.context)
+    const { context: _ignoredExecutionPatchContext, ...executionPatchWithoutContext } = executionPatch
+    const pauseContext = {
+      ...(run.context ?? {}),
+      ...executionPatchContext,
+      progress_current: execution.status === 'waiting_external'
+        ? progressCurrent(run, `${activeSpecialistDisplayName(run)} is waiting for the external update: ${execution.message}`)
+        : null,
+    }
     await admin.from('agent_actions').update({
       status: actionStatus,
       output: execution.value,
@@ -12912,10 +13188,13 @@ async function approveOrReject(
       ...(advanceStep
         ? {
             current_step: run.current_step + 1,
-            progress: [...(Array.isArray(run.progress) ? run.progress : []), execution.message],
+            ...(completedSummary
+              ? { progress: [...(Array.isArray(run.progress) ? run.progress : []), completedSummary] }
+              : {}),
           }
         : {}),
-      ...(execution.runPatch ?? {}),
+      ...executionPatchWithoutContext,
+      context: pauseContext,
       error: execution.status === 'waiting_for_user' ? execution.message : null,
       error_code: execution.status === 'waiting_for_user' ? execution.code : null,
       retryable: execution.status === 'waiting_external' && !actionSucceeded,
@@ -13000,15 +13279,19 @@ async function approveOrReject(
           ? `Waiting for ${contactEmail} to reply.`
           : 'Waiting for every required scheduling attendee to reply.',
         current_step: run.current_step + 1,
-        progress: [...(Array.isArray(run.progress) ? run.progress : []), 'Gmail confirmed the email was sent.', contactEmail
-          ? `Waiting for ${contactEmail} to reply.`
-          : 'Waiting for every required scheduling attendee to reply.'],
+        progress: [...(Array.isArray(run.progress) ? run.progress : []), 'Gmail confirmed the email was sent.'],
         external_correlation_id: `gmail-thread:${threadId}`,
         context: {
           ...(run.context ?? {}),
           negotiation_active: true,
           negotiation_required_attendees: requiredAttendees,
           negotiation_status: 'awaiting_responses',
+          progress_current: progressCurrent(
+            run,
+            `${activeSpecialistDisplayName(run)} is waiting for the external reply: ${contactEmail
+              ? `Waiting for ${contactEmail} to reply.`
+              : 'Waiting for every required scheduling attendee to reply.'}`,
+          ),
         },
         lease_owner: null,
         lease_expires_at: null,
@@ -13022,6 +13305,10 @@ async function approveOrReject(
   }
   run = await updateRun(admin, run, {
     current_step: run.current_step + 1,
+    context: {
+      ...(run.context ?? {}),
+      progress_current: progressCurrent(run, modelProgressLabel(run)),
+    },
     lease_owner: null,
     lease_expires_at: null,
   })
@@ -13361,6 +13648,12 @@ Deno.serve(async request => {
           overall_completion_policy: intent.outcomeType,
           specialist_route_rationale: route.rationale,
           application_boundary: route.applicationBoundary ?? null,
+          progress_current: initialStatus === 'needs_context'
+            ? null
+            : {
+                specialist_id: assignedSpecialist.id,
+                label: `${assignedSpecialist.displayName} is preparing the first verified operation.`,
+              },
           ...(intent.capability === 'flight_search'
             ? { flight_context_answers: {}, flight_context_pending: null }
             : {}),

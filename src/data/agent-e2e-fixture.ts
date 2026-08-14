@@ -252,6 +252,10 @@ export function invokeFixtureAction(body: Record<string, unknown>) {
         paymentHandoffUrl: 'https://www.google.com/travel/flights/booking',
         paymentHandoffProvider: 'Google Flights',
         paymentHandoffStage: 'google_booking_options',
+        flightCheckout: {
+          paymentBoundaryReached: true,
+          preparedTravelerCount: 1,
+        },
         outcome: {
           preparedResult: true,
           externalChangeConfirmed: false,

@@ -17,6 +17,8 @@ function runFixture(taskId, status, updatedAt, overrides = {}) {
       : 'Research potential supervisors for the MSc',
     context: '',
     capability: 'research',
+    specialistId: 'roon',
+    activeSpecialistId: 'roon',
     intent: {
       capability: 'research',
       strategy: 'structured',
@@ -26,6 +28,7 @@ function runFixture(taskId, status, updatedAt, overrides = {}) {
     waitingReason: '',
     progressIndex: 2,
     progress: ['Opened the task context', 'Reviewed the relevant material'],
+    currentProgress: { specialistId: 'roon', label: 'Roon is reviewing the latest result and selecting the next verified operation.' },
     result: null,
     durable: true,
     createdAt: updatedAt,
@@ -121,7 +124,13 @@ try {
     key: storageKey,
     runs: [
       runFixture('license', 'running', now),
-      runFixture('outline', 'running', new Date(Date.now() - 1_000).toISOString()),
+      runFixture('outline', 'running', new Date(Date.now() - 1_000).toISOString(), {
+        objective: 'Prepare my MSc application',
+        capability: 'research_draft',
+        specialistId: 'david',
+        activeSpecialistId: 'david',
+        currentProgress: { specialistId: 'david', label: 'David is reviewing the latest result and selecting the next verified operation.' },
+      }),
     ],
   })
 
@@ -129,6 +138,13 @@ try {
     waitUntil: 'networkidle',
   })
   await assertVisible(page, '.task-agent-card--progress', 'Today did not show inline agent progress.')
+  const progressText = await page.locator('.task-agent-card--progress').first().innerText()
+  if (!progressText.includes('Roon is reviewing the latest result and selecting the next verified operation.')) {
+    throw new Error('The active Roon operation is not shown in the progress card.')
+  }
+  if (progressText.includes('Summarizing main points') || progressText.includes('Identifying key takeaways')) {
+    throw new Error('The progress card still shows anticipated static steps.')
+  }
   if (await page.locator('.shotcount-agent-island').count()) {
     throw new Error('The retired Dynamic Island returned instead of using inline agent progress.')
   }
@@ -187,6 +203,10 @@ try {
   }
   await page.locator('.task-text[data-task="outline"]').click()
   await assertVisible(page, '.task-agent-card--progress', 'Upcoming did not reuse inline agent progress.')
+  const davidProgressText = await page.locator('.inspector .task-agent-card--progress').innerText()
+  if (!davidProgressText.includes('David is reviewing the latest result and selecting the next verified operation.')) {
+    throw new Error('The active David operation is not shown in the progress card.')
+  }
   await assertVisible(page, '.task-row.selected', 'Upcoming did not preserve selected-task styling.')
   if (await page.locator('.upcoming-screen .shotcount-agent-helper').count()) {
     throw new Error('The Today-only helper leaked into Upcoming.')
