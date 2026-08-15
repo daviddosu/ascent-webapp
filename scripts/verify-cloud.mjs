@@ -42,18 +42,25 @@ async function check(label, request, expected = response => response.ok) {
   }
 }
 
+async function privateCollectionIsNotPublic(response) {
+  if (response.status === 401 || response.status === 403) return true
+  if (!response.ok) return false
+  const body = await response.json().catch(() => null)
+  return Array.isArray(body) && body.length === 0
+}
+
 await check('Supabase Auth health', {
   url: `${base}/auth/v1/health`,
   options: { headers: { apikey: key } },
 })
-await check('Database migration and tasks endpoint', {
+await check('Private tasks endpoint rejects anonymous access', {
   url: `${base}/rest/v1/tasks?select=id&limit=1`,
   options: { headers },
-})
-await check('Conflict-safe planner migration', {
+}, privateCollectionIsNotPublic)
+await check('Private planner endpoint rejects anonymous access', {
   url: `${base}/rest/v1/planner_records?select=record_id&limit=1`,
   options: { headers },
-})
+}, privateCollectionIsNotPublic)
 await check('Private AgentRun migration hides all rows from anonymous access', {
   url: `${base}/rest/v1/agent_runs?select=id&limit=1`,
   options: { headers },
