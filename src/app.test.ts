@@ -266,7 +266,7 @@ describe('reference screens', () => {
       'Task activity',
     ])
     expect(document.querySelectorAll('.upcoming-command-row .ask-shotcount-button')).toHaveLength(2)
-    expect(document.querySelectorAll('.upcoming-command-row .agent-sparkle-icon')).toHaveLength(2)
+    expect(document.querySelectorAll('.upcoming-command-row .roon-orb--waiting')).toHaveLength(2)
     expect(document.querySelectorAll('.activity-cell')).toHaveLength(371)
     expect([...document.querySelectorAll('[data-activity-mode]')].map(node => node.textContent)).toEqual(['Daily', 'Weekly', 'Cumulative'])
     const todayActivity = document.querySelector(`[data-activity-date="${testDateKey()}"]`)

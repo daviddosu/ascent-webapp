@@ -151,6 +151,12 @@ import {
   type RecommendationContextResolution,
 } from '../_shared/recommendation-workflow.ts'
 import {
+  createApplicationProgrammeSelectionInteraction,
+  validateApplicationProgrammeSelection,
+  type ApplicationProgrammeSelectionInteraction,
+  type ApplicationProgrammeSelectionOpportunity,
+} from '../_shared/application-programme-selection.ts'
+import {
   applyWorkSampleInteraction,
   buildWorkSampleRequirementGraph,
   createWorkSamplePortfolioStrategy,
@@ -2945,6 +2951,237 @@ function nextApplicationState(run: AgentRunRow, patch: ApplicationStatePatch): D
   }
 }
 
+type ApplicationProgrammeTask = {
+  opportunityId: string
+  taskId: string
+  institution: string
+  programmeTitle: string
+  officialUrl: string
+}
+
+type ApplicationProgrammeOpportunityRow = ApplicationProgrammeSelectionOpportunity & {
+  campaignId: string
+}
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function applicationProgrammeSelectionInteraction(value: unknown): value is ApplicationProgrammeSelectionInteraction {
+  const interaction = recordValue(value)
+  return interaction.kind === 'multiple_choice' &&
+    interaction.requirementId === 'application_programme_selection' &&
+    safeString(interaction.id, 300).startsWith('application:programme-selection:')
+}
+
+function applicationProgrammeTasks(value: unknown): ApplicationProgrammeTask[] {
+  return Array.isArray(value)
+    ? value.map(item => {
+        const row = recordValue(item)
+        return {
+          opportunityId: safeString(row.opportunity_id ?? row.opportunityId, 80),
+          taskId: safeString(row.task_id ?? row.taskId, 80),
+          institution: safeString(row.institution, 500),
+          programmeTitle: safeString(row.programme_title ?? row.programmeTitle, 800),
+          officialUrl: safeString(row.official_url ?? row.officialUrl, 2_000),
+        }
+      }).filter(item => uuidPattern.test(item.opportunityId) && uuidPattern.test(item.taskId))
+    : []
+}
+
+function applicationProgrammeTaskDescription(run: AgentRunRow, opportunity: ApplicationProgrammeOpportunityRow) {
+  return [
+    'One-programme application task.',
+    `Programme: ${opportunity.programmeTitle}`,
+    `Institution: ${opportunity.institution}`,
+    `Official programme page: ${opportunity.officialUrl}`,
+    'This task covers one programme only. Do not apply to another programme from this task.',
+    `Created from the programme shortlist in “${run.objective.slice(0, 240)}”.`,
+  ].join('\n')
+}
+
+async function createApplicationProgrammeTasks(
+  admin: AdminClient,
+  run: AgentRunRow,
+  selectedOpportunityIds: string[],
+) {
+  const campaignId = safeString(run.context?.application_campaign_id, 80) || safeString(run.application_state?.campaignId, 80)
+  if (!campaignId || !selectedOpportunityIds.length) throw new Error('The application shortlist is no longer available.')
+
+  const [campaignResult, opportunitiesResult] = await Promise.all([
+    admin.from('application_campaigns').select('id,data').eq('id', campaignId).eq('user_id', run.user_id).maybeSingle(),
+    admin.from('application_opportunities')
+      .select('id,campaign_id,institution,programme_title,official_url,fit_score,deadline_at')
+      .eq('campaign_id', campaignId)
+      .eq('user_id', run.user_id)
+      .eq('verification_status', 'verified')
+      .in('id', selectedOpportunityIds),
+  ])
+  if (campaignResult.error || opportunitiesResult.error) {
+    throw new Error(campaignResult.error?.message ?? opportunitiesResult.error?.message ?? 'The application shortlist could not be loaded.')
+  }
+  if (!campaignResult.data || (opportunitiesResult.data ?? []).length !== selectedOpportunityIds.length) {
+    throw new Error('One of the selected programmes is no longer a verified choice. Refresh the task and select from the current shortlist.')
+  }
+
+  const opportunities = (opportunitiesResult.data ?? []).map(row => ({
+    id: safeString(row.id, 80),
+    campaignId: safeString(row.campaign_id, 80),
+    institution: safeString(row.institution, 500),
+    programmeTitle: safeString(row.programme_title, 800),
+    officialUrl: safeString(row.official_url, 2_000),
+    fitScore: Number(row.fit_score ?? 0) || 0,
+    deadlineAt: typeof row.deadline_at === 'string' ? row.deadline_at : null,
+  })) as ApplicationProgrammeOpportunityRow[]
+  const byId = new Map(opportunities.map(opportunity => [opportunity.id, opportunity]))
+  const campaignData = recordValue(campaignResult.data.data)
+  const persistedTasks = applicationProgrammeTasks(campaignData.created_programme_tasks)
+  const persistedByOpportunity = new Map(persistedTasks.map(task => [task.opportunityId, task]))
+  const createdTaskIds: string[] = []
+  const newTaskIds: string[] = []
+  const newPlannerRecordIds: string[] = []
+  const due = safeString(run.context?.due, 10)
+  const goalId = safeString(run.context?.goal_id, 80)
+  const safeGoalId = uuidPattern.test(goalId) ? goalId : null
+  const now = new Date().toISOString()
+
+  try {
+    for (const opportunityId of selectedOpportunityIds) {
+      const opportunity = byId.get(opportunityId)
+      if (!opportunity) throw new Error('One of the selected programmes is no longer available.')
+      const persisted = persistedByOpportunity.get(opportunityId)
+      if (persisted) {
+        createdTaskIds.push(persisted.taskId)
+        continue
+      }
+
+      // A retry can arrive after the task was written but before campaign data
+      // was updated. The planner marker closes that small crash window without
+      // exposing an internal ID in the task's visible copy.
+      const existingPlanner = await admin.from('planner_records')
+        .select('record_id,data')
+        .eq('user_id', run.user_id)
+        .eq('record_type', 'task')
+        .eq('data->>applicationOpportunityId', opportunityId)
+        .is('deleted_at', null)
+        .maybeSingle()
+      if (existingPlanner.error) throw new Error(existingPlanner.error.message)
+      const existingPlannerTaskId = safeString(existingPlanner.data?.record_id, 80)
+      if (uuidPattern.test(existingPlannerTaskId)) {
+        const recovered = {
+          opportunityId,
+          taskId: existingPlannerTaskId,
+          institution: opportunity.institution,
+          programmeTitle: opportunity.programmeTitle,
+          officialUrl: opportunity.officialUrl,
+        }
+        persistedTasks.push(recovered)
+        persistedByOpportunity.set(opportunityId, recovered)
+        createdTaskIds.push(existingPlannerTaskId)
+        continue
+      }
+
+      const taskId = crypto.randomUUID()
+      const title = `Apply to ${opportunity.programmeTitle} · ${opportunity.institution}`.slice(0, 300)
+      const description = applicationProgrammeTaskDescription(run, opportunity)
+      const task = await admin.from('tasks').insert({
+        id: taskId,
+        user_id: run.user_id,
+        goal_id: safeGoalId,
+        title,
+        description,
+        due_date: /^\d{4}-\d{2}-\d{2}$/.test(due) ? due : null,
+        due_time: null,
+        priority: 'medium',
+        estimate_minutes: 25,
+        recurrence: 'none',
+        top_three: false,
+        carried_count: 0,
+        last_carry_reason: '',
+        position: 0,
+        visibility: 'private',
+      })
+      if (task.error) throw new Error(task.error.message)
+      newTaskIds.push(taskId)
+
+      const plannerData = {
+        title,
+        description,
+        goalId: safeGoalId,
+        due: /^\d{4}-\d{2}-\d{2}$/.test(due) ? due : null,
+        time: null,
+        duration: 25,
+        kind: 'task',
+        recurrence: 'none',
+        reminder: null,
+        location: null,
+        attendees: null,
+        visibility: 'private',
+        completedAt: null,
+        createdAt: now,
+        applicationOpportunityId: opportunityId,
+        applicationCampaignId: campaignId,
+      }
+      const planner = await admin.from('planner_records').insert({
+        user_id: run.user_id,
+        record_type: 'task',
+        record_id: taskId,
+        parent_id: null,
+        visibility: 'private',
+        data: plannerData,
+        field_versions: Object.fromEntries(Object.keys(plannerData).map(key => [key, now])),
+        deleted_at: null,
+      })
+      if (planner.error) throw new Error(planner.error.message)
+      newPlannerRecordIds.push(taskId)
+
+      const created = {
+        opportunityId,
+        taskId,
+        institution: opportunity.institution,
+        programmeTitle: opportunity.programmeTitle,
+        officialUrl: opportunity.officialUrl,
+      }
+      persistedTasks.push(created)
+      persistedByOpportunity.set(opportunityId, created)
+      createdTaskIds.push(taskId)
+    }
+  } catch (error) {
+    if (newPlannerRecordIds.length) {
+      await admin.from('planner_records').delete().eq('user_id', run.user_id).eq('record_type', 'task').in('record_id', newPlannerRecordIds)
+    }
+    if (newTaskIds.length) {
+      await admin.from('tasks').delete().eq('user_id', run.user_id).in('id', newTaskIds)
+    }
+    throw error
+  }
+
+  const selectedTasks = selectedOpportunityIds.map(opportunityId => persistedByOpportunity.get(opportunityId)).filter((task): task is ApplicationProgrammeTask => Boolean(task))
+  const nextAction = `Created ${selectedTasks.length} separate application task${selectedTasks.length === 1 ? '' : 's'}; each task covers one programme.`
+  const updatedCampaign = await admin.from('application_campaigns').update({
+    status: 'completed',
+    data: {
+      ...campaignData,
+      created_programme_tasks: persistedTasks,
+      selected_opportunity_ids: selectedOpportunityIds,
+      shortlist_selection_pending: false,
+    },
+    next_action: nextAction,
+    progress: { completed: 2, total: 5, label: 'Application tasks created', nextAction, blockers: [], evidenceCount: 0 },
+  }).eq('id', campaignId).eq('user_id', run.user_id)
+  if (updatedCampaign.error) throw new Error(updatedCampaign.error.message)
+
+  const applicationState = nextApplicationState(run, {
+    campaignId,
+    caseIds: [],
+    currentCaseId: null,
+    status: 'completed',
+    stage: 'shortlist_approval',
+    nextAction,
+    blockers: [],
+    progress: { completed: 2, label: 'Application tasks created', nextAction, blockers: [], evidenceCount: 0 },
+  })
+  return { campaignId, selectedTasks, createdTaskIds, applicationState }
+}
+
 function normalizeRequirementPayload(value: unknown, applicationCaseId: string) {
   const input = recordValue(value)
   const source = recordValue(input.source)
@@ -5215,16 +5452,82 @@ async function executeProviderTool(
     if (!campaignId || !opportunityId || Object.keys(portalAccount).some(key => /password|passcode|secret|card|cvv|otp|verification/i.test(key))) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_invalid', message: 'The case needs a campaign, opportunity, and non-sensitive portal account identifier.', value: { valid: false }, actionStatus: 'failed' }
     }
-    const [campaignResult, opportunityResult] = await Promise.all([
+    const [campaignResult, opportunityResult, taskCasesResult] = await Promise.all([
       admin.from('application_campaigns').select('id,data').eq('id', campaignId).eq('user_id', run.user_id).maybeSingle(),
       admin.from('application_opportunities').select('id,campaign_id,verification_status,data').eq('id', opportunityId).eq('user_id', run.user_id).maybeSingle(),
+      admin.from('application_cases').select('id,opportunity_id,status').eq('task_id', run.task_id).eq('user_id', run.user_id),
     ])
-    if (campaignResult.error || opportunityResult.error) throw new Error(campaignResult.error?.message ?? opportunityResult.error?.message ?? 'The application campaign could not be loaded.')
+    if (campaignResult.error || opportunityResult.error || taskCasesResult.error) throw new Error(campaignResult.error?.message ?? opportunityResult.error?.message ?? taskCasesResult.error?.message ?? 'The application campaign could not be loaded.')
     if (!campaignResult.data || !opportunityResult.data || opportunityResult.data.campaign_id !== campaignId) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_reference_invalid', message: 'The selected opportunity does not belong to this application campaign.', value: { valid: false }, actionStatus: 'failed' }
     }
     if (opportunityResult.data.verification_status !== 'verified') {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_opportunity_unverified', message: 'Verify the official programme requirements before creating an application case.', value: { valid: false }, actionStatus: 'failed' }
+    }
+    const taskCases = taskCasesResult.data ?? []
+    if (taskCases.some(row => safeString(row.opportunity_id, 80) !== opportunityId)) {
+      return {
+        kind: 'pause',
+        status: 'waiting_for_user',
+        code: 'application_one_programme_per_task',
+        message: 'This task already covers one programme. Create a separate application task before working on another programme.',
+        value: { valid: false, task_id: run.task_id, rule: 'one_programme_per_task' },
+        actionStatus: 'failed',
+      }
+    }
+    const verifiedShortlist = await admin.from('application_opportunities')
+      .select('id,institution,programme_title,official_url,fit_score,deadline_at')
+      .eq('campaign_id', campaignId)
+      .eq('user_id', run.user_id)
+      .eq('verification_status', 'verified')
+      .order('fit_score', { ascending: false })
+    if (verifiedShortlist.error) throw new Error(verifiedShortlist.error.message)
+    if (!taskCases.length && (verifiedShortlist.data ?? []).length > 1) {
+      const shortlist = (verifiedShortlist.data ?? []).map(row => ({
+        id: safeString(row.id, 80),
+        institution: safeString(row.institution, 500),
+        programmeTitle: safeString(row.programme_title, 800),
+        officialUrl: safeString(row.official_url, 2_000),
+        fitScore: Number(row.fit_score ?? 0) || 0,
+        deadlineAt: typeof row.deadline_at === 'string' ? row.deadline_at : null,
+      }))
+      const interaction = createApplicationProgrammeSelectionInteraction(campaignId, shortlist)
+      const nextAction = 'Choose the verified programmes you want to pursue; one separate to-do task will be created for each selection.'
+      const nextState = nextApplicationState(run, {
+        campaignId,
+        status: 'awaiting_shortlist_approval',
+        stage: 'shortlist_approval',
+        nextAction,
+        blockers: ['Programme selection is required before creating application cases.'],
+        progress: { completed: 1, label: 'Verified programme shortlist ready', nextAction, blockers: ['Programme selection is required before creating application cases.'] },
+      })
+      const campaignData = recordValue(campaignResult.data.data)
+      const campaignUpdate = await admin.from('application_campaigns').update({
+        status: 'awaiting_shortlist_approval',
+        data: { ...campaignData, shortlist_selection_pending: true, shortlist_opportunity_ids: shortlist.map(item => item.id) },
+        next_action: nextAction,
+        progress: { completed: 1, total: 5, label: 'Verified programme shortlist ready', nextAction, blockers: ['Programme selection is required before creating application cases.'], evidenceCount: shortlist.length },
+      }).eq('id', campaignId).eq('user_id', run.user_id)
+      if (campaignUpdate.error) throw new Error(campaignUpdate.error.message)
+      return {
+        kind: 'pause',
+        status: 'needs_context',
+        code: 'application_programme_selection_required',
+        message: nextAction,
+        value: { interaction, opportunities: shortlist.map(item => ({ id: item.id, institution: item.institution, programme_title: item.programmeTitle, official_url: item.officialUrl, fit_score: item.fitScore, deadline_at: item.deadlineAt })) },
+        publicSummary: 'The verified programme shortlist is ready for selection.',
+        runPatch: {
+          application_state: nextState,
+          context: {
+            ...(run.context ?? {}),
+            application_campaign_id: campaignId,
+            application_programme_selection_pending: true,
+            progress_detail_interaction: interaction,
+            last_context_question: nextAction,
+            scheduling_options: [],
+          },
+        },
+      }
     }
     const existing = await admin.from('application_cases').select('id,status').eq('campaign_id', campaignId).eq('opportunity_id', opportunityId).eq('user_id', run.user_id).maybeSingle()
     if (existing.error) throw new Error(existing.error.message)
@@ -8632,6 +8935,11 @@ async function completionSatisfied(
     // protects a legacy run from accepting a model-only submission claim.
     if (!submissionEvidence.data?.length) return false
   }
+  if (run.active_specialist_id === 'david' &&
+      run.context?.application_programme_selection_completed === true &&
+      stringArray(run.context?.application_programme_task_ids, 80).length > 0) {
+    return true
+  }
   if (run.active_specialist_id === 'david' && run.application_state) {
     const objective = `${run.objective} ${safeString(run.context?.description, 4_000)}`
     const applicationController = await loadApplicationControllerSnapshot(admin, run)
@@ -8746,6 +9054,9 @@ function completionResult(argumentsValue: Record<string, unknown>) {
     },
     ...(safeString(argumentsValue.application_review_url, 2000)
       ? { applicationReviewUrl: safeString(argumentsValue.application_review_url, 2000) }
+      : {}),
+    ...(Array.isArray(argumentsValue.application_programme_task_ids)
+      ? { applicationProgrammeTaskIds: stringArray(argumentsValue.application_programme_task_ids, 80) }
       : {}),
   }
 }
@@ -9145,6 +9456,7 @@ async function resumeWithContext(
   const value = context.trim()
   if (!value) throw new Error('Add the missing context before resuming this task.')
   const proposalInteractionPending = run.context.proposal_interaction === true && Boolean(recordValue(run.context.proposal_progress_detail).id)
+  let applicationProgrammeSelection: { selectedIds: string[] } | null = null
   if (interactionResponse?.interactionId) {
     const pendingInteraction = run.context.progress_detail_interaction
     if (!pendingInteraction || typeof pendingInteraction !== 'object' || Array.isArray(pendingInteraction) || safeString((pendingInteraction as Record<string, unknown>).id, 300) !== interactionResponse.interactionId) {
@@ -9157,6 +9469,13 @@ async function resumeWithContext(
       if (safeString(proposalProgress.inputMode, 40) === 'choose' && !proposalOptions.some(option => safeString(option.id, 160) === safeString(submittedValue, 500) || safeString(option.value, 500) === safeString(submittedValue, 500))) {
         throw new Error('That proposal direction is not one of the current grounded options. Refresh the task and choose again.')
       }
+    } else if (applicationProgrammeSelectionInteraction(pendingInteraction)) {
+      const validated = validateApplicationProgrammeSelection(
+        pendingInteraction as ApplicationProgrammeSelectionInteraction,
+        interactionResponse.value,
+      )
+      if (!validated.accepted) throw new Error(validated.error)
+      applicationProgrammeSelection = { selectedIds: validated.selectedIds }
     } else if (safeString((pendingInteraction as Record<string, unknown>).kind, 80) === 'application_question') {
       const questionId = safeString((pendingInteraction as Record<string, unknown>).questionId, 80)
       const caseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80)
@@ -9292,8 +9611,12 @@ async function resumeWithContext(
         candidates: [],
       }
     : null
+  const applicationProgrammeTaskResult = applicationProgrammeSelection
+    ? await createApplicationProgrammeTasks(admin, run, applicationProgrammeSelection.selectedIds)
+    : null
   const updated = await updateRun(admin, run, {
     status: 'planning',
+    ...(applicationProgrammeTaskResult ? { application_state: applicationProgrammeTaskResult.applicationState } : {}),
     context: {
       ...(run.context ?? {}),
       user_context: value,
@@ -9306,6 +9629,19 @@ async function resumeWithContext(
         proposal_approval_response: recordValue(run.context.proposal_progress_detail).inputMode === 'approve' ? interactionResponse?.value ?? null : null,
       } : {}),
       ...(interactionResponse?.interactionId && safeString(recordValue(run.context?.progress_detail_interaction).kind, 80) === 'application_question' ? { progress_detail_interaction: null, application_question_answered: true } : {}),
+      ...(applicationProgrammeTaskResult ? {
+        application_programme_selection_pending: false,
+        application_programme_selection_completed: true,
+        application_selected_opportunity_ids: applicationProgrammeSelection?.selectedIds ?? [],
+        application_programme_task_ids: applicationProgrammeTaskResult.createdTaskIds,
+        application_programme_task_summaries: applicationProgrammeTaskResult.selectedTasks.map(task => ({
+          task_id: task.taskId,
+          institution: task.institution,
+          programme_title: task.programmeTitle,
+          official_url: task.officialUrl,
+        })),
+        progress_detail_interaction: null,
+      } : {}),
       application_context_answers: [
         ...(Array.isArray(run.context?.application_context_answers) ? run.context.application_context_answers : []),
         { question: safeString(run.waiting_reason, 600), answer: value, answeredAt: new Date().toISOString() },
@@ -13989,9 +14325,28 @@ Deno.serve(async request => {
            recoverSavedAction = !applicationAttachmentsRefreshed && !applicationHistoryReset
         }
         if (!approvalReopened) {
-          run = !applicationContextResumed && recoverSavedAction
-            ? await recoverStalledRun(admin, run, openaiKey)
-            : await advanceRun(admin, run!, openaiKey)
+          const programmeTaskIds = stringArray(run?.context?.application_programme_task_ids, 80)
+          if (run?.context?.application_programme_selection_completed === true && programmeTaskIds.length) {
+            run = await completeRun(admin, run, {
+              summary: `Created ${programmeTaskIds.length} separate application task${programmeTaskIds.length === 1 ? '' : 's'} from the verified programme shortlist.`,
+              sections: [{
+                title: 'One programme per task',
+                body: 'Each selected programme now has its own private to-do task and application workflow.',
+              }],
+              drafts: [],
+              follow_ups: [],
+              sources: [],
+              prepared_result: true,
+              external_change_confirmed: false,
+              payment_boundary_reached: false,
+              purchase_confirmed: false,
+              application_programme_task_ids: programmeTaskIds,
+            }, openaiKey)
+          } else {
+            run = !applicationContextResumed && recoverSavedAction
+              ? await recoverStalledRun(admin, run, openaiKey)
+              : await advanceRun(admin, run!, openaiKey)
+          }
         }
         await addEvent(admin, run!, 'agent_resumed', run!.status, `${activeSpecialistDisplayName(run!)} resumed the task.`)
       } else if (action === 'poll') {

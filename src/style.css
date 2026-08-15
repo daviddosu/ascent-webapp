@@ -373,6 +373,31 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   stroke-linejoin: round;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16));
 }
+.roon-orb {
+  width: var(--roon-orb-size, 20px);
+  height: var(--roon-orb-size, 20px);
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  opacity: .38;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.roon-orb canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.roon-orb--active { opacity: 1; }
+.roon-orb--complete { opacity: .58; }
+.agent-status-orb {
+  width: 12px;
+  height: 12px;
+  display: inline-grid;
+  place-items: center;
+  vertical-align: -2px;
+}
+.agent-status-orb .roon-orb { --roon-orb-size: 12px; }
 .agent-icon-wrap {
   width: 16px;
   height: 16px;
@@ -594,7 +619,6 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
 }
 .task-agent-icon:hover, .task-agent-icon:focus-visible { color: #171717; }
 .task-agent-icon .agent-icon-wrap { width: 16px; height: 16px; }
-.task-agent-icon--running span { animation: agent-spin 1s linear infinite; }
 .task-agent-icon--completed { color: #242426; }
 .agent-state-alert { font-size: 12px; font-weight: 750; }
 .task-row.selected:has(.task-agent-icon--running) {
@@ -1053,43 +1077,16 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
 .task-agent-progress { display: grid; gap: 10px; }
 .task-agent-progress > div {
   display: grid;
-  grid-template-columns: 19px 1fr 16px;
+  grid-template-columns: 20px 1fr;
   align-items: center;
   min-height: 18px;
   color: #77777b;
   font-size: 10px;
 }
-.task-agent-progress > div::after {
-  width: 13px;
-  height: 13px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(145, 145, 150, .62);
-  border-radius: 50%;
-  color: #3f3f42;
-  content: '';
-  font-size: 7px;
-}
-.task-agent-progress > div.done::after { content: '✓'; }
-.task-agent-progress i {
-  width: 15px;
-  height: 15px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(170, 170, 175, .62);
-  border-radius: 50%;
-  font-size: 7px;
-  font-style: normal;
-}
+.task-agent-progress-orb { width: 20px; height: 20px; display: grid; place-items: center; }
+.task-agent-progress-orb .roon-orb { --roon-orb-size: 20px; }
 .task-agent-progress .done,
 .task-agent-progress .active { color: #292929; }
-.task-agent-progress .done i { border-color: #202020; background: #202020; color: #fff; }
-.task-agent-progress .active i { animation: agent-spin 1s linear infinite; }
-.task-agent-progress .active::after {
-  border-color: #4f4f53;
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .84);
-  background: #66666b;
-}
 .task-agent-files {
   display: grid;
   gap: 0;

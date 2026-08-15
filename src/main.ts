@@ -80,6 +80,7 @@ import {
   type RoonPlanTask,
 } from './data/agent'
 import { agentProgressTimeline } from './data/agent-progress'
+import { mountRoonOrbs, renderRoonOrb, type RoonOrbState } from './data/roon-orb'
 import {
   REASONING_MODEL_ID,
   getSpecialist,
@@ -697,6 +698,16 @@ function agentSparkleIcon() {
   </svg>`
 }
 
+function agentOrbState(status?: AgentRun['status'] | null): RoonOrbState {
+  if (status === 'planning' || status === 'running') return 'active'
+  if (status === 'completed') return 'complete'
+  return 'waiting'
+}
+
+function agentIdentityMark(run?: AgentRun | null) {
+  return run ? renderRoonOrb(agentOrbState(run.status), 20) : agentSparkleIcon()
+}
+
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
 }
@@ -1228,7 +1239,7 @@ function specialistActivity(
 function specialistHeader(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
   const specialist = specialistForTask(task, run)
   if (!specialist) return '<strong>ShotCount</strong>'
-  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentSparkleIcon()}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialistActivity(run))}</small></span></strong>`
+  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentIdentityMark(run)}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialistActivity(run))}</small></span></strong>`
 }
 
 function agentUpdateToast(run: AgentRun) {
@@ -1896,6 +1907,7 @@ function render() {
   if (nextInspectorContent && inspectorScroll !== undefined) nextInspectorContent.scrollTop = inspectorScroll
   if (pageScroll.x || pageScroll.y) window.scrollTo(pageScroll.x, pageScroll.y)
   if (isPhone) queueMicrotask(alignMobileScrollSurfaces)
+  mountRoonOrbs(app)
 }
 
 function renderDailyPlanningPrompt() {
@@ -1999,7 +2011,7 @@ function renderRoonPlanner() {
       <section class="roon-planner-card" role="dialog" aria-modal="true" aria-labelledby="roon-planner-title">
         <button type="button" class="roon-planner-close" data-action="close-roon-planner" aria-label="Close Ask Roon">×</button>
         <header>
-          <span class="agent-icon-wrap">${agentSparkleIcon()}</span>
+          <span class="agent-icon-wrap">${renderRoonOrb('waiting', 18)}</span>
           <div><h2 id="roon-planner-title">Ask Roon</h2><p>Turn an outcome into tasks.</p></div>
         </header>
         ${roonPlannerStage === 'goal' || loading ? `
@@ -2151,7 +2163,7 @@ function renderAgentIsland() {
   if (!state) return ''
   return `<button type="button" class="shotcount-island shotcount-agent-island" data-agent-island-task="${escapeHtml(task.id)}" aria-label="${escapeHtml(state.title)}. Open ${escapeHtml(task.title)}">
     <span class="island-head">
-      <span class="island-portrait agent-island-mark specialist-icon specialist-icon--${owner?.id ?? 'roon'}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span></span>
+      <span class="island-portrait agent-island-mark specialist-icon specialist-icon--${owner?.id ?? 'roon'}"><span class="agent-icon-wrap">${renderRoonOrb(agentOrbState(candidate.status), 34)}</span></span>
       <span class="island-identity">
         <small>${state.eyebrow}</small>
         <strong>${escapeHtml(state.title)}</strong>
@@ -2940,7 +2952,7 @@ function renderToday() {
       <header class="screen-title"><h1>Today</h1><span class="screen-count" data-count="${screenCounts.today}" aria-label="${screenCounts.today} open tasks">${screenCounts.today}</span></header>
       ${todayComposerOpen ? renderTodayComposer() : `<div class="today-command-row">
         <button class="add-task-row" data-action="add-task">${icon('plus')}<span>Add New Task</span></button>
-        <button class="ask-shotcount-button" data-action="open-roon-planner"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
+        <button class="ask-shotcount-button" data-action="open-roon-planner"><span class="agent-icon-wrap">${renderRoonOrb('waiting', 16)}</span>Ask Roon</button>
       </div>`}
       <div class="task-list">
         ${hasTasks
@@ -3134,9 +3146,9 @@ function renderAgentPill(task: Task) {
         displayStatus === 'needs_context' ? 'Needs context' :
           displayStatus === 'failed' ? 'Needs attention' :
             'Delegate'
-  const mark = displayStatus === 'planning' || displayStatus === 'running' ? '<span aria-hidden="true">◔</span>' :
-      ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '') ? '<span class="agent-state-alert" aria-hidden="true">!</span>' :
-      `<span class="agent-icon-wrap">${agentSparkleIcon()}</span>`
+  const mark = ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '')
+    ? '<span class="agent-state-alert" aria-hidden="true">!</span>'
+    : renderRoonOrb(agentOrbState(displayStatus), 16)
   return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'} specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}" data-agent-task="${escapeHtml(task.id)}" aria-label="${escapeHtml(ownerName)} — ${label}: ${escapeHtml(task.title)}" title="${escapeHtml(ownerName)} — ${label}">${mark}</button>`
 }
 
@@ -3180,11 +3192,11 @@ function renderAgentProgressPanel(task: Task, _progressIndex: number, placeholde
   const canCheckExternalWork = run?.status === 'waiting_external' && !placeholder
   const checkExternalBusy = canCheckExternalWork && agentDecisionBusy.has(run?.id ?? '')
   return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
-    <header>${specialistHeader(task, run)}<em><i aria-hidden="true">◔</i> In progress</em></header>
+    <header>${specialistHeader(task, run)}<em><span class="agent-status-orb">${renderRoonOrb('active', 12)}</span> In progress</em></header>
     ${liveActivity ? `<p>${escapeHtml(liveActivity)}</p>` : ''}
     ${renderDavidApplicationStatus(task, run)}
     <div class="task-agent-progress">
-      ${progressRows.map(row => `<div class="${row.state}"><i>${row.state === 'done' ? '✓' : '◔'}</i><span>${escapeHtml(row.label)}</span></div>`).join('')}
+      ${progressRows.map(row => `<div class="${row.state}"><span class="task-agent-progress-orb">${renderRoonOrb(row.state === 'done' ? 'complete' : 'active', 20)}</span><span>${escapeHtml(row.label)}</span></div>`).join('')}
     </div>
     ${renderRoonGeneratedFiles(task)}
     <footer><button type="button" data-action="view-agent-progress" data-task-id="${escapeHtml(task.id)}">View progress</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${escapeHtml(task.id)}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button></footer>
@@ -3726,7 +3738,7 @@ function renderInspectorRoonAction(task: Task) {
   if (!route.supported && !roonCapabilityForTask(task)) return ''
   const owner = specialistForTask(task, run)
   const ownerName = owner?.displayName ?? 'ShotCount'
-  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${escapeHtml(task.id)}"><span class="agent-icon-wrap specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}">${agentSparkleIcon()}</span>Delegate to ${escapeHtml(ownerName)}</button>`
+  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${escapeHtml(task.id)}"><span class="agent-icon-wrap specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}">${renderRoonOrb('waiting', 14)}</span>Delegate to ${escapeHtml(ownerName)}</button>`
 }
 
 function renderSubtask(task: Task, subtask: NonNullable<Task['subtaskItems']>[number]) {
@@ -3772,7 +3784,7 @@ function renderUpcomingComposer(group: UpcomingGroup) {
   if (plannerDraftGroup !== group) {
     return `<div class="upcoming-command-row">
       <button class="add-task-row" data-action="open-planner" data-task-group="${group}">${icon('plus')}<span>Add New Task</span></button>
-      <button class="ask-shotcount-button" data-action="open-roon-planner" data-task-group="${group}"><span class="agent-icon-wrap">${agentSparkleIcon()}</span>Ask Roon</button>
+      <button class="ask-shotcount-button" data-action="open-roon-planner" data-task-group="${group}"><span class="agent-icon-wrap">${renderRoonOrb('waiting', 16)}</span>Ask Roon</button>
     </div>`
   }
   const isWeek = group === 'week'
