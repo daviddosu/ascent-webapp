@@ -3228,11 +3228,15 @@ function renderAgentProgressPanel(task: Task, _progressIndex: number, placeholde
 }
 
 function projectionDeadlineLabel(deadline: { dateTime: string; timezone: string } | null) {
-  if (!deadline) return ''
+  const dateTime = typeof deadline?.dateTime === 'string' ? deadline.dateTime.trim() : ''
+  if (!dateTime) return ''
+  const timezone = typeof deadline?.timezone === 'string' && deadline.timezone.trim()
+    ? deadline.timezone.trim()
+    : 'UTC'
   try {
-    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: deadline.timezone || 'UTC' }).format(new Date(deadline.dateTime))
+    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: timezone }).format(new Date(dateTime))
   } catch {
-    return deadline.dateTime.slice(0, 10)
+    return dateTime.slice(0, 10)
   }
 }
 

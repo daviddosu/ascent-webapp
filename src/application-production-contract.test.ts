@@ -118,6 +118,8 @@ describe('production application completion contract', () => {
     expect(agent).toContain('completion_continuations: 0')
     expect(agent).toContain('internal_failure_recovery_attempts: 0')
     expect(agent).toContain('David is resuming from the last verified application state.')
+    expect(app).toContain("const dateTime = typeof deadline?.dateTime === 'string'")
+    expect(app).toContain("if (!dateTime) return ''")
     expect(runtimePolicy).toContain("if (state === 'CASE_CREATION')")
     expect(runtimePolicy).toContain("return new Set(['agent.request_context'])")
     expect(runtimePolicy).not.toContain("'browser.submit',\n] as const")
