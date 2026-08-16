@@ -12,6 +12,7 @@ import {
   specialistRegistry,
   specialistRequiredEffects,
 } from './specialists'
+import { agentToolDefinitions } from '../../supabase/functions/_shared/agent-tools'
 
 describe('ShotCount specialist contracts', () => {
   it('keeps one versioned registry and one reasoning model', () => {
@@ -67,6 +68,14 @@ describe('ShotCount specialist contracts', () => {
     expect(specialistCanUseTool('david', 'application.generate_document')).toBe(true)
     expect(specialistCanUseTool('david', 'browser.submit')).toBe(true)
     expect(specialistCanUseTool('david', 'calendar.create_event')).toBe(false)
+  })
+
+  it('exposes every registered application workflow tool to David', () => {
+    const applicationTools = agentToolDefinitions
+      .map(tool => tool.name)
+      .filter(name => name.startsWith('application.'))
+    expect(applicationTools.length).toBeGreaterThan(20)
+    expect(applicationTools.filter(name => !specialistCanUseTool('david', name))).toEqual([])
   })
 
   it('forwards a next-stage tool only to the registered immediate specialist', () => {

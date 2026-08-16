@@ -455,6 +455,7 @@ const pendingEmailSends = new Map<string, (proceed: boolean) => void>()
 let agentPollingTimer = 0
 let agentPollBusy = false
 let agentRunsRefreshing = false
+const internalAgentRecoveryRunIDs = new Set<string>()
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
@@ -1070,7 +1071,28 @@ async function pollWaitingAgentRuns() {
     Date.now() - Date.parse(run.updatedAt) >= 20_000,
   )
   const waitingRuns = [...agentRuns.values()].filter(run => run.status === 'waiting_external')
-  const recoverableRuns = [...waitingRuns, ...staleApplicationRuns, ...stalePaymentHandoffRuns]
+  const internalRecoveryRuns = [...agentRuns.values()].filter(run => {
+    if (!isApplicationIntent(run.objective, run.context) || internalAgentRecoveryRunIDs.has(run.id)) return false
+    const browserAllowlistRecovery = ['waiting_for_user', 'needs_context'].includes(run.status) &&
+      (
+        run.errorCode === 'browser_domain_not_allowed' ||
+        /browser allowlist/i.test(run.waitingReason) ||
+        /outside the task/i.test(run.waitingReason)
+      )
+    const singleProgrammeRecovery = run.status === 'needs_context' &&
+      /approve creating .*application case/i.test(run.waitingReason)
+    const semanticHandoffRecovery = run.status === 'waiting_for_user' &&
+      run.errorCode === 'application_semantic_handoff'
+    const failedApplicationRecovery = run.status === 'failed' &&
+      ['agent_execution_error', 'model_reasoning_luna', 'application_controller_repair_exhausted'].includes(run.errorCode ?? '')
+    const intermediateApplicationRecovery = run.status === 'completed' &&
+      Boolean(run.applicationState) &&
+      !['complete', 'submitted', 'post_submission'].includes(String(run.applicationState?.stage ?? '').toLocaleLowerCase()) &&
+      String(run.applicationState?.status ?? '').toLocaleLowerCase() !== 'complete'
+    return browserAllowlistRecovery || singleProgrammeRecovery || semanticHandoffRecovery || failedApplicationRecovery || intermediateApplicationRecovery
+  })
+  internalRecoveryRuns.forEach(run => internalAgentRecoveryRunIDs.add(run.id))
+  const recoverableRuns = [...waitingRuns, ...staleApplicationRuns, ...stalePaymentHandoffRuns, ...internalRecoveryRuns]
   if (!recoverableRuns.length) return
   agentPollBusy = true
   try {

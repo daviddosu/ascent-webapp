@@ -12,6 +12,8 @@ const browserDocs = readFileSync(resolve('docs/browser-execution.md'), 'utf8')
 const qualificationRunner = readFileSync(resolve('benchmarks/david-applications/production-qualification.mjs'), 'utf8')
 const controller = readFileSync(resolve('supabase/functions/_shared/application-controller.ts'), 'utf8')
 const engine = readFileSync(resolve('supabase/functions/_shared/application-engine.ts'), 'utf8')
+const runtimePolicy = readFileSync(resolve('supabase/functions/_shared/application-runtime-policy.ts'), 'utf8')
+const specialists = readFileSync(resolve('supabase/functions/_shared/specialists.ts'), 'utf8')
 
 describe('production application completion contract', () => {
   it('sends private PNG and JPEG bytes to Luna multimodally', () => {
@@ -97,11 +99,28 @@ describe('production application completion contract', () => {
     expect(agent).toContain("'www.ed.ac.uk': 'study.ed.ac.uk'")
     expect(agent).toContain('repairedDomains')
     expect(agent).toContain('const shortlistApproved =')
-    expect(agent).toContain('isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) && shortlistApproved')
+    expect(agent).toContain('(shortlistApproved || internallyAuthorizedSingleProgramme || caseCreationRequested)')
     expect(agent).toContain("application_cases').select('id,opportunity_id,status')")
     expect(agent).toContain('targetCaseCount')
     expect(agent).toContain('campaignCaseIds.length < targetCaseCount')
     expect(agent).toContain("action: 'continue_application_controller'")
+    expect(agent).toContain('current = await ensureCanonicalApplicationRuntime(admin, current)')
+    expect(agent).toContain('const engineTools = applicationController ? toolsForApplicationEngineStep(applicationController) : null')
+    expect(agent).toContain("? { type: 'function', name: tools[0].name }")
+    expect(agent).toContain(": 'required'")
+    expect(agent).toContain("error_code: 'application_engine_tool_not_allowed'")
+    expect(agent).toContain('normalizeApplicationEngineToolArguments(toolName, argumentsValue, applicationController)')
+    expect(agent).toContain('normalized.requirement_id = snapshot.engineStep.requirementId')
+    expect(agent).toContain('application_runtime_canonicalized')
+    expect(runtimePolicy).toContain("if (state === 'CASE_CREATION')")
+    expect(runtimePolicy).toContain("return new Set(['agent.request_context'])")
+    expect(runtimePolicy).not.toContain("'browser.submit',\n] as const")
+    for (const tool of [
+      'application.resolve_supplemental_questions',
+      'application.generate_supervisor_outreach',
+      'application.prepare_research_proposal',
+      'application.coordinate_fee',
+    ]) expect(specialists).toContain(`'${tool}'`)
     expect(agent).toContain('normalizeApplicationCreateCaseArguments')
     expect(agent).toContain("select('id,official_url,application_url')")
     expect(agent).toContain('input.label ?? input.title')
@@ -139,7 +158,7 @@ describe('production application completion contract', () => {
     expect(agent).toContain('application_requirement_evidence_reconciled')
     expect(agent).toContain("['unknown', 'in_progress', 'awaiting_institution', 'awaiting_user'].includes(rawStatus)")
     expect(agent).toContain('safeString(message, 4_000).replace')
-    expect(agent).toContain("portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'")
+    expect(runtimePolicy).toContain("portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'")
     expect(agent).toContain('submissionAttempted: null')
     expect(agent).toContain('agent_browser_validation_recovered')
     expect(agent).toContain('normalizeControlledFixtureNavigation')

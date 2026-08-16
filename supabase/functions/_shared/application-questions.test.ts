@@ -89,6 +89,25 @@ describe('canonical supplemental application questions', () => {
     expect(found[0]?.options.map(option => option.value)).toEqual(['yes', 'no'])
   })
 
+  it('does not turn portal navigation search into an application question', () => {
+    const found = discoverApplicationQuestions({
+      applicationCaseId: 'case-1',
+      portal: 'benchmark.test',
+      section: 'Graduate Admissions',
+      fields: [{
+        name: 'search',
+        label: 'Search',
+        prompt: 'Search',
+        type: 'text',
+        value: '',
+        checked: false,
+        required: false,
+        options: [],
+      }],
+    })
+    expect(found).toEqual([])
+  })
+
   it('resolves facts before asking the user and routes substantial writing to the writer system', () => {
     const factual = question({ questionType: 'factual', inputType: 'text', exactPrompt: 'What is your undergraduate institution?', normalizedPrompt: 'what is your undergraduate institution?', questionKey: 'education:institution', maximum: null, unit: null })
     const resolved = resolveSupplementalAnswer(factual, { facts: [{ factId: 'profile:education[0].institution', value: 'University of Lagos', evidenceIds: ['cv-1'], verified: true }] })

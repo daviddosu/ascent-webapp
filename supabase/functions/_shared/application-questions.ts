@@ -296,6 +296,16 @@ function textFromField(field: PortalFieldObservation) {
   return clean(field.prompt || field.label || field.name || 'Supplemental question')
 }
 
+function isPortalUtilityField(field: PortalFieldObservation) {
+  if (field.required) return false
+  const name = normalized(field.name)
+  const prompt = normalized(field.prompt)
+  const label = normalized(field.label)
+  return [name, prompt, label].some(value =>
+    ['search', 'site search', 'search this site', 'site-search', 'q'].includes(value),
+  )
+}
+
 function isEmptyValue(value: unknown) {
   if (value === null || value === undefined) return true
   if (typeof value === 'boolean') return false
@@ -424,7 +434,7 @@ function inputType(field: PortalFieldObservation): ApplicationQuestionInputType 
 function groupFields(fields: PortalFieldObservation[]) {
   const groups = new Map<string, PortalFieldObservation[]>()
   for (const field of fields) {
-    if (field.visible === false || field.savedState === true) continue
+    if (field.visible === false || field.savedState === true || isPortalUtilityField(field)) continue
     const type = inputType(field)
     if (type === 'unknown' && !field.label && !field.prompt && !field.name) continue
     const groupName = type === 'radio' || type === 'checkbox'

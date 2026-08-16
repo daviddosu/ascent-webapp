@@ -184,6 +184,7 @@ import {
 } from '../_shared/academic-evidence.ts'
 import { isApplicationIntent } from '../_shared/application.ts'
 import {
+  APPLICATION_ENGINE_VERSION,
   applicationEngineDirective,
   applicationSemanticFunctions,
   createApplicationEngineState,
@@ -198,6 +199,7 @@ import {
   type SemanticDecision,
 } from '../_shared/application-engine.ts'
 import {
+  APPLICATION_CONTROLLER_VERSION,
   applicationControllerStateFromLegacy,
   buildAuthoritativeApplicationContext,
   recoverInvalidApplicationAction,
@@ -214,6 +216,14 @@ import {
   type ProposedApplicationAction,
   type RequirementNode,
 } from '../_shared/application-controller.ts'
+import {
+  APPLICATION_RUNTIME_POLICY_VERSION,
+  applicationResearchTargetQuantity,
+  applicationTaskAuthorizesCaseCreation,
+  canonicalApplicationBrowserSubmitIsPreparatory,
+  canonicalApplicationToolAllowed,
+  toolsForCanonicalApplicationStep,
+} from '../_shared/application-runtime-policy.ts'
 import {
   applicationQuestionTypes,
   discoverApplicationQuestions,
@@ -233,6 +243,7 @@ import {
   type SupervisorOutreachPackage,
 } from '../_shared/supervisor-outreach.ts'
 import {
+  DAVID_APPLICATION_V21_PROMPT_VERSION,
   DAVID_APPLICATION_V21_MODEL_CONFIG,
   davidApplicationV21Instructions,
 } from '../_shared/david-agent-config.ts'
@@ -313,6 +324,7 @@ type AgentRunRow = {
   current_step: number
   waiting_reason: string
   task_completion_policy: AgentIntent['outcomeType']
+  retryable: boolean
   progress: unknown[]
   result: Record<string, unknown> | null
   error: string | null
@@ -479,6 +491,11 @@ type ReusableAgentContext = {
 
 const workerId = `task-agent:${crypto.randomUUID()}`
 const maximumModelSteps = 10
+// Application work includes deterministic research, evidence checks, and
+// portal preparation. Keep the ordinary agent budget unchanged, but allow an
+// application run to finish its bounded controller slice before surfacing a
+// false safe-step-limit failure.
+const maximumApplicationModelSteps = 24
 const maximumCompletionContinuations = 3
 const openAIRequestTimeoutMs = 45_000
 
@@ -1008,6 +1025,7 @@ async function ensureApplicationCampaign(
     objective: run.objective,
     application_kind: intent.applicationKind,
     status: 'researching',
+    target_quantity: applicationResearchTargetQuantity(run.objective, safeString(run.context?.description, 4_000)),
     data: {
       description: safeString(run.context?.description, 4_000),
       research_workflow: intent.researchWorkflow,
@@ -1018,9 +1036,13 @@ async function ensureApplicationCampaign(
     progress: { completed: 0, total: 5, label: 'Researching programmes', nextAction: 'Verify official opportunities and requirements.', blockers: [], evidenceCount: 0 },
   }, { onConflict: 'user_id,task_id' }).select('id').single<{ id: string }>()
   if (campaign.error || !campaign.data) {
-    // The application migration is additive. A stale deployment should keep
-    // the existing AgentRun usable while the migration is being applied.
-    if (campaign.error?.code === '42P01') return run
+    // Application work must not fall back to the generic agent when its
+    // durable graph is unavailable. Failing closed preserves applicant data
+    // and makes a deployment mismatch visible instead of silently bypassing
+    // the canonical workflow.
+    if (campaign.error?.code === '42P01') {
+      throw new Error('Canonical application persistence is unavailable; deploy the application migrations before continuing this run.')
+    }
     throw new Error(campaign.error?.message ?? 'Could not create the application campaign.')
   }
   const applicationState: DavidApplicationState = {
@@ -1046,6 +1068,96 @@ async function ensureApplicationCampaign(
   }).eq('id', run.id).eq('user_id', run.user_id).select('*').single<AgentRunRow>()
   if (updated.error || !updated.data) throw new Error(updated.error?.message ?? 'Could not attach the application campaign to the AgentRun.')
   return updated.data
+}
+
+async function ensureCanonicalApplicationRuntime(
+  admin: AdminClient,
+  run: AgentRunRow,
+) {
+  const description = safeString(run.context?.description, 4_000)
+  if (!isApplicationIntent(run.objective, description)) return run
+
+  const david = getSpecialist('david')
+  if (!david) throw new Error('The canonical David specialist contract is unavailable.')
+  const route = routeTask(run.objective, description)
+  const taskContract: TaskContract = route.primarySpecialistId === 'david' && route.taskContract
+    ? route.taskContract
+    : 'applications.planning'
+  const specialistStages = route.primarySpecialistId === 'david' && route.stages.length
+    ? route.stages
+    : [{
+        stageId: 'application-planning',
+        specialistId: 'david' as const,
+        specialistVersion: david.version,
+        taskContract,
+        label: taskContract === 'applications.review_handoff'
+          ? 'Preparing the approved submission path'
+          : 'Preparing your application checklist',
+      }]
+  const requiredEffects = specialistRequiredEffects('david', `${run.objective} ${description}`, taskContract)
+  const applicationState = run.application_state ?? nextApplicationState(run, {})
+  const runtimeAlreadyCanonical = run.active_specialist_id === 'david' &&
+    run.active_specialist_version === david.version &&
+    run.specialist_id === 'david' &&
+    run.task_contract === taskContract &&
+    Boolean(run.application_state) &&
+    run.context?.application_controller_required === true &&
+    run.context?.application_runtime_policy_version === APPLICATION_RUNTIME_POLICY_VERSION &&
+    run.context?.application_prompt_version === DAVID_APPLICATION_V21_PROMPT_VERSION &&
+    run.context?.application_engine_version === APPLICATION_ENGINE_VERSION &&
+    run.context?.application_controller_version === APPLICATION_CONTROLLER_VERSION
+
+  let current = run
+  if (!runtimeAlreadyCanonical) {
+    current = await updateRun(admin, run, {
+      capability: 'browser',
+      strategy: 'hybrid',
+      intent: classifySharedAgentIntent(run.objective, description),
+      specialist_id: 'david',
+      specialist_version: david.version,
+      active_specialist_id: 'david',
+      active_specialist_version: david.version,
+      task_contract: taskContract,
+      routing_source: route.primarySpecialistId === 'david' ? route.classification : 'deterministic',
+      specialist_stage_index: 0,
+      specialist_stages: specialistStages,
+      unsatisfied_effects: requiredEffects,
+      task_completion_policy: 'prepared_result',
+      application_state: applicationState,
+      context: {
+        ...(run.context ?? {}),
+        application_owner: 'david',
+        application_boundary: route.applicationBoundary ?? 'supported_planning',
+        application_controller_required: true,
+        application_runtime_policy_version: APPLICATION_RUNTIME_POLICY_VERSION,
+        application_prompt_version: DAVID_APPLICATION_V21_PROMPT_VERSION,
+        application_engine_version: APPLICATION_ENGINE_VERSION,
+        application_controller_version: APPLICATION_CONTROLLER_VERSION,
+        application_runtime_repaired_from: {
+          specialist_id: run.active_specialist_id,
+          task_contract: run.task_contract,
+          had_application_state: Boolean(run.application_state),
+        },
+        progress_current: progressCurrent(run, 'David is entering the canonical application controller.'),
+      },
+    })
+    await addEvent(admin, current, 'application_runtime_canonicalized', current.status,
+      'David entered the authoritative application controller.', {
+        runtime_policy_version: APPLICATION_RUNTIME_POLICY_VERSION,
+        prompt_version: DAVID_APPLICATION_V21_PROMPT_VERSION,
+        engine_version: APPLICATION_ENGINE_VERSION,
+        controller_version: APPLICATION_CONTROLLER_VERSION,
+        prior_specialist_id: run.active_specialist_id,
+        prior_task_contract: run.task_contract,
+        repaired_application_state: !run.application_state,
+      })
+  }
+
+  current = await ensureApplicationCampaign(admin, current)
+  if (!current.application_state?.campaignId) {
+    throw new Error('The canonical application controller could not attach a durable ApplicationCampaign.')
+  }
+  return current
 }
 
 async function validateApplicationSubmissionPackage(
@@ -2422,13 +2534,49 @@ async function queueBrowserOperation(
     }
   }
   if (operation.type === 'navigate') {
+    let destination: URL
     try {
-      const destination = new URL(safeString(operation.arguments.url, 2000))
-      if (destination.protocol !== 'https:' || !allowedDomains.includes(destination.hostname.toLocaleLowerCase())) {
-        return { kind: 'unavailable' as const, message: 'This destination is outside the task’s browser allowlist.' }
-      }
+      destination = new URL(safeString(operation.arguments.url, 2000))
     } catch {
       return { kind: 'unavailable' as const, message: 'This browser destination is invalid.' }
+    }
+    const destinationHostname = destination.hostname.toLocaleLowerCase()
+    if (destination.protocol !== 'https:') {
+      return { kind: 'unavailable' as const, message: 'This browser destination is not an HTTPS page.' }
+    }
+    if (!allowedDomains.includes(destinationHostname)) {
+      // A model can discover a verified link on an allowed public page that
+      // was not part of the initial session request. Automatically add it when
+      // it is covered by the server-side domain allowlist. This keeps the
+      // browser task-owned without asking the user to repair session state.
+      const configured = configuredBrowserDomains()
+      const configuredDomain = canonicalConfiguredBrowserDomain(destinationHostname, configured)
+      const coveredByConfiguredAllowlist = configured.has(destinationHostname) ||
+        (configuredDomain !== destinationHostname && configured.has(configuredDomain))
+      if (coveredByConfiguredAllowlist) {
+        const repairedDomains = [...new Set([...allowedDomains, destinationHostname])]
+        const repaired = await admin.from('browser_execution_sessions').update({
+          allowed_domains: repairedDomains,
+        }).eq('id', session.id).eq('run_id', run.id).eq('user_id', run.user_id)
+        if (repaired.error) throw new Error(repaired.error.message)
+        allowedDomains = repairedDomains
+        await addEvent(
+          admin,
+          run,
+          'browser_allowlist_repaired',
+          run.status,
+          `Expanded the task-owned browser session for the verified ${destinationHostname} domain.`,
+          { destination_domain: destinationHostname, reason: 'configured_public_application_domain' },
+        )
+      }
+    }
+    if (!allowedDomains.includes(destinationHostname)) {
+      return {
+        kind: 'unavailable' as const,
+        code: 'browser_domain_not_allowed',
+        recoverable: true,
+        message: `The browser session did not include ${destinationHostname}. Roon should refresh the task-owned session with a verified configured domain and retry.`,
+      }
     }
   }
   if (
@@ -2841,7 +2989,12 @@ function canUseOfficialRequirementEvidence(requirement: Record<string, unknown>)
   // cannot verify the applicant's identity, education, employment history,
   // documents, referees, or portal state. Keep this boundary explicit because
   // those categories need profile, artifact, Gmail, or portal evidence.
-  return name.length > 0 && !/(?:identity|contact details?|education|academic history|research history|employment history|referees?|references?|cv|resume|transcript|degree|statement|essay|personal information|portal|upload|document)/i.test(name)
+  // A broad admissions-requirements heading is only a pointer to the
+  // institution's requirements page. It is not evidence that the detailed
+  // requirements have been verified. Specific requirements, such as an
+  // English-language test, remain eligible for official-source evidence.
+  if (!name.length || /\b(?:detailed|general|overall|full|all)?\s*(?:admissions?|application)\s+requirements?\b/i.test(name)) return false
+  return !/(?:identity|contact details?|education|academic history|research history|employment history|referees?|references?|cv|resume|transcript|degree|statement|essay|personal information|portal|upload|document)/i.test(name)
 }
 
 async function ensureOfficialRequirementEvidence(
@@ -2917,6 +3070,72 @@ async function ensureOfficialRequirementEvidence(
     if (updated.error) throw new Error(updated.error.message)
   }))
   return { rows: (persisted.data ?? []) as Array<Record<string, unknown>>, evidenceIdsByRequirement }
+}
+
+async function ensureApplicationRequirementScaffold(
+  admin: AdminClient,
+  run: AgentRunRow,
+  caseId: string,
+  rawRequirements: Array<Record<string, unknown>>,
+  opportunity: Record<string, unknown> | null,
+) {
+  const container = rawRequirements.find(requirement =>
+    /\b(?:detailed|general|overall|full|all)?\s*(?:admissions?|application)\s+requirements?\b/i.test(
+      safeString(requirement.name ?? requirement.label ?? requirement.title, 500),
+    ),
+  )
+  if (!container) return []
+  const existingNames = new Set(rawRequirements.map(requirement => safeString(requirement.name, 500).toLocaleLowerCase()).filter(Boolean))
+  const institution = safeString(opportunity?.institution, 240)
+  const programme = safeString(opportunity?.programme_title, 500)
+  const officialUrl = safeString(opportunity?.official_url, 2_000)
+  const prefix = [institution, programme].filter(Boolean).join(' ')
+  const definitions = [
+    { name: `${prefix} official application deadline`, category: 'other', requirement_type: 'deadline', responsible_party: 'david', exact_instructions: 'Verify the exact application deadline, cycle, timezone, and whether the programme has more than one deadline.' },
+    { name: `${prefix} admissions tests`, category: 'test', requirement_type: 'admissions_test', responsible_party: 'david', exact_instructions: 'Verify every required or waived admissions test and the exact reporting policy from the official source.' },
+    { name: `${prefix} application essays and statements`, category: 'essay', requirement_type: 'writer', responsible_party: 'writer', exact_instructions: 'Verify the required essay or statement prompts, limits, and submission format before briefing the writer.' },
+    { name: `${prefix} recommendation requirements`, category: 'reference', requirement_type: 'referee', responsible_party: 'referee', exact_instructions: 'Verify the number, type, and submission route for recommendation letters.' },
+    { name: `${prefix} supervisor or faculty-contact expectations`, category: 'other', requirement_type: 'professor', responsible_party: 'institution', exact_instructions: 'Verify whether supervisor contact is required, recommended, or unnecessary, and preserve the official source.' },
+    { name: `${prefix} CV and supporting documents`, category: 'academic', requirement_type: 'document', responsible_party: 'applicant', exact_instructions: 'Verify the required CV and supporting-document formats, then use the supplied applicant files.' },
+    { name: `${prefix} academic transcript`, category: 'academic', requirement_type: 'transcript', responsible_party: 'applicant', exact_instructions: 'Verify transcript requirements and identify the exact applicant document still needed.' },
+    { name: `${prefix} application portal sections`, category: 'portal', requirement_type: 'portal_section', responsible_party: 'david', exact_instructions: 'Verify the official application portal sections and persist read-after-write evidence for each saved section.' },
+  ].filter(definition => definition.name && !existingNames.has(definition.name.toLocaleLowerCase()))
+  if (definitions.length) {
+    const inserted = await admin.from('application_requirements').insert(definitions.map(definition => ({
+      application_case_id: caseId,
+      user_id: run.user_id,
+      name: definition.name,
+      category: definition.category,
+      requirement_type: definition.requirement_type,
+      required: true,
+      exact_instructions: definition.exact_instructions,
+      status: 'unknown',
+      responsible_party: definition.responsible_party,
+      verification_evidence_ids: [],
+      source: { id: officialUrl || `case:${caseId}`, url: officialUrl || null, authority: 'official', scaffolded: true },
+      blocker_reason: 'Official-source verification is still required.',
+    })))
+    if (inserted.error) throw new Error(inserted.error.message)
+  }
+  // The broad node is a deterministic container; its actionable children own
+  // completion and keep the engine from treating a single page citation as an
+  // end-to-end application result.
+  if (container.required !== false || safeString(container.status, 80) !== 'verified') {
+    const flattened = await admin.from('application_requirements').update({
+      required: false,
+      status: 'verified',
+      blocker_reason: null,
+      exact_instructions: 'Container node expanded into actionable application requirements.',
+    }).eq('id', safeString(container.id, 80)).eq('application_case_id', caseId).eq('user_id', run.user_id)
+    if (flattened.error) throw new Error(flattened.error.message)
+  }
+  const refreshed = await admin.from('application_requirements')
+    .select('id,application_case_id,name,required,status,source,source_id,requirement_type,dependency_ids,evidence_contract,responsible_party,deadline_at,verification_evidence_ids,linked_artifact_id,blocker_reason')
+    .eq('application_case_id', caseId)
+    .eq('user_id', run.user_id)
+    .order('created_at')
+  if (refreshed.error) throw new Error(refreshed.error.message)
+  return (refreshed.data ?? []) as Array<Record<string, unknown>>
 }
 
 type ApplicationStatePatch = Omit<Partial<DavidApplicationState>, 'progress'> & {
@@ -3818,6 +4037,131 @@ function controllerRequirementStatus(value: string): RequirementNode['status'] {
   return 'UNRESOLVED'
 }
 
+function applicationTaskCvAttachments(run: AgentRunRow) {
+  const attachments = Array.isArray(run.context?.attachments)
+    ? run.context.attachments as Array<Record<string, unknown>>
+    : []
+  return attachments.filter(asset => {
+    const filename = safeString(asset.original_filename, 255).replace(/[_-]+/g, ' ')
+    const mimeType = safeString(asset.mime_type, 160).toLocaleLowerCase()
+    return asset.source === 'task_upload' &&
+      /\b(?:cv|resum[eé]+|curriculum vitae)\b/i.test(filename) &&
+      ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'].includes(mimeType)
+  })
+}
+
+function cvSourceIds(value: unknown) {
+  const factIds = new Set<string>()
+  const assetIds = new Set<string>()
+  const visit = (item: unknown) => {
+    if (Array.isArray(item)) {
+      item.forEach(visit)
+      return
+    }
+    if (!item || typeof item !== 'object') return
+    const record = item as Record<string, unknown>
+    const provenance = recordValue(record.provenance)
+    stringArray(provenance.sourceFactIds ?? provenance.source_fact_ids, 300).forEach(id => factIds.add(id))
+    stringArray(provenance.sourceAssetIds ?? provenance.source_asset_ids, 160).forEach(id => assetIds.add(id))
+    stringArray(record.provenance_fact_ids ?? record.provenanceFactIds, 300).forEach(id => factIds.add(id))
+    stringArray(record.source_fact_ids ?? record.sourceFactIds, 300).forEach(id => factIds.add(id))
+    stringArray(record.source_asset_ids ?? record.sourceAssetIds, 160).forEach(id => assetIds.add(id))
+    Object.values(record).forEach(visit)
+  }
+  visit(value)
+  return { factIds: [...factIds], assetIds: [...assetIds] }
+}
+
+function cvFactProvenance(value: unknown, taskAssetIds: string[]) {
+  const record = recordValue(value)
+  const existing = recordValue(record.provenance)
+  const sourceFactIds = stringArray(existing.sourceFactIds ?? existing.source_fact_ids ?? record.provenance_fact_ids ?? record.provenanceFactIds, 300)
+  const sourceAssetIds = stringArray(existing.sourceAssetIds ?? existing.source_asset_ids ?? record.source_asset_ids ?? record.sourceAssetIds, 160)
+  const rawValue = Object.prototype.hasOwnProperty.call(record, 'value')
+    ? record.value
+    : Object.prototype.hasOwnProperty.call(record, 'items')
+      ? record.items
+      : value
+  const provenance = Object.keys(existing).length
+    ? {
+        ...existing,
+        confirmed: existing.confirmed === true,
+        sourceFactIds,
+        sourceAssetIds,
+      }
+    : {
+        confirmed: true,
+        sourceFactIds,
+        sourceAssetIds: sourceAssetIds.length || sourceFactIds.length ? sourceAssetIds : taskAssetIds,
+        kind: sourceAssetIds.length || taskAssetIds.length ? 'uploaded_document' : 'user_statement',
+      }
+  if (Object.keys(existing).length && !provenance.sourceAssetIds.length && !provenance.sourceFactIds.length && taskAssetIds.length) {
+    provenance.sourceAssetIds = taskAssetIds
+    provenance.kind = 'uploaded_document'
+    provenance.confirmed = true
+  }
+  if (Object.keys(existing).length) {
+    const cleaned = { ...record }
+    delete cleaned.provenance
+    delete cleaned.provenance_fact_ids
+    delete cleaned.provenanceFactIds
+    delete cleaned.source_asset_ids
+    delete cleaned.sourceAssetIds
+    delete cleaned.source_fact_ids
+    delete cleaned.sourceFactIds
+    const cleanedValue = Object.prototype.hasOwnProperty.call(record, 'value')
+      ? record.value
+      : Object.keys(cleaned).length ? cleaned : rawValue
+    return { value: cleanedValue, provenance }
+  }
+  if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) {
+    const cleaned = { ...(rawValue as Record<string, unknown>) }
+    delete cleaned.provenance
+    delete cleaned.provenance_fact_ids
+    delete cleaned.provenanceFactIds
+    delete cleaned.source_asset_ids
+    delete cleaned.sourceAssetIds
+    delete cleaned.source_fact_ids
+    delete cleaned.sourceFactIds
+    return { value: cleaned, provenance }
+  }
+  return { value: rawValue, provenance }
+}
+
+function cvFactArray(value: unknown, taskAssetIds: string[]) {
+  return Array.isArray(value) ? value.map(item => cvFactProvenance(item, taskAssetIds)) : []
+}
+
+function normalizeApplicationCvData(value: unknown, taskAssetIds: string[]) {
+  const raw = recordValue(value)
+  const contact = recordValue(raw.contact)
+  const normalized: Record<string, unknown> = {
+    ...raw,
+    fullName: cvFactProvenance(raw.fullName ?? raw.name, taskAssetIds),
+    email: cvFactProvenance(raw.email ?? contact.email, taskAssetIds),
+    phone: raw.phone ?? contact.phone ?? null,
+    location: raw.location ?? contact.location ?? contact.address ?? null,
+    education: cvFactArray(raw.education ?? raw.Education, taskAssetIds),
+    researchExperience: cvFactArray(raw.researchExperience ?? raw['Research Experience'], taskAssetIds),
+    workExperience: cvFactArray(raw.workExperience ?? raw.Employment ?? raw.employment, taskAssetIds),
+    teachingExperience: cvFactArray(raw.teachingExperience ?? raw['Teaching Experience'], taskAssetIds),
+    publications: cvFactArray(raw.publications ?? raw.Publications, taskAssetIds),
+    presentations: cvFactArray(raw.presentations ?? raw.Presentations, taskAssetIds),
+    projects: cvFactArray(raw.projects ?? raw.Projects, taskAssetIds),
+    researchProjects: cvFactArray(raw.researchProjects ?? raw['Research Projects'], taskAssetIds),
+    leadership: cvFactArray(raw.leadership ?? raw.Leadership, taskAssetIds),
+    awards: cvFactArray(raw.awards ?? raw.Awards, taskAssetIds),
+    scholarships: cvFactArray(raw.scholarships ?? raw.Scholarships, taskAssetIds),
+    certifications: cvFactArray(raw.certifications ?? raw.Certifications, taskAssetIds),
+    technicalSkills: cvFactArray(raw.technicalSkills ?? raw['Technical Skills'], taskAssetIds),
+    researchSkills: cvFactArray(raw.researchSkills ?? raw['Research Skills'] ?? raw['Research Interests'], taskAssetIds),
+    languages: cvFactArray(raw.languages ?? raw.Languages, taskAssetIds),
+    coursework: cvFactArray(raw.coursework ?? raw.Coursework, taskAssetIds),
+    memberships: cvFactArray(raw.memberships ?? raw.Memberships, taskAssetIds),
+  }
+  return normalized
+}
+
 function profileFactResolutions(profile: unknown) {
   const candidates = new Map<string, FactCandidate[]>()
   const visit = (value: unknown, path: string) => {
@@ -4189,6 +4533,41 @@ async function normalizeApplicationCreateCaseArguments(
     : argumentsValue
 }
 
+async function normalizeApplicationRecordOpportunityArguments(
+  run: AgentRunRow,
+  argumentsValue: Record<string, unknown>,
+) {
+  const campaignId = safeString(run.context?.application_campaign_id, 80) ||
+    safeString(run.application_state?.campaignId, 80) ||
+    safeString(argumentsValue.campaign_id, 80)
+  const opportunity = recordValue(argumentsValue.opportunity)
+  const citations = Array.isArray(argumentsValue.citations)
+    ? argumentsValue.citations.map(recordValue)
+    : []
+  const officialUrl = safeString(
+    opportunity.official_url ?? opportunity.officialUrl ?? opportunity.url,
+    2_000,
+  ) || citations.map(citation => safeString(citation.url, 2_000)).find(Boolean) || ''
+  const existingKey = safeString(argumentsValue.idempotency_key, 300)
+  if (campaignId && existingKey) {
+    return {
+      ...argumentsValue,
+      campaign_id: campaignId,
+    }
+  }
+  const digest = await hashValue({
+    campaignId,
+    officialUrl: canonicalOpportunityReference(officialUrl),
+    opportunity,
+    citations,
+  })
+  return {
+    ...argumentsValue,
+    ...(campaignId ? { campaign_id: campaignId } : {}),
+    idempotency_key: existingKey || `application-opportunity:${digest.slice(0, 48)}`,
+  }
+}
+
 async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentRunRow): Promise<ApplicationControllerSnapshot | null> {
   if (run.active_specialist_id !== 'david' || !run.application_state) return null
   const caseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state.currentCaseId, 80) || null
@@ -4219,7 +4598,16 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     : { data: null, error: null }
   if (opportunityResult.error && opportunityResult.error.code !== '42P01') throw new Error(opportunityResult.error.message)
   const facts = profileFactResolutions(profileResult.data?.profile)
-  const rawRequirements = requirementsResult.data ?? []
+  let rawRequirements = (requirementsResult.data ?? []) as Array<Record<string, unknown>>
+  if (caseId) {
+    rawRequirements = await ensureApplicationRequirementScaffold(
+      admin,
+      run,
+      caseId,
+      rawRequirements,
+      opportunityResult.data as Record<string, unknown> | null,
+    )
+  }
   const requirementIdsByName = new Map(rawRequirements.map(requirement => [safeString(requirement.name, 500).toLocaleLowerCase(), safeString(requirement.id, 80)]))
   const requirements: RequirementNode[] = rawRequirements.map(requirement => {
     const source = recordValue(requirement.source)
@@ -4277,7 +4665,7 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
       if (retainedEvidenceIds.length === currentEvidenceIds.length) continue
       const hasLinkedArtifact = Boolean(safeString(rawRequirement.linked_artifact_id, 80))
       const currentStatus = safeString(rawRequirement.status, 80)
-      const resetStatus = !hasLinkedArtifact && ['verified', 'ready', 'approved'].includes(currentStatus) && !retainedEvidenceIds.length
+      const resetStatus = rawRequirement.required !== false && !hasLinkedArtifact && ['verified', 'ready', 'approved'].includes(currentStatus) && !retainedEvidenceIds.length
       const repaired = await admin.from('application_requirements').update({
         verification_evidence_ids: retainedEvidenceIds,
         ...(resetStatus ? { status: 'unknown', blocker_reason: null } : {}),
@@ -4293,10 +4681,10 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   for (const requirement of requirements) {
     requirement.evidenceIds = [...new Set([
       ...requirement.evidenceIds.filter(id => !invalidOfficialEvidenceIds.has(id)),
-      ...(officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? []),
+      ...(officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? []).filter(id => !invalidOfficialEvidenceIds.has(id)),
     ])]
     const rawRequirement = rawRequirements.find(item => safeString(item.id, 80) === requirement.id)
-    if (rawRequirement && invalidOfficialEvidenceIds.size && !canUseOfficialRequirementEvidence(rawRequirement) && !requirement.evidenceIds.length && ['VERIFIED', 'READY'].includes(requirement.status)) {
+    if (rawRequirement && rawRequirement.required !== false && invalidOfficialEvidenceIds.size && !canUseOfficialRequirementEvidence(rawRequirement) && !requirement.evidenceIds.length && ['VERIFIED', 'READY'].includes(requirement.status)) {
       requirement.status = 'UNRESOLVED'
     }
   }
@@ -4307,7 +4695,8 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   // becomes an unbounded WAIT and the model can only repeat itself.
   if (caseId && officialRequirementEvidence.evidenceIdsByRequirement.size) {
     for (const requirement of requirements) {
-      const officialEvidenceIds = officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? []
+      const officialEvidenceIds = (officialRequirementEvidence.evidenceIdsByRequirement.get(requirement.id) ?? [])
+        .filter(id => !invalidOfficialEvidenceIds.has(id))
       const rawRequirement = rawRequirements.find(item => safeString(item.id, 80) === requirement.id)
       const rawStatus = safeString(rawRequirement?.status, 80)
       if (!officialEvidenceIds.length || !['unknown', 'in_progress', 'awaiting_institution', 'awaiting_user'].includes(rawStatus)) continue
@@ -4391,7 +4780,26 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   ].filter(Boolean).join(' ')
   const shortlistApproved = /\b(?:I|we)\s+(?:approve|approved|confirm|confirmed|authorize|authorise|accept|accepted)\b/i.test(applicationContextText) &&
     /\b(?:shortlist|three|applications?|programmes?|strategy)\b/i.test(applicationContextText)
-  const approvedApplicationIntent = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) && shortlistApproved
+  const applicationIntent = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))
+  const caseCreationRequested = applicationIntent &&
+    applicationTaskAuthorizesCaseCreation(run.objective, safeString(run.context?.description, 4_000))
+  const researchTargetQuantity = Number(campaignResult.data?.target_quantity ?? 0) ||
+    applicationResearchTargetQuantity(run.objective, safeString(run.context?.description, 4_000))
+  // A single verified programme is the bounded default for an application task.
+  // The first implementation could already recover the model's strategy prompt,
+  // but it did not make that recovery visible to the deterministic controller.
+  // Keep the durable marker as the primary signal and accept the exhausted
+  // legacy recovery counter so an already-running task can move forward too.
+  const internallyAuthorizedSingleProgramme = caseCreationRequested &&
+    verifiedOpportunityRows.length === 1 &&
+    campaignCaseIds.length === 0 &&
+    (run.context?.application_strategy_approved !== false)
+  // For multiple verified programmes, entering CASE_CREATION invokes the
+  // typed programme selector in application.create_case before any case is
+  // written. For one explicit programme, reversible case preparation can
+  // begin immediately. Research-only/checklist tasks stay in research.
+  const approvedApplicationIntent = applicationIntent &&
+    (shortlistApproved || internallyAuthorizedSingleProgramme || caseCreationRequested)
   // A natural request can contain both research language ("Find ...") and
   // application intent. Once the applicant has explicitly approved the
   // verified shortlist, move the durable research snapshot into the legal
@@ -4401,6 +4809,11 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
       verifiedOpportunityCount > 0 &&
       approvedApplicationIntent) {
     state = 'CASE_CREATION'
+  } else if (!caseCreationRequested && verifiedOpportunityCount >= researchTargetQuantity) {
+    // Research/checklist requests intentionally stop after a bounded,
+    // official-source-verified shortlist. They never create a case or touch a
+    // portal merely because admissions language appeared in the task.
+    state = 'COMPLETE'
   }
   if (state === 'PORTAL_EXECUTION' && latestCheckpoint?.verified === true && /review|final/i.test(safeString(latestCheckpoint.section, 160))) state = 'READINESS_REVIEW'
   const evidence: ControllerEvidence[] = []
@@ -4642,6 +5055,7 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     'application.generate_supervisor_outreach': ['DOCUMENT_CHECKSUM', 'OFFICIAL_SOURCE'],
     'application.coordinate_work_samples': ['DOCUMENT_CHECKSUM'],
     'application.record_fee_waiver_result': ['PORTAL_OBSERVATION'],
+    'application.execute_fee_payment': ['APPROVAL'],
     'application.reconcile_fee_payment': ['PORTAL_OBSERVATION'],
     'application.build_readiness_report': ['PORTAL_SAVE_CONFIRMATION'],
     'application.submit': ['SUBMISSION_CONFIRMATION', 'APPLICATION_ID'],
@@ -4658,21 +5072,21 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
     'application.record_communication': 'communication',
     'application.create_human_assignment': 'writer',
     'application.coordinate_recommendations': 'referee',
-    'application.coordinate_academic_evidence': 'academic_evidence',
+    'application.coordinate_academic_evidence': 'document',
     'application.coordinate_work_samples': 'document',
-    'application.coordinate_fee': 'fee_waiver',
-    'application.record_fee_waiver_result': 'fee_waiver',
+    'application.coordinate_fee': 'requirement',
+    'application.record_fee_waiver_result': 'requirement',
     'application.execute_fee_payment': 'payment',
-    'application.reconcile_fee_payment': 'payment',
+    'application.reconcile_fee_payment': 'requirement',
     'application.build_referee_support_pack': 'referee',
     'application.build_readiness_report': 'readiness',
     'application.generate_document': 'document',
     'application.generate_cv': 'document',
-    'application.prepare_research_proposal': 'proposal',
-    'application.review_research_proposal': 'proposal',
-    'application.interpret_research_proposal_feedback': 'proposal',
-    'application.finalize_research_proposal': 'proposal',
-    'application.record_proposal_delivery': 'proposal',
+    'application.prepare_research_proposal': 'document',
+    'application.review_research_proposal': 'document',
+    'application.interpret_research_proposal_feedback': 'document',
+    'application.finalize_research_proposal': 'document',
+    'application.record_proposal_delivery': 'portal',
     'application.generate_supervisor_outreach': 'professor',
     'application.submit': 'submission',
     'application.request_roon': safeString(argumentsValue.request_kind, 80).includes('professor') ? 'professor' : safeString(argumentsValue.request_kind, 80).includes('referee') ? 'referee' : 'communication',
@@ -4728,46 +5142,35 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
 
 function toolsForApplicationEngineStep(snapshot: ApplicationControllerSnapshot) {
   const step = snapshot.engineStep
-  if (step.kind === 'CONTROLLER') return new Set(['application.record_opportunity', 'application.record_evidence', 'application.create_case', 'agent.request_context', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'])
-  if (step.kind === 'SEMANTIC_DECISION') return new Set([`application.${step.request.function}`])
-  if (step.kind === 'SUPPLEMENTAL_QUESTION') return new Set(['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.resolve_supplemental_questions', 'application.record_portal_checkpoint', 'application.create_human_assignment', 'agent.request_context'])
-  if (step.kind === 'COMPLETE') return new Set(['agent.complete'])
-  if (step.kind === 'USER_HANDOFF') return new Set(['agent.request_context'])
-  if (step.kind === 'WAIT') return new Set(['application.request_roon'])
-  if (step.kind === 'BLOCKED') return new Set(['agent.request_context'])
-  if (step.kind === 'VERIFY') return new Set(['application.update_requirement', 'application.build_readiness_report', 'application.record_evidence'])
-  const requirement = snapshot.engineState.requirements.find(item => item.id === step.requirementId)
-  const byType: Partial<Record<RequirementType, string[]>> = {
-    profile_fact: ['application.record_evidence', 'agent.request_context'],
-    eligibility: ['application.record_evidence', 'application.update_requirement'],
-    official_requirement: ['application.record_evidence', 'application.update_requirement'],
-    deadline: ['application.record_evidence', 'application.update_requirement'],
-    funding: ['application.record_evidence', 'application.update_requirement'],
-    document: ['application.generate_document', 'application.generate_cv', 'application.coordinate_work_samples', 'application.update_requirement'],
-    transcript: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
-    degree_certificate: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
-    proof_of_graduation: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
-    credential_evaluation: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
-    english_language_test: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'calendar.list_events', 'calendar.get_availability'],
-    admissions_test: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'calendar.list_events', 'calendar.get_availability'],
-    academic_evidence: ['application.coordinate_academic_evidence', 'application.request_roon', 'application.update_requirement', 'application.record_evidence'],
-    research_proposal: ['application.prepare_research_proposal', 'application.create_human_assignment', 'application.review_research_proposal', 'application.interpret_research_proposal_feedback', 'application.finalize_research_proposal', 'application.record_proposal_delivery', 'application.update_requirement', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.record_portal_checkpoint', 'application.record_evidence'],
-    writer: ['application.create_human_assignment', 'application.request_roon', 'application.update_requirement'],
-    referee: ['application.coordinate_recommendations', 'application.build_referee_support_pack', 'application.request_roon', 'application.update_requirement'],
-    professor: ['application.record_contact', 'application.generate_supervisor_outreach', 'application.request_roon', 'application.update_requirement'],
-    communication: ['application.request_roon', 'application.record_communication', 'application.update_requirement'],
-    application_fee: ['application.coordinate_fee', 'application.record_fee_waiver_result', 'application.reconcile_fee_payment', 'application.update_requirement', 'application.record_evidence', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'application.execute_fee_payment'],
-    fee_waiver: ['application.coordinate_fee', 'application.record_fee_waiver_result', 'application.request_roon', 'application.update_requirement', 'application.record_evidence', 'agent.request_context'],
-    payment: ['application.coordinate_fee', 'application.execute_fee_payment', 'application.reconcile_fee_payment', 'application.record_evidence', 'application.update_requirement', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'],
-    portal_field: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint'],
-    portal_section: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint'],
-    supplemental_question: ['browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit', 'application.resolve_supplemental_questions', 'application.record_portal_checkpoint', 'application.create_human_assignment', 'agent.request_context'],
-    artifact_upload: ['application.coordinate_work_samples', 'browser.observe', 'browser.act', 'browser.submit', 'application.record_portal_checkpoint', 'application.record_evidence'],
-    approval: ['application.build_readiness_report', 'application.update_requirement'],
-    submission: ['application.submit'],
-    post_submission: ['application.request_roon', 'application.record_evidence', 'application.update_requirement'],
+  const requirement = 'requirementId' in step
+    ? snapshot.engineState.requirements.find(item => item.id === step.requirementId)
+    : null
+  return toolsForCanonicalApplicationStep({
+    state: snapshot.state,
+    step,
+    requirementType: requirement?.type ?? null,
+  })
+}
+
+function normalizeApplicationEngineToolArguments(
+  toolName: string,
+  argumentsValue: Record<string, unknown>,
+  snapshot: ApplicationControllerSnapshot,
+) {
+  if (!toolName.startsWith('application.')) return argumentsValue
+  const definition = agentToolDefinitions.find(tool => tool.name === toolName)
+  const properties = recordValue(recordValue(definition?.parameters).properties)
+  const normalized = { ...argumentsValue }
+  if (snapshot.caseId && Object.hasOwn(properties, 'application_case_id')) {
+    normalized.application_case_id = snapshot.caseId
   }
-  return new Set(byType[requirement?.type ?? 'official_requirement'] ?? ['application.update_requirement'])
+  if ('requirementId' in snapshot.engineStep && Object.hasOwn(properties, 'requirement_id')) {
+    normalized.requirement_id = snapshot.engineStep.requirementId
+  }
+  if (snapshot.engineStep.kind === 'EXECUTE' && Object.hasOwn(properties, 'idempotency_key') && !safeString(normalized.idempotency_key, 300)) {
+    normalized.idempotency_key = snapshot.engineStep.idempotencyKey
+  }
+  return normalized
 }
 
 type PersistedFeeWorkflow = {
@@ -5173,6 +5576,45 @@ async function executeProviderTool(
         .slice(0, 3)
       : []
     const question = safeString(argumentsValue.question, 400)
+    const missingFields = stringArray(argumentsValue.missing_fields, 120)
+    const strategyApprovalRequested = missingFields.some(field => /strategy|shortlist|case[_ ]creation/i.test(field))
+    if (
+      strategyApprovalRequested &&
+      isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))
+    ) {
+      const campaignId = safeString(run.context?.application_campaign_id, 80) || safeString(run.application_state?.campaignId, 80)
+      if (campaignId) {
+        const verified = await admin.from('application_opportunities')
+          .select('id,institution,programme_title,official_url')
+          .eq('campaign_id', campaignId)
+          .eq('user_id', run.user_id)
+          .eq('verification_status', 'verified')
+        if (verified.error) throw new Error(verified.error.message)
+        if ((verified.data ?? []).length === 1) {
+          const onlyOpportunity = verified.data[0]!
+          return {
+            kind: 'output',
+            value: {
+              ok: true,
+              context_already_provided: true,
+              strategy_approval: 'authorized_by_application_task',
+              selected_opportunity_id: onlyOpportunity.id,
+              institution: onlyOpportunity.institution,
+              programme_title: onlyOpportunity.programme_title,
+              official_url: onlyOpportunity.official_url,
+            },
+            publicSummary: 'David is creating the single verified application case.',
+            runPatch: {
+              context: {
+                ...(run.context ?? {}),
+                application_strategy_approved: true,
+                application_selected_opportunity_id: onlyOpportunity.id,
+              },
+            },
+          }
+        }
+      }
+    }
     const requestedFlightFields = run.capability === 'flight_search'
       ? flightContextFields(question, argumentsValue.missing_fields)
       : []
@@ -5617,7 +6059,9 @@ async function executeProviderTool(
         .eq('user_id', run.user_id)
       if (evidence.error) throw new Error(evidence.error.message)
       const hasQualifyingOfficialEvidence = (evidence.data ?? []).some(item =>
-        safeString(item.kind, 120) === 'official_requirement_source' && verifyOfficialSource(safeString(item.source_url, 2_000)),
+        canUseOfficialRequirementEvidence(requirement.data as Record<string, unknown>) &&
+        safeString(item.kind, 120) === 'official_requirement_source' &&
+        verifyOfficialSource(safeString(item.source_url, 2_000)),
       )
       if (hasQualifyingOfficialEvidence) {
         effectiveStatus = 'verified'
@@ -7502,7 +7946,25 @@ async function executeProviderTool(
     if (fallbackProfileResult.error && fallbackProfileResult.error.code !== '42P01') throw new Error(fallbackProfileResult.error.message)
     if (!fallbackProfileResult.data) return { kind: 'pause', status: 'needs_context', code: 'applicant_profile_required', message: 'Confirm the reusable applicant profile before David renders a final CV.', value: { available: false }, actionStatus: 'failed' }
     if (fallbackProfileResult.data.consent_granted !== true) return { kind: 'pause', status: 'needs_context', code: 'applicant_reuse_consent_required', message: 'Grant reusable-context consent before David can render profile facts into an application CV.', value: { consent_required: true }, actionStatus: 'failed' }
-    const cvData = argumentsValue.cv_data as CvData
+    const taskCvAssetIds = applicationTaskCvAttachments(run)
+      .map(asset => safeString(asset.id, 80))
+      .filter(Boolean)
+    const normalizedCvData = normalizeApplicationCvData(argumentsValue.cv_data, taskCvAssetIds) as CvData
+    const sourceIds = cvSourceIds(normalizedCvData)
+    const profileSourceIds = sourceIds.factIds.filter(id => /^profile:/i.test(id))
+    const taskSourceIds = new Set(taskCvAssetIds)
+    const hasTaskAttachmentGrounding = sourceIds.assetIds.some(id => taskSourceIds.has(id))
+    if (taskCvAssetIds.length && profileSourceIds.length && !hasTaskAttachmentGrounding) {
+      return {
+        kind: 'pause',
+        status: 'needs_context',
+        code: 'application_cv_task_attachment_grounding_required',
+        message: `The CV draft reused profile facts from another applicant. Re-read the attached ${safeString(applicationTaskCvAttachments(run)[0]?.original_filename, 255) || 'CV'} and rebuild every CV field from that document only. Do not use ApplicantProfile facts when the attached CV identifies a different applicant.`,
+        value: { valid: false, task_cv_asset_ids: taskCvAssetIds, conflicting_profile_fact_ids: profileSourceIds },
+        actionStatus: 'failed',
+      }
+    }
+    const cvData = normalizedCvData
     const cvIssues = validateCvData(cvData)
     if (cvIssues.length) return { kind: 'pause', status: 'needs_context', code: 'application_cv_provenance_invalid', message: cvIssues.map(issue => `${issue.path}: ${issue.message}`).join(' '), value: { valid: false, issues: cvIssues }, actionStatus: 'failed' }
     const profile = recordValue(fallbackProfileResult.data.profile)
@@ -7510,7 +7972,7 @@ async function executeProviderTool(
     const profileEmail = safeString(recordValue(recordValue(profile.contactInformation).email).value, 320).toLocaleLowerCase()
     const cvName = safeString(recordValue(cvData.fullName).value, 240)
     const cvEmail = safeString(recordValue(cvData.email).value, 320).toLocaleLowerCase()
-    if ((profileName && profileName !== cvName) || (profileEmail && profileEmail !== cvEmail)) {
+    if (!taskCvAssetIds.length && ((profileName && profileName !== cvName) || (profileEmail && profileEmail !== cvEmail))) {
       return { kind: 'pause', status: 'needs_context', code: 'application_cv_identity_mismatch', message: 'The CV identity does not match the confirmed ApplicantProfile. Review the name and email before continuing.', value: { valid: false }, actionStatus: 'failed' }
     }
     const pageTarget = safeString(argumentsValue.page_target, 30) as CvPageTarget
@@ -8252,11 +8714,17 @@ async function executeProviderTool(
       : requested.every(domain => configured.has(domain))
     if (!requested.length || !configured.size || !requestedDomainsAllowed) {
       return {
-        kind: 'pause',
-        status: 'waiting_for_user',
-        code: 'browser_domain_not_allowed',
-        message: 'This browser destination is not enabled for the active specialist yet.',
-        value: { allowed: false },
+        kind: 'output',
+        value: {
+          allowed: false,
+          retryable: true,
+          error_code: 'browser_domain_not_allowed',
+          requested_domains: requestedDomains,
+          configured_domains: [...configured],
+          error_message: 'The requested browser domain is not enabled for this task. Choose a verified configured domain, start the task-owned session again, and continue without asking the user to repair the session.',
+        },
+        providerActionId: `browser-domain-recovery:${run.id}:${safeString(argumentsValue.objective, 1200)}`,
+        publicSummary: 'Roon is repairing the task-owned browser domain configuration.',
       }
     }
 
@@ -8512,6 +8980,20 @@ async function executeProviderTool(
       }
     }
     if (queued.kind === 'unavailable') {
+      if ('recoverable' in queued && queued.recoverable) {
+        return {
+          kind: 'output',
+          value: {
+            available: false,
+            recoverable: true,
+            error_code: queued.code ?? 'browser_domain_not_allowed',
+            error_message: queued.message,
+            requested_url: safeString(operation.arguments.url, 2_000),
+          },
+          providerActionId: `browser-domain-recovery:${run.id}:${operation.id}`,
+          publicSummary: 'Roon is repairing the task-owned browser domain configuration.',
+        }
+      }
       return {
         kind: 'pause',
         status: 'waiting_for_user',
@@ -8795,7 +9277,7 @@ async function refreshSpecialistEffectLedger(admin: AdminClient, run: AgentRunRo
       (action.output?.payment_boundary_reached === true || action.output?.paymentBoundaryReached === true)
     ) completed.add('booking_handoff')
     if (action.tool_name === 'application.generate_document' || action.tool_name === 'browser.act' || action.tool_name === 'browser.navigate') completed.add('application_plan')
-    if (action.tool_name === 'browser.submit' || action.tool_name === 'application.submit') completed.add('application_submission')
+    if (action.tool_name === 'application.submit') completed.add('application_submission')
   }
   const required = Array.isArray(run.unsatisfied_effects) ? run.unsatisfied_effects : []
   const unsatisfied = required.filter(effect => !completed.has(effect))
@@ -8926,13 +9408,13 @@ async function completionSatisfied(
       .select('id')
       .eq('run_id', run.id)
       .eq('user_id', run.user_id)
-      .in('tool_name', ['browser.submit', 'application.submit'])
+      .eq('tool_name', 'application.submit')
       .eq('status', 'succeeded')
       .not('provider_action_id', 'is', null)
       .limit(1)
     if (submissionEvidence.error) throw new Error(submissionEvidence.error.message)
-    // David's v1 contract does not expose browser.submit. This guard also
-    // protects a legacy run from accepting a model-only submission claim.
+    // A preparatory browser save is not final application submission. Only
+    // the canonical package-checked application.submit action can satisfy it.
     if (!submissionEvidence.data?.length) return false
   }
   if (run.active_specialist_id === 'david' &&
@@ -8943,15 +9425,26 @@ async function completionSatisfied(
   if (run.active_specialist_id === 'david' && run.application_state) {
     const objective = `${run.objective} ${safeString(run.context?.description, 4_000)}`
     const applicationController = await loadApplicationControllerSnapshot(admin, run)
-    if (!applicationController || !applicationController.caseId) return false
-    if (/\b(?:submit|send in|final submission)\b/i.test(objective)) {
+    if (!applicationController) return false
+    if (!applicationController.caseId) {
+      return !applicationTaskAuthorizesCaseCreation(run.objective, safeString(run.context?.description, 4_000)) &&
+        applicationController.engineStep.kind === 'COMPLETE'
+    }
+    const requestsSubmission = /\b(?:submit|send in|final submission)\b/i.test(objective)
+    const requestsFinalReview = /\b(?:final review|ready for (?:final )?review|through verified final review|prepare(?:d| this| the)? application)\b/i.test(objective)
+    // A generic application task must stay alive through the actual case
+    // workflow. Creating an ApplicationCase is an intermediate milestone, not
+    // completion, even when the first model turn supplies a polished summary.
+    // The narrower submission and final-review contracts are checked below.
+    if (!requestsSubmission && !requestsFinalReview && applicationController.state !== 'COMPLETE') return false
+    if (requestsSubmission) {
       if (!verifyApplicationCompletion({
         intendedAction: 'Submit the exact approved application package.',
         expectedState: 'POST_SUBMISSION',
         evidenceTypes: ['SUBMISSION_CONFIRMATION', 'APPLICATION_ID'],
         caseId: applicationController.caseId,
       }, applicationController.evidence)) return false
-    } else if (/\b(?:final review|ready for (?:final )?review|through verified final review|prepare(?:d| this| the)? application)\b/i.test(objective)) {
+    } else if (requestsFinalReview) {
       if (!applicationController.readinessVerified || !verifyApplicationCompletion({
         intendedAction: 'Reach verified final review without submission.',
         expectedState: 'SUBMISSION_APPROVAL',
@@ -9325,10 +9818,14 @@ function agentInstructions(run?: AgentRunRow) {
   const specialist = getSpecialist(run?.active_specialist_id ?? 'roon')
   if (!run || !specialist || specialist.id === 'roon') return roonAgentInstructions()
   if (specialist.id === 'david') {
-    return davidApplicationV21Instructions({
+    const base = davidApplicationV21Instructions({
       displayName: specialist.displayName,
       roleDescription: specialist.roleDescription,
     })
+    const taskCv = applicationTaskCvAttachments(run)
+    if (!taskCv.length) return base
+    const assetLabels = taskCv.map(asset => `${safeString(asset.original_filename, 255)} (${safeString(asset.id, 80)})`).join(', ')
+    return `${base} TASK_ATTACHED_CV_AUTHORITY_V1: This task includes the authoritative applicant CV attachment ${assetLabels}. Re-read that attachment before calling application.generate_cv. When it conflicts with the reusable ApplicantProfile, the task attachment wins for this task. Rebuild every CV field from the attached document only; never combine the attachment with another applicant's profile facts. Use the exact canonical cv_data keys fullName, email, education, researchExperience, workExperience, teachingExperience, publications, presentations, projects, researchProjects, leadership, awards, scholarships, certifications, technicalSkills, researchSkills, languages, coursework, and memberships. Every fact must have confirmed provenance with sourceAssetIds containing the attached CV asset ID. Keep the attached CV's identity and academic record consistent throughout the application.`
   }
   const shared = [
     `You are ${specialist.displayName}, the ${specialist.roleDescription} specialist inside ShotCount.`,
@@ -9367,7 +9864,10 @@ async function callOpenAI(
   const model = 'gpt-5.6-luna'
   const specialist = getSpecialist(run.active_specialist_id)
   if (!specialist) throw new Error('The task has no valid active specialist contract.')
-  const engineTools = applicationController?.caseId ? toolsForApplicationEngineStep(applicationController) : null
+  // The controller is authoritative before case creation too. Falling back to
+  // David's broad registry when caseId is empty lets research and shortlist
+  // turns bypass the workflow that creates the durable ApplicationCase.
+  const engineTools = applicationController ? toolsForApplicationEngineStep(applicationController) : null
   const tools: Array<Record<string, unknown>> = agentToolDefinitions
     .filter(tool => specialistCanUseTool(specialist.id, tool.name))
     .filter(tool => !engineTools || engineTools.has(tool.name))
@@ -9400,9 +9900,19 @@ async function callOpenAI(
     (run.context.attachments as Array<Record<string, unknown>>).some(asset =>
       ['image/png', 'image/jpeg'].includes(safeString(asset.mime_type, 120))
     )
-  if ((['research', 'research_draft'].includes(run.capability) || screenshotApplication) && specialistCanUseTool(specialist.id, 'web_search')) {
+  if ((['research', 'research_draft'].includes(run.capability) || screenshotApplication || applicationController?.engineStep.kind === 'CONTROLLER') &&
+      specialistCanUseTool(specialist.id, 'web_search') &&
+      (!engineTools || engineTools.has('web_search'))) {
     tools.push({ type: 'web_search', search_context_size: 'medium' })
   }
+  if (applicationController && !tools.length) {
+    throw new Error(`The canonical application controller exposed no executable tool for ${applicationController.engineStep.kind}.`)
+  }
+  const applicationToolChoice = applicationController
+    ? tools.length === 1 && tools[0]?.type === 'function' && typeof tools[0].name === 'string'
+      ? { type: 'function', name: tools[0].name }
+      : 'required'
+    : DAVID_APPLICATION_V21_MODEL_CONFIG.toolChoice
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -9420,7 +9930,7 @@ async function callOpenAI(
       // research and application work retain the larger budget.
       max_output_tokens: ['gmail', 'scheduling'].includes(run.capability) ? 1_100 : DAVID_APPLICATION_V21_MODEL_CONFIG.maxOutputTokens,
       parallel_tool_calls: DAVID_APPLICATION_V21_MODEL_CONFIG.parallelToolCalls,
-      tool_choice: DAVID_APPLICATION_V21_MODEL_CONFIG.toolChoice,
+      tool_choice: applicationToolChoice,
       tools,
       instructions: agentInstructions(run),
       input: history,
@@ -12237,6 +12747,280 @@ async function pollWaitingExternalRun(
   return advanceRun(admin, resumed, openaiKey)
 }
 
+const applicationBrowserRecoveryCodes = [
+  'browser_domain_not_allowed',
+  'browser_worker_unavailable',
+  'browser_retry_exhausted',
+  'browser_target_closed',
+  'browser_target_ambiguous',
+  'browser_sensitive_field_blocked',
+]
+
+function applicationBrowserRecoveryCanRecover(run: AgentRunRow) {
+  const recoveryText = `${safeString(run.error_code, 120)} ${safeString(run.error, 800)} ${safeString(run.waiting_reason, 800)}`
+  return isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
+    ['waiting_for_user', 'needs_context'].includes(run.status) &&
+    (applicationBrowserRecoveryCodes.includes(safeString(run.error_code, 120)) ||
+      /outside the task.?s browser allowlist|browser destination.*allowlist|browser.*allowlist/i.test(recoveryText))
+}
+
+async function recoverApplicationBrowserFailureInternally(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  const cleared = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+  if (cleared.error) throw new Error(cleared.error.message)
+  const planning = await updateRun(admin, run, {
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await addEvent(admin, planning, 'agent_internal_browser_recovery_started', planning.status,
+    'David is repairing the task-owned browser session and continuing automatically.', {
+      prior_error_code: safeString(run.error_code, 120),
+    })
+  return advanceRun(admin, planning, openaiKey)
+}
+
+function applicationFailureCanRecoverInternally(run: AgentRunRow) {
+  if (!isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) return false
+  if (run.retryable !== true) return false
+  return [
+    'agent_execution_error',
+    'model_reasoning_luna',
+    'browser_resume_context_missing',
+    'browser_result_invalid',
+    'browser_retry_exhausted',
+    'browser_worker_unavailable',
+    'browser_target_closed',
+    'browser_target_ambiguous',
+    'browser_sensitive_field_blocked',
+    'application_controller_repair_exhausted',
+  ].includes(safeString(run.error_code, 120))
+}
+
+function applicationStrategyPromptCanRecover(run: AgentRunRow) {
+  return isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
+    run.status === 'needs_context' &&
+    /approve creating .*application case/i.test(run.waiting_reason)
+}
+
+function applicationSemanticHandoffCanRecover(run: AgentRunRow) {
+  return isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
+    run.status === 'waiting_for_user' &&
+    safeString(run.error_code, 120) === 'application_semantic_handoff'
+}
+
+function applicationCvGroundingCanRecover(run: AgentRunRow) {
+  if (!isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) return false
+  if (!['waiting_for_user', 'needs_context'].includes(run.status)) return false
+  if (!applicationTaskCvAttachments(run).length) return false
+  if (Number(run.context?.application_cv_grounding_attempts ?? 0) >= 3) return false
+  const recoveryText = `${safeString(run.error_code, 160)} ${safeString(run.error, 1_000)} ${safeString(run.waiting_reason, 2_000)}`
+  return [
+    'application_cv_task_attachment_grounding_required',
+    'application_cv_provenance_invalid',
+    'application_cv_identity_mismatch',
+    'application_requirement_awaiting_user',
+  ].includes(safeString(run.error_code, 160)) &&
+    /cv|resume|supporting documents|applicant profile|applicant identity/i.test(recoveryText)
+}
+
+async function reopenApplicationTaskRecord(admin: AdminClient, run: AgentRunRow) {
+  const reopened = await admin.from('tasks')
+    .update({ completed_at: null })
+    .eq('id', run.task_id)
+    .eq('user_id', run.user_id)
+  if (reopened.error) throw new Error(reopened.error.message)
+}
+
+async function recoverApplicationCvGroundingInternally(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  const attempts = Number(run.context?.application_cv_grounding_attempts ?? 0)
+  if (attempts >= 3) return run
+  await reopenApplicationTaskRecord(admin, run)
+  const caseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80)
+  if (caseId) {
+    const requirements = await admin.from('application_requirements')
+      .select('id,name,status')
+      .eq('application_case_id', caseId)
+      .eq('user_id', run.user_id)
+    if (requirements.error) throw new Error(requirements.error.message)
+    const cvRequirement = (requirements.data ?? []).find(requirement => /\b(?:cv|resume|curriculum vitae|supporting documents?)\b/i.test(safeString(requirement.name, 500)))
+    if (cvRequirement) {
+      const reset = await admin.from('application_requirements').update({ status: 'in_progress', blocker_reason: null }).eq('id', cvRequirement.id).eq('application_case_id', caseId).eq('user_id', run.user_id)
+      if (reset.error) throw new Error(reset.error.message)
+    }
+  }
+  const cleared = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+  if (cleared.error) throw new Error(cleared.error.message)
+  const planning = await updateRun(admin, run, {
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    application_state: run.application_state
+      ? nextApplicationState(run, {
+          status: 'active',
+          stage: 'document_preparation',
+          blockers: [],
+          nextAction: 'Rebuild the application CV from the task-attached document.',
+          progress: {
+            label: 'Reading the attached CV',
+            nextAction: 'Rebuild the application CV from the task-attached document.',
+            blockers: [],
+          },
+        })
+      : undefined,
+    context: {
+      ...(run.context ?? {}),
+      application_task_cv_authoritative: true,
+      application_cv_grounding_attempts: attempts + 1,
+      application_cv_grounding_directive: 'The task-attached CV is authoritative. Re-read it and rebuild the structured CV from that document only; do not reuse facts from another ApplicantProfile.',
+    },
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await addEvent(admin, planning, 'agent_internal_cv_grounding_recovery_started', planning.status,
+    'David is rebuilding the application CV from the task-attached document instead of mixing it with another profile.', {
+      recovery_attempt: attempts + 1,
+      task_cv_asset_ids: applicationTaskCvAttachments(run).map(asset => safeString(asset.id, 80)).filter(Boolean),
+    })
+  return advanceRun(admin, planning, openaiKey)
+}
+
+async function recoverApplicationSemanticHandoffInternally(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  await reopenApplicationTaskRecord(admin, run)
+  const cleared = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+  if (cleared.error) throw new Error(cleared.error.message)
+  const planning = await updateRun(admin, run, {
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    context: {
+      ...(run.context ?? {}),
+      application_semantic_recovery_attempts: Number(run.context?.application_semantic_recovery_attempts ?? 0) + 1,
+    },
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await addEvent(admin, planning, 'agent_internal_semantic_recovery_started', planning.status,
+    'David is repairing the unsupported semantic handoff and continuing from the verified application state.', {
+      reason: 'semantic_evidence_invalid',
+    })
+  return advanceRun(admin, planning, openaiKey)
+}
+
+function applicationIntermediateCompletionCanRecover(run: AgentRunRow) {
+  if (!isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) return false
+  if (run.status !== 'completed' || !run.application_state) return false
+  return !['complete', 'submitted', 'post_submission'].includes(safeString(run.application_state.stage, 80)) &&
+    safeString(run.application_state.status, 80) !== 'complete'
+}
+
+async function recoverApplicationIntermediateCompletion(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  await reopenApplicationTaskRecord(admin, run)
+  const cleared = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+  if (cleared.error) throw new Error(cleared.error.message)
+  const planning = await updateRun(admin, run, {
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    context: {
+      ...(run.context ?? {}),
+      completion_continuations: 0,
+      progress_current: progressCurrent(run, 'David is continuing the application workflow.'),
+    },
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await addEvent(admin, planning, 'application_intermediate_result_reopened', planning.status,
+    'Reopened the application task after an intermediate research result so David can continue the case workflow.')
+  return advanceRun(admin, planning, openaiKey)
+}
+
+async function recoverApplicationFailureInternally(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  const attempts = Number(run.context?.internal_failure_recovery_attempts ?? 0)
+  if (attempts >= 2) return run
+  await reopenApplicationTaskRecord(admin, run)
+  const cleared = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+  if (cleared.error) throw new Error(cleared.error.message)
+  const planning = await updateRun(admin, run, {
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    context: {
+      ...(run.context ?? {}),
+      internal_failure_recovery_attempts: attempts + 1,
+    },
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await addEvent(admin, planning, 'agent_internal_recovery_started', planning.status,
+    'David is repairing the interrupted application step and continuing automatically.', {
+      prior_error_code: safeString(run.error_code, 120),
+      recovery_attempt: attempts + 1,
+    })
+  return advanceRun(admin, planning, openaiKey)
+}
+
+async function recoverApplicationStrategyPromptInternally(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  const attempts = Number(run.context?.internal_context_recovery_attempts ?? 0)
+  if (attempts >= 2) return run
+  const cleared = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+  if (cleared.error) throw new Error(cleared.error.message)
+  const planning = await updateRun(admin, run, {
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    context: {
+      ...(run.context ?? {}),
+      internal_context_recovery_attempts: attempts + 1,
+    },
+    lease_owner: null,
+    lease_expires_at: null,
+  })
+  await addEvent(admin, planning, 'agent_internal_context_recovery_started', planning.status,
+    'David is continuing the single-programme application setup without an unnecessary user handoff.', {
+      recovery_attempt: attempts + 1,
+      reason: 'single_verified_application_case',
+    })
+  return advanceRun(admin, planning, openaiKey)
+}
+
 async function simulateExternalReply(
   admin: AdminClient,
   run: AgentRunRow,
@@ -12409,6 +13193,7 @@ async function advanceRun(
     return current ?? run
   }
   let current = claim.data as AgentRunRow
+  current = await ensureCanonicalApplicationRuntime(admin, current)
   if (current.status === 'planning') {
     current = await updateRun(admin, current, {
       status: 'running',
@@ -12467,8 +13252,10 @@ async function advanceRun(
     ? [...ephemeralHistoryByRun.get(current.id)!]
     : await loadModelHistory(admin, current)
   let semanticRepairAttempts = 0
+  const isApplicationRun = isApplicationIntent(current.objective, safeString(current.context?.description, 4_000))
+  const modelStepLimit = isApplicationRun ? maximumApplicationModelSteps : maximumModelSteps
 
-  for (let iteration = 0; iteration < maximumModelSteps; iteration += 1) {
+  for (let iteration = 0; iteration < modelStepLimit; iteration += 1) {
     current = await updateRun(admin, current, {
       context: {
         ...(current.context ?? {}),
@@ -12489,7 +13276,7 @@ async function advanceRun(
       })
     }
     const benchmarkRunId = safeString(current.context?.benchmark_run_id, 160)
-    const applicationRun = isApplicationIntent(current.objective, safeString(current.context?.description, 4_000)) &&
+    const applicationRun = isApplicationRun &&
       Array.isArray(current.context?.attachments) &&
       // Production application qualifications also use text/plain source
       // documents; model usage must be observable for every attached run, not
@@ -12538,8 +13325,61 @@ async function advanceRun(
     } catch {
       throw new Error(`The agent produced malformed arguments for ${toolName}.`)
     }
+    if (applicationController) {
+      const allowedTools = toolsForApplicationEngineStep(applicationController)
+      if (!canonicalApplicationToolAllowed(allowedTools, toolName)) {
+        const message = `The canonical application engine requires ${applicationController.engineStep.kind}; ${toolName} is outside this step.`
+        history.push({
+          type: 'function_call_output',
+          call_id: safeString(call.call_id, 256),
+          output: JSON.stringify({
+            ok: false,
+            error_code: 'application_engine_tool_not_allowed',
+            error_message: message,
+            controller_state: applicationController.state,
+            engine_step: applicationController.engineStep,
+            allowed_tools: [...allowedTools],
+            preserve_state: true,
+          }),
+        })
+        await saveModelHistory(admin, current, history, response.id)
+        await addEvent(admin, current, 'application_engine_tool_rejected', current.status, message, {
+          tool_name: toolName,
+          controller_state: applicationController.state,
+          engine_step_kind: applicationController.engineStep.kind,
+          allowed_tools: [...allowedTools],
+        })
+        continue
+      }
+      argumentsValue = normalizeApplicationEngineToolArguments(toolName, argumentsValue, applicationController)
+      if (toolName === 'browser.submit' && !canonicalApplicationBrowserSubmitIsPreparatory(
+        safeString(argumentsValue.target, 1_000),
+        safeString(argumentsValue.expected_effect, 1_200),
+      )) {
+        const message = 'Final application submission must use application.submit after the exact package, portal checkpoint, durable claim, and user approval are re-verified.'
+        history.push({
+          type: 'function_call_output',
+          call_id: safeString(call.call_id, 256),
+          output: JSON.stringify({
+            ok: false,
+            error_code: 'application_final_submit_requires_canonical_tool',
+            error_message: message,
+            preserve_state: true,
+          }),
+        })
+        await saveModelHistory(admin, current, history, response.id)
+        await addEvent(admin, current, 'application_browser_submit_rejected', current.status, message, {
+          target: safeString(argumentsValue.target, 240),
+          controller_state: applicationController.state,
+        })
+        continue
+      }
+    }
     if (toolName === 'application.create_case') {
       argumentsValue = await normalizeApplicationCreateCaseArguments(admin, current, argumentsValue)
+    }
+    if (toolName === 'application.record_opportunity') {
+      argumentsValue = await normalizeApplicationRecordOpportunityArguments(current, argumentsValue)
     }
     if (!validateAgentToolArguments(toolName, argumentsValue)) {
       throw new Error(`The agent produced invalid arguments for ${toolName}.`)
@@ -12681,6 +13521,24 @@ async function advanceRun(
           retry_count: recovery.retryCount,
           fallback: recovery.fallback,
         })
+        if (!recovery.retryAllowed) {
+          const message = 'The application controller rejected the proposed action after its bounded repair attempts. The verified workflow state was preserved for automatic recovery.'
+          current = await updateRun(admin, current, {
+            status: 'failed',
+            waiting_reason: '',
+            error: message,
+            error_code: 'application_controller_repair_exhausted',
+            retryable: true,
+            lease_owner: null,
+            lease_expires_at: null,
+          })
+          await addEvent(admin, current, 'application_controller_repair_exhausted', current.status, message, {
+            tool_name: toolName,
+            controller_state: applicationController.state,
+            validation_error: error,
+          })
+          return current
+        }
         continue
       }
     }
@@ -13230,7 +14088,7 @@ async function advanceRun(
     lease_owner: null,
     lease_expires_at: null,
   })
-  await addEvent(admin, current, 'agent_failed', current.status, current.error ?? '', { retryable: true })
+  await addEvent(admin, current, 'agent_failed', current.status, current.error ?? '', { retryable: true, step_limit: modelStepLimit })
   return current
 }
 
@@ -14088,6 +14946,28 @@ Deno.serve(async request => {
         let applicationAttachmentsRefreshed = false
         let applicationHistoryReset = false
         let applicationContextResumed = false
+        // Application tasks are deliberately resumable after an intermediate
+        // result. Older runs could mark the research milestone as completed
+        // before the case workflow began, so reopen that same run instead of
+        // forcing the user to create a duplicate task.
+        if (run.status === 'completed' && isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) {
+          const clearedHistory = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
+          if (clearedHistory.error) throw new Error(clearedHistory.error.message)
+          run = await updateRun(admin, run, {
+            status: 'planning',
+            waiting_reason: '',
+            error: null,
+            error_code: null,
+            retryable: true,
+            context: {
+              ...(run.context ?? {}),
+              completion_continuations: 0,
+              progress_current: progressCurrent(run, 'David is continuing the application workflow.'),
+            },
+          })
+          applicationHistoryReset = true
+          await addEvent(admin, run, 'application_intermediate_result_reopened', run.status, 'Reopened the application task after an intermediate research result so David can continue the case workflow.')
+        }
         // A stale continuation can request approval for an action whose
         // durable approval and provider action are already complete. That
         // leaves no pending approval for the client to resume. Reset the
@@ -14141,8 +15021,7 @@ Deno.serve(async request => {
             }
           }
         }
-        const applicationBrowserRecovery = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000)) &&
-           ['browser_worker_unavailable', 'browser_retry_exhausted', 'browser_target_closed', 'browser_target_ambiguous', 'browser_sensitive_field_blocked'].includes(safeString(run.error_code, 120))
+        const applicationBrowserRecovery = applicationBrowserRecoveryCanRecover(run)
         if (run.status === 'failed' && /new email cannot reuse an existing thread/i.test(run.error ?? '')) {
           await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
         }
@@ -14182,7 +15061,7 @@ Deno.serve(async request => {
            if (clearedApplicationHistory.error) throw new Error(clearedApplicationHistory.error.message)
            applicationHistoryReset = true
          }
-        if (run.status === 'waiting_for_user' && applicationBrowserRecovery) {
+        if (applicationBrowserRecovery) {
           const clearedBrowserHistory = await admin.from('agent_model_state').delete().eq('run_id', run.id).eq('user_id', run.user_id)
           if (clearedBrowserHistory.error) throw new Error(clearedBrowserHistory.error.message)
           run = await updateRun(admin, run, {
@@ -14355,6 +15234,18 @@ Deno.serve(async request => {
           // Another request already owns this same continuation. Return the
           // current durable state rather than replaying model work in parallel.
           run = claimed ? await recoverStalledRun(admin, claimed, openaiKey) : run
+        } else if (applicationBrowserRecoveryCanRecover(run)) {
+          run = await recoverApplicationBrowserFailureInternally(admin, run, openaiKey)
+        } else if (applicationCvGroundingCanRecover(run)) {
+          run = await recoverApplicationCvGroundingInternally(admin, run, openaiKey)
+        } else if (applicationSemanticHandoffCanRecover(run)) {
+          run = await recoverApplicationSemanticHandoffInternally(admin, run, openaiKey)
+        } else if (applicationStrategyPromptCanRecover(run)) {
+          run = await recoverApplicationStrategyPromptInternally(admin, run, openaiKey)
+        } else if (applicationIntermediateCompletionCanRecover(run)) {
+          run = await recoverApplicationIntermediateCompletion(admin, run, openaiKey)
+        } else if (run.status === 'failed' && applicationFailureCanRecoverInternally(run)) {
+          run = await recoverApplicationFailureInternally(admin, run, openaiKey)
         } else {
           run = await pollWaitingExternalRun(admin, run, openaiKey)
         }

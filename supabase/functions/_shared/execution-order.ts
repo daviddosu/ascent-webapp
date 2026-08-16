@@ -30,7 +30,7 @@ export function requiredEffectsSatisfied(required: RequiredEffect[], confirmedTo
   return required.every(effect => effect === 'gmail_send'
     ? confirmed.has('gmail.send_message')
     : effect === 'application_submission'
-      ? confirmed.has('application.submit') || confirmed.has('browser.submit')
+      ? confirmed.has('application.submit')
       : ['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
 }
 
@@ -39,7 +39,7 @@ export function unresolvedRequiredEffects(required: RequiredEffect[], confirmedT
   return required.filter(effect => effect === 'gmail_send'
     ? !confirmed.has('gmail.send_message')
     : effect === 'application_submission'
-      ? !confirmed.has('application.submit') && !confirmed.has('browser.submit')
+      ? !confirmed.has('application.submit')
       : !['calendar.create_event', 'calendar.update_event', 'calendar.delete_event'].some(tool => confirmed.has(tool)))
 }
 

@@ -96,6 +96,47 @@ it('gives David one typed semantic decision with minimal context', () => {
   expect(validateSemanticDecision(input, step.request, { schemaVersion: 1, function: step.request.function, caseId: 'case-1', requirementId: 'req-1', decision: 'eligible', confidence: 'high', evidenceIds: ['excerpt-1'], factIds: ['profile:name'], rationale: 'The verified degree satisfies the official requirement.' })).toEqual({ valid: true, defects: [] })
 })
 
+it('researches a broad official-requirements node before asking for conflict resolution', () => {
+  const officialRequirements = requirement({
+    name: 'Stanford Physics PhD admissions requirements',
+    type: 'official_requirement',
+    requiredFactIds: [],
+    evidenceContract: ['web'],
+  })
+  expect(planApplicationEngineStep(state([officialRequirements]))).toMatchObject({
+    kind: 'EXECUTE',
+    requirementId: 'req-1',
+    action: 'execute_primitive',
+  })
+})
+
+it('uses source-linked official evidence for bounded conflict resolution', () => {
+  const officialRequirements = requirement({
+    name: 'Conflicting official admissions requirements',
+    type: 'official_requirement',
+    requiredFactIds: [],
+    evidenceContract: ['web'],
+    source: { id: 'official-source', url: 'https://example.edu/requirements', authority: 'official' },
+  })
+  const input = state([officialRequirements])
+  input.observations = [{
+    id: 'official-source',
+    caseId: input.caseId,
+    requirementId: 'source-requirement',
+    kind: 'web',
+    verified: true,
+    evidenceIds: ['official-excerpt'],
+    observedAt: '2026-08-16T00:00:00Z',
+    sourceUrl: 'https://example.edu/requirements',
+    authoritative: true,
+    excerpts: [{ evidenceId: 'official-excerpt', text: 'Controlled official requirement.' }],
+  }]
+  expect(planApplicationEngineStep(input)).toMatchObject({
+    kind: 'SEMANTIC_DECISION',
+    requirementId: 'req-1',
+  })
+})
+
 it('routes verified synthetic referees to the procedural harness before semantic interpretation', () => {
   const referee = requirement({ id: 'referee-1', type: 'referee', name: 'Referee contact', requiredFactIds: [], evidenceContract: ['gmail'] })
   const input = state([referee])

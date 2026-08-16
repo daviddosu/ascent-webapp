@@ -82,6 +82,19 @@ describe('David application controller v2.1', () => {
     expect(errors.map(error => error.code)).not.toContain('action_outside_current_state')
   })
 
+  it('allows canonical proposal and fee preparation without weakening submission gates', () => {
+    const proposal: ProposedApplicationAction = {
+      id: 'proposal', kind: 'document', toolName: 'application.prepare_research_proposal', caseId: 'case-1',
+    }
+    const payment: ProposedApplicationAction = {
+      id: 'payment', kind: 'payment', toolName: 'application.execute_fee_payment', caseId: 'case-1',
+      consequential: true, expectedEvidenceTypes: ['PORTAL_OBSERVATION'], idempotencyKey: 'fee:case-1',
+    }
+    expect(validateApplicationAction({ state: 'DOCUMENT_PREPARATION', currentCaseId: 'case-1', action: proposal, facts: [], requirements })).toEqual([])
+    expect(validateApplicationAction({ state: 'DOCUMENT_PREPARATION', currentCaseId: 'case-1', action: payment, facts: [], requirements })).toEqual([])
+    expect(validateApplicationAction({ state: 'SUBMISSION_APPROVAL', currentCaseId: 'case-1', action: payment, facts: [], requirements }).map(error => error.code)).toContain('action_outside_current_state')
+  })
+
   it('validates plan order, state, fact, case, evidence, readiness, and approval', () => {
     const unresolved = resolveApplicationFact('major_gpa', [])
     const submit: ProposedApplicationAction = {

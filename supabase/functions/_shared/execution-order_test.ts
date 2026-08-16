@@ -33,6 +33,12 @@ Deno.test('required-effect ledger ignores model claims and drafts', () => {
   assertEquals(requiredEffectsSatisfied([...required], ['calendar.update_event', 'gmail.send_message']), true)
 })
 
+Deno.test('a generic browser form submit is not application submission evidence', () => {
+  assertEquals(requiredEffectsSatisfied(['application_submission'], ['browser.submit']), false)
+  assertEquals(requiredEffectsSatisfied(['application_submission'], ['application.submit']), true)
+  assertEquals(unresolvedRequiredEffects(['application_submission'], ['browser.submit']), ['application_submission'])
+})
+
 Deno.test('required-effect ledger preserves completed Calendar work during continuation', () => {
   const required = ['calendar_write', 'gmail_send'] as const
   const confirmed = ['calendar.update_event']

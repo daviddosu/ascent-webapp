@@ -259,6 +259,7 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
   // therefore an active controller step, never a vacuous completion.
   if (!state.caseId) {
     if (state.status === 'BLOCKED') return { kind: 'BLOCKED', caseId: '', reason: 'Application controller is blocked before case creation.' }
+    if (state.status === 'COMPLETE') return { kind: 'COMPLETE', caseId: '' }
     return { kind: 'CONTROLLER', caseId: '', action: 'continue_application_controller' }
   }
   if (state.status === 'COMPLETE') return { kind: 'COMPLETE', caseId: state.caseId }
@@ -295,6 +296,11 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
       : { kind: 'EXECUTE', caseId: state.caseId, requirementId: requirement.id, tier: 0, action: 'search_verified_context', evidenceContract: ['artifact'], idempotencyKey: `fact-search:${state.caseId}:${requirement.id}` }
   }
   const existing = state.observations.filter(item => item.requirementId === requirement.id && item.verified)
+  const semanticEvidence = state.observations.filter(item => item.verified && (
+    item.requirementId === requirement.id ||
+    item.id === requirement.source.id ||
+    item.evidenceIds.includes(requirement.source.id)
+  ))
   const semanticFunction = semanticFunctionByType[requirement.type]
   // Reference requirements begin with verified applicant referee facts, not
   // provider correspondence. Route that first procedural step through the
@@ -303,7 +309,12 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
   const verifiedRefereeFacts = requirement.type === 'referee' && state.facts.some(fact =>
     fact.verification === 'VERIFIED' && /^profile:referees(?:\[|$)/i.test(fact.factId),
   )
-  if (semanticFunction && !verifiedRefereeFacts && !existing.some(item => item.evidenceIds.includes(`semantic:${semanticFunction}`))) {
+  // A generic official-requirements node has no conflict to resolve until an
+  // authoritative observation exists. Route the empty-evidence case to the
+  // research harness first; otherwise the model is asked to choose between
+  // sources that the controller has not actually observed.
+  const hasEvidenceForSemanticReview = requirement.type !== 'official_requirement' || semanticEvidence.length > 0
+  if (semanticFunction && hasEvidenceForSemanticReview && !verifiedRefereeFacts && !semanticEvidence.some(item => item.evidenceIds.includes(`semantic:${semanticFunction}`))) {
     return { kind: 'SEMANTIC_DECISION', caseId: state.caseId, requirementId: requirement.id, tier: requirement.retry.attempts >= 1 ? 4 : 2, request: semanticRequestFor(state, requirement, semanticFunction) }
   }
   if (requirement.evidenceContract.every(kind => existing.some(item => item.kind === kind))) return { kind: 'VERIFY', caseId: state.caseId, requirementId: requirement.id, evidenceContract: requirement.evidenceContract }

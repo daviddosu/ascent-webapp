@@ -100,7 +100,7 @@ export function agentCompletionEvidenceSatisfied(
     return evidence.requiredExternalEffects.every(effect => effect === 'gmail_send'
       ? confirmedTools.has('gmail.send_message')
       : effect === 'application_submission'
-        ? confirmedTools.has('application.submit') || confirmedTools.has('browser.submit')
+        ? confirmedTools.has('application.submit')
         : [...calendarWriteTools].some(tool => confirmedTools.has(tool)))
   }
   if (evidence.capability === 'gmail') {
