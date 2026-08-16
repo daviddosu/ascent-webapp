@@ -13263,6 +13263,9 @@ async function advanceRun(
       },
     })
     const applicationController = await loadApplicationControllerSnapshot(admin, current)
+    if (isApplicationRun && !applicationController) {
+      throw new Error('The canonical application controller snapshot is unavailable. Preserve the run and retry after durable application state is restored.')
+    }
     const modelHistory = applicationController
       ? [...history, {
           role: 'user',
@@ -15194,12 +15197,21 @@ Deno.serve(async request => {
             }
           }
         } else if (run.status === 'failed') {
+          const failedApplicationRun = isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))
           run = await updateRun(admin, run, {
             status: 'planning',
             waiting_reason: '',
             error: null,
             error_code: null,
             retryable: true,
+            ...(failedApplicationRun ? {
+              context: {
+                ...(run.context ?? {}),
+                completion_continuations: 0,
+                internal_failure_recovery_attempts: 0,
+                progress_current: progressCurrent(run, 'David is resuming from the last verified application state.'),
+              },
+            } : {}),
           })
            recoverSavedAction = !applicationAttachmentsRefreshed && !applicationHistoryReset
         }
