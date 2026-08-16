@@ -91,6 +91,7 @@ import {
 } from './data/specialists'
 import {
   acceptedTaskFileTypes,
+  createTaskFileAssetViewUrl,
   downloadTaskFileAsset,
   loadTaskFileAssets,
   removeTaskFileAsset,
@@ -446,7 +447,7 @@ const applicationCampaignProjections = new Map<string, ApplicationCampaignProjec
 const applicationProjectionLoading = new Set<string>()
 const loadingTaskFileAssets = new Set<string>()
 const taskFileAssetBusy = new Set<string>()
-let filePreview: { asset: FileAsset; url: string | null; message?: string } | null = null
+let filePreview: { asset: FileAsset; url: string | null; loading?: boolean; message?: string } | null = null
 const agentApprovals = new Map<string, AgentApproval>()
 const agentDecisionBusy = new Set<string>()
 const roonContextDrafts = new Map<string, string>()
@@ -3712,21 +3713,28 @@ function renderFilePreview() {
   if (!filePreview) return ''
   const isPdf = filePreview.asset.mimeType === 'application/pdf'
   const isImage = filePreview.asset.mimeType.startsWith('image/')
-  const isText = filePreview.asset.mimeType === 'text/plain'
+  const isText = filePreview.asset.mimeType === 'text/plain' || filePreview.asset.mimeType === 'application/json' || filePreview.asset.mimeType === 'application/x-ipynb+json'
   const canPreviewInline = isPdf || isImage || isText
   const previewTask = tasks.find(task => task.id === filePreview?.asset.taskId)
   const sourceLabel = filePreview.asset.source === 'roon_generated'
     ? `Prepared by ${specialistName(previewTask ?? { title: '', description: '' }, previewTask ? agentRuns.get(previewTask.id) : null)}`
     : 'Attachment'
+  const safeUrl = filePreview.url ? escapeHtml(filePreview.url) : ''
+  const openLabel = isPdf ? 'Open PDF' : isImage ? 'Open image' : 'Open file'
+  const loadingNotice = filePreview.loading
+    ? '<div class="file-preview-notice"><strong>Opening file…</strong><p>Preparing a private view of this file.</p></div>'
+    : !filePreview.url
+      ? `<div class="file-preview-notice"><strong>Preview unavailable</strong><p>${escapeHtml(filePreview.message ?? 'The file could not be opened.')}</p></div>`
+      : ''
   return `<div class="file-preview-backdrop" data-action="close-file-preview">
     <section class="file-preview-card" role="dialog" aria-modal="true" aria-labelledby="file-preview-title" data-action-stop>
       <header><div><small>${sourceLabel}</small><strong id="file-preview-title">${escapeHtml(filePreview.asset.originalFilename)}</strong></div><button type="button" data-action="close-file-preview" aria-label="Close preview">×</button></header>
-      ${filePreview.url && canPreviewInline
+      ${loadingNotice || (filePreview.url && canPreviewInline
         ? isImage
-          ? `<div class="file-preview-image"><img alt="Preview of ${escapeHtml(filePreview.asset.originalFilename)}" src="${escapeHtml(filePreview.url)}"></div>`
-          : `<iframe title="Preview of ${escapeHtml(filePreview.asset.originalFilename)}" src="${escapeHtml(filePreview.url)}"></iframe>`
-        : `<div class="file-preview-notice"><strong>${filePreview.asset.mimeType.includes('wordprocessingml') ? 'DOCX preview' : 'Preview unavailable'}</strong><p>${escapeHtml(filePreview.message ?? 'Download this file to open it in its native app.')}</p></div>`}
-      <footer><span>Private to you</span>${filePreview.url ? `<a href="${escapeHtml(filePreview.url)}" download="${escapeHtml(filePreview.asset.originalFilename)}">Download ${fileKind(filePreview.asset)}</a>` : ''}</footer>
+          ? `<div class="file-preview-image"><img alt="Preview of ${escapeHtml(filePreview.asset.originalFilename)}" src="${safeUrl}"></div>`
+          : `<iframe title="Preview of ${escapeHtml(filePreview.asset.originalFilename)}" src="${safeUrl}"></iframe>`
+        : filePreview.url ? `<div class="file-preview-notice"><strong>${filePreview.asset.mimeType.includes('wordprocessingml') ? 'Open this Word document' : 'Open this file'}</strong><p>${escapeHtml(filePreview.message ?? 'This format is best opened in its native app.')}</p></div>` : '')}
+      <footer><span>Private to you</span>${filePreview.url ? `<div class="file-preview-links"><a class="file-preview-open" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${openLabel}</a><a class="file-preview-download" href="${safeUrl}" download="${escapeHtml(filePreview.asset.originalFilename)}" target="_blank" rel="noopener noreferrer">Download ${fileKind(filePreview.asset)}</a></div>` : ''}</footer>
     </section>
   </div>`
 }
@@ -5325,25 +5333,44 @@ app.addEventListener('click', async event => {
     const assetId = target.closest<HTMLElement>('[data-file-asset-id]')?.dataset.fileAssetId
     const asset = taskId && assetId ? (taskFileAssets.get(taskId) ?? []).find(item => item.id === assetId) : undefined
     if (!asset) return
-    void downloadTaskFileAsset(asset).then(blob => {
-      if (filePreview?.url) URL.revokeObjectURL(filePreview.url)
+    if (filePreview?.url?.startsWith('blob:')) URL.revokeObjectURL(filePreview.url)
+    filePreview = { asset, url: null, loading: true }
+    render()
+    void (async () => {
+      let url = ''
+      try {
+        // A signed URL lets desktop browsers and iOS hand the file to their
+        // native viewer without depending on blob iframe support.
+        url = await createTaskFileAssetViewUrl(asset)
+      } catch {
+        // Keep a blob fallback for an older storage configuration that cannot
+        // create signed URLs yet. The CSP explicitly permits this preview.
+        const blob = await downloadTaskFileAsset(asset)
+        url = URL.createObjectURL(blob)
+      }
+      if (filePreview?.asset.id !== asset.id) {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+        return
+      }
       filePreview = {
         asset,
-        url: URL.createObjectURL(blob),
+        url,
         ...(asset.mimeType.includes('wordprocessingml')
-          ? { message: 'This Word document is ready to download and open in Word or Pages.' }
+          ? { message: 'Open this document in Word or Pages. iOS will hand it to the app you choose.' }
           : {}),
       }
       render()
-    }).catch(error => {
-      toast = error instanceof Error ? error.message : 'The file could not be previewed.'
-      render()
+    })().catch(error => {
+      if (filePreview?.asset.id === asset.id) {
+        filePreview = { asset, url: null, message: error instanceof Error ? error.message : 'The file could not be previewed.' }
+        render()
+      }
     })
     return
   }
 
   if (action === 'close-file-preview') {
-    if (filePreview?.url) URL.revokeObjectURL(filePreview.url)
+    if (filePreview?.url?.startsWith('blob:')) URL.revokeObjectURL(filePreview.url)
     filePreview = null
     render()
     return

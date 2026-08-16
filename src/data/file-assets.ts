@@ -178,3 +178,12 @@ export async function downloadTaskFileAsset(asset: FileAsset) {
   if (error || !data) throw new Error(error?.message ?? 'The file could not be opened.')
   return data
 }
+
+export async function createTaskFileAssetViewUrl(asset: FileAsset) {
+  const client = await getCloudClient()
+  const user = await currentUser()
+  if (!client || !user) throw new Error('Sign in to preview this file.')
+  const { data, error } = await client.storage.from('private-file-assets').createSignedUrl(asset.storageKey, 10 * 60)
+  if (error || !data?.signedUrl) throw new Error(error?.message ?? 'The file could not be opened.')
+  return data.signedUrl
+}

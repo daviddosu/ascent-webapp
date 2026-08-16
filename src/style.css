@@ -1942,7 +1942,10 @@ body[data-theme='dark'] .task-agent-email-field textarea {
 .file-preview-notice strong { color: #292929; font-size: 13px; }
 .file-preview-notice p { max-width: 330px; margin: 0; font-size: 10px; line-height: 1.5; }
 .file-preview-card footer { min-height: 48px; border-top: 1px solid #ededeb; }
-.file-preview-card footer a { padding: 7px 10px; border-radius: 6px; background: #202020; color: #fff; font-size: 9px; font-weight: 700; text-decoration: none; }
+.file-preview-links { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.file-preview-card footer a { padding: 7px 10px; border-radius: 6px; color: #202020; font-size: 9px; font-weight: 700; text-decoration: none; }
+.file-preview-card footer .file-preview-open { background: #202020; color: #fff; }
+.file-preview-card footer .file-preview-download { border: 1px solid #dededb; }
 body[data-theme='dark'] .file-preview-card { border-color: var(--dark-border); background: var(--dark-surface); }
 body[data-theme='dark'] .file-preview-card header, body[data-theme='dark'] .file-preview-card footer { border-color: var(--dark-border); }
 body[data-theme='dark'] .file-preview-card header strong { color: var(--dark-text); }

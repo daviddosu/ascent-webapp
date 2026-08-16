@@ -959,6 +959,7 @@ describe('offline application contract', () => {
     const headers = new Map(deployment.headers?.flatMap(rule => rule.headers).map(header => [header.key, header.value]))
     expect(headers.get('Content-Security-Policy')).toContain("script-src 'self'")
     expect(headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'")
+    expect(headers.get('Content-Security-Policy')).toContain("frame-src 'self' blob: https://*.supabase.co")
     expect(headers.get('Content-Security-Policy')).toContain("object-src 'none'")
     expect(headers.get('Content-Security-Policy')).toContain("style-src-elem 'self'")
     expect(headers.get('Content-Security-Policy')).toContain("style-src-attr 'unsafe-inline'")

@@ -20,6 +20,8 @@ describe('private file asset contract', () => {
     for (const mime of ['image/png', 'image/jpeg', 'application/pdf', 'wordprocessingml.document', 'text/plain']) expect(client).toContain(mime)
     expect(client).toContain("digest('SHA-256'")
     expect(client).toContain(".eq('checksum', checksum)")
+    expect(client).toContain('createTaskFileAssetViewUrl')
+    expect(client).toContain('createSignedUrl')
     expect(client).not.toContain('getPublicUrl')
   })
 })
