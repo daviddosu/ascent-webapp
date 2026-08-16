@@ -40,7 +40,7 @@ supabase start
 supabase db lint --local
 ```
 
-There is no Swift/Xcode project in this checkout. Do not claim Apple build coverage unless one is added or supplied separately.
+The native iOS client is maintained in the sibling repository `../shotcount-ios`, which contains `ios/Shotcount.xcodeproj`. When an iOS request is in scope, inspect that repository and its `AGENTS.md`; do not say that Shotcount has no iOS app. This web checkout alone does not provide Apple build coverage, so run native checks from the companion repository.
 
 ## Database and security rules
 
