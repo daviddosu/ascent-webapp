@@ -608,6 +608,8 @@ describe('agent execution security contract', () => {
     expect(recovery).toContain("'Checking the programme’s recommendation instructions.'")
     expect(mainUi).toContain("run.errorCode === 'recommendation_source_not_found'")
     expect(mainUi).toContain('/recommendation rules aren.t clear yet/i.test(run.waitingReason)')
+    expect(mainUi).toContain('const internalAgentRecoveryFingerprints = new Map<string, string>()')
+    expect(mainUi).toContain('internalAgentRecoveryFingerprints.get(run.id) === recoveryFingerprint')
     expect(taskAgentFunction).toContain("error_code: toolOutput.status === 'waiting_external' ? null : toolOutput.code")
   })
 

@@ -446,7 +446,11 @@ const pendingEmailSends = new Map<string, (proceed: boolean) => void>()
 let agentPollingTimer = 0
 let agentPollBusy = false
 let agentRunsRefreshing = false
-const internalAgentRecoveryRunIDs = new Set<string>()
+// Deduplicate one exact paused state, not the run forever. A recovery can
+// legitimately produce a new persisted pause (for example after David checks
+// another official source), and that new state deserves its own bounded
+// continuation. Unchanged states remain quiet instead of polling in a loop.
+const internalAgentRecoveryFingerprints = new Map<string, string>()
 const screenCounts: Record<CountKey, number> = { today: 5, upcoming: 12 }
 const completedTaskIds = new Set(tasks.filter(task => task.completedAt).map(task => task.id))
 let activityMode: ActivityMode = 'daily'
@@ -936,7 +940,9 @@ async function pollWaitingAgentRuns() {
   )
   const waitingRuns = [...agentRuns.values()].filter(run => run.status === 'waiting_external')
   const internalRecoveryRuns = [...agentRuns.values()].filter(run => {
-    if (!isApplicationIntent(run.objective, run.context) || internalAgentRecoveryRunIDs.has(run.id)) return false
+    if (!isApplicationIntent(run.objective, run.context)) return false
+    const recoveryFingerprint = `${run.status}|${run.errorCode ?? ''}|${run.waitingReason}|${run.updatedAt}`
+    if (internalAgentRecoveryFingerprints.get(run.id) === recoveryFingerprint) return false
     const browserAllowlistRecovery = ['waiting_for_user', 'needs_context'].includes(run.status) &&
       (
         run.errorCode === 'browser_domain_not_allowed' ||
@@ -962,7 +968,9 @@ async function pollWaitingAgentRuns() {
       String(run.applicationState?.status ?? '').toLocaleLowerCase() !== 'complete'
     return browserAllowlistRecovery || singleProgrammeRecovery || semanticHandoffRecovery || recommendationSourceRecovery || failedApplicationRecovery || intermediateApplicationRecovery
   })
-  internalRecoveryRuns.forEach(run => internalAgentRecoveryRunIDs.add(run.id))
+  internalRecoveryRuns.forEach(run => {
+    internalAgentRecoveryFingerprints.set(run.id, `${run.status}|${run.errorCode ?? ''}|${run.waitingReason}|${run.updatedAt}`)
+  })
   const recoverableRuns = [...waitingRuns, ...staleApplicationRuns, ...stalePaymentHandoffRuns, ...internalRecoveryRuns]
   if (!recoverableRuns.length) return
   agentPollBusy = true
