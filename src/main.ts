@@ -952,7 +952,8 @@ async function pollWaitingAgentRuns() {
     // university sources before asking the applicant for anything.
     const recommendationSourceRecovery = run.status === 'needs_context' &&
       (run.contextInteraction?.id === 'recommendation:requirements-source' ||
-        run.errorCode === 'recommendation_source_not_found')
+        run.errorCode === 'recommendation_source_not_found' ||
+        /recommendation rules aren.t clear yet/i.test(run.waitingReason))
     const failedApplicationRecovery = run.status === 'failed' &&
       ['agent_execution_error', 'model_reasoning_luna', 'application_controller_repair_exhausted'].includes(run.errorCode ?? '')
     const intermediateApplicationRecovery = run.status === 'completed' &&

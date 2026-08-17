@@ -599,12 +599,15 @@ describe('agent execution security contract', () => {
     )
     expect(recovery).toContain("safeString(interaction.id, 300) === 'recommendation:requirements-source'")
     expect(recovery).toContain("safeString(run.error_code, 120) === 'recommendation_source_not_found'")
+    expect(recovery).toContain('/recommendation rules aren.t clear yet/i.test(run.waiting_reason)')
     expect(recovery).toContain('applicationRecommendationSourceRecoveryAttempts(run) >= 3')
     expect(recovery).toContain("recommendation_source_research_required: true")
     expect(recovery).toContain(".eq('status', 'needs_context')")
     expect(recovery).toContain(".eq('version', run.version)")
     expect(recovery).toContain("'Checking the programme’s recommendation instructions.'")
     expect(mainUi).toContain("run.errorCode === 'recommendation_source_not_found'")
+    expect(mainUi).toContain('/recommendation rules aren.t clear yet/i.test(run.waitingReason)')
+    expect(taskAgentFunction).toContain("error_code: toolOutput.status === 'waiting_external' ? null : toolOutput.code")
   })
 
   it('keeps official university research bounded while preserving links from earlier pages', () => {

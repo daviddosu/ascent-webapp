@@ -12715,7 +12715,7 @@ async function retryWaitingProviderAction(
         : {}),
       ...executionPatchWithoutContext,
       context: pauseContext,
-      error_code: execution.status === 'waiting_for_user' ? execution.code : null,
+      error_code: execution.status === 'waiting_external' ? null : execution.code,
       error: execution.status === 'waiting_for_user' ? execution.message : null,
       retryable: execution.status === 'waiting_external' && !actionSucceeded,
       lease_owner: null,
@@ -13335,7 +13335,9 @@ function applicationRecommendationSourceCanRecover(run: AgentRunRow) {
   const interaction = recordValue(run.context?.progress_detail_interaction)
   const legacyUploadRequest = safeString(interaction.id, 300) === 'recommendation:requirements-source' &&
     /(?:official recommendation instructions|programme page)/i.test(run.waiting_reason)
-  const exhaustedOfficialResearch = safeString(run.error_code, 120) === 'recommendation_source_not_found'
+  const exhaustedOfficialResearch = safeString(run.error_code, 120) === 'recommendation_source_not_found' ||
+    (run.context?.recommendation_source_research_required === true &&
+      /recommendation rules aren.t clear yet/i.test(run.waiting_reason))
   return legacyUploadRequest || exhaustedOfficialResearch
 }
 
@@ -14575,7 +14577,7 @@ async function advanceRun(
           : {}),
         ...toolPatchWithoutContext,
         context: pauseContext,
-        error_code: toolOutput.status === 'waiting_for_user' ? toolOutput.code : null,
+        error_code: toolOutput.status === 'waiting_external' ? null : toolOutput.code,
         error: toolOutput.status === 'waiting_for_user' ? toolOutput.message : null,
         lease_owner: null,
         lease_expires_at: null,
@@ -14999,7 +15001,7 @@ async function approveOrReject(
       ...executionPatchWithoutContext,
       context: pauseContext,
       error: execution.status === 'waiting_for_user' ? execution.message : null,
-      error_code: execution.status === 'waiting_for_user' ? execution.code : null,
+      error_code: execution.status === 'waiting_external' ? null : execution.code,
       retryable: execution.status === 'waiting_external' && !actionSucceeded,
       lease_owner: null,
       lease_expires_at: null,
