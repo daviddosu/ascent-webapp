@@ -103,6 +103,7 @@ import {
   nextApplicationCaseState,
   parseDeadline,
   recordPortalCheckpoint,
+  sameOfficialInstitutionDomain,
   verifyOfficialSource,
   submissionIdempotencyKey,
   type DavidApplicationState,
@@ -3588,7 +3589,7 @@ function isProgrammeOfficialSource(opportunity: Record<string, unknown>, sourceU
   return Boolean(
     officialUrl &&
     verifyOfficialSource(sourceUrl) &&
-    citationMatchesOfficialDomain(officialUrl, sourceUrl),
+    sameOfficialInstitutionDomain(officialUrl, sourceUrl),
   )
 }
 
@@ -3687,33 +3688,98 @@ async function recommendationProgrammeSources(
   return {
     sources,
     visitedUrls: new Set(policyRows.map(row => canonicalOpportunityReference(safeString(row.source_url, 2_000))).filter(Boolean)),
-    researchAttempts: policyRows.length,
   }
+}
+
+const recommendationProgrammeSourcePageLimit = 6
+
+type RecommendationProgrammeSourceLink = {
+  url: string
+  label: string
+}
+
+/**
+ * The browser worker keeps each completed navigation as durable action output.
+ * Reuse links from those public snapshots when the current page has moved on:
+ * departmental pages routinely link to a university-wide admissions page, but
+ * that link is no longer visible once David has followed another branch.
+ */
+async function recommendationProgrammeResearchHistory(
+  admin: AdminClient,
+  run: AgentRunRow,
+  opportunity: Record<string, unknown>,
+) {
+  const historyResult = await admin.from('agent_actions')
+    .select('output')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('tool_name', 'browser.navigate')
+    .eq('status', 'succeeded')
+    .order('completed_at', { ascending: false })
+    .limit(24)
+  if (historyResult.error) throw new Error(historyResult.error.message)
+
+  const visitedUrls = new Set<string>()
+  const links: RecommendationProgrammeSourceLink[] = []
+  for (const action of historyResult.data ?? []) {
+    const observation = recordValue(recordValue(action.output).observation)
+    const pageUrl = safeString(observation.url, 2_000)
+    if (pageUrl && isProgrammeOfficialSource(opportunity, pageUrl)) {
+      const canonicalUrl = canonicalOpportunityReference(pageUrl)
+      if (canonicalUrl) visitedUrls.add(canonicalUrl)
+    }
+    const observationLinks = Array.isArray(observation.links) ? observation.links : []
+    for (const rawLink of observationLinks) {
+      const link = recordValue(rawLink)
+      const url = safeString(link.href, 2_000)
+      if (!url || !isProgrammeOfficialSource(opportunity, url)) continue
+      links.push({ url, label: safeString(link.text, 500) })
+    }
+  }
+  return { visitedUrls, links }
 }
 
 function nextRecommendationProgrammeSourceUrl(input: {
   opportunity: Record<string, unknown>
   observation?: Record<string, unknown> | null
   visitedUrls: Set<string>
+  historicalLinks?: RecommendationProgrammeSourceLink[]
 }) {
   const officialUrl = opportunityOfficialUrl(input.opportunity)
-  const links = Array.isArray(input.observation?.links) ? input.observation!.links : []
-  const candidates = links.map(recordValue).map(link => {
-    const url = safeString(link.href, 2_000)
-    const label = safeString(link.text, 500)
+  const currentLinks = Array.isArray(input.observation?.links)
+    ? input.observation!.links.map(recordValue).map(link => ({
+      url: safeString(link.href, 2_000),
+      label: safeString(link.text, 500),
+    }))
+    : []
+  const candidates = [...currentLinks, ...(input.historicalLinks ?? [])].map(link => {
+    const url = link.url
+    const label = link.label
     if (!url || !isProgrammeOfficialSource(input.opportunity, url)) return null
-    if (input.visitedUrls.has(canonicalOpportunityReference(url))) return null
+    const canonicalUrl = canonicalOpportunityReference(url)
+    if (!canonicalUrl || input.visitedUrls.has(canonicalUrl)) return null
     const value = `${label} ${url}`.toLocaleLowerCase()
     if (/\b(?:sign in|log in|login|create account|apply now|start application)\b/.test(value)) return null
     const score = /recommend|reference|referee/.test(value)
-      ? 4
-      : /admission|application|requirement|graduate/.test(value)
-        ? 2
-        : 0
-    return score > 0 ? { url, score } : null
-  }).filter((candidate): candidate is { url: string; score: number } => Boolean(candidate))
-  candidates.sort((left, right) => right.score - left.score || left.url.localeCompare(right.url))
-  if (candidates[0]) return candidates[0].url
+      ? 100
+      : /admission|application|requirement/.test(value)
+        ? 70
+        : /\bapply\b/.test(value)
+          ? 50
+          : /graduate/.test(value)
+            ? 30
+            : 0
+    return score > 0 ? { url, canonicalUrl, score } : null
+  }).filter((candidate): candidate is { url: string; canonicalUrl: string; score: number } => Boolean(candidate))
+  const bestByUrl = new Map<string, { url: string; score: number }>()
+  for (const candidate of candidates) {
+    const existing = bestByUrl.get(candidate.canonicalUrl)
+    if (!existing || candidate.score > existing.score || (candidate.score === existing.score && candidate.url.localeCompare(existing.url) < 0)) {
+      bestByUrl.set(candidate.canonicalUrl, { url: candidate.url, score: candidate.score })
+    }
+  }
+  const ranked = [...bestByUrl.values()].sort((left, right) => right.score - left.score || left.url.localeCompare(right.url))
+  if (ranked[0]) return ranked[0].url
   return officialUrl && !input.visitedUrls.has(canonicalOpportunityReference(officialUrl))
     ? officialUrl
     : ''
@@ -3725,40 +3791,44 @@ async function queueRecommendationProgrammeSourceResearch(
   input: {
     caseId: string
     opportunity: Record<string, unknown>
-    sources: { visitedUrls: Set<string>; researchAttempts: number }
+    sources: { visitedUrls: Set<string> }
     coordinatorActionKey: string
   },
 ) {
   const officialUrl = opportunityOfficialUrl(input.opportunity)
   const visitedUrls = new Set(input.sources.visitedUrls)
-  let researchAttempts = input.sources.researchAttempts
   const currentSession = run.browser_session_id
     ? await loadOwnedBrowserSession(admin, run, run.browser_session_id)
     : null
+  const history = await recommendationProgrammeResearchHistory(admin, run, input.opportunity)
+  for (const url of history.visitedUrls) visitedUrls.add(url)
   const checkpoint = recordValue(currentSession?.checkpoint) as BrowserCheckpoint
   const observation = recordValue(recordValue(checkpoint.publicBrowser).observation)
   if (currentSession && Object.keys(observation).length) {
+    const currentUrl = safeString(currentSession.current_url, 2_000) ||
+      safeString(recordValue(checkpoint.publicBrowser).currentUrl, 2_000) ||
+      safeString(observation.url, 2_000)
     const persisted = await persistRecommendationProgrammeSourceObservation(admin, run, {
       caseId: input.caseId,
       sessionId: currentSession.id,
       observation,
-      currentUrl: safeString(currentSession.current_url ?? recordValue(checkpoint.publicBrowser).currentUrl, 2_000),
+      currentUrl,
       opportunity: input.opportunity,
     })
-    if (persisted) {
-      const canonicalUrl = canonicalOpportunityReference(persisted.url)
-      if (canonicalUrl && !visitedUrls.has(canonicalUrl)) {
-        visitedUrls.add(canonicalUrl)
-        researchAttempts += 1
-      }
+    const observedUrl = persisted?.url ?? currentUrl
+    if (observedUrl && isProgrammeOfficialSource(input.opportunity, observedUrl)) {
+      const canonicalUrl = canonicalOpportunityReference(observedUrl)
+      if (canonicalUrl) visitedUrls.add(canonicalUrl)
     }
   }
+  if (visitedUrls.size >= recommendationProgrammeSourcePageLimit) return { kind: 'exhausted' as const }
   const destination = nextRecommendationProgrammeSourceUrl({
     opportunity: input.opportunity,
     observation: Object.keys(observation).length ? observation : null,
     visitedUrls,
+    historicalLinks: history.links,
   })
-  if (!destination || researchAttempts >= 3) return { kind: 'exhausted' as const }
+  if (!destination) return { kind: 'exhausted' as const }
   let host = ''
   try { host = new URL(destination).hostname.toLocaleLowerCase() } catch { /* validated below */ }
   if (!host || !isProgrammeOfficialSource(input.opportunity, destination)) return { kind: 'exhausted' as const }
@@ -7505,7 +7575,7 @@ async function executeProviderTool(
         kind: 'pause',
         status: 'needs_context',
         code: 'recommendation_source_not_found',
-        message: 'I found the programme, but its recommendation rules aren’t clear yet. Send the relevant instructions and I’ll take it from there.',
+        message: 'I checked the programme and university admissions pages, but I still can’t verify the recommendation rules. Add the official instructions if you have them and I’ll finish this step.',
         value: { application_case_id: caseId, source_research: 'exhausted', unresolved_fields: requirements.unresolvedFields },
         actionSucceeded: true,
         runPatch: { context: { ...(run.context ?? {}), application_case_id: caseId, progress_detail_interaction: null } },
@@ -13261,10 +13331,12 @@ function applicationSemanticHandoffCanRecover(run: AgentRunRow) {
 function applicationRecommendationSourceCanRecover(run: AgentRunRow) {
   if (!isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) return false
   if (run.status !== 'needs_context') return false
-  if (applicationRecommendationSourceRecoveryAttempts(run) >= 2) return false
+  if (applicationRecommendationSourceRecoveryAttempts(run) >= 3) return false
   const interaction = recordValue(run.context?.progress_detail_interaction)
-  return safeString(interaction.id, 300) === 'recommendation:requirements-source' &&
+  const legacyUploadRequest = safeString(interaction.id, 300) === 'recommendation:requirements-source' &&
     /(?:official recommendation instructions|programme page)/i.test(run.waiting_reason)
+  const exhaustedOfficialResearch = safeString(run.error_code, 120) === 'recommendation_source_not_found'
+  return legacyUploadRequest || exhaustedOfficialResearch
 }
 
 function applicationRecommendationSourceRecoveryAttempts(run: AgentRunRow) {
@@ -13278,7 +13350,7 @@ async function recoverApplicationRecommendationSourceInternally(
   openaiKey: string,
 ) {
   const attempts = applicationRecommendationSourceRecoveryAttempts(run)
-  if (attempts >= 2) return run
+  if (attempts >= 3) return run
   const campaign = recordValue(run.context?.recommendation_campaign)
   const campaignContext = recordValue(campaign.context)
   // This is an exact legacy-state transition, not an open-ended retry. Claim
@@ -13308,7 +13380,7 @@ async function recoverApplicationRecommendationSourceInternally(
       completion_continuations: 0,
       last_context_question: null,
       progress_detail_interaction: null,
-      progress_current: progressCurrent(run, 'David is checking the programme’s recommendation instructions.'),
+      progress_current: progressCurrent(run, 'Checking the programme’s recommendation instructions.'),
       recommendation_source_recovery_attempts: attempts + 1,
       recommendation_source_research_required: true,
       recommendation_campaign: Object.keys(campaign).length
@@ -13343,7 +13415,7 @@ async function recoverApplicationRecommendationSourceInternally(
   const cleared = await admin.from('agent_model_state').delete().eq('run_id', planning.id).eq('user_id', planning.user_id)
   if (cleared.error) throw new Error(cleared.error.message)
   await addEvent(admin, planning, 'application_recommendation_source_recovery_started', planning.status,
-    'David is checking the programme’s recommendation instructions instead of asking the applicant for a public page.', {
+    'Checking the programme’s recommendation instructions.', {
       recovery_attempt: attempts + 1,
       application_case_id: safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80),
     })

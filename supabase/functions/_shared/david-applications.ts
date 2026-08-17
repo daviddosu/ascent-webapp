@@ -900,6 +900,82 @@ export function verifyOfficialSource(url: string, institutionDomains: string[] =
   }
 }
 
+// Public suffixes where the registrable institution domain needs one more
+// label than the usual `example.edu` shape. This deliberately covers the
+// common university and government country-code domains we may encounter in
+// application research without treating a shared hosting suffix as an
+// institution.
+const multiLabelInstitutionSuffixes = new Set([
+  'ac.uk', 'co.uk', 'gov.uk', 'ltd.uk', 'me.uk', 'net.uk', 'nhs.uk', 'org.uk', 'plc.uk', 'sch.uk',
+  'ac.nz', 'co.nz', 'govt.nz', 'health.nz', 'iwi.nz', 'maori.nz', 'school.nz',
+  'com.au', 'edu.au', 'gov.au', 'net.au', 'org.au',
+  'ac.jp', 'co.jp', 'go.jp', 'ne.jp', 'or.jp',
+  'com.br', 'edu.br', 'gov.br', 'net.br', 'org.br',
+  'com.cn', 'edu.cn', 'gov.cn', 'net.cn', 'org.cn',
+  'co.id', 'ac.id', 'go.id', 'or.id', 'web.id',
+  'co.in', 'firm.in', 'gen.in', 'ind.in', 'net.in', 'org.in',
+  'com.kr', 'co.kr', 'go.kr', 'ne.kr', 'or.kr',
+  'com.mx', 'edu.mx', 'gob.mx', 'net.mx', 'org.mx',
+  'com.my', 'edu.my', 'gov.my', 'net.my', 'org.my',
+  'com.ph', 'edu.ph', 'gov.ph', 'net.ph', 'org.ph',
+  'com.sg', 'edu.sg', 'gov.sg', 'org.sg',
+  'com.tw', 'edu.tw', 'gov.tw', 'net.tw', 'org.tw',
+  'co.za', 'gov.za', 'net.za', 'org.za',
+])
+
+// These are shared platforms, not institution roots. Sibling subdomains on
+// them are often controlled by different people, so they must not become
+// trusted merely because their registrable suffix matches.
+const sharedHostingDomains = new Set([
+  'amazonaws.com', 'azurewebsites.net', 'cloudfront.net', 'firebaseapp.com',
+  'github.io', 'herokuapp.com', 'netlify.app', 'notion.site', 'pages.dev',
+  'squarespace.com', 'substack.com', 'vercel.app', 'web.app', 'wixsite.com',
+  'wordpress.com',
+])
+
+function hostnameForOfficialInstitution(url: string) {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:') return ''
+    const host = parsed.hostname.toLocaleLowerCase().replace(/\.$/, '')
+    if (!host || host.includes(':') || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return ''
+    return host
+  } catch {
+    return ''
+  }
+}
+
+function registrableInstitutionDomain(host: string) {
+  const labels = host.split('.').filter(Boolean)
+  if (labels.length < 2) return ''
+  const terminal = labels.slice(-2).join('.')
+  const suffixLength = multiLabelInstitutionSuffixes.has(terminal) ? 2 : 1
+  if (labels.length <= suffixLength) return ''
+  return labels.slice(-(suffixLength + 1)).join('.')
+}
+
+/**
+ * Accept a source on the verified programme host, one of its nested hosts, or
+ * a sibling host under the same registrable institution domain. The latter is
+ * needed when a department programme page delegates application rules to a
+ * university-wide admissions site (for example, physics.stanford.edu to
+ * gradadmissions.stanford.edu). HTTPS and shared-hosting exclusions keep this
+ * from accepting lookalikes or unrelated tenant sites.
+ */
+export function sameOfficialInstitutionDomain(officialUrl: string, candidateUrl: string) {
+  const officialHost = hostnameForOfficialInstitution(officialUrl)
+  const candidateHost = hostnameForOfficialInstitution(candidateUrl)
+  if (!officialHost || !candidateHost) return false
+  if (candidateHost === officialHost || candidateHost.endsWith(`.${officialHost}`) || officialHost.endsWith(`.${candidateHost}`)) return true
+  const officialDomain = registrableInstitutionDomain(officialHost)
+  const candidateDomain = registrableInstitutionDomain(candidateHost)
+  return Boolean(
+    officialDomain &&
+    officialDomain === candidateDomain &&
+    !sharedHostingDomains.has(officialDomain),
+  )
+}
+
 export function verifyOpportunity(opportunity: Opportunity, now = new Date()) {
   const issues: ValidationIssue[] = []
   if (!verifyOfficialSource(opportunity.officialUrl)) issues.push({ path: 'officialUrl', message: 'The opportunity needs an HTTPS official source.', severity: 'error' })

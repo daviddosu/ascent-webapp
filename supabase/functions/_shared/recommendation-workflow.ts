@@ -804,7 +804,7 @@ export function extractRecommendationRequirements(input: {
   // Schools often publish no letter-length, language, invitation-flow, or
   // separate referee-deadline rule. Those omissions stay visible as unknown
   // and are checked again in the portal, but must not force the applicant to
-  // supply a public programme page before we can responsibly identify and
+  // chase down extra programme material before we can responsibly identify and
   // prepare recommenders. The core gate is limited to facts an official page
   // must actually establish to start that preparation.
   const criticalFields = new Set(['programme', 'institution', 'recommendationCount', 'submissionMethod'])
@@ -1276,8 +1276,12 @@ export function resolveRecommendationContext(input: {
   const selected = input.selectedCandidateIds ?? []
   const hasSelection = selected.length > 0
   if (ranked.length && !hasSelection) unresolved.push('recommender_selection')
+  // Source discovery is owned by the task agent. Keeping it out of Progress
+  // Detail prevents an upload card from appearing for work David can complete
+  // through the programme's official pages. If that bounded research truly
+  // exhausts, the task agent renders one plain-language fallback instead.
   const nextInteraction = !input.requirements?.sourceBacked
-    ? createRecommendationInteraction({ kind: 'attachment_request', id: 'recommendation:requirements-source', requirementId: 'programme_requirements_source_evidence', question: 'Add the official recommendation instructions or programme page.', reason: 'The request cannot be safely prepared until the recommendation count, deadline, submission method, and relationship rules are backed by a source.', knownContext: [programme ? `Programme: ${programme}` : 'Programme name not yet verified'], reusableContextKeys: [] })
+    ? null
     : !ranked.length
       ? createRecommendationInteraction({ kind: 'contact_select', id: 'recommendation:candidate', requirementId: 'recommender_candidate', question: 'Which eligible recommender should be considered for this application?', reason: 'No recommender was resolved from your profile, previous applications, Gmail, Contacts, or uploaded context.', options: [], knownContext: [], reusableContextKeys: [] })
       : !hasSelection

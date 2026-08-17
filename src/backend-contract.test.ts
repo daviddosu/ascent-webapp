@@ -592,17 +592,31 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('Another request already owns this same continuation.')
   })
 
-  it('replaces the legacy public recommendation-page request with one bounded internal research recovery', () => {
+  it('continues bounded official recommendation-source research before asking the applicant', () => {
     const recovery = taskAgentFunction.slice(
       taskAgentFunction.indexOf('function applicationRecommendationSourceCanRecover'),
       taskAgentFunction.indexOf('function applicationCvGroundingCanRecover'),
     )
     expect(recovery).toContain("safeString(interaction.id, 300) === 'recommendation:requirements-source'")
-    expect(recovery).toContain('applicationRecommendationSourceRecoveryAttempts(run) >= 2')
+    expect(recovery).toContain("safeString(run.error_code, 120) === 'recommendation_source_not_found'")
+    expect(recovery).toContain('applicationRecommendationSourceRecoveryAttempts(run) >= 3')
     expect(recovery).toContain("recommendation_source_research_required: true")
     expect(recovery).toContain(".eq('status', 'needs_context')")
     expect(recovery).toContain(".eq('version', run.version)")
-    expect(recovery).toContain("'David is checking the programme’s recommendation instructions instead of asking the applicant for a public page.'")
+    expect(recovery).toContain("'Checking the programme’s recommendation instructions.'")
+    expect(mainUi).toContain("run.errorCode === 'recommendation_source_not_found'")
+  })
+
+  it('keeps official university research bounded while preserving links from earlier pages', () => {
+    const research = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('function isProgrammeOfficialSource'),
+      taskAgentFunction.indexOf('function decodeWorkSamplePdfText'),
+    )
+    expect(research).toContain(".eq('tool_name', 'browser.navigate')")
+    expect(research).toContain('const recommendationProgrammeSourcePageLimit = 6')
+    expect(research).toContain('sameOfficialInstitutionDomain(officialUrl, sourceUrl)')
+    expect(research).toContain('historicalLinks: history.links')
+    expect(research).toContain('visitedUrls.size >= recommendationProgrammeSourcePageLimit')
   })
 
   it('preserves the original Gmail thread for scheduling replies', () => {

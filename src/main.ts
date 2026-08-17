@@ -947,12 +947,12 @@ async function pollWaitingAgentRuns() {
       /approve creating .*application case/i.test(run.waitingReason)
     const semanticHandoffRecovery = run.status === 'waiting_for_user' &&
       run.errorCode === 'application_semantic_handoff'
-    // Versions before the programme-source reader asked the applicant to
-    // upload a public recommendation page. That is recoverable internal work,
-    // not user context, so wake the persisted run and let David research the
-    // verified programme source instead.
+    // Programme-source research is internal work. If a bounded pass stopped
+    // too early, wake the persisted run so it can continue through verified
+    // university sources before asking the applicant for anything.
     const recommendationSourceRecovery = run.status === 'needs_context' &&
-      run.contextInteraction?.id === 'recommendation:requirements-source'
+      (run.contextInteraction?.id === 'recommendation:requirements-source' ||
+        run.errorCode === 'recommendation_source_not_found')
     const failedApplicationRecovery = run.status === 'failed' &&
       ['agent_execution_error', 'model_reasoning_luna', 'application_controller_repair_exhausted'].includes(run.errorCode ?? '')
     const intermediateApplicationRecovery = run.status === 'completed' &&

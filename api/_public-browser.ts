@@ -38,6 +38,38 @@ export type PublicBrowserObservation = {
 }
 
 const sensitivePattern = /\b(?:password|passcode|otp|one[- ]?time|card|credit|debit|cvv|cvc|security code|account number|routing|bank|ssn|social security|passport)\b/i
+const publicBrowserPrimaryLinkLimit = 20
+const publicBrowserRelevantLinkLimit = 20
+const publicBrowserLinkScanLimit = 160
+
+/**
+ * Keep the compact, DOM-order link list used by generic browser work while
+ * retaining a second, bounded set of application-relevant links that can sit
+ * behind a page's global navigation. This prevents a programme's
+ * "Recommendations" page from disappearing simply because it follows a long
+ * header menu, without turning an observation into a page crawl.
+ */
+export function retainPublicBrowserLinks(links: Array<{ text: string; href: string }>) {
+  const primary = links.slice(0, publicBrowserPrimaryLinkLimit)
+  const relevance = (link: { text: string; href: string }) => {
+    const value = `${link.text} ${link.href}`.toLocaleLowerCase()
+    if (/recommend|reference|referee/.test(value)) return 3
+    if (/admission|application|requirement|deadline|funding|fee|transcript|statement/.test(value)) return 2
+    return /\b(?:apply|graduate)\b/.test(value) ? 1 : 0
+  }
+  const supplemental = links
+    .map((link, index) => ({ link, index, score: relevance(link) }))
+    .filter(item => item.index >= publicBrowserPrimaryLinkLimit && item.score > 0)
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .slice(0, publicBrowserRelevantLinkLimit)
+    .map(item => item.link)
+  const seen = new Set<string>()
+  return [...primary, ...supplemental].filter(link => {
+    if (!link.href || seen.has(link.href)) return false
+    seen.add(link.href)
+    return true
+  })
+}
 
 function benchmarkModeEnabled() {
   return process.env.SHOTCOUNT_BENCHMARK_MODE === 'true' && process.env.NODE_ENV !== 'production'
@@ -190,7 +222,7 @@ async function assertPageAllowed(page: Page, domains: unknown) {
 }
 
 async function observe(page: Page): Promise<PublicBrowserObservation> {
-  const raw = await page.evaluate(() => {
+  const raw = await page.evaluate((linkScanLimit) => {
     const clean = (value: string | null | undefined, maximum: number) => (value ?? '').replace(/\s+/g, ' ').trim().slice(0, maximum)
     const exact = (value: string | null | undefined, maximum: number) => (value ?? '').trim().slice(0, maximum)
     const visible = (element: Element) => {
@@ -223,7 +255,7 @@ async function observe(page: Page): Promise<PublicBrowserObservation> {
         href: clean((element as HTMLAnchorElement).href, 2000),
       }))
       .filter(link => link.text && link.href.startsWith('https://'))
-      .slice(0, 20)
+      .slice(0, linkScanLimit)
     const controls = [...document.querySelectorAll('input,textarea,select,button')]
       .filter(visible)
       .map(element => {
@@ -284,7 +316,7 @@ async function observe(page: Page): Promise<PublicBrowserObservation> {
       fields,
       untrustedExternalContent: true as const,
     }
-  })
+  }, publicBrowserLinkScanLimit)
   const portal = new URL(raw.url).hostname
   const questions = discoverApplicationQuestions({
     applicationCaseId: '',
@@ -293,7 +325,7 @@ async function observe(page: Page): Promise<PublicBrowserObservation> {
     url: raw.url,
     fields: raw.fields,
   })
-  return { ...raw, questions }
+  return { ...raw, links: retainPublicBrowserLinks(raw.links), questions }
 }
 
 async function targetLocator(page: Page, target: string): Promise<Locator> {

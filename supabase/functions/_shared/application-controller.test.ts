@@ -82,6 +82,17 @@ describe('David application controller v2.1', () => {
     expect(errors.map(error => error.code)).not.toContain('action_outside_current_state')
   })
 
+  it('allows official recommendation-source evidence to be reconciled during referee work', () => {
+    const actions: ProposedApplicationAction[] = [
+      { id: 'official-source', kind: 'evidence', toolName: 'application.record_evidence', caseId: 'case-1' },
+      { id: 'recommendation-rule', kind: 'requirement', toolName: 'application.update_requirement', caseId: 'case-1', targetRequirementId: 'education' },
+    ]
+    for (const action of actions) {
+      const errors = validateApplicationAction({ state: 'REFEREE_EXECUTION', currentCaseId: 'case-1', action, facts: [], requirements })
+      expect(errors.map(error => error.code)).not.toContain('action_outside_current_state')
+    }
+  })
+
   it('allows canonical proposal and fee preparation without weakening submission gates', () => {
     const proposal: ProposedApplicationAction = {
       id: 'proposal', kind: 'document', toolName: 'application.prepare_research_proposal', caseId: 'case-1',

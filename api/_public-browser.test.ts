@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { allowedPublicUrl } from './_public-browser.js'
+import { allowedPublicUrl, retainPublicBrowserLinks } from './_public-browser.js'
 
 describe('public browser URL policy', () => {
   const allowed = ['example.com', 'forms.example.org']
@@ -50,5 +50,20 @@ describe('public browser URL policy', () => {
 
     process.env.NODE_ENV = 'production'
     expect(() => allowedPublicUrl('https://benchmark.test/form', ['benchmark.test'])).toThrow(/allowlist/i)
+  })
+
+  it('retains recommendation instructions that appear after global navigation without expanding the snapshot unboundedly', () => {
+    const navigation = Array.from({ length: 20 }, (_, index) => ({
+      text: `Navigation ${index + 1}`,
+      href: `https://example.com/navigation-${index + 1}`,
+    }))
+    const links = retainPublicBrowserLinks([
+      ...navigation,
+      { text: 'Recommendations', href: 'https://example.com/apply/recommendations' },
+      ...Array.from({ length: 60 }, (_, index) => ({ text: `Archive ${index + 1}`, href: `https://example.com/archive-${index + 1}` })),
+    ])
+
+    expect(links).toContainEqual({ text: 'Recommendations', href: 'https://example.com/apply/recommendations' })
+    expect(links).toHaveLength(21)
   })
 })

@@ -122,6 +122,20 @@ Deno.test('does not treat a generic official page as recommendation instructions
   assertEquals(result.submissionMethod.value, null)
 })
 
+Deno.test('keeps missing programme-source research out of the upload-style progress UI', () => {
+  const requirements = extractRecommendationRequirements({
+    opportunity: {
+      institution: 'Northbridge University',
+      programmeTitle: 'PhD in Computational Science',
+    },
+    sourceEvidence: [source('general-admissions', 'Learn more about graduate study at Northbridge University.')],
+  })
+  const context = resolveRecommendationContext({ requirements, programme: 'PhD in Computational Science' })
+
+  assertEquals(context.nextInteraction, null)
+  assert(context.unresolved.includes('programme_requirements_source_evidence'))
+})
+
 Deno.test('keeps a detailed browser snapshot when the opportunity already cites the same official page', () => {
   const result = extractRecommendationRequirements({
     opportunity: {
