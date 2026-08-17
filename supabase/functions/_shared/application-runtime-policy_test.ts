@@ -32,7 +32,7 @@ Deno.test('pre-case application work remains inside the canonical controller too
   assertEquals(research.has('application.submit'), false)
 
   const caseCreation = toolsForCanonicalApplicationStep({ state: 'CASE_CREATION', step })
-  assertEquals([...caseCreation].sort(), ['agent.request_context', 'application.create_case', 'application.record_evidence'])
+  assertEquals([...caseCreation], ['application.create_case'])
 })
 
 Deno.test('a bounded verified research shortlist can complete without creating a case', () => {

@@ -92,6 +92,8 @@ import {
 } from '../_shared/research-proposal-workflow.ts'
 import { renderResearchProposalLatex } from '../_shared/research-proposal-pdf.ts'
 import {
+  applicationCaseStages,
+  applicationCaseStatuses,
   createInterAgentRequest,
   buildReadinessReport,
   buildRefereeSupportPack,
@@ -108,6 +110,7 @@ import {
   submissionIdempotencyKey,
   type DavidApplicationState,
 } from '../_shared/david-applications.ts'
+import { resolveTaskApplicationCaseLink } from '../_shared/application-case-link.ts'
 import {
   admissionsClarificationRow,
   admissionsQuestionCategories,
@@ -1078,6 +1081,100 @@ async function ensureApplicationCampaign(
   return updated.data
 }
 
+/**
+ * A user can restart or resume a task after an earlier AgentRun created its
+ * ApplicationCase. Reconnect the new run to that task-owned case before the
+ * controller plans another research turn; otherwise it sees an empty context
+ * and can repeat the already-completed shortlist work.
+ */
+async function relinkTaskApplicationCase(
+  admin: AdminClient,
+  run: AgentRunRow,
+) {
+  const campaignId = safeString(run.context?.application_campaign_id, 80) ||
+    safeString(run.application_state?.campaignId, 80)
+  if (!campaignId) return run
+
+  const taskCases = await admin.from('application_cases')
+    .select('id,campaign_id,current_stage,status,next_action')
+    .eq('user_id', run.user_id)
+    .eq('task_id', run.task_id)
+    .eq('campaign_id', campaignId)
+    .order('created_at', { ascending: true })
+    .limit(3)
+  if (taskCases.error) throw new Error(taskCases.error.message)
+
+  const currentCaseId = safeString(run.context?.application_case_id, 80) ||
+    safeString(run.application_state?.currentCaseId, 80) || null
+  const cases = (taskCases.data ?? []).map(row => ({
+    id: safeString(row.id, 80),
+    campaignId: safeString(row.campaign_id, 80),
+  })).filter(row => row.id && row.campaignId)
+  const resolution = resolveTaskApplicationCaseLink({ campaignId, currentCaseId, cases })
+  if (resolution.kind === 'already_linked' || resolution.kind === 'unlinked') return run
+
+  if (resolution.kind === 'ambiguous') {
+    const message = 'This task is linked to more than one application workspace. Keep one programme per task before continuing.'
+    const paused = await updateRun(admin, run, {
+      status: 'needs_context',
+      waiting_reason: message,
+      error: message,
+      error_code: 'application_task_case_ambiguous',
+      retryable: false,
+      lease_owner: null,
+      lease_expires_at: null,
+    })
+    await addEvent(admin, paused, 'application_task_case_ambiguous', paused.status, message, {
+      campaign_id: campaignId,
+      case_count: resolution.caseIds.length,
+    })
+    return paused
+  }
+
+  const recoveredCase = (taskCases.data ?? []).find(row => safeString(row.id, 80) === resolution.caseId)
+  if (!recoveredCase) return run
+  const caseIds = [resolution.caseId]
+  const stageCandidate = safeString(recoveredCase.current_stage, 80)
+  const statusCandidate = safeString(recoveredCase.status, 80)
+  const stage = applicationCaseStages.includes(stageCandidate as typeof applicationCaseStages[number])
+    ? stageCandidate as DavidApplicationState['stage']
+    : run.application_state?.stage ?? 'document_preparation'
+  const status = applicationCaseStatuses.includes(statusCandidate as typeof applicationCaseStatuses[number])
+    ? statusCandidate as DavidApplicationState['status']
+    : run.application_state?.status ?? 'preparing'
+  const nextAction = safeString(recoveredCase.next_action, 500) || run.application_state?.nextAction || 'Continue the application workspace.'
+  const relinked = await updateRun(admin, run, {
+    application_state: nextApplicationState(run, {
+      campaignId,
+      caseIds,
+      currentCaseId: resolution.caseId,
+      status,
+      stage,
+      nextAction,
+      progress: { label: 'Application workspace restored', nextAction },
+    }),
+    context: {
+      ...(run.context ?? {}),
+      application_campaign_id: campaignId,
+      application_case_id: resolution.caseId,
+      application_case_ids: caseIds,
+      model_rate_limit_count: 0,
+      progress_current: progressCurrent(run, 'David is reconnecting to your application workspace.'),
+    },
+  })
+  const clearedHistory = await admin.from('agent_model_state').delete()
+    .eq('run_id', relinked.id)
+    .eq('user_id', relinked.user_id)
+  if (clearedHistory.error) throw new Error(clearedHistory.error.message)
+  await addEvent(admin, relinked, 'application_case_relinked', relinked.status,
+    'Reconnected this task to its existing application workspace.', {
+      campaign_id: campaignId,
+      application_case_id: resolution.caseId,
+      model_history_reset: true,
+    })
+  return relinked
+}
+
 async function ensureCanonicalApplicationRuntime(
   admin: AdminClient,
   run: AgentRunRow,
@@ -1162,6 +1259,7 @@ async function ensureCanonicalApplicationRuntime(
   }
 
   current = await ensureApplicationCampaign(admin, current)
+  current = await relinkTaskApplicationCase(admin, current)
   if (!current.application_state?.campaignId) {
     throw new Error('The canonical application controller could not attach a durable ApplicationCampaign.')
   }
@@ -13802,6 +13900,7 @@ async function advanceRun(
   }
   let current = claim.data as AgentRunRow
   current = await ensureCanonicalApplicationRuntime(admin, current)
+  if (!['planning', 'running'].includes(current.status)) return current
   if (current.status === 'planning') {
     current = await updateRun(admin, current, {
       status: 'running',

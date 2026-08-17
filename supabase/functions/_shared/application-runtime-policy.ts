@@ -84,7 +84,11 @@ export function toolsForCanonicalApplicationStep(input: {
   const { state, step } = input
   if (step.kind === 'CONTROLLER') {
     if (state === 'CASE_CREATION') {
-      return new Set(['application.create_case', 'application.record_evidence', 'agent.request_context'])
+      // A verified, approved programme has reached the only legal next move:
+      // create or reuse its durable case. Letting the model ask for the same
+      // strategy approval here can consume a whole turn without advancing the
+      // controller, especially after a resumed run.
+      return new Set(['application.create_case'])
     }
     if (state === 'SHORTLIST_APPROVAL') return new Set(['agent.request_context'])
     return new Set(controllerResearchTools)

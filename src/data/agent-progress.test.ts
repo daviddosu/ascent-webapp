@@ -13,6 +13,27 @@ describe('agent progress timeline', () => {
     })
   })
 
+  it('keeps a compact timeline when a retried operation repeats later', () => {
+    expect(agentProgressTimeline({
+      completed: [
+        'Verified Physics PhD from an official source.',
+        'I’m creating the single verified application case.',
+        'Verified Physics PhD from an official source.',
+        'I’m creating the single verified application case.',
+        'Checked the latest progress.',
+      ],
+      current: 'David is choosing the best next move.',
+      status: 'running',
+    })).toEqual({
+      completed: [
+        'Verified Physics PhD from an official source.',
+        'I’m creating the single verified application case.',
+        'Checked the latest progress.',
+      ],
+      active: 'I’m choosing the best next move.',
+    })
+  })
+
   it('uses the exact external wait as the active row', () => {
     expect(agentProgressTimeline({
       completed: ['Compared live flight options.', 'Waiting for the next update.'],

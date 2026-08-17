@@ -123,8 +123,13 @@ export function agentProgressTimeline(input: {
   const completed = input.completed
     .map(humanizeAgentProgressLabel)
     .filter(Boolean)
-    .filter((label, index, labels) => index === 0 || progressMomentKey(label) !== progressMomentKey(labels[index - 1]))
     .filter(label => !active || progressMomentKey(label) !== progressMomentKey(active))
+    .reduce<string[]>((timeline, label) => {
+      const key = progressMomentKey(label)
+      if (!timeline.some(item => progressMomentKey(item) === key)) timeline.push(label)
+      return timeline
+    }, [])
+    .slice(-4)
 
   return {
     completed,

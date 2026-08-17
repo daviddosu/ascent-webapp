@@ -610,6 +610,20 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain("error_code: toolOutput.status === 'waiting_external' ? null : toolOutput.code")
   })
 
+  it('relinks a resumed application run to its task-owned case before planning again', () => {
+    const relink = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('async function relinkTaskApplicationCase'),
+      taskAgentFunction.indexOf('async function ensureCanonicalApplicationRuntime'),
+    )
+    expect(relink).toContain(".eq('task_id', run.task_id)")
+    expect(relink).toContain(".eq('campaign_id', campaignId)")
+    expect(relink).toContain('resolveTaskApplicationCaseLink')
+    expect(relink).toContain('application_case_id: resolution.caseId')
+    expect(relink).toContain("admin.from('agent_model_state').delete()")
+    expect(relink).toContain("'application_case_relinked'")
+    expect(taskAgentFunction).toContain("if (!['planning', 'running'].includes(current.status)) return current")
+  })
+
   it('keeps official university research bounded while preserving links from earlier pages', () => {
     const research = taskAgentFunction.slice(
       taskAgentFunction.indexOf('function isProgrammeOfficialSource'),
