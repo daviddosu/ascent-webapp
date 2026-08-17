@@ -79,8 +79,8 @@ import {
   type AgentRun,
   type RoonPlanTask,
 } from './data/agent'
-import { agentProgressTimeline } from './data/agent-progress'
-import { mountRoonOrbs, renderRoonOrb, type RoonOrbState } from './data/roon-orb'
+import { agentProgressTimeline, humanizeAgentProgressLabel } from './data/agent-progress'
+import { mountRoonOrbs, renderRoonOrb } from './data/roon-orb'
 import {
   REASONING_MODEL_ID,
   getSpecialist,
@@ -100,13 +100,6 @@ import {
   type FileAsset,
 } from './data/file-assets'
 import { isApplicationIntent } from './data/application'
-import {
-  loadApplicationCampaignProjection,
-  type ApplicationCampaignProjection,
-  type ProjectionExecutionState,
-  type ProjectionInteractionKind,
-  type ProjectionUserInteraction,
-} from './data/david-application'
 import { renderRecommendationProgressDetail } from './data/recommendation-progress-detail'
 import { renderWorkSampleProgressDetail } from './data/work-sample-progress-detail'
 import type { RecommendationInteraction } from '../supabase/functions/_shared/recommendation-workflow'
@@ -443,8 +436,6 @@ let selectedTaskId = showDemoData && tasks.some(task => task.id === 'license') ?
 let mobileInspectorOpen = false
 const agentRuns = readAgentRuns()
 const taskFileAssets = new Map<string, FileAsset[]>()
-const applicationCampaignProjections = new Map<string, ApplicationCampaignProjection | null>()
-const applicationProjectionLoading = new Set<string>()
 const loadingTaskFileAssets = new Set<string>()
 const taskFileAssetBusy = new Set<string>()
 let filePreview: { asset: FileAsset; url: string | null; loading?: boolean; message?: string } | null = null
@@ -693,23 +684,6 @@ function icon(name: string) {
   return `<svg aria-hidden="true" viewBox="0 0 24 24">${icons[name]}</svg>`
 }
 
-function agentSparkleIcon() {
-  return `<svg class="agent-sparkle-icon" aria-hidden="true" viewBox="0 0 24 24">
-    <path d="M8.2 2.7c.65 3.72 2.14 5.2 5.85 5.86-3.71.66-5.2 2.14-5.85 5.86-.66-3.72-2.15-5.2-5.86-5.86C6.05 7.9 7.54 6.42 8.2 2.7Z"/>
-    <path d="M16.55 11.25c.43 2.48 1.42 3.47 3.9 3.91-2.48.44-3.47 1.43-3.9 3.91-.44-2.48-1.43-3.47-3.91-3.91 2.48-.44 3.47-1.43 3.91-3.91Z"/>
-  </svg>`
-}
-
-function agentOrbState(status?: AgentRun['status'] | null): RoonOrbState {
-  if (status === 'planning' || status === 'running') return 'active'
-  if (status === 'completed') return 'complete'
-  return 'waiting'
-}
-
-function agentIdentityMark(run?: AgentRun | null) {
-  return run ? renderRoonOrb(agentOrbState(run.status), 20) : agentSparkleIcon()
-}
-
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
 }
@@ -904,115 +878,6 @@ function applyCompletedAgentTasks(runs: AgentRun[]) {
   refreshCounts()
 }
 
-function projectionRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
-}
-
-function projectionText(value: unknown, maximum = 500) {
-  return typeof value === 'string' ? value.trim().slice(0, maximum) : ''
-}
-
-function projectionInteractionKind(value: unknown): ProjectionInteractionKind {
-  const kind = projectionText(value, 80)
-  const mapping: Record<string, ProjectionInteractionKind> = {
-    approval: 'approve',
-    application_question: 'short_text',
-    single_choice: 'choose_one',
-    multiple_choice: 'choose_several',
-    contact_select: 'contact',
-    attachment_request: 'attachment',
-    attachment_selection: 'attachment',
-    confirmation: 'confirm',
-    correction: 'correction',
-    email: 'email',
-    date: 'date',
-    fact: 'short_text',
-    short_text: 'short_text',
-    browser_submit: 'approve',
-    payment_approval: 'payment_approval',
-    secure_authentication: 'secure_authentication',
-  }
-  return mapping[kind] ?? 'short_text'
-}
-
-function projectionInteractionFromRun(task: Task, run: AgentRun | null, approval?: AgentApproval | null): ProjectionUserInteraction | null {
-  const applicationCaseId = run?.applicationCaseId || run?.applicationState?.currentCaseId || ''
-  if (!run || !applicationCaseId) return null
-  const raw = projectionRecord(run.contextInteraction)
-  if (Object.keys(raw).length) {
-    const requirementId = projectionText(raw.requirementId, 300) || null
-    const question = projectionText(raw.question, 2_000)
-    if (question) return {
-      id: projectionText(raw.id, 300) || ['interaction', run.id].join(':'),
-      applicationCaseId,
-      requirementId,
-      taskId: task.id,
-      kind: projectionInteractionKind(raw.kind),
-      question,
-      reason: projectionText(raw.reason, 2_000) || 'Your confirmed input is required to continue this application.',
-      status: 'pending',
-      dedupeKey: projectionText(raw.mapsToRequirement, 300) || projectionText(raw.id, 300) || null,
-      deadline: null,
-    }
-  }
-  if (!approval || approval.status !== 'pending') return null
-  const payload = projectionRecord(approval.payload)
-  const payloadPreview = projectionRecord(payload.preview)
-  const approvalCaseId = projectionText(payload.application_case_id ?? payload.applicationCaseId ?? payloadPreview.application_case_id ?? payloadPreview.applicationCaseId, 80) || applicationCaseId
-  const requirementId = projectionText(payload.requirement_id ?? payload.requirementId ?? payloadPreview.requirement_id ?? payloadPreview.requirementId, 300) || null
-  return {
-    id: `approval:${approval.id}`,
-    applicationCaseId: approvalCaseId,
-    requirementId,
-    taskId: task.id,
-    kind: approval.kind === 'payment' ? 'payment_approval' : 'approve',
-    question: approval.title || 'Review and approve the prepared action',
-    reason: approval.summary || 'ShotCount is ready for your approval before anything consequential happens.',
-    status: 'pending',
-    dedupeKey: `approval:${approval.actionId}`,
-    deadline: null,
-  }
-}
-
-function projectionExecutionsForRun(run: AgentRun | null): ProjectionExecutionState[] {
-  if (!run || !isApplicationIntent(run.objective, run.context)) return []
-  if (!['planning', 'running'].includes(run.status)) return []
-  const applicationCaseId = run.applicationCaseId || run.applicationState?.currentCaseId
-  const requirementId = run.applicationRequirementId || null
-  if (!applicationCaseId || !requirementId) return []
-  const owner = run.activeSpecialistId === 'roon' ? 'roon' : run.activeSpecialistId === 'david' ? 'david' : 'system'
-  return [{ applicationCaseId, requirementId, state: 'active', owner, runId: run.id, updatedAt: run.updatedAt }]
-}
-
-async function refreshApplicationProjection(taskId: string, renderAfter = true) {
-  const task = tasks.find(item => item.id === taskId)
-  if (!task || !isApplicationIntent(task.title, task.description) || !activeUser || applicationProjectionLoading.has(taskId)) return
-  applicationProjectionLoading.add(taskId)
-  try {
-    const run = agentRuns.get(taskId) ?? null
-    const approval = run ? agentApprovals.get(run.id) ?? null : null
-    const interaction = projectionInteractionFromRun(task, run, approval)
-    const projection = await loadApplicationCampaignProjection(taskId, {
-      executions: projectionExecutionsForRun(run),
-      interactions: interaction ? [interaction] : [],
-    })
-    applicationCampaignProjections.set(taskId, projection)
-  } catch {
-    // A projection read is recoverable. Keep the last known projection until
-    // the next state/realtime refresh instead of replacing it with narration.
-    if (!applicationCampaignProjections.has(taskId)) applicationCampaignProjections.set(taskId, null)
-  } finally {
-    applicationProjectionLoading.delete(taskId)
-    if (renderAfter && selectedTaskId === taskId) render()
-  }
-}
-
-async function refreshApplicationProjections(taskIds = tasks.filter(task => isApplicationIntent(task.title, task.description)).map(task => task.id)) {
-  if (!activeUser || !taskIds.length) return
-  await Promise.all(taskIds.map(taskId => refreshApplicationProjection(taskId, false)))
-  render()
-}
-
 async function refreshAgentRuns() {
   if (!activeUser || agentRunsRefreshing) return
   agentRunsRefreshing = true
@@ -1029,7 +894,6 @@ async function refreshAgentRuns() {
     agentApprovals.clear()
     pendingApprovals.forEach(approval => agentApprovals.set(approval.runId, approval))
     persistAgentRuns()
-    await refreshApplicationProjections()
     // Task state is ready before attachment metadata. Keep the workspace
     // responsive while that secondary read finishes in the background.
     render()
@@ -1055,7 +919,7 @@ async function pollWaitingAgentRuns() {
   // A provider write normally continues in the same approval response. Poll
   // active application runs as a recovery path too. An application turn can
   // take longer than the browser request that started it; without this nudge a
-  // dropped response leaves the panel saying “In progress” until the periodic
+  // dropped response leaves the panel stuck on a stale activity message until the periodic
   // server sweep catches it. The server-side lease makes this safe: while the
   // original turn still owns the run, a poll only reads its durable state and
   // cannot replay the model turn.
@@ -1241,40 +1105,20 @@ function specialistName(task: Pick<Task, 'title' | 'description'>, run?: AgentRu
   return specialistForTask(task, run)?.displayName ?? 'ShotCount'
 }
 
-function specialistActivity(
-  run: AgentRun | null | undefined,
-) {
-  const liveDetail = run?.currentProgress?.label?.trim()
-  if (liveDetail && ['planning', 'running'].includes(run?.status ?? '')) return liveDetail
-  if (run?.status === 'needs_context') {
-    return run.waitingReason.trim()
-  }
-  if (run?.status === 'needs_approval') return run.waitingReason.trim()
-  if (run?.status === 'waiting_external') {
-    return run.waitingReason.trim()
-  }
-  if (run?.status === 'waiting_for_user') return run.waitingReason.trim()
-  if (run?.status === 'failed') return run.error?.trim() || ''
-  if (run?.status === 'completed') return 'Finished the groundwork and left it ready for you'
-  return ''
-}
-
 function specialistHeader(task: Pick<Task, 'title' | 'description'>, run?: AgentRun | null) {
   const specialist = specialistForTask(task, run)
   if (!specialist) return '<strong>ShotCount</strong>'
-  return `<strong><span class="agent-icon-wrap specialist-icon specialist-icon--${specialist.id}" data-specialist-id="${specialist.id}">${agentIdentityMark(run)}</span><span class="specialist-identity"><b>${escapeHtml(specialist.displayName)}</b><small>${escapeHtml(specialistActivity(run))}</small></span></strong>`
+  return `<strong>${escapeHtml(specialist.displayName)}</strong>`
 }
 
 function agentUpdateToast(run: AgentRun) {
-  const specialist = getSpecialist(run.activeSpecialistId ?? run.specialistId)
-  const name = specialist?.displayName ?? 'ShotCount'
-  if (run.status === 'completed') return `${name} finished your task`
+  if (run.status === 'completed') return 'Your task is ready'
   if (run.status === 'needs_approval') return 'Ready for your approval'
   if (run.status === 'needs_context') return 'Add the requested details to continue'
-  if (run.status === 'waiting_external') return `${name} will continue when the expected update arrives`
-  if (run.status === 'waiting_for_user') return `${name} needs your next step`
-  if (run.status === 'failed') return run.error ?? `${name} needs attention`
-  return `${name} is working through this task`
+  if (run.status === 'waiting_external') return 'I’ll continue as soon as there’s an update'
+  if (run.status === 'waiting_for_user') return 'I need your next step'
+  if (run.status === 'failed') return humanizeAgentProgressLabel(run.error) || 'I hit a snag, but your task is safe.'
+  return 'I’m moving your task forward'
 }
 
 function clearAgentToast(expected: string) {
@@ -1347,7 +1191,6 @@ async function startAgentRun(task: Task, context = '', interactionResponse?: { i
     } finally {
       agentDecisionBusy.delete(existing.id)
       persistAgentRuns()
-      void refreshApplicationProjection(task.id, false)
       render()
       if (toast) clearAgentToast(toast)
     }
@@ -1390,10 +1233,9 @@ async function startAgentRun(task: Task, context = '', interactionResponse?: { i
     run.status = 'failed'
     run.error = error instanceof Error ? error.message : `${specialistName(task, run)} could not complete this task.`
     run.updatedAt = new Date().toISOString()
-    toast = run.error
+    toast = humanizeAgentProgressLabel(run.error)
   } finally {
     persistAgentRuns()
-    void refreshApplicationProjection(task.id, false)
     render()
     if (toast) clearAgentToast(toast)
   }
@@ -1575,7 +1417,6 @@ async function decidePendingAgentApproval(taskId: string, decision: 'approve' | 
   } finally {
     agentDecisionBusy.delete(approval.id)
     persistAgentRuns()
-    if (task) void refreshApplicationProjection(task.id, false)
     render()
     if (toast) clearAgentToast(toast)
   }
@@ -2142,43 +1983,41 @@ function renderAgentIsland() {
   const task = tasks.find(item => item.id === candidate.taskId)
   if (!task) return ''
   const owner = specialistForTask(task, candidate)
-  const ownerName = owner?.displayName ?? 'ShotCount'
-  const ownerUpper = ownerName.toLocaleUpperCase()
   const labels: Partial<Record<AgentRun['status'], { eyebrow: string; title: string; message: string; mark: string }>> = {
     needs_approval: {
-      eyebrow: 'APPROVAL NEEDED',
-      title: `${ownerName} needs you`,
-      message: candidate.waitingReason || 'Review the prepared action.',
+      eyebrow: 'READY FOR YOU',
+      title: 'Ready for your approval',
+      message: humanizeAgentProgressLabel(candidate.waitingReason) || 'Review the prepared action.',
       mark: '!',
     },
     waiting_for_user: {
-      eyebrow: 'ACTION NEEDED',
-      title: `${ownerName} needs you`,
-      message: candidate.waitingReason || 'Open the task to continue.',
+      eyebrow: 'YOUR NEXT STEP',
+      title: 'I need one detail',
+      message: humanizeAgentProgressLabel(candidate.waitingReason) || 'Open the task to continue.',
       mark: '!',
     },
     waiting_external: {
-      eyebrow: `${ownerUpper} IS WAITING`,
+      eyebrow: 'ON WATCH',
       title: 'Waiting for a reply',
-      message: candidate.waitingReason || 'I’ll continue automatically.',
+      message: humanizeAgentProgressLabel(candidate.waitingReason) || 'I’ll continue automatically.',
       mark: '…',
     },
     planning: {
-      eyebrow: `${ownerUpper} IS WORKING`,
+      eyebrow: 'IN MOTION',
       title: 'Planning the task',
-      message: candidate.progress.at(-1) || 'Preparing the next safe step.',
+      message: humanizeAgentProgressLabel(candidate.currentProgress?.label ?? candidate.progress.at(-1)) || 'Preparing the next safe step.',
       mark: '◔',
     },
     running: {
-      eyebrow: `${ownerUpper} IS WORKING`,
+      eyebrow: 'IN MOTION',
       title: 'Moving your task forward',
-      message: candidate.progress.at(-1) || 'Working through the task.',
+      message: humanizeAgentProgressLabel(candidate.currentProgress?.label ?? candidate.progress.at(-1)) || 'Working through the task.',
       mark: '◔',
     },
     completed: {
-      eyebrow: `${ownerUpper} FINISHED`,
+      eyebrow: 'COMPLETE',
       title: 'Done',
-      message: candidate.result?.summary || 'The task reached its intended outcome.',
+      message: humanizeAgentProgressLabel(candidate.result?.summary) || 'The task reached its intended outcome.',
       mark: '✓',
     },
   }
@@ -2186,7 +2025,7 @@ function renderAgentIsland() {
   if (!state) return ''
   return `<button type="button" class="shotcount-island shotcount-agent-island" data-agent-island-task="${escapeHtml(task.id)}" aria-label="${escapeHtml(state.title)}. Open ${escapeHtml(task.title)}">
     <span class="island-head">
-      <span class="island-portrait agent-island-mark specialist-icon specialist-icon--${owner?.id ?? 'roon'}"><span class="agent-icon-wrap">${renderRoonOrb(agentOrbState(candidate.status), 34)}</span></span>
+      <span class="island-portrait agent-island-mark" aria-hidden="true">${state.mark}</span>
       <span class="island-identity">
         <small>${state.eyebrow}</small>
         <strong>${escapeHtml(state.title)}</strong>
@@ -3151,28 +2990,22 @@ function taskIsExecutableToday(task: Task) {
 }
 
 function renderAgentPill(task: Task) {
-  const run = agentRuns.get(task.id)
   if (!taskIsExecutableToday(task)) return ''
-  const route = taskSpecialistRoute(task)
-  if (!run && !route.supported && !roonCapabilityForTask(task)) return ''
-  const owner = specialistForTask(task, run)
-  const ownerName = owner?.displayName ?? 'ShotCount'
+  const run = agentRuns.get(task.id)
+  if (!run) return ''
   const displayStatus = isPreviewMode && previewAgentState !== 'error' && run?.status === 'failed' ? 'running' : run?.status
-  // Task completion is already shown by the normal checkbox. Do not add a
-  // second Roon-specific completion control to the same row.
   if (displayStatus === 'completed') return ''
   const label =
-    displayStatus === 'planning' || displayStatus === 'running' ? 'In progress' :
-        displayStatus === 'needs_approval' ? 'Approval needed' :
-          displayStatus === 'waiting_external' ? 'Waiting' :
-            displayStatus === 'waiting_for_user' ? 'Needs you' :
-        displayStatus === 'needs_context' ? 'Needs context' :
-          displayStatus === 'failed' ? 'Needs attention' :
-            'Delegate'
-  const mark = ['needs_approval', 'waiting_for_user', 'failed'].includes(displayStatus ?? '')
-    ? '<span class="agent-state-alert" aria-hidden="true">!</span>'
-    : renderRoonOrb(agentOrbState(displayStatus), 16)
-  return `<button type="button" class="task-agent-icon task-agent-icon--${displayStatus ?? 'available'} specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}" data-agent-task="${escapeHtml(task.id)}" aria-label="${escapeHtml(ownerName)} — ${label}: ${escapeHtml(task.title)}" title="${escapeHtml(ownerName)} — ${label}">${mark}</button>`
+    displayStatus === 'planning' || displayStatus === 'running' ? 'Task underway' :
+      displayStatus === 'needs_approval' ? 'Approval requested' :
+        displayStatus === 'waiting_external' ? 'Waiting for an update' :
+          ['waiting_for_user', 'needs_context', 'failed'].includes(displayStatus ?? '') ? 'Action needed' :
+            'Task available'
+  const mark =
+    ['needs_approval', 'waiting_for_user', 'needs_context', 'failed'].includes(displayStatus ?? '') ? '!' :
+      displayStatus === 'waiting_external' ? '…' :
+        ['planning', 'running'].includes(displayStatus ?? '') ? '◔' : '✓'
+  return `<span class="task-agent-indicator task-agent-indicator--${displayStatus ?? 'available'}" role="img" aria-label="${escapeHtml(label)}">${mark}</span>`
 }
 
 function safeAgentUrl(value: string) {
@@ -3207,124 +3040,28 @@ function renderAgentProgressPanel(task: Task, _progressIndex: number, placeholde
     waitingReason: run?.waitingReason,
     status: run?.status,
   })
-  const progressRows = [
-    ...timeline.completed.map(label => ({ label, state: 'done' as const })),
-    ...(timeline.active ? [{ label: timeline.active, state: 'active' as const }] : []),
-  ]
-  const liveActivity = timeline.active || (run?.status === 'waiting_external' ? run.waitingReason.trim() : '')
+  const progressRows = timeline.completed.map(label => ({ label, state: 'done' as const }))
+  const liveActivity = timeline.active || (run?.status === 'waiting_external' ? humanizeAgentProgressLabel(run.waitingReason) : '')
   const canCheckExternalWork = run?.status === 'waiting_external' && !placeholder
   const checkExternalBusy = canCheckExternalWork && agentDecisionBusy.has(run?.id ?? '')
   return `<section class="task-agent-card task-agent-card--progress${placeholder ? ' task-agent-card--placeholder' : ''}">
-    <header>${specialistHeader(task, run)}<em><span class="agent-status-orb">${renderRoonOrb('active', 12)}</span> In progress</em></header>
-    ${liveActivity ? `<p>${escapeHtml(liveActivity)}</p>` : ''}
-    ${renderDavidApplicationStatus(task, run)}
-    <div class="task-agent-progress">
+    <header>${specialistHeader(task, run)}</header>
+    ${liveActivity ? `<p class="task-agent-live-activity">${escapeHtml(liveActivity)}</p>` : ''}
+    ${progressRows.length ? `<div class="task-agent-progress">
       ${progressRows.map(row => `<div class="${row.state}"><span class="task-agent-progress-orb">${renderRoonOrb(row.state === 'done' ? 'complete' : 'active', 20)}</span><span>${escapeHtml(row.label)}</span></div>`).join('')}
-    </div>
+    </div>` : ''}
     ${renderRoonGeneratedFiles(task)}
-    <footer><button type="button" data-action="view-agent-progress" data-task-id="${escapeHtml(task.id)}">View progress</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${escapeHtml(task.id)}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button></footer>
+    <footer><button type="button" data-action="view-agent-progress" data-task-id="${escapeHtml(task.id)}">Activity</button>${canCheckExternalWork ? `<button class="agent-primary" type="button" data-action="poll-agent" data-task-id="${escapeHtml(task.id)}" ${checkExternalBusy ? 'disabled' : ''}>${checkExternalBusy ? 'Checking…' : 'Check now'}</button>` : ''}<button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button></footer>
   </section>
-  <aside class="task-agent-notification">${icon('bell')}<span>You’ll be notified when this is ready.</span></aside>`
-}
-
-function projectionDeadlineLabel(deadline: { dateTime: string; timezone: string } | null) {
-  const dateTime = typeof deadline?.dateTime === 'string' ? deadline.dateTime.trim() : ''
-  if (!dateTime) return ''
-  const timezone = typeof deadline?.timezone === 'string' && deadline.timezone.trim()
-    ? deadline.timezone.trim()
-    : 'UTC'
-  try {
-    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: timezone }).format(new Date(dateTime))
-  } catch {
-    return dateTime.slice(0, 10)
-  }
-}
-
-function renderCampaignProjectionItem(taskId: string, item: ApplicationCampaignProjection['activeWork'][number], bucketLabel: string) {
-  const reference = item.references[0]
-  const attributes = `data-action="open-campaign-progress-detail" data-task-id="${escapeHtml(taskId)}" data-application-case-id="${escapeHtml(reference?.applicationCaseId ?? item.applicationCaseIds[0] ?? '')}" data-application-requirement-id="${escapeHtml(reference?.requirementId ?? item.requirementIds[0] ?? '')}" data-interaction-id="${escapeHtml(reference?.interactionId ?? item.interaction?.id ?? '')}"`
-  return `<button type="button" class="campaign-summary-item" ${attributes} aria-label="${escapeHtml(`${bucketLabel}: ${item.label}`)}">
-    <span class="campaign-summary-item-main"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.institution)}${item.programme ? ` · ${escapeHtml(item.programme)}` : ''}</small></span>
-    <span class="campaign-summary-item-meta">${item.deadline ? escapeHtml(projectionDeadlineLabel(item.deadline)) : ''}${item.applicationCaseIds.length > 1 ? ` · ${item.applicationCaseIds.length} applications` : ''}</span>
-  </button>`
-}
-
-function renderCampaignRiskItem(taskId: string, risk: ApplicationCampaignProjection['risks'][number]) {
-  return `<button type="button" class="campaign-summary-risk" data-action="open-campaign-progress-detail" data-task-id="${escapeHtml(taskId)}" data-application-case-id="${escapeHtml(risk.applicationCaseId)}" data-application-requirement-id="${escapeHtml(risk.requirementId)}" aria-label="At risk: ${escapeHtml(risk.reason)}">
-    <span><strong>${escapeHtml(risk.actor?.name ?? 'Application requirement')}</strong><small>${escapeHtml(risk.reason)}</small></span>
-    <em>${escapeHtml(risk.level)}</em>
-  </button>`
-}
-
-function campaignStatusLabel(status: ApplicationCampaignProjection['status']) {
-  return status === 'needs_user' ? 'Needs you' : status === 'risk_detected' ? 'Risk detected' : status === 'all_currently_waiting' ? 'Waiting on others' : status === 'decisions_pending' ? 'Decisions pending' : status === 'submission_season_complete' ? 'Submission season complete' : 'Active'
-}
-
-function renderApplicationCampaignSummary(task: Task, projection: ApplicationCampaignProjection) {
-  const counts = projection.counts
-  const appRows = projection.applications.slice(0, 8).map(application => {
-    const current = application.userBlockedRequirements[0]?.label
-      ?? application.riskRequirements[0]?.recommendedMitigation
-      ?? application.activeRequirements[0]?.label
-      ?? application.waitingRequirements[0]?.label
-      ?? (application.postSubmissionState === 'monitoring' ? 'Waiting for decision' : application.progressState)
-    return `<article class="campaign-summary-application" data-application-case-id="${escapeHtml(application.applicationCaseId)}">
-      <div><strong>${escapeHtml(application.institution)}</strong><span>${escapeHtml(application.progressState)}</span></div>
-      <p>${escapeHtml(application.programme)}${application.degree ? ` · ${escapeHtml(application.degree)}` : ''}</p>
-      <small>${application.completionPercent === null ? escapeHtml(current) : `${application.completionPercent}% complete · ${escapeHtml(current)}`}${application.deadline ? ` · Due ${escapeHtml(projectionDeadlineLabel(application.deadline))}` : ''}</small>
-    </article>`
-  }).join('')
-  const doing = projection.activeWork.slice(0, 4).map(item => renderCampaignProjectionItem(task.id, item, 'ShotCount is doing')).join('')
-  const waiting = projection.waitingExternal.slice(0, 4).map(item => renderCampaignProjectionItem(task.id, item, 'Waiting')).join('')
-  const needsYou = projection.userActions.slice(0, 4).map(item => renderCampaignProjectionItem(task.id, item, 'Needs you')).join('')
-  const risks = projection.risks.slice(0, 4).map(risk => renderCampaignRiskItem(task.id, risk)).join('')
-  const completed = projection.recentlyCompleted.slice(0, 4).map(item => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.institution)}</span></li>`).join('')
-  return `<section class="campaign-summary" data-campaign-summary="${escapeHtml(projection.campaignId)}" aria-label="Application campaign summary">
-    <header class="campaign-summary-header"><div><span>Application campaign</span><strong>${counts.applications} application${counts.applications === 1 ? '' : 's'}</strong></div><em>${escapeHtml(campaignStatusLabel(projection.status))}</em></header>
-    <div class="campaign-summary-counts"><span><b>${counts.doing}</b> Doing</span><span><b>${counts.waitingExternal}</b> Waiting</span><span><b>${counts.needsUser}</b> Needs you</span><span><b>${counts.risks}</b> At risk</span><span><b>${counts.submittedApplications}</b> Submitted</span></div>
-    <section class="campaign-summary-section campaign-summary-applications"><h4>Applications</h4>${appRows || '<p class="campaign-summary-empty">No active applications.</p>'}</section>
-    <section class="campaign-summary-section"><h4>ShotCount is doing</h4>${doing || '<p class="campaign-summary-empty">Nothing active right now.</p>'}</section>
-    <section class="campaign-summary-section"><h4>Waiting on others</h4>${waiting || '<p class="campaign-summary-empty">Nothing is waiting on someone else.</p>'}</section>
-    <section class="campaign-summary-section campaign-summary-needs"><h4>Needs you</h4>${needsYou || '<p class="campaign-summary-empty">Nothing needs you right now.</p>'}</section>
-    ${risks ? `<section class="campaign-summary-section campaign-summary-risks"><h4>At risk</h4>${risks}</section>` : ''}
-    ${completed ? `<section class="campaign-summary-section campaign-summary-completed"><h4>Completed recently</h4><ul>${completed}</ul></section>` : ''}
-  </section>`
-}
-
-function renderDavidApplicationStatus(task: Task, run?: AgentRun | null) {
-  if (!isApplicationIntent(task.title, task.description)) return ''
-  const projection = applicationCampaignProjections.get(task.id)
-  if (projection) return renderApplicationCampaignSummary(task, projection)
-  if (!run?.applicationState) return ''
-  const state = run.applicationState
-  const progress = state.progress
-  const statusLabel = state.status === 'awaiting_shortlist_approval'
-    ? 'Waiting for shortlist approval'
-    : state.status === 'awaiting_submission_approval' || state.stage === 'submission_approval'
-      ? 'Submission approval needed'
-      : state.stage === 'submitted' || state.status === 'submitted'
-        ? 'Submitted'
-        : progress.label || 'Application in progress'
-  const opportunityLabel = state.verifiedOpportunityCount > 0
-    ? `${state.verifiedOpportunityCount} opportunities verified`
-    : ''
-  const blocker = state.blockers[0] || progress.blockers[0]
-  return `<section class="david-application-status" aria-label="David application progress">
-    <div class="david-application-status-heading"><strong>${escapeHtml(statusLabel)}</strong>${opportunityLabel ? `<span>${escapeHtml(opportunityLabel)}</span>` : ''}</div>
-    <p>${escapeHtml(state.nextAction || progress.nextAction)}</p>
-    ${blocker ? `<small>${icon('info')} ${escapeHtml(blocker)}</small>` : ''}
-  </section>`
+  <aside class="task-agent-notification">${icon('bell')}<span>ShotCount keeps watch while you get on with your day.</span></aside>`
 }
 
 function renderAgentErrorPanel(task: Task, error: string) {
   const needsSignIn = error.toLowerCase().includes('sign in')
+  const friendlyError = humanizeAgentProgressLabel(error) || 'I hit a snag, but your task is safe. Try again and I’ll pick up from the last confirmed step.'
   return `<section class="task-agent-card task-agent-card--error" role="alert">
-    <header>${specialistHeader(task, agentRuns.get(task.id))}<em><i aria-hidden="true">!</i> Needs attention</em></header>
-    <p>I couldn’t start this task.</p>
-    <div class="task-agent-error-detail">
-      <span aria-hidden="true">!</span>
-      <div><strong>${needsSignIn ? 'Sign in required' : 'Something interrupted the task'}</strong><p>${escapeHtml(error)}</p></div>
-    </div>
+    <header>${specialistHeader(task, agentRuns.get(task.id))}<span class="task-agent-header-mark" role="img" aria-label="${needsSignIn ? 'Sign in needed' : 'Action needed'}">!</span></header>
+    <p class="task-agent-live-activity">${escapeHtml(friendlyError)}</p>
     ${renderRoonGeneratedFiles(task)}
     <footer><button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Dismiss</button><button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${escapeHtml(task.id)}">Try again</button></footer>
   </section>
@@ -3367,7 +3104,7 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
         ? 'Approve payment'
       : 'Submit'
   return `<section class="task-agent-card task-agent-card--approval">
-    <header>${specialistHeader(task, agentRuns.get(task.id))}<em><i aria-hidden="true">!</i> Approval needed</em></header>
+    <header>${specialistHeader(task, agentRuns.get(task.id))}<span class="task-agent-header-mark" role="img" aria-label="Approval needed">!</span></header>
     <p>${escapeHtml(approval.title)}</p>
     <div class="task-agent-approval-detail">
       ${Array.isArray(recipients) && recipients.length ? `<dl><dt>To</dt><dd>${escapeHtml(recipients.join(', '))}</dd></dl>` : ''}
@@ -3425,16 +3162,16 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     /connect google|reconnect google/i.test(run.waitingReason)
   const owner = specialistForTask(task, run)
   const ownerName = owner?.displayName ?? 'ShotCount'
-  const title = external ? 'Waiting' : `${ownerName} needs you`
+  const title = external ? 'I’m keeping an eye on this.' : 'I need one detail to keep moving.'
   const userFacingWaitingReason = flightTask && /live provider timed out after bounded recovery/i.test(run.waitingReason)
     ? 'The live flight site is taking too long. Your options are saved—choose one to try again.'
     : flightTask && /provider checkout is temporarily unavailable/i.test(run.waitingReason)
       ? 'The flight site is taking too long. Your itinerary and traveler details are saved.'
-      : run.waitingReason
+      : humanizeAgentProgressLabel(run.waitingReason)
   const detail = external
     ? flightTask
-      ? 'The isolated browser worker is continuing this same task. You can leave this screen.'
-      : 'I’ll continue this same task automatically when the expected reply or external update arrives.'
+      ? 'I’m still checking the flight site and will continue automatically. You can leave this screen.'
+      : 'I’ll keep watching and continue as soon as there’s an update. You can leave this screen.'
     : 'Review the message below, then retry when you’re ready.'
   const replySimulation = agentDevMode && external && run.capability === 'scheduling'
     ? `<div class="task-agent-reply-simulation">
@@ -3444,7 +3181,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
       </div>`
     : ''
   return `<section class="task-agent-card task-agent-card--waiting">
-    <header>${specialistHeader(task, run)}<em>${external ? 'Waiting' : 'Needs you'}</em></header>
+    <header>${specialistHeader(task, run)}<span class="task-agent-header-mark" role="img" aria-label="${external ? 'Waiting for an update' : 'Action needed'}">${external ? '…' : '!'}</span></header>
     <p>${escapeHtml(userFacingWaitingReason || title)}</p>
     ${awaitingFlightSelection ? `
       <div class="task-agent-flight-options">
@@ -3512,12 +3249,13 @@ function renderAgentPanel(task: Task) {
   if (!run || run.status === 'cancelled') return ''
 
   if (run.status === 'needs_context') {
-    const contextPrompt = (run.waitingReason.trim() || 'Share the missing details so I can continue.')
+    const rawContextPrompt = run.waitingReason.trim() || 'Share the missing details so I can continue.'
+    const contextPrompt = humanizeAgentProgressLabel(rawContextPrompt)
       .replace(/\bRoon\b/gi, specialistName(task, run))
     const owner = specialistForTask(task, run)
     const ownerName = owner?.displayName ?? 'ShotCount'
     const canUseAttachedCv = isApplicationIntent(task.title, task.description) &&
-      /NOT A REAL APPLICANT|authoritative CV/i.test(contextPrompt) &&
+      /NOT A REAL APPLICANT|authoritative CV/i.test(rawContextPrompt) &&
       (taskFileAssets.get(task.id) ?? []).some(asset => asset.source === 'task_upload' && asset.mimeType === 'application/pdf')
     const candidates = run.recipientResolution?.state === 'ambiguous'
       ? (run.recipientResolution.candidates ?? []).filter(candidate => candidate.email)
@@ -3541,13 +3279,12 @@ function renderAgentPanel(task: Task) {
     const replyLabel = asksForConfirmation ? 'Your confirmation' : requestsAttachment ? 'Add a note (optional)' : flightContext ? 'Your answer' : 'Your reply'
     const replyPlaceholder = asksForConfirmation ? 'Confirm or correct these details' : requestsAttachment ? `Anything ${ownerName} should know about this file` : sopAuthoringOptions ? `Anything ${ownerName} should share with the expert` : tripTypeOptions ? 'Add a return date if needed' : schedulingOptions.length ? 'Enter another airport or city' : flightContext ? 'Type your answer' : `Write the details ${ownerName} needs`
     const attachmentHint = 'Roon checks it automatically once it is attached.'.replace('Roon', ownerName)
-    const contextStatus = flightContext ? 'One detail at a time' : 'Needs context'
     const contextInteraction = run.contextInteraction
     const workSampleInteraction = isWorkSampleProgressInteraction(contextInteraction) ? contextInteraction : null
     const applicationQuestionInteraction = contextInteraction?.kind === 'application_question' ? contextInteraction : null
     const recommendationInteraction = isRecommendationProgressInteraction(contextInteraction) ? contextInteraction : null
     return `<section class="task-agent-card task-agent-card--context">
-      <header>${specialistHeader(task, run)}<em>${contextStatus}</em></header>
+      <header>${specialistHeader(task, run)}<span class="task-agent-header-mark" role="img" aria-label="Action needed">!</span></header>
       ${workSampleInteraction ? renderWorkSampleProgressDetail(workSampleInteraction, task.id, agentDecisionBusy.has(run.id)) : applicationQuestionInteraction ? renderApplicationQuestionProgressDetail(applicationQuestionInteraction, task.id, agentDecisionBusy.has(run.id)) : recommendationInteraction ? renderRecommendationProgressDetail(recommendationInteraction, task.id, agentDecisionBusy.has(run.id)) : ''}
       ${formattedPrompt}
       ${flightContext ? '<small class="task-agent-context-hint">Roon asks the questions. Caspian continues as soon as you answer.</small>' : ''}
@@ -3591,13 +3328,12 @@ function renderAgentPanel(task: Task) {
     const selectedFlightDetail = selectedFlight ? agentFlightDetail(selectedFlight) : ''
     const selectedReturnFlightDetail = selectedReturnFlight ? agentFlightDetail(selectedReturnFlight) : ''
     return `<section class="task-agent-card task-agent-card--result">
-      <header>${specialistHeader(task, run)}<em>${resultLabel}</em></header>
-      <p>${escapeHtml(run.result.summary)}</p>
-      ${renderDavidApplicationStatus(task, run)}
+      <header>${specialistHeader(task, run)}<span class="task-agent-header-mark task-agent-header-mark--complete" role="img" aria-label="${escapeHtml(resultLabel)}">✓</span></header>
+      <p>${escapeHtml(humanizeAgentProgressLabel(run.result.summary))}</p>
       <div class="task-agent-result">
         ${flightHandoffUrl && selectedFlight ? `<article class="agent-selected-flight"><span>Selected flight</span><strong>${escapeHtml(String(selectedFlight.label ?? 'Your selected option'))}</strong><p>${escapeHtml(selectedFlightDetail || 'Ready to continue to payment.')}</p></article>` : ''}
         ${flightHandoffUrl && selectedReturnFlight ? `<article class="agent-selected-flight"><span>Return flight</span><strong>${escapeHtml(String(selectedReturnFlight.label ?? 'Selected return option'))}</strong><p>${escapeHtml(selectedReturnFlightDetail || 'Return leg included in the booking handoff.')}</p></article>` : ''}
-        ${run.result.sections.map(section => `<article><strong>${escapeHtml(section.title)}</strong><p>${escapeHtml(section.body)}</p></article>`).join('')}
+        ${run.result.sections.map(section => `<article><strong>${escapeHtml(humanizeAgentProgressLabel(section.title))}</strong><p>${escapeHtml(humanizeAgentProgressLabel(section.body))}</p></article>`).join('')}
         ${run.result.drafts.map(draft => `<article class="agent-draft"><strong>${escapeHtml(draft.title)}</strong><p>${escapeHtml(draft.body).replaceAll('\n', '<br>')}</p></article>`).join('')}
       </div>
       ${renderRoonGeneratedFiles(task)}
@@ -3772,7 +3508,7 @@ function renderInspectorRoonAction(task: Task) {
   if (!route.supported && !roonCapabilityForTask(task)) return ''
   const owner = specialistForTask(task, run)
   const ownerName = owner?.displayName ?? 'ShotCount'
-  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${escapeHtml(task.id)}"><span class="agent-icon-wrap specialist-icon specialist-icon--${owner?.id ?? 'unassigned'}">${renderRoonOrb('waiting', 14)}</span>Delegate to ${escapeHtml(ownerName)}</button>`
+  return `<button type="button" class="inspector-roon-delegate" data-action="delegate-task" data-task-id="${escapeHtml(task.id)}">Delegate to ${escapeHtml(ownerName)}</button>`
 }
 
 function renderSubtask(task: Task, subtask: NonNullable<Task['subtaskItems']>[number]) {
@@ -5082,24 +4818,6 @@ app.addEventListener('change', event => {
 app.addEventListener('click', async event => {
   const target = event.target as HTMLElement
   const action = target.closest<HTMLElement>('[data-action]')?.dataset.action
-  if (action === 'open-campaign-progress-detail') {
-    const control = target.closest<HTMLElement>('[data-action="open-campaign-progress-detail"]')
-    const taskId = control?.dataset.taskId
-    const interactionId = control?.dataset.interactionId
-    if (!taskId) return
-    selectedTaskId = taskId
-    mobileInspectorOpen = true
-    render()
-    if (interactionId) queueMicrotask(() => {
-      const detail = [...document.querySelectorAll<HTMLElement>('[data-progress-detail], .recommendation-progress-detail')].find(item =>
-        item.dataset.recommendationInteractionId === interactionId || item.dataset.workSampleInteractionId === interactionId,
-      )
-      if (!detail) return
-      if (typeof detail.scrollIntoView === 'function') detail.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      detail.querySelector<HTMLElement>('input, textarea, button')?.focus()
-    })
-    return
-  }
   if (action === 'plan-tomorrow') {
     dailyPlanningPrompt = null
     rememberView('upcoming')
@@ -5265,19 +4983,6 @@ app.addEventListener('click', async event => {
     selectedCreatorTaskId = creatorTaskId
     mobileInspectorOpen = true
     render()
-    return
-  }
-
-  const agentTaskId = target.closest<HTMLElement>('[data-agent-task]')?.dataset.agentTask
-  if (agentTaskId) {
-    const task = tasks.find(item => item.id === agentTaskId)
-    if (!task) return
-    selectedTaskId = task.id
-    mobileInspectorOpen = true
-    const run = agentRuns.get(task.id)
-    const route = taskSpecialistRoute(task)
-    if ((!run || run.status === 'failed' || run.status === 'cancelled') && (route.supported || route.needsSemanticClassification)) void startAgentRun(task)
-    else render()
     return
   }
 

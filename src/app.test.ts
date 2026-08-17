@@ -86,7 +86,8 @@ describe('reference screens', () => {
     expect(document.querySelector('.today-task-group--today h2')?.textContent).toBe('Today')
     expect(document.querySelectorAll('.today-task-group--today .task-row')).toHaveLength(4)
     expect(document.querySelector('.inspector-title')?.getAttribute('value')).toBe("Renew driver's license")
-    expect(document.querySelector('.task-row.selected .task-agent-icon')?.getAttribute('aria-label')).toContain('Delegate')
+    expect(document.querySelector('.task-row.selected .task-agent-indicator')).toBeNull()
+    expect(document.querySelector('.task-row.selected .task-chevron')).not.toBeNull()
     expect(document.querySelector('.inspector .task-agent-card')).toBeNull()
     expect(document.querySelector<HTMLTextAreaElement>('.inspector-description')?.rows).toBe(3)
     expect(document.querySelector<HTMLButtonElement>('[data-action="toggle-description-voice"]')?.getAttribute('aria-label')).toBe('Add voice input to description')
@@ -284,7 +285,7 @@ describe('reference screens', () => {
     expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-row.selected')).not.toBeNull()
     expect(document.querySelector('.inspector .task-agent-card')).toBeNull()
     expect(document.querySelector('.inspector [data-action="delegate-task"]')).toBeNull()
-    expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-agent-icon')).toBeNull()
+    expect(document.querySelector('[data-upcoming-section="tomorrow"] .task-agent-indicator')).toBeNull()
   })
 
   it('routes a future-dated task from Today into This Week', () => {

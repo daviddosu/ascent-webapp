@@ -362,17 +362,6 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
 }
-.agent-sparkle-icon {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  fill: rgba(20, 20, 22, .035);
-  stroke: #1d1d1f;
-  stroke-width: 1.65;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16));
-}
 .roon-orb {
   width: var(--roon-orb-size, 20px);
   height: var(--roon-orb-size, 20px);
@@ -390,14 +379,6 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
 }
 .roon-orb--active { opacity: 1; }
 .roon-orb--complete { opacity: .58; }
-.agent-status-orb {
-  width: 12px;
-  height: 12px;
-  display: inline-grid;
-  place-items: center;
-  vertical-align: -2px;
-}
-.agent-status-orb .roon-orb { --roon-orb-size: 12px; }
 .agent-icon-wrap {
   width: 16px;
   height: 16px;
@@ -609,19 +590,15 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
 .task-row.completed .task-text small { opacity: .55; }
 
 .task-trailing-action { width: 18px; min-height: 22px; display: grid; place-items: center; }
-.task-agent-icon {
-  width: 22px;
-  height: 22px;
-  padding: 3px;
+.task-agent-indicator {
+  width: 18px;
+  min-height: 22px;
   display: grid;
   place-items: center;
   color: #555;
 }
-.task-agent-icon:hover, .task-agent-icon:focus-visible { color: #171717; }
-.task-agent-icon .agent-icon-wrap { width: 16px; height: 16px; }
-.task-agent-icon--completed { color: #242426; }
-.agent-state-alert { font-size: 12px; font-weight: 750; }
-.task-row.selected:has(.task-agent-icon--running) {
+.task-agent-indicator--completed { color: #242426; }
+.task-row.selected:has(.task-agent-indicator--running) {
   background: #f7f7f7;
   box-shadow: none;
 }
@@ -863,53 +840,18 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   font-size: 11px;
   font-weight: 700;
 }
-.specialist-identity {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-}
-.specialist-identity b { font-size: 11px; line-height: 1.1; }
-.specialist-identity small {
-  max-width: 205px;
-  color: #858589;
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: .01em;
-  line-height: 1.25;
-}
-.specialist-icon--roon { color: #1d1d1f; }
-.specialist-icon--caspian { color: #4d7f9d; }
-.specialist-icon--david { color: #8b6a4f; }
-.task-agent-card header strong .specialist-icon { flex: 0 0 auto; }
-.task-agent-card header strong > .agent-icon-wrap,
-.task-agent-mark {
-  width: 20px;
-  height: 20px;
-  margin-right: 7px;
+.task-agent-header-mark {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
   display: inline-grid;
   place-items: center;
+  color: #77777a;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1;
 }
-.task-agent-card header em {
-  min-height: 25px;
-  padding: 0 9px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid rgba(185, 185, 190, .48);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .48);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75);
-  color: #66666a;
-  font-size: 8px;
-  font-style: normal;
-  font-weight: 700;
-}
-.task-agent-card header em i {
-  margin-right: 5px;
-  font-size: 10px;
-  font-style: normal;
-  animation: agent-spin 1s linear infinite;
-}
+.task-agent-header-mark--complete { color: #242426; }
 .task-agent-card > p {
   margin: 0;
   color: #61615e;
@@ -920,7 +862,6 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   grid-template-columns: 31px minmax(0, 1fr) auto;
   align-items: center;
 }
-.task-agent-card--delegate .task-agent-mark { margin: 0; }
 .task-agent-card--delegate strong { display: block; font-size: 11px; }
 .task-agent-card--delegate p { margin: 3px 0 0; color: #777; font-size: 8px; line-height: 1.45; }
 .task-agent-card button {
@@ -979,101 +920,17 @@ body[data-theme='dark'] .tomorrow-planning-prompt button.primary { border-color:
   line-height: 1.45;
 }
 .task-agent-card--progress {
-  min-height: 266px;
-  padding: 15px 17px 14px;
-  gap: 13px;
-}
-.task-agent-card--progress > p {
-  padding-bottom: 1px;
-  color: #444448;
-  font-size: 10px;
-}
-.campaign-summary {
-  display: grid;
+  min-height: 0;
+  padding: 16px;
   gap: 10px;
-  margin: 1px 0 2px;
-  padding: 11px;
-  border: 1px solid rgba(180, 180, 185, .48);
-  border-radius: 9px;
-  background: rgba(248, 248, 247, .74);
 }
-.campaign-summary-header,
-.campaign-summary-header > div,
-.campaign-summary-application > div,
-.campaign-summary-risk,
-.campaign-summary-item {
-  display: flex;
-  align-items: center;
+.task-agent-live-activity {
+  margin: 0;
+  color: #1d1d1f;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.45;
 }
-.campaign-summary-header,
-.campaign-summary-application > div,
-.campaign-summary-risk,
-.campaign-summary-item { justify-content: space-between; gap: 9px; }
-.campaign-summary-header > div,
-.campaign-summary-application > div { min-width: 0; display: grid; gap: 2px; }
-.campaign-summary-header span,
-.campaign-summary-section h4,
-.campaign-summary-counts,
-.campaign-summary-application small,
-.campaign-summary-item small,
-.campaign-summary-risk small,
-.campaign-summary-completed span,
-.campaign-summary-empty {
-  color: #77777b;
-  font-size: 8px;
-  line-height: 1.4;
-}
-.campaign-summary-header strong { color: #242426; font-size: 11px; }
-.campaign-summary-header em {
-  flex: 0 0 auto;
-  padding: 4px 7px;
-  border: 1px solid rgba(160, 160, 165, .42);
-  border-radius: 999px;
-  color: #5d5d62;
-  font-size: 8px;
-  font-style: normal;
-  font-weight: 700;
-}
-.campaign-summary-counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 9px;
-  padding: 7px 0 2px;
-  border-top: 1px solid rgba(170, 170, 175, .28);
-}
-.campaign-summary-counts b { color: #2e2e31; font-size: 10px; }
-.campaign-summary-section { display: grid; gap: 5px; }
-.campaign-summary-section h4 { margin: 0; color: #4d4d51; font-weight: 750; }
-.campaign-summary-application,
-.campaign-summary-item,
-.campaign-summary-risk {
-  width: 100%;
-  min-width: 0;
-  padding: 7px 8px;
-  border: 1px solid rgba(180, 180, 185, .34);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, .67);
-  text-align: left;
-}
-.campaign-summary-application p { margin: 3px 0 0; overflow: hidden; color: #55555a; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
-.campaign-summary-application strong,
-.campaign-summary-item strong,
-.campaign-summary-risk strong { overflow: hidden; color: #303034; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.campaign-summary-item,
-.campaign-summary-risk { cursor: pointer; }
-.campaign-summary-item:hover,
-.campaign-summary-item:focus-visible,
-.campaign-summary-risk:hover,
-.campaign-summary-risk:focus-visible { border-color: rgba(75, 75, 80, .56); background: #fff; outline: none; }
-.campaign-summary-item-main,
-.campaign-summary-risk > span { min-width: 0; display: grid; gap: 2px; }
-.campaign-summary-item-meta { flex: 0 0 auto; color: #747478; font-size: 8px; }
-.campaign-summary-risk em { flex: 0 0 auto; color: #7b4d3c; font-size: 8px; font-style: normal; font-weight: 750; text-transform: capitalize; }
-.campaign-summary-risks { padding-top: 2px; }
-.campaign-summary-completed ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.campaign-summary-completed li { display: flex; justify-content: space-between; gap: 8px; }
-.campaign-summary-completed strong { overflow: hidden; color: #515156; font-size: 8px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.campaign-summary-empty { margin: 0; }
 .task-agent-progress { display: grid; gap: 10px; }
 .task-agent-progress > div {
   display: grid;
@@ -1744,37 +1601,12 @@ body[data-theme='dark'] .task-agent-files b { color: var(--dark-text); }
 body[data-theme='dark'] .task-agent-files > header span,
 body[data-theme='dark'] .task-agent-files small,
 body[data-theme='dark'] .task-agent-files em { color: var(--dark-muted); }
-body[data-theme='dark'] .task-agent-card header em,
 body[data-theme='dark'] .shotcount-agent-helper button {
   border-color: rgba(255, 255, 255, .12);
   background: rgba(255, 255, 255, .07);
   color: #e8e8e8;
 }
-body[data-theme='dark'] .campaign-summary {
-  border-color: rgba(255, 255, 255, .12);
-  background: rgba(255, 255, 255, .045);
-}
-body[data-theme='dark'] .campaign-summary-header strong,
-body[data-theme='dark'] .campaign-summary-counts b,
-body[data-theme='dark'] .campaign-summary-application strong,
-body[data-theme='dark'] .campaign-summary-item strong,
-body[data-theme='dark'] .campaign-summary-risk strong { color: #f0f0f0; }
-body[data-theme='dark'] .campaign-summary-header span,
-body[data-theme='dark'] .campaign-summary-section h4,
-body[data-theme='dark'] .campaign-summary-counts,
-body[data-theme='dark'] .campaign-summary-application small,
-body[data-theme='dark'] .campaign-summary-item small,
-body[data-theme='dark'] .campaign-summary-risk small,
-body[data-theme='dark'] .campaign-summary-completed span,
-body[data-theme='dark'] .campaign-summary-empty,
-body[data-theme='dark'] .campaign-summary-item-meta { color: var(--dark-muted); }
-body[data-theme='dark'] .campaign-summary-application,
-body[data-theme='dark'] .campaign-summary-item,
-body[data-theme='dark'] .campaign-summary-risk { border-color: rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .035); }
-body[data-theme='dark'] .campaign-summary-item:hover,
-body[data-theme='dark'] .campaign-summary-item:focus-visible,
-body[data-theme='dark'] .campaign-summary-risk:hover,
-body[data-theme='dark'] .campaign-summary-risk:focus-visible { border-color: rgba(255, 255, 255, .28); background: rgba(255, 255, 255, .08); }
+body[data-theme='dark'] .task-agent-header-mark { color: #e8e8e8; }
 body[data-theme='dark'] .task-agent-card header strong,
 body[data-theme='dark'] .task-agent-result article strong,
 body[data-theme='dark'] .agent-sources > strong,
@@ -1784,11 +1616,6 @@ body[data-theme='dark'] .task-agent-card > p,
 body[data-theme='dark'] .task-agent-result article p,
 body[data-theme='dark'] .agent-followups span,
 body[data-theme='dark'] .shotcount-agent-helper p span { color: #bdbdbd; }
-body[data-theme='dark'] .agent-sparkle-icon {
-  fill: rgba(255, 255, 255, .04);
-  stroke: #f2f2f2;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .32));
-}
 body[data-theme='dark'] .task-agent-error-detail,
 body[data-theme='dark'] .task-agent-approval-detail,
 body[data-theme='dark'] .task-agent-waiting-detail,
@@ -5203,19 +5030,6 @@ body[data-theme='dark'] .notification-bell { border-color: var(--dark-border); b
   background: rgba(255, 255, 255, .94);
   color: #151515;
 }
-.agent-island-mark .agent-icon-wrap {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-}
-.agent-island-mark .agent-sparkle-icon {
-  width: 30px;
-  height: 30px;
-  fill: rgba(0, 0, 0, .02);
-  stroke: #121212;
-  stroke-width: 1.45;
-}
 .island-identity { min-width: 0; display: grid; gap: 1px; }
 .island-identity > small,
 .island-task small,
@@ -5696,49 +5510,6 @@ body[data-theme='dark'] .profile-popover select option:disabled {
   color: #7f8991;
 }
 
-.david-application-status {
-  display: grid;
-  gap: 7px;
-  margin: 14px 0 4px;
-  padding: 12px 13px;
-  border: 1px solid #e4e8e8;
-  border-radius: 13px;
-  background: #fafbfb;
-}
-
-.david-application-status-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: #202525;
-  font-size: 12px;
-}
-
-.david-application-status-heading span {
-  color: #818989;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.david-application-status p {
-  margin: 0;
-  color: #666f70;
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.david-application-status small {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  color: #9a6c24;
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-.david-application-status small svg { width: 12px; height: 12px; flex: 0 0 auto; }
-
 .recommendation-progress-detail {
   display: grid;
   gap: 10px;
@@ -5758,7 +5529,6 @@ body[data-theme='dark'] .profile-popover select option:disabled {
 }
 
 .recommendation-progress-detail header strong { color: #23615c; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
-.recommendation-progress-detail header em { color: #7b8987; font-size: 10px; font-style: normal; }
 .recommendation-progress-detail h4 { margin: 0; color: #202525; font-size: 14px; line-height: 1.35; }
 .recommendation-interaction-reason { margin: 0; color: #687574; font-size: 11px; line-height: 1.45; }
 .recommendation-known-context { padding: 9px 10px; border-radius: 10px; background: #f1f7f5; color: #52625f; font-size: 10px; line-height: 1.4; }
@@ -5777,17 +5547,8 @@ body[data-theme='dark'] .profile-popover select option:disabled {
 
 body[data-theme='dark'] .recommendation-progress-detail { border-color: var(--dark-border); background: var(--dark-raised); }
 body[data-theme='dark'] .recommendation-progress-detail h4 { color: var(--dark-text); }
-body[data-theme='dark'] .recommendation-interaction-reason,
-body[data-theme='dark'] .recommendation-progress-detail header em { color: var(--dark-muted); }
+body[data-theme='dark'] .recommendation-interaction-reason { color: var(--dark-muted); }
 body[data-theme='dark'] .recommendation-known-context { background: rgb(50 75 72 / 40%); color: #b4c9c5; }
 body[data-theme='dark'] .recommendation-choice,
 body[data-theme='dark'] .recommendation-interaction-input input,
 body[data-theme='dark'] .recommendation-attachment-input input { border-color: var(--dark-border); background: var(--dark-bg); color: var(--dark-text); }
-
-body[data-theme='dark'] .david-application-status {
-  border-color: var(--dark-border);
-  background: var(--dark-raised);
-}
-
-body[data-theme='dark'] .david-application-status-heading { color: var(--dark-text); }
-body[data-theme='dark'] .david-application-status p { color: var(--dark-muted); }

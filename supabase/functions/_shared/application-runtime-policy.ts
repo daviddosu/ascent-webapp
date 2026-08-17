@@ -41,7 +41,10 @@ const requirementTools: Readonly<Partial<Record<RequirementType, readonly string
   eligibility: ['application.record_evidence', 'application.update_requirement'],
   official_requirement: ['application.record_evidence', 'application.update_requirement', 'web_search', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'],
   deadline: ['application.record_evidence', 'application.update_requirement', 'web_search', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'],
-  funding: ['application.record_evidence', 'application.update_requirement'],
+  // A funding requirement must be grounded in a funding-specific official
+  // source. Give David the same bounded research surface as other official
+  // requirements so it can be verified rather than guessed or waived.
+  funding: ['application.record_evidence', 'application.update_requirement', 'web_search', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'],
   document: ['application.generate_document', 'application.generate_cv', 'application.coordinate_work_samples', 'application.update_requirement'],
   transcript: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
   degree_certificate: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],

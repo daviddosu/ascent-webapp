@@ -27,7 +27,7 @@ describe('canonical work-sample / portfolio qualification', () => {
     expect(readFileSync(academic.outputPaths.derived!).subarray(0, 4).toString()).toBe('%PDF')
     expect(readFileSync(portfolio.outputPaths.derived!).subarray(0, 4).toString()).toBe('%PDF')
     expect(existsSync(code.outputPaths.supplement!)).toBe(true)
-    expect(academic.interactions.some(item => item.kind === 'approval' && item.renderedHtml.includes('Progress Detail'))).toBe(true)
+    expect(academic.interactions.some(item => item.kind === 'approval' && item.renderedHtml.includes('Next step'))).toBe(true)
     expect(portfolio.interactions.some(item => item.kind === 'multiple_choice')).toBe(true)
     expect(academic.failuresRecovered).toEqual(expect.arrayContaining(['page_limit_rejected_before_excerpt', 'session_expired_after_upload']))
     expect(code.failuresRecovered).toContain('secret_found_in_repository')

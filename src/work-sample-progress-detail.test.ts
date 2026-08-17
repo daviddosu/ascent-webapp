@@ -23,7 +23,7 @@ describe('work-sample Progress Detail', () => {
   it('renders typed choice and approval controls without a broad context textarea', () => {
     for (const kind of ['single_choice', 'approval', 'attachment_request'] as const) {
       const html = renderWorkSampleProgressDetail(base(kind), 'task-1')
-      expect(html).toContain('Progress Detail')
+      expect(html).toContain('Next step')
       expect(html).toContain(`work-sample-${kind}`)
       expect(html).not.toContain('data-agent-context-input')
     }
@@ -34,5 +34,12 @@ describe('work-sample Progress Detail', () => {
     expect(html).toContain('Official source says one PDF')
     expect(html).toContain('data-interaction-value="thesis"')
     expect(html).toContain('Inspected programme fit')
+  })
+
+  it('turns internal decision wording into a clear next step', () => {
+    const html = renderWorkSampleProgressDetail(base('single_choice'), 'task-1')
+    expect(html).toContain('I’ve checked the programme requirements and your material.')
+    expect(html).not.toContain('bounded decision')
+    expect(html).not.toContain('Progress Detail')
   })
 })

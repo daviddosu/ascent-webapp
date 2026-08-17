@@ -22,13 +22,14 @@ describe('Roon context panel', () => {
   it('shows flight context as a Roon-owned one-question conversation', () => {
     expect(mainSource).toContain('contextOwnerSpecialistId')
     expect(mainSource).toContain('Roon asks the questions. Caspian continues as soon as you answer.')
-    expect(mainSource).toContain('One detail at a time')
+    expect(mainSource).toContain('task-agent-header-mark')
+    expect(mainSource).not.toContain('One detail at a time')
     expect(mainSource).toContain('Roon will ask for missing trip or traveler details here, one question at a time.')
   })
 
   it('uses live specialist state for the flight operation copy', () => {
     expect(mainSource).toContain('currentProgress')
-    expect(mainSource).toContain("return run.waitingReason.trim()")
+    expect(mainSource).toContain('humanizeAgentProgressLabel(run.waitingReason)')
     expect(mainSource).not.toContain('Waiting for the next external update')
     expect(mainSource).not.toContain('I’m checking live flights and comparing the best matches.')
     expect(mainSource).toContain('The live flight site is taking too long. Your options are saved')

@@ -225,6 +225,13 @@ import {
   toolsForCanonicalApplicationStep,
 } from '../_shared/application-runtime-policy.ts'
 import {
+  canUseOfficialRequirementEvidence,
+  fundingCitationSupportsFullFunding,
+  isFundingRequirement,
+  officialCitationSupportsRequirement,
+  requiresApplicantSpecificEvidence,
+} from '../_shared/application-requirement-evidence.ts'
+import {
   applicationQuestionTypes,
   discoverApplicationQuestions,
   resolveSupplementalAnswer,
@@ -911,31 +918,31 @@ function progressCurrent(run: AgentRunRow, label: string, specialistId = run.act
 }
 
 function modelProgressLabel(run: AgentRunRow) {
-  return `${activeSpecialistDisplayName(run)} is reviewing the latest result and selecting the next verified operation.`
+  return `${activeSpecialistDisplayName(run)} is checking the latest progress and choosing the best next move.`
 }
 
 function toolProgressLabel(run: AgentRunRow, toolName: string) {
   const specialist = activeSpecialistDisplayName(run)
   const phraseByTool: Record<string, string> = {
-    web_search: 'researching the relevant official sources',
-    'gmail.search_messages': 'searching Gmail for the relevant messages',
-    'gmail.read_message': 'reading the matched email',
-    'gmail.read_thread': 'reading the conversation',
-    'gmail.create_draft': 'preparing the exact email draft',
-    'gmail.send_message': 'preparing the exact email for approval',
-    'gmail.wait_for_reply': 'setting up the reply watch',
-    'contacts.find_contact': 'checking the saved contact records',
-    'contacts.resolve_recipient': 'resolving the exact recipient',
-    'calendar.list_events': 'reading the relevant Calendar events',
-    'calendar.get_availability': 'checking Calendar availability',
-    'calendar.create_event': 'preparing the Calendar event details',
-    'calendar.update_event': 'preparing the Calendar change',
-    'calendar.delete_event': 'preparing the Calendar removal',
-    'browser.start_session': 'starting the task-owned browser session',
-    'browser.navigate': 'opening the verified website page',
-    'browser.observe': 'reading the current website state',
-    'browser.act': 'completing the next verified website field',
-    'browser.submit': 'preparing the exact public form for approval',
+    web_search: 'finding the most reliable sources',
+    'gmail.search_messages': 'finding the right emails',
+    'gmail.read_message': 'reading the important email',
+    'gmail.read_thread': 'catching up on the conversation',
+    'gmail.create_draft': 'writing the email draft',
+    'gmail.send_message': 'getting the email ready for your approval',
+    'gmail.wait_for_reply': 'keeping watch for a reply',
+    'contacts.find_contact': 'checking saved contacts',
+    'contacts.resolve_recipient': 'making sure the recipient is right',
+    'calendar.list_events': 'checking your calendar',
+    'calendar.get_availability': 'finding a time that works',
+    'calendar.create_event': 'getting the calendar invite ready',
+    'calendar.update_event': 'getting the calendar change ready',
+    'calendar.delete_event': 'getting the calendar removal ready',
+    'browser.start_session': 'setting up a secure workspace',
+    'browser.navigate': 'finding the right page',
+    'browser.observe': 'checking the latest page',
+    'browser.act': 'taking care of the next step',
+    'browser.submit': 'getting the approved form ready to send',
     'browser.search_flights': 'searching live flight options',
     'browser.select_flight': 'selecting the verified flight itinerary',
     'browser.prepare_flight_checkout': 'preparing the traveler details for payment review',
@@ -947,38 +954,38 @@ function toolProgressLabel(run: AgentRunRow, toolName: string) {
     'application.evaluate_writer_draft': 'reviewing the writer draft against the brief',
     'application.classify_application_message': 'classifying the application message against the case',
     'application.evaluate_reference_requirement': 'checking the reference requirement against the evidence',
-    'application.record_opportunity': 'recording the verified opportunity',
-    'application.create_case': 'creating the application case from verified requirements',
-    'application.record_contact': 'recording the approved application contact',
-    'application.register_writer': 'recording the available writer',
-    'application.select_writer': 'selecting the approved writer for the brief',
-    'application.update_requirement': 'updating the requirement with the latest evidence',
-    'application.record_portal_checkpoint': 'recording the verified portal checkpoint',
-    'application.resolve_supplemental_questions': 'resolving the portal questions against applicant evidence',
-    'application.record_evidence': 'recording the verified application evidence',
-    'application.record_communication': 'recording the provider-confirmed communication',
-    'application.create_human_assignment': 'preparing the human expert assignment',
-    'application.coordinate_recommendations': 'coordinating the recommendation request',
-    'application.coordinate_academic_evidence': 'coordinating the academic evidence request',
-    'application.coordinate_work_samples': 'coordinating the work-sample decision',
-    'application.coordinate_fee': 'checking the application fee path',
-    'application.record_fee_waiver_result': 'recording the fee-waiver result',
-    'application.execute_fee_payment': 'preparing the fee payment boundary for your review',
-    'application.reconcile_fee_payment': 'reconciling the provider fee result',
-    'application.build_referee_support_pack': 'building the verified referee support pack',
-    'application.build_readiness_report': 'building the evidence-backed readiness report',
-    'application.generate_document': 'preparing the grounded application document',
-    'application.prepare_research_proposal': 'preparing the research proposal from verified evidence',
-    'application.review_research_proposal': 'reviewing the research proposal against the brief',
-    'application.interpret_research_proposal_feedback': 'interpreting the proposal feedback',
-    'application.finalize_research_proposal': 'finalizing the approved research proposal',
-    'application.record_proposal_delivery': 'recording the verified proposal delivery',
-    'application.generate_cv': 'preparing the grounded application CV',
-    'application.generate_supervisor_outreach': 'preparing the grounded supervisor outreach',
-    'application.submit': 'preparing the exact application submission for approval',
-    'application.request_roon': 'preparing the typed handoff to Roon',
-    'agent.request_context': 'preparing the one missing detail needed to continue',
-    'agent.complete': 'verifying the completion evidence',
+    'application.record_opportunity': 'saving the verified programme details',
+    'application.create_case': 'setting up your application workspace',
+    'application.record_contact': 'saving the application contact',
+    'application.register_writer': 'saving the available writer',
+    'application.select_writer': 'choosing the best writer for the brief',
+    'application.update_requirement': 'locking in the latest verified detail',
+    'application.record_portal_checkpoint': 'saving proof that this portal step worked',
+    'application.resolve_supplemental_questions': 'matching portal questions to your verified details',
+    'application.record_evidence': 'saving the proof behind this step',
+    'application.record_communication': 'saving the confirmed update',
+    'application.create_human_assignment': 'briefing the right expert',
+    'application.coordinate_recommendations': 'organising recommendation support',
+    'application.coordinate_academic_evidence': 'organising your academic records',
+    'application.coordinate_work_samples': 'choosing the strongest work sample',
+    'application.coordinate_fee': 'checking the application-fee options',
+    'application.record_fee_waiver_result': 'saving the fee-waiver result',
+    'application.execute_fee_payment': 'getting the fee payment ready for your review',
+    'application.reconcile_fee_payment': 'checking the fee result',
+    'application.build_referee_support_pack': 'building a helpful referee pack',
+    'application.build_readiness_report': 'checking that the application is truly ready',
+    'application.generate_document': 'preparing the application document',
+    'application.prepare_research_proposal': 'preparing the research proposal from your verified work',
+    'application.review_research_proposal': 'checking the research proposal against the brief',
+    'application.interpret_research_proposal_feedback': 'turning the proposal feedback into next steps',
+    'application.finalize_research_proposal': 'finishing the approved research proposal',
+    'application.record_proposal_delivery': 'saving proof that the proposal was delivered',
+    'application.generate_cv': 'preparing the application CV',
+    'application.generate_supervisor_outreach': 'preparing the supervisor outreach',
+    'application.submit': 'getting the application ready for your approval',
+    'application.request_roon': 'bringing Roon in for the communication step',
+    'agent.request_context': 'pinpointing the one detail needed to continue',
+    'agent.complete': 'checking that every promised step is done',
   }
   return `${specialist} is ${phraseByTool[toolName] ?? 'carrying out the next verified operation'}.`
 }
@@ -1138,7 +1145,7 @@ async function ensureCanonicalApplicationRuntime(
           task_contract: run.task_contract,
           had_application_state: Boolean(run.application_state),
         },
-        progress_current: progressCurrent(run, 'David is entering the canonical application controller.'),
+        progress_current: progressCurrent(run, 'David is taking the lead on your application.'),
       },
     })
     await addEvent(admin, current, 'application_runtime_canonicalized', current.status,
@@ -2983,18 +2990,13 @@ type OfficialRequirementEvidence = {
   evidenceIdsByRequirement: Map<string, string[]>
 }
 
-function canUseOfficialRequirementEvidence(requirement: Record<string, unknown>) {
-  const name = safeString(requirement.name ?? requirement.label ?? requirement.title, 500).toLocaleLowerCase()
-  // An official programme page can verify what the institution requires. It
-  // cannot verify the applicant's identity, education, employment history,
-  // documents, referees, or portal state. Keep this boundary explicit because
-  // those categories need profile, artifact, Gmail, or portal evidence.
-  // A broad admissions-requirements heading is only a pointer to the
-  // institution's requirements page. It is not evidence that the detailed
-  // requirements have been verified. Specific requirements, such as an
-  // English-language test, remain eligible for official-source evidence.
-  if (!name.length || /\b(?:detailed|general|overall|full|all)?\s*(?:admissions?|application)\s+requirements?\b/i.test(name)) return false
-  return !/(?:identity|contact details?|education|academic history|research history|employment history|referees?|references?|cv|resume|transcript|degree|statement|essay|personal information|portal|upload|document)/i.test(name)
+function applicationRequiresFullFunding(run: AgentRunRow) {
+  const request = `${run.objective} ${safeString(run.context?.description, 4_000)}`
+  return /\b(?:fully funded|full funding|funding (?:is )?required|must be funded|funded (?:programme|program)|guaranteed funding)\b/i.test(request)
+}
+
+function officialEvidenceCanSupportRequirement(requirement: Record<string, unknown>, excerpt: string) {
+  return officialCitationSupportsRequirement(requirement, excerpt)
 }
 
 async function ensureOfficialRequirementEvidence(
@@ -3028,13 +3030,22 @@ async function ensureOfficialRequirementEvidence(
       : []
   if (!sources.length) return { rows: [], evidenceIdsByRequirement: new Map() }
 
-  const evidenceRows = rawRequirements.filter(canUseOfficialRequirementEvidence).map(requirement => {
+  const evidenceRows = rawRequirements.flatMap(requirement => {
+    if (!canUseOfficialRequirementEvidence(requirement)) return []
     const source = recordValue(requirement.source)
     const requirementUrls = stringArray(source.url ?? source.urls ?? requirement.source_id, 2_000)
     const targetUrl = safeString(source.url, 2_000) || requirementUrls[0] || safeString(requirement.source_id, 2_000)
-    const citation = sources.find(item => canonicalOpportunityReference(item.url) === canonicalOpportunityReference(targetUrl)) ?? sources[0]!
+    const matchingSources = sources.filter(item => canonicalOpportunityReference(item.url) === canonicalOpportunityReference(targetUrl))
+    const candidates = matchingSources.length ? matchingSources : sources
+    // Funding is a material user constraint, not a generic admissions fact.
+    // Persist it only when the official excerpt itself establishes the scope
+    // of support; a bare programme URL must never make a "fully funded"
+    // requirement look complete.
+    const citation = candidates.find(item => officialCitationSupportsRequirement(requirement, item.excerpt)) ??
+      sources.find(item => officialCitationSupportsRequirement(requirement, item.excerpt))
+    if (!citation || !officialEvidenceCanSupportRequirement(requirement, citation.excerpt)) return []
     const requirementId = safeString(requirement.id, 80)
-    return {
+    return [{
       user_id: run.user_id,
       application_case_id: caseId,
       task_id: run.task_id,
@@ -3050,7 +3061,7 @@ async function ensureOfficialRequirementEvidence(
         retrieved_at: citation.retrievedAt,
       },
       idempotency_key: `official-requirement:${requirementId}:${canonicalOpportunityReference(citation.url)}`,
-    }
+    }]
   }).filter(row => safeString(recordValue(row.metadata).requirement_id, 80))
   if (!evidenceRows.length) return { rows: [], evidenceIdsByRequirement: new Map() }
   const persisted = await admin.from('application_evidence').upsert(evidenceRows, { onConflict: 'user_id,application_case_id,idempotency_key' }).select('id,application_case_id,kind,source_url,provider_message_id,provider_thread_id,asset_id,metadata,captured_at')
@@ -3084,13 +3095,29 @@ async function ensureApplicationRequirementScaffold(
       safeString(requirement.name ?? requirement.label ?? requirement.title, 500),
     ),
   )
-  if (!container) return []
+  const opportunityData = recordValue(opportunity?.data)
+  const officialUrl = safeString(opportunity?.official_url ?? opportunityData.officialUrl ?? opportunityData.official_url, 2_000)
+  const needsFundingRequirement = applicationRequiresFullFunding(run) && !rawRequirements.some(isFundingRequirement)
+  const fundingDefinition = {
+    name: 'Full funding',
+    category: 'financial',
+    requirement_type: 'funding',
+    responsible_party: 'david',
+    exact_instructions: 'Verify from an official programme or university source that the offer provides full doctoral funding or an equivalent guarantee. Preserve the exact support, duration, eligibility conditions, and source before this requirement can be marked complete.',
+  }
+  // Most cases arrive with a detailed requirement list already. Scaffolding
+  // is only needed for a broad container node; returning an empty list here
+  // erased the live graph and made the engine falsely conclude the case was
+  // complete. A stated funding constraint is the one exception: add its
+  // explicit requirement before returning the existing graph.
+  if (!container && !needsFundingRequirement) return rawRequirements
   const existingNames = new Set(rawRequirements.map(requirement => safeString(requirement.name, 500).toLocaleLowerCase()).filter(Boolean))
   const institution = safeString(opportunity?.institution, 240)
   const programme = safeString(opportunity?.programme_title, 500)
-  const officialUrl = safeString(opportunity?.official_url, 2_000)
   const prefix = [institution, programme].filter(Boolean).join(' ')
   const definitions = [
+    ...(needsFundingRequirement ? [fundingDefinition] : []),
+    ...(container ? [
     { name: `${prefix} official application deadline`, category: 'other', requirement_type: 'deadline', responsible_party: 'david', exact_instructions: 'Verify the exact application deadline, cycle, timezone, and whether the programme has more than one deadline.' },
     { name: `${prefix} admissions tests`, category: 'test', requirement_type: 'admissions_test', responsible_party: 'david', exact_instructions: 'Verify every required or waived admissions test and the exact reporting policy from the official source.' },
     { name: `${prefix} application essays and statements`, category: 'essay', requirement_type: 'writer', responsible_party: 'writer', exact_instructions: 'Verify the required essay or statement prompts, limits, and submission format before briefing the writer.' },
@@ -3099,6 +3126,7 @@ async function ensureApplicationRequirementScaffold(
     { name: `${prefix} CV and supporting documents`, category: 'academic', requirement_type: 'document', responsible_party: 'applicant', exact_instructions: 'Verify the required CV and supporting-document formats, then use the supplied applicant files.' },
     { name: `${prefix} academic transcript`, category: 'academic', requirement_type: 'transcript', responsible_party: 'applicant', exact_instructions: 'Verify transcript requirements and identify the exact applicant document still needed.' },
     { name: `${prefix} application portal sections`, category: 'portal', requirement_type: 'portal_section', responsible_party: 'david', exact_instructions: 'Verify the official application portal sections and persist read-after-write evidence for each saved section.' },
+    ] : []),
   ].filter(definition => definition.name && !existingNames.has(definition.name.toLocaleLowerCase()))
   if (definitions.length) {
     const inserted = await admin.from('application_requirements').insert(definitions.map(definition => ({
@@ -3120,7 +3148,7 @@ async function ensureApplicationRequirementScaffold(
   // The broad node is a deterministic container; its actionable children own
   // completion and keep the engine from treating a single page citation as an
   // end-to-end application result.
-  if (container.required !== false || safeString(container.status, 80) !== 'verified') {
+  if (container && (container.required !== false || safeString(container.status, 80) !== 'verified')) {
     const flattened = await admin.from('application_requirements').update({
       required: false,
       status: 'verified',
@@ -3424,6 +3452,7 @@ function normalizeRequirementPayload(value: unknown, applicationCaseId: string) 
     responsible_party: allowedResponsibleParties.has(safeString(input.responsible_party ?? input.responsibleParty, 80)) ? safeString(input.responsible_party ?? input.responsibleParty, 80) : 'applicant',
     linked_artifact_id: safeString(input.linked_artifact_id ?? input.linkedArtifactId, 80) || null,
     verification_evidence_ids: stringArray(input.verification_evidence_ids ?? input.verificationEvidenceIds, 120),
+    requirement_type: safeString(input.requirement_type ?? input.requirementType, 120) || null,
     source: normalizedSource,
     source_id: safeString(input.source_id ?? input.sourceId ?? source.id ?? source.url ?? sourceUrls[0], 2_000) || null,
     dependency_ids: stringArray(input.dependency_ids ?? input.dependencyIds ?? input.dependencies, 500),
@@ -4585,7 +4614,7 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
     caseId ? admin.from('human_assignments').select('id,status,deadline_at,final_artifact_id').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at') : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('application_communications').select('id,direction,classification,provider_message_id,provider_thread_id,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
     caseId ? admin.from('portal_checkpoints').select('id,application_case_id,verified,portal,section,entered_values,save_confirmation,session_information,idempotency_key,created_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
-    caseId ? admin.from('application_evidence').select('id,application_case_id,kind,source_url,provider_message_id,provider_thread_id,asset_id,metadata,captured_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('captured_at', { ascending: false }).limit(80) : Promise.resolve({ data: [], error: null }),
+    caseId ? admin.from('application_evidence').select('id,application_case_id,kind,source_url,excerpt,provider_message_id,provider_thread_id,asset_id,metadata,captured_at').eq('application_case_id', caseId).eq('user_id', run.user_id).order('captured_at', { ascending: false }).limit(80) : Promise.resolve({ data: [], error: null }),
     admin.from('agent_approvals').select('id,kind,status,updated_at').eq('run_id', run.id).eq('user_id', run.user_id).order('updated_at', { ascending: false }).limit(20),
     admin.from('agent_actions').select('idempotency_key,status,provider_action_id,tool_name').eq('run_id', run.id).eq('user_id', run.user_id).eq('status', 'succeeded').not('provider_action_id', 'is', null).limit(200),
   ])
@@ -4646,7 +4675,7 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
       .filter(item => {
         const metadata = recordValue(item.metadata)
         const requirement = rawRequirements.find(candidate => safeString(candidate.id, 80) === safeString(metadata.requirement_id, 80))
-        return Boolean(requirement && !canUseOfficialRequirementEvidence(requirement))
+        return Boolean(requirement && !officialEvidenceCanSupportRequirement(requirement, safeString(item.excerpt, 2_000)))
       })
       .map(item => safeString(item.id, 80))
       .filter(Boolean),
@@ -4949,7 +4978,13 @@ async function loadApplicationControllerSnapshot(admin: AdminClient, run: AgentR
   // create the remaining cases without losing the current one.
   const engineStep = state === 'CASE_CREATION' && campaignCaseIds.length < targetCaseCount
     ? { kind: 'CONTROLLER' as const, caseId: caseId ?? '', action: 'continue_application_controller' as const }
-    : plannedEngineStep
+    : plannedEngineStep.kind === 'COMPLETE' && state !== 'COMPLETE'
+      // A case can have an incomplete graph (for example, a legacy case whose
+      // portal step was never represented). Never expose agent.complete from
+      // that state: completion must remain blocked until the missing work is
+      // made explicit or the controller itself reaches a terminal state.
+      ? { kind: 'BLOCKED' as const, caseId: caseId ?? '', reason: 'The application is not ready to finish. Record the missing portal, readiness, or applicant-material step before asking to complete the run.' }
+      : plannedEngineStep
   const applicationContextAnswers = Array.isArray(run.context?.application_context_answers)
     ? run.context.application_context_answers
       .filter(item => item && typeof item === 'object' && !Array.isArray(item))
@@ -5043,6 +5078,10 @@ function normalizePortalCheckpointInput(input: Record<string, unknown>): Record<
 function applicationToolAction(toolName: string, argumentsValue: Record<string, unknown>, snapshot: ApplicationControllerSnapshot): ProposedApplicationAction | null {
   if (!toolName.startsWith('application.')) return null
   const caseId = safeString(argumentsValue.application_case_id, 80) || snapshot.caseId
+  const targetRequirementId = safeString(argumentsValue.requirement_id, 80) || null
+  const targetRequirement = targetRequirementId
+    ? snapshot.engineState.requirements.find(requirement => requirement.id === targetRequirementId) ?? null
+    : null
   const idempotencyKey = safeString(argumentsValue.idempotency_key, 300) || (toolName === 'application.submit' ? `submit:${caseId}` : null)
   const evidenceByTool: Partial<Record<string, ControllerEvidenceType[]>> = {
     'application.record_opportunity': ['OFFICIAL_SOURCE'],
@@ -5123,14 +5162,18 @@ function applicationToolAction(toolName: string, argumentsValue: Record<string, 
   const consequential = ['application.record_portal_checkpoint', 'application.record_communication', 'application.generate_supervisor_outreach', 'application.finalize_research_proposal', 'application.record_proposal_delivery', 'application.submit', 'application.execute_fee_payment'].includes(toolName) || completingRequirement
   if (completingRequirement) {
     if (safeString(argumentsValue.linked_artifact_id, 80)) evidenceByTool[toolName] = ['DOCUMENT_CHECKSUM']
-    else if (stringArray(argumentsValue.verification_evidence_ids, 120).length) evidenceByTool[toolName] = ['PORTAL_OBSERVATION']
+    else if (stringArray(argumentsValue.verification_evidence_ids, 120).length) {
+      evidenceByTool[toolName] = targetRequirement?.type === 'funding'
+        ? ['OFFICIAL_SOURCE']
+        : ['PORTAL_OBSERVATION']
+    }
   }
   return {
     id: `${toolName}:${idempotencyKey ?? crypto.randomUUID()}`,
     kind: kindByTool[toolName] ?? 'requirement',
     toolName,
     caseId,
-    targetRequirementId: safeString(argumentsValue.requirement_id, 80) || null,
+    targetRequirementId,
     requiredFactIds,
     expectedEvidenceTypes: evidenceByTool[toolName] ?? [],
     intendedNextState: nextStateByTool[toolName] ?? null,
@@ -6036,7 +6079,7 @@ async function executeProviderTool(
     if (!caseId || !requirementId || !['unknown', 'verified', 'missing', 'in_progress', 'awaiting_user', 'awaiting_writer', 'awaiting_referee', 'awaiting_institution', 'ready', 'approved', 'submitted', 'rejected', 'waived', 'expired'].includes(status)) {
       return { kind: 'pause', status: 'waiting_for_user', code: 'application_requirement_invalid', message: 'The application requirement update is incomplete.', value: { valid: false }, actionStatus: 'failed' }
     }
-    const requirement = await admin.from('application_requirements').select('id,application_case_id,name,verification_evidence_ids').eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
+    const requirement = await admin.from('application_requirements').select('id,application_case_id,name,category,requirement_type,responsible_party,verification_evidence_ids').eq('id', requirementId).eq('application_case_id', caseId).eq('user_id', run.user_id).maybeSingle()
     if (requirement.error) throw new Error(requirement.error.message)
     if (!requirement.data) return { kind: 'pause', status: 'waiting_for_user', code: 'application_requirement_missing', message: 'The application requirement was not found on this case.', value: { valid: false }, actionStatus: 'failed' }
     if (linkedArtifactId) {
@@ -6051,6 +6094,66 @@ async function executeProviderTool(
     ])]
     let effectiveStatus = status
     let effectiveBlockerReason = blockerReason
+    const completingFundingRequirement = isFundingRequirement(requirement.data as Record<string, unknown>) &&
+      ['verified', 'ready', 'approved', 'submitted'].includes(status)
+    if (completingFundingRequirement) {
+      const fundingEvidence = verificationEvidenceIds.length
+        ? await admin.from('application_evidence')
+          .select('id,kind,source_url,excerpt')
+          .in('id', verificationEvidenceIds)
+          .eq('application_case_id', caseId)
+          .eq('user_id', run.user_id)
+        : { data: [], error: null }
+      if (fundingEvidence.error) throw new Error(fundingEvidence.error.message)
+      const hasVerifiedFundingEvidence = (fundingEvidence.data ?? []).some(item =>
+        ['official_requirement_source', 'programme_snapshot'].includes(safeString(item.kind, 120)) &&
+        verifyOfficialSource(safeString(item.source_url, 2_000)) &&
+        fundingCitationSupportsFullFunding(safeString(item.excerpt, 2_000)),
+      )
+      if (!hasVerifiedFundingEvidence) {
+        return {
+          kind: 'output',
+          value: {
+            ok: false,
+            error_code: 'application_funding_evidence_required',
+            error_message: 'Keep the funding requirement open until an official source explicitly confirms full coverage or its equivalent (for example, support for all admitted doctoral students, a guaranteed funding period, tuition coverage, or a stipend).',
+          },
+          publicSummary: 'Funding still needs a specific official confirmation.',
+        }
+      }
+    }
+    const completingApplicantRequirement = requiresApplicantSpecificEvidence(requirement.data as Record<string, unknown>) &&
+      ['verified', 'ready', 'approved', 'submitted'].includes(status)
+    if (completingApplicantRequirement && !linkedArtifactId) {
+      const applicantEvidence = verificationEvidenceIds.length
+        ? await admin.from('application_evidence')
+          .select('id,kind,asset_id,provider_message_id,provider_thread_id,metadata')
+          .in('id', verificationEvidenceIds)
+          .eq('application_case_id', caseId)
+          .eq('user_id', run.user_id)
+        : { data: [], error: null }
+      if (applicantEvidence.error) throw new Error(applicantEvidence.error.message)
+      const hasVerifiedApplicantEvidence = (applicantEvidence.data ?? []).some(item => {
+        const kind = safeString(item.kind, 120)
+        const metadata = recordValue(item.metadata)
+        const verifiedUpload = kind === 'uploaded_file_verification' &&
+          Boolean(safeString(item.asset_id, 80) && safeString(metadata.checksum, 128))
+        const verifiedProviderMessage = ['sent_message', 'received_message', 'status_email'].includes(kind) &&
+          Boolean(safeString(item.provider_message_id, 256) && safeString(item.provider_thread_id, 256))
+        return verifiedUpload || verifiedProviderMessage
+      })
+      if (!hasVerifiedApplicantEvidence) {
+        return {
+          kind: 'output',
+          value: {
+            ok: false,
+            error_code: 'application_applicant_evidence_required',
+            error_message: 'Keep this requirement open until there is verified applicant-specific evidence, such as an approved document, a confirmed upload, or a provider-confirmed referee record. An official admissions page only proves the programme rule.',
+          },
+          publicSummary: `Still matching ${safeString(requirement.data.name, 500)} to verified applicant material.`,
+        }
+      }
+    }
     if (['in_progress', 'awaiting_institution', 'awaiting_user'].includes(status) && blockerReason && verificationEvidenceIds.length) {
       const evidence = await admin.from('application_evidence')
         .select('id,kind,source_url')
@@ -8755,7 +8858,7 @@ async function executeProviderTool(
         kind: 'output',
         value: { session_id: existing.data.id, status: existing.data.status, resumable: existing.data.resumable !== false },
         providerActionId: existing.data.id,
-        publicSummary: 'Reused the task-owned browser session.',
+        publicSummary: 'Picked up the secure workspace.',
       }
     }
 
@@ -8774,7 +8877,7 @@ async function executeProviderTool(
       kind: 'output',
       value: { session_id: data.id, status: data.status, resumable: true },
       providerActionId: data.id,
-      publicSummary: 'Started an isolated browser session.',
+      publicSummary: 'Set up a secure workspace.',
     }
   }
 
@@ -8972,10 +9075,10 @@ async function executeProviderTool(
           : operation.type === 'select_flight'
             ? 'Prepared the selected itinerary for payment handoff.'
             : operation.type === 'navigate'
-              ? 'Opened the allowed public webpage.'
+              ? 'Found the right page.'
               : operation.type === 'submit'
-                ? toolName === 'application.submit' ? 'Submitted the approved application and captured portal evidence.' : 'Submitted the exact approved public form.'
-                : 'Prepared the public webpage.',
+                ? toolName === 'application.submit' ? 'Submitted the approved application and captured portal evidence.' : 'Submitted the approved form.'
+                : 'Prepared the next step.',
         ...(submissionRunPatch ? { runPatch: submissionRunPatch } : {}),
       }
     }
@@ -9012,10 +9115,10 @@ async function executeProviderTool(
         : operation.type === 'select_flight'
           ? 'Preparing the selected itinerary.'
           : operation.type === 'navigate'
-            ? 'Opening the allowed public webpage.'
+            ? 'Finding the right page.'
             : operation.type === 'submit'
-              ? 'Submitting the exact approved public form.'
-              : 'Preparing the public webpage.',
+              ? 'Submitting the approved form.'
+              : 'Preparing the next step.',
       value: { queued: true, session_id: queued.sessionId, operation_id: operation.id },
       actionStatus: 'running',
       advanceStep: false,
@@ -9071,7 +9174,7 @@ async function executeProviderTool(
         payment_boundary_reached: session.payment_boundary_reached === true,
       },
       providerActionId: session.id,
-      publicSummary: 'Observed the isolated browser session.',
+      publicSummary: 'Checked the latest progress.',
       ...(supplemental.interaction ? { runPatch: { context: { ...(run.context ?? {}), application_case_id: applicationCaseId, progress_detail_interaction: supplemental.interaction } } } : {}),
     }
   }
@@ -9350,6 +9453,9 @@ async function completeProviderConfirmedRun(admin: AdminClient, run: AgentRunRow
 }
 
 function unresolvedEffectMessage(ledger: Awaited<ReturnType<typeof requiredEffectLedger>>) {
+  if (!ledger.required.length) {
+    return 'No external effect is currently required. The task is not ready to finish yet; continue the active workflow instead of claiming completion.'
+  }
   const completed = [
     ledger.effects.CALENDAR_EVENT_UPDATED ? 'CALENDAR_EVENT_UPDATED' : null,
     ledger.effects.GMAIL_MESSAGE_SENT ? 'GMAIL_MESSAGE_SENT' : null,
@@ -11230,10 +11336,10 @@ async function pollBrowserExecutionRun(
         : operation.type === 'prepare_flight_checkout'
           ? 'Filled the supported traveler details and reached the provider payment boundary.'
         : operation.type === 'navigate'
-        ? 'Opened the allowed public webpage.'
+        ? 'Found the right page.'
         : operation.type === 'submit'
-          ? 'Submitted the exact approved public form.'
-          : 'Prepared the public webpage.'
+          ? 'Submitted the approved form.'
+          : 'Prepared the next step.'
 
   if (operation.type === 'search_flights') {
     // Prefer the worker's returned payload, then its durable checkpoint. A
@@ -12781,7 +12887,7 @@ async function recoverApplicationBrowserFailureInternally(
     lease_expires_at: null,
   })
   await addEvent(admin, planning, 'agent_internal_browser_recovery_started', planning.status,
-    'David is repairing the task-owned browser session and continuing automatically.', {
+    'David is getting the secure workspace back on track and continuing automatically.', {
       prior_error_code: safeString(run.error_code, 120),
     })
   return advanceRun(admin, planning, openaiKey)
@@ -12950,7 +13056,7 @@ async function recoverApplicationIntermediateCompletion(
     context: {
       ...(run.context ?? {}),
       completion_continuations: 0,
-      progress_current: progressCurrent(run, 'David is continuing the application workflow.'),
+      progress_current: progressCurrent(run, 'David is moving your application forward.'),
     },
     lease_owner: null,
     lease_expires_at: null,
@@ -14965,7 +15071,7 @@ Deno.serve(async request => {
             context: {
               ...(run.context ?? {}),
               completion_continuations: 0,
-              progress_current: progressCurrent(run, 'David is continuing the application workflow.'),
+              progress_current: progressCurrent(run, 'David is moving your application forward.'),
             },
           })
           applicationHistoryReset = true
@@ -15209,7 +15315,7 @@ Deno.serve(async request => {
                 ...(run.context ?? {}),
                 completion_continuations: 0,
                 internal_failure_recovery_attempts: 0,
-                progress_current: progressCurrent(run, 'David is resuming from the last verified application state.'),
+                progress_current: progressCurrent(run, 'David is picking up from the last confirmed step.'),
               },
             } : {}),
           })

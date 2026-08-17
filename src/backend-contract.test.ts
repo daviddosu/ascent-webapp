@@ -394,7 +394,7 @@ describe('agent execution security contract', () => {
   it('keeps Caspian flight sessions on the registered Google destination', () => {
     expect(taskAgentFunction).toContain('googleFlightsBrowserDomains')
     expect(taskAgentFunction).toContain('normalizeBrowserDomains')
-    expect(taskAgentFunction).toContain('Reused the task-owned browser session.')
+    expect(taskAgentFunction).toContain('Picked up the secure workspace.')
     expect(taskAgentFunction).toContain('upsertHistoryToolOutput')
   })
 

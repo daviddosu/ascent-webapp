@@ -17,7 +17,7 @@ describe('recommendation Progress Detail', () => {
         reusableContextKeys: ['recommender_email'],
       })
       const html = renderRecommendationProgressDetail(interaction, 'task-1')
-      expect(html).toContain('Progress Detail')
+      expect(html).toContain('Next step')
       expect(html).toContain(`interaction-${kind}`)
       expect(html).not.toContain('data-agent-context-input')
     }
@@ -38,5 +38,21 @@ describe('recommendation Progress Detail', () => {
     expect(html).toContain('directly observed thesis work')
     expect(html).toContain('data-recommendation-choice')
     expect(html).toContain('submit-recommendation-multiple')
+  })
+
+  it('keeps internal workflow language out of the visible reason', () => {
+    const interaction = createRecommendationInteraction({
+      kind: 'confirmation',
+      id: 'plain-language',
+      requirementId: 'requirement-1',
+      question: 'Confirm this choice',
+      reason: 'The official requirement and candidate evidence are already resolved up to this bounded decision.',
+      confirmLabel: 'Continue',
+      cancelLabel: 'Not now',
+    })
+    const html = renderRecommendationProgressDetail(interaction, 'task-1')
+    expect(html).toContain('I’ve checked the programme requirements and your material.')
+    expect(html).not.toContain('bounded decision')
+    expect(html).not.toContain('Progress Detail')
   })
 })
