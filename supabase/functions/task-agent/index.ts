@@ -3552,6 +3552,267 @@ async function applicationCaseContext(admin: AdminClient, run: AgentRunRow, case
   return { row: caseResult.data, applicationCase, opportunity: applicationOpportunityFromRow(opportunityResult.data), artifacts }
 }
 
+type RecommendationProgrammeSource = {
+  id: string
+  url: string
+  excerpt: string
+  retrievedAt: string
+}
+
+function publicProgrammeExcerpt(value: unknown) {
+  return safeString(value, 4_000)
+    .replace(/\b(?:password|passcode|secret|security key)\s*[:=]\s*[^\s,;.]+/gi, '[redacted secure field]')
+    .replace(/\b(?:verification code|one[- ]time password|otp)\s*[:=]?\s*\d{4,8}\b/gi, '[redacted verification code]')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function browserObservationContainsPrivateFields(observation: Record<string, unknown>) {
+  const labels = [
+    ...Array.isArray(observation.fields) ? observation.fields : [],
+    ...Array.isArray(observation.controls) ? observation.controls : [],
+  ].map(item => {
+    const value = recordValue(item)
+    return `${safeString(value.name, 240)} ${safeString(value.label, 500)} ${safeString(value.type, 120)} ${safeString(value.prompt, 500)}`
+  }).join(' ')
+  return /\b(?:password|passcode|otp|one[- ]?time|card|credit|debit|cvv|cvc|security code|account number|routing|bank|ssn|social security|passport)\b/i.test(labels)
+}
+
+function opportunityOfficialUrl(opportunity: Record<string, unknown>) {
+  const data = recordValue(opportunity.data)
+  return safeString(opportunity.officialUrl ?? opportunity.official_url ?? data.officialUrl ?? data.official_url, 2_000)
+}
+
+function isProgrammeOfficialSource(opportunity: Record<string, unknown>, sourceUrl: string) {
+  const officialUrl = opportunityOfficialUrl(opportunity)
+  return Boolean(
+    officialUrl &&
+    verifyOfficialSource(sourceUrl) &&
+    citationMatchesOfficialDomain(officialUrl, sourceUrl),
+  )
+}
+
+async function persistRecommendationProgrammeSourceObservation(
+  admin: AdminClient,
+  run: AgentRunRow,
+  input: {
+    caseId: string
+    sessionId: string
+    observation: Record<string, unknown>
+    currentUrl?: string | null
+    opportunity?: Record<string, unknown> | null
+    campaignId?: string | null
+    taskId?: string | null
+  },
+) {
+  const caseId = safeString(input.caseId, 80)
+  if (!caseId || browserObservationContainsPrivateFields(input.observation)) return null
+  let opportunity = input.opportunity ?? null
+  let campaignId = safeString(input.campaignId, 80) || null
+  let taskId = safeString(input.taskId, 80) || null
+  if (!opportunity) {
+    const caseResult = await admin.from('application_cases')
+      .select('id,opportunity_id,campaign_id,task_id')
+      .eq('id', caseId)
+      .eq('user_id', run.user_id)
+      .maybeSingle()
+    if (caseResult.error || !caseResult.data) return null
+    campaignId = safeString(caseResult.data.campaign_id, 80) || null
+    taskId = safeString(caseResult.data.task_id, 80) || null
+    const opportunityResult = await admin.from('application_opportunities')
+      .select('*')
+      .eq('id', safeString(caseResult.data.opportunity_id, 80))
+      .eq('user_id', run.user_id)
+      .maybeSingle()
+    if (opportunityResult.error || !opportunityResult.data) return null
+    opportunity = applicationOpportunityFromRow(opportunityResult.data as Record<string, unknown>) as unknown as Record<string, unknown>
+  }
+  const currentUrl = safeString(input.currentUrl ?? input.observation.url, 2_000)
+  const excerpt = publicProgrammeExcerpt(input.observation.text)
+  if (!opportunity || !currentUrl || !excerpt || !isProgrammeOfficialSource(opportunity, currentUrl)) return null
+  const digest = await hashValue({ caseId, currentUrl: canonicalOpportunityReference(currentUrl), excerpt })
+  const evidence = await admin.from('application_evidence').upsert({
+    user_id: run.user_id,
+    application_case_id: caseId,
+    task_id: taskId || run.task_id,
+    campaign_id: campaignId,
+    agent_run_id: run.id,
+    kind: 'programme_snapshot',
+    source_url: currentUrl,
+    provider: 'browser',
+    excerpt,
+    metadata: {
+      evidence_scope: 'recommendation_programme_policy',
+      source_authority: 'official',
+      browser_session_id: safeString(input.sessionId, 80),
+      observation_hash: digest,
+      retrieved_at: new Date().toISOString(),
+    },
+    idempotency_key: `recommendation-policy-source:${caseId}:${digest.slice(0, 40)}`,
+  }, { onConflict: 'user_id,application_case_id,idempotency_key' })
+    .select('id,source_url,excerpt,captured_at')
+    .single()
+  if (evidence.error || !evidence.data) throw new Error(evidence.error?.message ?? 'The official programme source could not be saved.')
+  return {
+    id: safeString(evidence.data.id, 80),
+    url: safeString(evidence.data.source_url, 2_000),
+    excerpt: safeString(evidence.data.excerpt, 4_000),
+    retrievedAt: safeString(evidence.data.captured_at, 80) || new Date().toISOString(),
+  } satisfies RecommendationProgrammeSource
+}
+
+async function recommendationProgrammeSources(
+  admin: AdminClient,
+  run: AgentRunRow,
+  input: { caseId: string; opportunity: Record<string, unknown> },
+) {
+  const caseId = safeString(input.caseId, 80)
+  const sourcesResult = await admin.from('application_evidence')
+    .select('id,kind,source_url,excerpt,metadata,captured_at')
+    .eq('application_case_id', caseId)
+    .eq('user_id', run.user_id)
+    .in('kind', ['programme_snapshot', 'official_requirement_source'])
+    .order('captured_at', { ascending: false })
+    .limit(40)
+  if (sourcesResult.error) throw new Error(sourcesResult.error.message)
+  const rows = (sourcesResult.data ?? [])
+    .filter(row => isProgrammeOfficialSource(input.opportunity, safeString(row.source_url, 2_000)))
+  const sources = rows.map(row => ({
+    id: safeString(row.id, 80),
+    url: safeString(row.source_url, 2_000),
+    excerpt: safeString(row.excerpt, 4_000),
+    retrievedAt: safeString(row.captured_at, 80) || new Date().toISOString(),
+  })).filter(source => source.id && source.url && source.excerpt)
+  const policyRows = rows.filter(row => safeString(recordValue(row.metadata).evidence_scope, 120) === 'recommendation_programme_policy')
+  return {
+    sources,
+    visitedUrls: new Set(policyRows.map(row => canonicalOpportunityReference(safeString(row.source_url, 2_000))).filter(Boolean)),
+    researchAttempts: policyRows.length,
+  }
+}
+
+function nextRecommendationProgrammeSourceUrl(input: {
+  opportunity: Record<string, unknown>
+  observation?: Record<string, unknown> | null
+  visitedUrls: Set<string>
+}) {
+  const officialUrl = opportunityOfficialUrl(input.opportunity)
+  const links = Array.isArray(input.observation?.links) ? input.observation!.links : []
+  const candidates = links.map(recordValue).map(link => {
+    const url = safeString(link.href, 2_000)
+    const label = safeString(link.text, 500)
+    if (!url || !isProgrammeOfficialSource(input.opportunity, url)) return null
+    if (input.visitedUrls.has(canonicalOpportunityReference(url))) return null
+    const value = `${label} ${url}`.toLocaleLowerCase()
+    if (/\b(?:sign in|log in|login|create account|apply now|start application)\b/.test(value)) return null
+    const score = /recommend|reference|referee/.test(value)
+      ? 4
+      : /admission|application|requirement|graduate/.test(value)
+        ? 2
+        : 0
+    return score > 0 ? { url, score } : null
+  }).filter((candidate): candidate is { url: string; score: number } => Boolean(candidate))
+  candidates.sort((left, right) => right.score - left.score || left.url.localeCompare(right.url))
+  if (candidates[0]) return candidates[0].url
+  return officialUrl && !input.visitedUrls.has(canonicalOpportunityReference(officialUrl))
+    ? officialUrl
+    : ''
+}
+
+async function queueRecommendationProgrammeSourceResearch(
+  admin: AdminClient,
+  run: AgentRunRow,
+  input: {
+    caseId: string
+    opportunity: Record<string, unknown>
+    sources: { visitedUrls: Set<string>; researchAttempts: number }
+    coordinatorActionKey: string
+  },
+) {
+  const officialUrl = opportunityOfficialUrl(input.opportunity)
+  const visitedUrls = new Set(input.sources.visitedUrls)
+  let researchAttempts = input.sources.researchAttempts
+  const currentSession = run.browser_session_id
+    ? await loadOwnedBrowserSession(admin, run, run.browser_session_id)
+    : null
+  const checkpoint = recordValue(currentSession?.checkpoint) as BrowserCheckpoint
+  const observation = recordValue(recordValue(checkpoint.publicBrowser).observation)
+  if (currentSession && Object.keys(observation).length) {
+    const persisted = await persistRecommendationProgrammeSourceObservation(admin, run, {
+      caseId: input.caseId,
+      sessionId: currentSession.id,
+      observation,
+      currentUrl: safeString(currentSession.current_url ?? recordValue(checkpoint.publicBrowser).currentUrl, 2_000),
+      opportunity: input.opportunity,
+    })
+    if (persisted) {
+      const canonicalUrl = canonicalOpportunityReference(persisted.url)
+      if (canonicalUrl && !visitedUrls.has(canonicalUrl)) {
+        visitedUrls.add(canonicalUrl)
+        researchAttempts += 1
+      }
+    }
+  }
+  const destination = nextRecommendationProgrammeSourceUrl({
+    opportunity: input.opportunity,
+    observation: Object.keys(observation).length ? observation : null,
+    visitedUrls,
+  })
+  if (!destination || researchAttempts >= 3) return { kind: 'exhausted' as const }
+  let host = ''
+  try { host = new URL(destination).hostname.toLocaleLowerCase() } catch { /* validated below */ }
+  if (!host || !isProgrammeOfficialSource(input.opportunity, destination)) return { kind: 'exhausted' as const }
+
+  let session = currentSession
+  if (!session) {
+    const created = await admin.from('browser_execution_sessions').insert({
+      run_id: run.id,
+      user_id: run.user_id,
+      status: 'planning',
+      // This is a case-specific allowlist entry derived from the already
+      // verified opportunity. It does not widen the global browser policy.
+      allowed_domains: [host],
+      objective: 'Read the verified programme’s public recommendation instructions.',
+      checkpoint: {},
+      resumable: true,
+    }).select('*').single()
+    if (created.error || !created.data) throw new Error(created.error?.message ?? 'Could not set up the official programme research workspace.')
+    session = created.data
+  } else {
+    const allowedDomains = Array.isArray(session.allowed_domains)
+      ? session.allowed_domains.map((domain: unknown) => safeString(domain, 253).toLocaleLowerCase()).filter(Boolean)
+      : []
+    if (!allowedDomains.includes(host)) {
+      const updated = await admin.from('browser_execution_sessions').update({
+        allowed_domains: [...new Set([...allowedDomains, host])],
+      }).eq('id', session.id).eq('run_id', run.id).eq('user_id', run.user_id).select('*').single()
+      if (updated.error || !updated.data) throw new Error(updated.error?.message ?? 'Could not add the verified programme domain to this research workspace.')
+      session = updated.data
+    }
+  }
+  await admin.from('agent_runs').update({ browser_session_id: session.id }).eq('id', run.id).eq('user_id', run.user_id)
+  const coordinatorAction = await admin.from('agent_actions')
+    .select('model_call_id')
+    .eq('run_id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('idempotency_key', input.coordinatorActionKey)
+    .maybeSingle()
+  if (coordinatorAction.error) throw new Error(coordinatorAction.error.message)
+  const modelCallId = safeString(coordinatorAction.data?.model_call_id, 256)
+  if (!modelCallId) return { kind: 'unavailable' as const, message: 'The saved research continuation is unavailable; retrying the verified source check automatically.' }
+  const action = await recordAction(admin, run, 'browser.navigate', modelCallId, {
+    session_id: session.id,
+    url: destination,
+  }, 'running')
+  const queued = await queueBrowserOperation(admin, run, {
+    id: safeString(action.idempotency_key, 500),
+    type: 'navigate',
+    arguments: { session_id: session.id, url: destination },
+  })
+  if (queued.kind === 'unavailable') return { kind: 'unavailable' as const, message: queued.message ?? 'The official programme page is temporarily unavailable.' }
+  return { kind: 'queued' as const, sessionId: session.id, destination }
+}
+
 function decodeWorkSamplePdfText(bytes: Uint8Array) {
   const raw = new TextDecoder('latin1').decode(bytes)
   const values: string[] = []
@@ -7184,17 +7445,76 @@ async function executeProviderTool(
     const caseId = safeString(argumentsValue.application_case_id, 80)
     const context = await applicationCaseContext(admin, run, caseId)
     if (!context) return { kind: 'pause', status: 'waiting_for_user', code: 'application_case_missing', message: 'The application case and verified opportunity are required before coordinating recommendations.', value: { valid: false }, actionStatus: 'failed' }
-    const profileResult = await admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle()
-    if (profileResult.error && profileResult.error.code !== '42P01') throw new Error(profileResult.error.message)
-    const profile = profileResult.data?.profile
-    if (!profile) return { kind: 'pause', status: 'needs_context', code: 'applicant_profile_missing', message: 'Confirm the reusable applicant profile or attach the current CV so I can resolve recommendation context safely.', value: { missing_fields: ['applicant_profile'], suggested_options: [] }, actionStatus: 'failed' }
     const requirementInput = recordValue(argumentsValue.programme_requirements)
+    const durableProgrammeSources = await recommendationProgrammeSources(admin, run, { caseId, opportunity: context.opportunity as unknown as Record<string, unknown> })
     const sourceEvidence = [
       ...(Array.isArray(requirementInput.sourceEvidence) ? requirementInput.sourceEvidence : []),
       ...(Array.isArray(requirementInput.source_evidence) ? requirementInput.source_evidence : []),
       ...(Array.isArray(recordValue(context.opportunity).citations) ? recordValue(context.opportunity).citations as unknown[] : []),
+      ...durableProgrammeSources.sources.map(source => ({
+        id: source.id,
+        url: source.url,
+        excerpt: source.excerpt,
+        authority: 'official',
+        sourceType: 'official',
+        retrievedAt: source.retrievedAt,
+      })),
     ]
     const requirements = extractRecommendationRequirements({ raw: requirementInput, opportunity: context.opportunity, sourceEvidence })
+    // Finding an institution's own requirements is David's job. Do that from
+    // the verified opportunity first; a person should only be asked for an
+    // alternative source after bounded, task-owned public research has truly
+    // exhausted the relevant programme pages.
+    if (!requirements.sourceBacked) {
+      const sourceResearch = await queueRecommendationProgrammeSourceResearch(admin, run, {
+        caseId,
+        opportunity: context.opportunity as unknown as Record<string, unknown>,
+        sources: durableProgrammeSources,
+        coordinatorActionKey: idempotencyKey,
+      })
+      if (sourceResearch.kind === 'queued') {
+        return {
+          kind: 'pause',
+          status: 'waiting_external',
+          code: 'recommendation_source_research',
+          message: 'I’m checking the programme’s recommendation instructions.',
+          value: {
+            application_case_id: caseId,
+            source_research: 'in_progress',
+            destination: sourceResearch.destination,
+            unresolved_fields: requirements.unresolvedFields,
+          },
+          runPatch: {
+            browser_session_id: sourceResearch.sessionId,
+            external_correlation_id: `browser-session:${sourceResearch.sessionId}`,
+            context: { ...(run.context ?? {}), application_case_id: caseId, progress_detail_interaction: null },
+          },
+        }
+      }
+      if (sourceResearch.kind === 'unavailable') {
+        return {
+          kind: 'pause',
+          status: 'waiting_external',
+          code: 'recommendation_source_research_retrying',
+          message: 'I’m reconnecting to the programme instructions and will keep trying.',
+          value: { application_case_id: caseId, source_research: 'retrying' },
+          runPatch: { context: { ...(run.context ?? {}), application_case_id: caseId, progress_detail_interaction: null } },
+        }
+      }
+      return {
+        kind: 'pause',
+        status: 'needs_context',
+        code: 'recommendation_source_not_found',
+        message: 'I found the programme, but its recommendation rules aren’t clear yet. Send the relevant instructions and I’ll take it from there.',
+        value: { application_case_id: caseId, source_research: 'exhausted', unresolved_fields: requirements.unresolvedFields },
+        actionSucceeded: true,
+        runPatch: { context: { ...(run.context ?? {}), application_case_id: caseId, progress_detail_interaction: null } },
+      }
+    }
+    const profileResult = await admin.from('applicant_profiles').select('profile').eq('user_id', run.user_id).maybeSingle()
+    if (profileResult.error && profileResult.error.code !== '42P01') throw new Error(profileResult.error.message)
+    const profile = profileResult.data?.profile
+    if (!profile) return { kind: 'pause', status: 'needs_context', code: 'applicant_profile_missing', message: 'Confirm the reusable applicant profile or attach the current CV so I can resolve recommendation context safely.', value: { missing_fields: ['applicant_profile'], suggested_options: [] }, actionStatus: 'failed' }
     const contextSources = recordValue(argumentsValue.context_sources)
     const caseData = recordValue(context.row.data)
     const priorCampaign = recordValue(caseData.recommendationCampaign)
@@ -9153,6 +9473,14 @@ async function executeProviderTool(
     const checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
     const publicObservation = recordValue(recordValue(checkpoint.publicBrowser).observation)
     const applicationCaseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80)
+    const recommendationProgrammeSource = applicationCaseId && Object.keys(publicObservation).length
+      ? await persistRecommendationProgrammeSourceObservation(admin, run, {
+        caseId: applicationCaseId,
+        sessionId: session.id,
+        observation: publicObservation,
+        currentUrl: safeString(session.current_url ?? recordValue(checkpoint.publicBrowser).currentUrl, 2_000),
+      })
+      : null
     const supplemental = applicationCaseId && Object.keys(publicObservation).length
       ? await persistSupplementalQuestionsFromObservation(admin, run, { caseId: applicationCaseId, sessionId: session.id, observation: publicObservation })
       : { questions: [], interaction: null as SupplementalProgressInteraction | null, writerQuestions: [] as ApplicationQuestion[] }
@@ -9169,6 +9497,7 @@ async function executeProviderTool(
         current_domain: session.current_domain,
         last_operation: checkpoint.lastOperation ?? null,
         observation: publicObservation,
+        ...(recommendationProgrammeSource ? { recommendation_programme_source: recommendationProgrammeSource } : {}),
         ...supplementalContext,
         resumable: session.resumable === true,
         payment_boundary_reached: session.payment_boundary_reached === true,
@@ -11310,6 +11639,12 @@ async function pollBrowserExecutionRun(
     const applicationCaseId = safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80)
     const observation = recordValue(output.observation)
     if (applicationCaseId && Object.keys(observation).length) {
+      const recommendationProgrammeSource = await persistRecommendationProgrammeSourceObservation(admin, run, {
+        caseId: applicationCaseId,
+        sessionId: session.id,
+        observation,
+        currentUrl: safeString(session.current_url ?? recordValue(checkpoint.publicBrowser).currentUrl, 2_000),
+      })
       supplementalObservation = await persistSupplementalQuestionsFromObservation(admin, run, { caseId: applicationCaseId, sessionId: session.id, observation })
       const readBack = operation.type === 'submit'
         ? await verifySupplementalReadBack(admin, run, {
@@ -11323,6 +11658,7 @@ async function pollBrowserExecutionRun(
         : []
       output = {
         ...output,
+        ...(recommendationProgrammeSource ? { recommendation_programme_source: recommendationProgrammeSource } : {}),
         supplemental_questions: supplementalObservation.questions,
         supplemental_writer_questions: supplementalObservation.writerQuestions.map(question => ({ id: question.id, exact_prompt: question.exactPrompt })),
         supplemental_read_back: readBack,

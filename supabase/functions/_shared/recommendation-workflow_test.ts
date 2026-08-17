@@ -88,6 +88,65 @@ Deno.test('extracts source-backed programme requirements and keeps unknown field
   assert(result.unresolvedFields.includes('template'))
 })
 
+Deno.test('derives the minimum recommendation workflow facts from an official programme snapshot', () => {
+  const result = extractRecommendationRequirements({
+    opportunity: {
+      institution: 'Northbridge University',
+      programmeTitle: 'PhD in Computational Science',
+    },
+    sourceEvidence: [
+      source('official-recommendations', 'PhD applicants must provide three letters of recommendation. Enter each recommender in the online application portal; the system emails them directly.'),
+    ],
+  })
+
+  assertEquals(result.recommendationCount.value, 3)
+  assertEquals(result.recommendationCount.verified, true)
+  assertEquals(result.submissionMethod.value, 'Enter each recommender in the application system.')
+  assertEquals(result.submissionMethod.verified, true)
+  assertEquals(result.programme.verified, true)
+  assertEquals(result.institution.verified, true)
+  assertEquals(result.sourceBacked, true)
+})
+
+Deno.test('does not treat a generic official page as recommendation instructions', () => {
+  const result = extractRecommendationRequirements({
+    opportunity: {
+      institution: 'Northbridge University',
+      programmeTitle: 'PhD in Computational Science',
+    },
+    sourceEvidence: [source('general-admissions', 'Learn more about graduate study at Northbridge University.')],
+  })
+
+  assertEquals(result.sourceBacked, false)
+  assertEquals(result.recommendationCount.value, null)
+  assertEquals(result.submissionMethod.value, null)
+})
+
+Deno.test('keeps a detailed browser snapshot when the opportunity already cites the same official page', () => {
+  const result = extractRecommendationRequirements({
+    opportunity: {
+      institution: 'Northbridge University',
+      programmeTitle: 'PhD in Computational Science',
+      citations: [{
+        id: 'opportunity-citation',
+        url: 'https://university.example/admissions',
+        authority: 'official',
+        excerpt: 'Graduate admissions information.',
+      }],
+    },
+    sourceEvidence: [{
+      id: 'browser-snapshot',
+      url: 'https://university.example/admissions',
+      authority: 'official',
+      excerpt: 'Applicants must provide three letters of recommendation. Enter each recommender in the online application portal.',
+    }],
+  })
+
+  assertEquals(result.recommendationCount.value, 3)
+  assertEquals(result.submissionMethod.value, 'Enter each recommender in the application system.')
+  assertEquals(result.sourceBacked, true)
+})
+
 Deno.test('discovers and merges profile, Gmail, Contacts, and previous-application candidates', () => {
   const candidates = discoverRecommenderCandidates({
     profile: {

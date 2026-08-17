@@ -3172,7 +3172,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ? flightTask
       ? 'I’m still checking the flight site and will continue automatically. You can leave this screen.'
       : 'I’ll keep watching and continue as soon as there’s an update. You can leave this screen.'
-    : 'Review the message below, then retry when you’re ready.'
+    : ''
   const replySimulation = agentDevMode && external && run.capability === 'scheduling'
     ? `<div class="task-agent-reply-simulation">
         <label for="agent-reply-simulation-${escapeHtml(run.id)}">Development reply</label>
@@ -3204,7 +3204,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
         <span>${escapeHtml(userFacingWaitingReason || 'Complete the provider step before payment can continue.')}</span>
         <a class="agent-primary" href="${paymentHandoffUrl}" target="_blank" rel="noreferrer">Open provider step</a>
       </div>
-    ` : `<div class="task-agent-waiting-detail">${icon(external ? 'bell' : 'settings')}<span>${escapeHtml(external && flightTask && flightOptions.length ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>`}
+    ` : detail ? `<div class="task-agent-waiting-detail">${icon('bell')}<span>${escapeHtml(external && flightTask && flightOptions.length ? 'Rechecking the selected itinerary. You can leave this screen.' : detail)}</span></div>` : ''}
     ${replySimulation}
     ${renderRoonGeneratedFiles(task)}
     <footer>

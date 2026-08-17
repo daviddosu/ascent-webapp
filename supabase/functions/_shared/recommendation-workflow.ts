@@ -676,6 +676,79 @@ function normalizeSourceEvidence(value: unknown, index: number): RecommendationS
   }
 }
 
+function officialSourceEvidence(evidence: RecommendationSourceEvidence[]) {
+  return evidence.filter(source => ['official', 'government'].includes(source.authority) && Boolean(source.excerpt.trim()))
+}
+
+function wordNumber(value: string) {
+  const normalized = value.toLocaleLowerCase()
+  const words: Record<string, number> = {
+    one: 1, two: 2, three: 3, four: 4, five: 5,
+    six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  }
+  if (normalized in words) return words[normalized]
+  const parsed = Number(normalized)
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= 20 ? parsed : null
+}
+
+function sourcedValue<T>(value: T, source: RecommendationSourceEvidence | null) {
+  return source ? { value, sourceIds: [source.id] } : value
+}
+
+/**
+ * Official programme pages routinely state the few facts needed to start a
+ * recommendation plan in prose rather than in a structured application API.
+ * Pull only direct, low-ambiguity claims out of those saved public snapshots.
+ * Everything else remains explicitly unknown; this is not a substitute for
+ * applicant evidence or a claim that a referee has agreed to help.
+ */
+function inferRecommendationRequirementsFromSources(input: {
+  opportunity: Record<string, unknown>
+  evidence: RecommendationSourceEvidence[]
+}) {
+  const sources = officialSourceEvidence(input.evidence)
+  const first = sources[0] ?? null
+  const sourceMatching = (pattern: RegExp) => sources.find(source => pattern.test(source.excerpt)) ?? null
+  const inferred: Record<string, unknown> = {}
+  const programme = text(input.opportunity.programme ?? input.opportunity.programmeTitle ?? input.opportunity.programme_title, 500)
+  const institution = text(input.opportunity.institution, 500)
+  if (programme && first) inferred.programme = sourcedValue(programme, first)
+  if (institution && first) inferred.institution = sourcedValue(institution, first)
+
+  const countSource = sourceMatching(/\b(?:one|two|three|four|five|six|seven|eight|nine|ten|\d{1,2})\s+(?:(?:academic|professional|confidential|strong)\s+){0,3}(?:letters?\s+(?:of\s+)?(?:recommendation|reference)|recommendation\s+letters?|references?)\b/i)
+  const countMatch = countSource?.excerpt.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|\d{1,2})\s+(?:(?:academic|professional|confidential|strong)\s+){0,3}(?:letters?\s+(?:of\s+)?(?:recommendation|reference)|recommendation\s+letters?|references?)\b/i)
+  const count = countMatch ? wordNumber(countMatch[1] ?? '') : null
+  if (count && countSource) inferred.recommendationCount = sourcedValue(count, countSource)
+
+  const submissionSource = sourceMatching(/(?:letters?\s+(?:of\s+)?(?:recommendation|reference)|recommendation\s+letters?|references?).{0,240}\b(?:submit(?:ted)?|upload(?:ed)?|provide(?:d)?|enter(?:ed)?|complete(?:d)?)\b.{0,160}\b(?:online|application|portal|system|electronic|slate)\b|(?:applicant|you).{0,180}\b(?:enter|provide|add)\b.{0,160}\b(?:recommender|referee)\b.{0,160}\b(?:email|portal|application|system|invitation)\b/i)
+  if (submissionSource) {
+    const sourceText = submissionSource.excerpt
+    const submissionMethod = /\b(?:enter|provide|add)\b.{0,160}\b(?:recommender|referee)\b.{0,160}\b(?:email|portal|application|system|invitation)\b/i.test(sourceText)
+      ? 'Enter each recommender in the application system.'
+      : /\bportal\b/i.test(sourceText)
+        ? 'Submit through the application portal.'
+        : 'Submit through the online application.'
+    inferred.submissionMethod = sourcedValue(submissionMethod, submissionSource)
+  }
+
+  const invitationSource = sourceMatching(/\b(?:recommender|referee).{0,180}\b(?:invitation|invited|email(?:ed)?)\b|\b(?:invitation|invited)\b.{0,180}\b(?:recommender|referee)\b/i)
+  if (invitationSource) inferred.portalInvitationFlow = sourcedValue('The programme sends the recommender an invitation after their details are entered.', invitationSource)
+
+  const formatSource = sourceMatching(/\b(?:pdf|docx?|word document|online form|electronic form)\b/i)
+  if (formatSource) {
+    const match = formatSource.excerpt.match(/\b(?:pdf|docx?|word document|online form|electronic form)\b/i)
+    if (match) inferred.format = sourcedValue(match[0]!.toUpperCase() === 'PDF' ? 'PDF' : match[0]!, formatSource)
+  }
+  const languageSource = sourceMatching(/\b(?:letters?|recommendations?|references?).{0,120}\b(?:english|English)\b/i)
+  if (languageSource) inferred.language = sourcedValue('English', languageSource)
+  const lengthSource = sourceMatching(/\b(?:letters?|recommendations?|references?).{0,120}\b(?:maximum|limit(?:ed)? to|no more than)\s+\d+\s+(?:page|pages|word|words)\b/i)
+  if (lengthSource) {
+    const match = lengthSource.excerpt.match(/\b(?:maximum|limit(?:ed)? to|no more than)\s+\d+\s+(?:page|pages|word|words)\b/i)
+    if (match) inferred.letterLength = sourcedValue(match[0]!, lengthSource)
+  }
+  return inferred
+}
+
 /** Extract requirements while retaining an explicit unresolved list for every unverified field. */
 export function extractRecommendationRequirements(input: {
   raw?: unknown
@@ -685,11 +758,21 @@ export function extractRecommendationRequirements(input: {
 }): RecommendationProgrammeRequirements {
   const raw = record(input.raw)
   const opportunity = record(input.opportunity)
-  const data = { ...opportunity, ...raw }
-  const evidence = [...(input.sourceEvidence ?? []), ...(Array.isArray(data.sourceEvidence) ? data.sourceEvidence : []), ...(Array.isArray(data.citations) ? data.citations : [])]
+  const initialData = { ...opportunity, ...raw }
+  const evidence = [...(input.sourceEvidence ?? []), ...(Array.isArray(initialData.sourceEvidence) ? initialData.sourceEvidence : []), ...(Array.isArray(initialData.citations) ? initialData.citations : [])]
     .map(normalizeSourceEvidence)
     .filter((item): item is RecommendationSourceEvidence => Boolean(item))
-    .filter((item, index, items) => items.findIndex(other => other.id === item.id || (item.url && other.url === item.url)) === index)
+    // Different saved excerpts can legitimately come from the same programme
+    // URL: a short opportunity citation establishes provenance while a later
+    // browser snapshot contains the actual recommendation instructions. Keep
+    // both when their durable source ids differ, otherwise the richer snapshot
+    // could be discarded before its direct claims are evaluated.
+    .filter((item, index, items) => items.findIndex(other => other.id === item.id) === index)
+  // Structured facts supplied by a verified source win. When a programme page
+  // only exposes prose, the narrow source parser above supplies the minimal
+  // operational fields without inventing any applicant-specific details.
+  const inferred = inferRecommendationRequirementsFromSources({ opportunity, evidence })
+  const data = { ...opportunity, ...inferred, ...raw }
   const countValue = data.recommendationCount ?? data.recommendation_count ?? (data.recommendations && record(data.recommendations).count)
   const deadlineValue = data.refereeDeadline ?? data.referee_deadline ?? data.recommendationDeadline ?? data.recommendation_deadline
   const requirements: RecommendationProgrammeRequirements = {
@@ -718,7 +801,13 @@ export function extractRecommendationRequirements(input: {
     const field = value as RecommendationField<unknown>
     return field.value === null || (field.value !== null && !field.verified && !(['requiredRefereeTypes', 'relationshipRestrictions', 'specialPrompts', 'contactVerification', 'fallbackRules'].includes(fieldNameFromEntry(value, fields))))
   }).map(([key]) => key)
-  const criticalFields = new Set(['programme', 'institution', 'recommendationCount', 'submissionMethod', 'refereeDeadline', 'portalInvitationFlow', 'letterLength', 'format', 'language'])
+  // Schools often publish no letter-length, language, invitation-flow, or
+  // separate referee-deadline rule. Those omissions stay visible as unknown
+  // and are checked again in the portal, but must not force the applicant to
+  // supply a public programme page before we can responsibly identify and
+  // prepare recommenders. The core gate is limited to facts an official page
+  // must actually establish to start that preparation.
+  const criticalFields = new Set(['programme', 'institution', 'recommendationCount', 'submissionMethod'])
   requirements.sourceBacked = requirements.sourceEvidence.length > 0 && fields.every(([key, value]) => {
     const field = value as RecommendationField<unknown>
     return !criticalFields.has(key) || (field.value !== null && field.verified)
