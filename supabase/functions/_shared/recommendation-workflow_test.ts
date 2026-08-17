@@ -6,6 +6,7 @@ import {
   classifyRecommendationReply,
   createRecommendationInteraction,
   createRecommendationPortfolioStrategy,
+  deriveOfficialRecommendationRoutes,
   discoverRecommenderCandidates,
   extractRecommendationRequirements,
   generateRecommendationRequestEmail,
@@ -18,6 +19,18 @@ import {
   type RecommendationProgrammeRequirements,
   type RecommenderCandidate,
 } from './recommendation-workflow.ts'
+
+Deno.test('derives one bounded same-origin recommendations route from an official application page', () => {
+  assertEquals(
+    deriveOfficialRecommendationRoutes([
+      'https://gradadmissions.stanford.edu/apply/faq?view=all#recommendations',
+      'https://physics.stanford.edu/graduate/graduate-admissions',
+      'http://gradadmissions.stanford.edu/apply/faq',
+      'not a URL',
+    ]),
+    ['https://gradadmissions.stanford.edu/apply/recommendations'],
+  )
+})
 
 function source(id: string, excerpt: string) {
   return { id, url: `https://university.example/${id}`, authority: 'official' as const, excerpt, retrievedAt: '2026-08-01T00:00:00.000Z' }

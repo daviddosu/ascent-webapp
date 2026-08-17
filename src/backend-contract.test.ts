@@ -600,7 +600,8 @@ describe('agent execution security contract', () => {
     expect(recovery).toContain("safeString(interaction.id, 300) === 'recommendation:requirements-source'")
     expect(recovery).toContain("safeString(run.error_code, 120) === 'recommendation_source_not_found'")
     expect(recovery).toContain('/recommendation rules aren.t clear yet/i.test(run.waiting_reason)')
-    expect(recovery).toContain('applicationRecommendationSourceRecoveryAttempts(run) >= 3')
+    expect(recovery).toContain("strategyVersion === 'recommendation-public-route@2'")
+    expect(recovery).toContain("recommendation_source_research_strategy_version: 'recommendation-public-route@2'")
     expect(recovery).toContain("recommendation_source_research_required: true")
     expect(recovery).toContain(".eq('status', 'needs_context')")
     expect(recovery).toContain(".eq('version', run.version)")
@@ -633,6 +634,8 @@ describe('agent execution security contract', () => {
     expect(research).toContain('const recommendationProgrammeSourcePageLimit = 6')
     expect(research).toContain('sameOfficialInstitutionDomain(officialUrl, sourceUrl)')
     expect(research).toContain('historicalLinks: history.links')
+    expect(research).toContain('deriveOfficialRecommendationRoutes')
+    expect(research).toContain("label: 'Official recommendations instructions'")
     expect(research).toContain('visitedUrls.size >= recommendationProgrammeSourcePageLimit')
   })
 

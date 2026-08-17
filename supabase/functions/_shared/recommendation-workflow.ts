@@ -366,6 +366,36 @@ function text(value: unknown, maximum = 4_000) {
   return typeof value === 'string' ? value.trim().slice(0, maximum) : ''
 }
 
+/**
+ * Some admissions sites keep recommendation instructions out of their primary
+ * navigation or behind a collapsed menu. Once David has reached an official
+ * application path, try the conventional sibling route on that exact origin.
+ * This is one bounded inference, not a crawl: the task agent still applies
+ * its official-source policy before opening the result.
+ */
+export function deriveOfficialRecommendationRoutes(sourceUrls: unknown[]) {
+  const routes = new Set<string>()
+  for (const value of sourceUrls) {
+    const sourceUrl = text(value, 2_000)
+    if (!sourceUrl) continue
+    try {
+      const source = new URL(sourceUrl)
+      if (source.protocol !== 'https:' || source.username || source.password) continue
+      const segments = source.pathname.split('/').filter(Boolean)
+      const applicationIndex = segments.findIndex(segment => /^(?:apply|admission|admissions)$/i.test(segment))
+      if (applicationIndex < 0) continue
+      source.pathname = `/${[...segments.slice(0, applicationIndex + 1), 'recommendations'].join('/')}`
+      source.search = ''
+      source.hash = ''
+      routes.add(source.toString())
+    } catch {
+      // Ignore malformed source evidence. The caller retains the authorization
+      // boundary around which official source may be opened.
+    }
+  }
+  return [...routes].sort()
+}
+
 function stringArray(value: unknown, maximum = 80) {
   return Array.isArray(value) ? value.map(item => text(item, maximum)).filter(Boolean) : []
 }

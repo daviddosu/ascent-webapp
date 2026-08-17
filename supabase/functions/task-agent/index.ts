@@ -148,6 +148,7 @@ import {
   buildRecommenderSupportPack,
   createRecommendationInteraction,
   createRecommendationPortfolioStrategy,
+  deriveOfficialRecommendationRoutes,
   extractRecommendationRequirements,
   generateRecommendationRequestEmail,
   nextRecommendationWorkflowState,
@@ -3850,7 +3851,15 @@ function nextRecommendationProgrammeSourceUrl(input: {
       label: safeString(link.text, 500),
     }))
     : []
-  const candidates = [...currentLinks, ...(input.historicalLinks ?? [])].map(link => {
+  const inferredLinks = deriveOfficialRecommendationRoutes([
+    safeString(input.observation?.url, 2_000),
+    ...currentLinks.map(link => link.url),
+    ...(input.historicalLinks ?? []).map(link => link.url),
+  ]).map(url => ({
+    url,
+    label: 'Official recommendations instructions',
+  }))
+  const candidates = [...currentLinks, ...(input.historicalLinks ?? []), ...inferredLinks].map(link => {
     const url = link.url
     const label = link.label
     if (!url || !isProgrammeOfficialSource(input.opportunity, url)) return null
@@ -13429,7 +13438,9 @@ function applicationSemanticHandoffCanRecover(run: AgentRunRow) {
 function applicationRecommendationSourceCanRecover(run: AgentRunRow) {
   if (!isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) return false
   if (run.status !== 'needs_context') return false
-  if (applicationRecommendationSourceRecoveryAttempts(run) >= 3) return false
+  const attempts = applicationRecommendationSourceRecoveryAttempts(run)
+  const strategyVersion = safeString(run.context?.recommendation_source_research_strategy_version, 120)
+  if (attempts >= 3 && strategyVersion === 'recommendation-public-route@2') return false
   const interaction = recordValue(run.context?.progress_detail_interaction)
   const legacyUploadRequest = safeString(interaction.id, 300) === 'recommendation:requirements-source' &&
     /(?:official recommendation instructions|programme page)/i.test(run.waiting_reason)
@@ -13450,7 +13461,8 @@ async function recoverApplicationRecommendationSourceInternally(
   openaiKey: string,
 ) {
   const attempts = applicationRecommendationSourceRecoveryAttempts(run)
-  if (attempts >= 3) return run
+  const strategyVersion = safeString(run.context?.recommendation_source_research_strategy_version, 120)
+  if (attempts >= 3 && strategyVersion === 'recommendation-public-route@2') return run
   const campaign = recordValue(run.context?.recommendation_campaign)
   const campaignContext = recordValue(campaign.context)
   // This is an exact legacy-state transition, not an open-ended retry. Claim
@@ -13483,6 +13495,7 @@ async function recoverApplicationRecommendationSourceInternally(
       progress_current: progressCurrent(run, 'Checking the programme’s recommendation instructions.'),
       recommendation_source_recovery_attempts: attempts + 1,
       recommendation_source_research_required: true,
+      recommendation_source_research_strategy_version: 'recommendation-public-route@2',
       recommendation_campaign: Object.keys(campaign).length
         ? {
             ...campaign,
