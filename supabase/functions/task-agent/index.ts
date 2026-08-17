@@ -3795,6 +3795,7 @@ const recommendationProgrammeSourcePageLimit = 6
 type RecommendationProgrammeSourceLink = {
   url: string
   label: string
+  kind?: 'linked' | 'inferred'
 }
 
 /**
@@ -3845,7 +3846,7 @@ function nextRecommendationProgrammeSourceUrl(input: {
   historicalLinks?: RecommendationProgrammeSourceLink[]
 }) {
   const officialUrl = opportunityOfficialUrl(input.opportunity)
-  const currentLinks = Array.isArray(input.observation?.links)
+  const currentLinks: RecommendationProgrammeSourceLink[] = Array.isArray(input.observation?.links)
     ? input.observation!.links.map(recordValue).map(link => ({
       url: safeString(link.href, 2_000),
       label: safeString(link.text, 500),
@@ -3858,8 +3859,13 @@ function nextRecommendationProgrammeSourceUrl(input: {
   ]).map(url => ({
     url,
     label: 'Official recommendations instructions',
+    kind: 'inferred' as const,
   }))
-  const candidates = [...currentLinks, ...(input.historicalLinks ?? []), ...inferredLinks].map(link => {
+  const inferredRouteAlreadyVisited = inferredLinks.some(link => {
+    const canonicalUrl = canonicalOpportunityReference(link.url)
+    return canonicalUrl && input.visitedUrls.has(canonicalUrl)
+  })
+  const candidates = [...currentLinks, ...(input.historicalLinks ?? []), ...(inferredRouteAlreadyVisited ? [] : inferredLinks)].map(link => {
     const url = link.url
     const label = link.label
     if (!url || !isProgrammeOfficialSource(input.opportunity, url)) return null
@@ -3876,20 +3882,20 @@ function nextRecommendationProgrammeSourceUrl(input: {
           : /graduate/.test(value)
             ? 30
             : 0
-    return score > 0 ? { url, canonicalUrl, score } : null
-  }).filter((candidate): candidate is { url: string; canonicalUrl: string; score: number } => Boolean(candidate))
-  const bestByUrl = new Map<string, { url: string; score: number }>()
+    return score > 0 ? { url, canonicalUrl, score: link.kind === 'inferred' ? score + 1 : score, kind: link.kind ?? 'linked' } : null
+  }).filter((candidate): candidate is { url: string; canonicalUrl: string; score: number; kind: 'linked' | 'inferred' } => Boolean(candidate))
+  const bestByUrl = new Map<string, { url: string; score: number; kind: 'linked' | 'inferred' }>()
   for (const candidate of candidates) {
     const existing = bestByUrl.get(candidate.canonicalUrl)
     if (!existing || candidate.score > existing.score || (candidate.score === existing.score && candidate.url.localeCompare(existing.url) < 0)) {
-      bestByUrl.set(candidate.canonicalUrl, { url: candidate.url, score: candidate.score })
+      bestByUrl.set(candidate.canonicalUrl, { url: candidate.url, score: candidate.score, kind: candidate.kind })
     }
   }
   const ranked = [...bestByUrl.values()].sort((left, right) => right.score - left.score || left.url.localeCompare(right.url))
-  if (ranked[0]) return ranked[0].url
+  if (ranked[0]) return ranked[0]
   return officialUrl && !input.visitedUrls.has(canonicalOpportunityReference(officialUrl))
-    ? officialUrl
-    : ''
+    ? { url: officialUrl, score: 0, kind: 'linked' as const }
+    : null
 }
 
 async function queueRecommendationProgrammeSourceResearch(
@@ -3928,7 +3934,6 @@ async function queueRecommendationProgrammeSourceResearch(
       if (canonicalUrl) visitedUrls.add(canonicalUrl)
     }
   }
-  if (visitedUrls.size >= recommendationProgrammeSourcePageLimit) return { kind: 'exhausted' as const }
   const destination = nextRecommendationProgrammeSourceUrl({
     opportunity: input.opportunity,
     observation: Object.keys(observation).length ? observation : null,
@@ -3936,9 +3941,17 @@ async function queueRecommendationProgrammeSourceResearch(
     historicalLinks: history.links,
   })
   if (!destination) return { kind: 'exhausted' as const }
+  // The normal page budget blocks open-ended navigation. One unvisited,
+  // conventional recommendation route is an exception because it is inferred
+  // from an already-verified application page and is the exact evidence this
+  // workflow is seeking. `nextRecommendationProgrammeSourceUrl` prevents a
+  // second inferred route once any such route has been visited.
+  if (visitedUrls.size >= recommendationProgrammeSourcePageLimit && destination.kind !== 'inferred') {
+    return { kind: 'exhausted' as const }
+  }
   let host = ''
-  try { host = new URL(destination).hostname.toLocaleLowerCase() } catch { /* validated below */ }
-  if (!host || !isProgrammeOfficialSource(input.opportunity, destination)) return { kind: 'exhausted' as const }
+  try { host = new URL(destination.url).hostname.toLocaleLowerCase() } catch { /* validated below */ }
+  if (!host || !isProgrammeOfficialSource(input.opportunity, destination.url)) return { kind: 'exhausted' as const }
 
   let session = currentSession
   if (!session) {
@@ -3979,15 +3992,15 @@ async function queueRecommendationProgrammeSourceResearch(
   if (!modelCallId) return { kind: 'unavailable' as const, message: 'The saved research continuation is unavailable; retrying the verified source check automatically.' }
   const action = await recordAction(admin, run, 'browser.navigate', modelCallId, {
     session_id: session.id,
-    url: destination,
+    url: destination.url,
   }, 'running')
   const queued = await queueBrowserOperation(admin, run, {
     id: safeString(action.idempotency_key, 500),
     type: 'navigate',
-    arguments: { session_id: session.id, url: destination },
+    arguments: { session_id: session.id, url: destination.url },
   })
   if (queued.kind === 'unavailable') return { kind: 'unavailable' as const, message: queued.message ?? 'The official programme page is temporarily unavailable.' }
-  return { kind: 'queued' as const, sessionId: session.id, destination }
+  return { kind: 'queued' as const, sessionId: session.id, destination: destination.url }
 }
 
 function decodeWorkSamplePdfText(bytes: Uint8Array) {

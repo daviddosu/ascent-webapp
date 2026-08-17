@@ -636,6 +636,8 @@ describe('agent execution security contract', () => {
     expect(research).toContain('historicalLinks: history.links')
     expect(research).toContain('deriveOfficialRecommendationRoutes')
     expect(research).toContain("label: 'Official recommendations instructions'")
+    expect(research).toContain('const inferredRouteAlreadyVisited')
+    expect(research).toContain("destination.kind !== 'inferred'")
     expect(research).toContain('visitedUrls.size >= recommendationProgrammeSourcePageLimit')
   })
 
