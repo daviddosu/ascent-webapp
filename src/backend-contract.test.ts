@@ -592,6 +592,19 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('Another request already owns this same continuation.')
   })
 
+  it('replaces the legacy public recommendation-page request with one bounded internal research recovery', () => {
+    const recovery = taskAgentFunction.slice(
+      taskAgentFunction.indexOf('function applicationRecommendationSourceCanRecover'),
+      taskAgentFunction.indexOf('function applicationCvGroundingCanRecover'),
+    )
+    expect(recovery).toContain("safeString(interaction.id, 300) === 'recommendation:requirements-source'")
+    expect(recovery).toContain('applicationRecommendationSourceRecoveryAttempts(run) >= 2')
+    expect(recovery).toContain("recommendation_source_research_required: true")
+    expect(recovery).toContain(".eq('status', 'needs_context')")
+    expect(recovery).toContain(".eq('version', run.version)")
+    expect(recovery).toContain("'David is checking the programme’s recommendation instructions instead of asking the applicant for a public page.'")
+  })
+
   it('preserves the original Gmail thread for scheduling replies', () => {
     expect(taskAgentFunction).toContain('const schedulingReply = Boolean(')
     expect(taskAgentFunction).toContain('!replyRequested && !schedulingReply && hasThread')

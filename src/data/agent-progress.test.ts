@@ -56,6 +56,8 @@ describe('agent progress timeline', () => {
       .toBe('I hit a snag finishing this step. Your progress is saved, and I’m finding a safer way forward.')
     expect(humanizeAgentProgressLabel('The bounded semantic decision remained invalid after one stronger repair: evidence_invalid.'))
       .toBe('I found a mismatch in the details, so I’m double-checking the application before I move on.')
+    expect(humanizeAgentProgressLabel('The reconciliation_ledger controller rejected the step.'))
+      .toBe('I found something to double-check before I move on. Your progress is saved.')
   })
 
   it('does not show the same moment as both history and live activity', () => {

@@ -947,13 +947,19 @@ async function pollWaitingAgentRuns() {
       /approve creating .*application case/i.test(run.waitingReason)
     const semanticHandoffRecovery = run.status === 'waiting_for_user' &&
       run.errorCode === 'application_semantic_handoff'
+    // Versions before the programme-source reader asked the applicant to
+    // upload a public recommendation page. That is recoverable internal work,
+    // not user context, so wake the persisted run and let David research the
+    // verified programme source instead.
+    const recommendationSourceRecovery = run.status === 'needs_context' &&
+      run.contextInteraction?.id === 'recommendation:requirements-source'
     const failedApplicationRecovery = run.status === 'failed' &&
       ['agent_execution_error', 'model_reasoning_luna', 'application_controller_repair_exhausted'].includes(run.errorCode ?? '')
     const intermediateApplicationRecovery = run.status === 'completed' &&
       Boolean(run.applicationState) &&
       !['complete', 'submitted', 'post_submission'].includes(String(run.applicationState?.stage ?? '').toLocaleLowerCase()) &&
       String(run.applicationState?.status ?? '').toLocaleLowerCase() !== 'complete'
-    return browserAllowlistRecovery || singleProgrammeRecovery || semanticHandoffRecovery || failedApplicationRecovery || intermediateApplicationRecovery
+    return browserAllowlistRecovery || singleProgrammeRecovery || semanticHandoffRecovery || recommendationSourceRecovery || failedApplicationRecovery || intermediateApplicationRecovery
   })
   internalRecoveryRuns.forEach(run => internalAgentRecoveryRunIDs.add(run.id))
   const recoverableRuns = [...waitingRuns, ...staleApplicationRuns, ...stalePaymentHandoffRuns, ...internalRecoveryRuns]
@@ -3283,10 +3289,14 @@ function renderAgentPanel(task: Task) {
     const workSampleInteraction = isWorkSampleProgressInteraction(contextInteraction) ? contextInteraction : null
     const applicationQuestionInteraction = contextInteraction?.kind === 'application_question' ? contextInteraction : null
     const recommendationInteraction = isRecommendationProgressInteraction(contextInteraction) ? contextInteraction : null
+    // Structured progress details already render their own question, reason,
+    // and control. Repeating the run's generic waiting message below it makes
+    // the card feel like it is stuck, and can surface stale worker wording.
+    const showContextPrompt = !contextInteraction
     return `<section class="task-agent-card task-agent-card--context">
       <header>${specialistHeader(task, run)}<span class="task-agent-header-mark" role="img" aria-label="Action needed">!</span></header>
       ${workSampleInteraction ? renderWorkSampleProgressDetail(workSampleInteraction, task.id, agentDecisionBusy.has(run.id)) : applicationQuestionInteraction ? renderApplicationQuestionProgressDetail(applicationQuestionInteraction, task.id, agentDecisionBusy.has(run.id)) : recommendationInteraction ? renderRecommendationProgressDetail(recommendationInteraction, task.id, agentDecisionBusy.has(run.id)) : ''}
-      ${formattedPrompt}
+      ${showContextPrompt ? formattedPrompt : ''}
       ${flightContext ? '<small class="task-agent-context-hint">Roon asks the questions. Caspian continues as soon as you answer.</small>' : ''}
       ${candidates.length ? `<div class="task-agent-recipient-options">${candidates.map(candidate => `<button type="button" data-action="select-agent-recipient" data-task-id="${escapeHtml(task.id)}" data-recipient-email="${escapeHtml(candidate.email ?? '')}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(candidate.name || run.recipientResolution?.recipient || 'Unknown recipient')}</strong><span>${escapeHtml(candidate.email ?? '')}</span></button>`).join('')}</div><small>Choose the person you mean. ${escapeHtml(ownerName)} will continue this same task.</small>` : schedulingOptions.length ? `<div class="task-agent-recipient-options">${schedulingOptions.map(option => `<button type="button" data-action="select-agent-schedule-option" data-task-id="${escapeHtml(task.id)}" data-schedule-option="${escapeHtml(option.value)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}><strong>${escapeHtml(option.label.replace(/Roon/gi, ownerName))}</strong><span>${sopAuthoringOptions ? 'Choose this path' : 'Use this option'}</span></button>`).join('')}</div><small>${sopAuthoringOptions ? `${escapeHtml(ownerName)} stays in the driver’s seat—from expert brief to final submission-ready pack.` : tripTypeOptions ? 'Choose your trip type, or add the return date below.' : `Choose an option, or give ${escapeHtml(ownerName)} a different airport or city below.`}</small>` : ''}
       ${!contextInteraction && canReplyInPanel ? `<label class="task-agent-context-input"><span>${replyLabel}</span><textarea class="task-agent-context" data-agent-context-input data-run-id="${escapeHtml(run.id)}" placeholder="${replyPlaceholder}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${escapeHtml(draft)}</textarea></label>` : ''}

@@ -19,6 +19,11 @@ describe('Roon context panel', () => {
     expect(mainSource).toContain('Roon checks it automatically once it is attached.')
   })
 
+  it('does not repeat a structured next-step prompt below the same detail panel', () => {
+    expect(mainSource).toContain('const showContextPrompt = !contextInteraction')
+    expect(mainSource).toContain("${showContextPrompt ? formattedPrompt : ''}")
+  })
+
   it('shows flight context as a Roon-owned one-question conversation', () => {
     expect(mainSource).toContain('contextOwnerSpecialistId')
     expect(mainSource).toContain('Roon asks the questions. Caspian continues as soon as you answer.')

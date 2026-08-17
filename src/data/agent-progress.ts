@@ -63,6 +63,9 @@ function friendlyRecoveryMessage(label: string) {
   if (/browser[_ -]?(?:domain|allowlist)|outside the task/i.test(label)) {
     return 'I’m finding the right verified page for this step.'
   }
+  if (/\b(?:bounded|semantic|controller|ledger|idempotency|continuation|provider action)\b/i.test(label) || /\b[a-z]+(?:_[a-z]+){1,}\b/i.test(label)) {
+    return 'I found something to double-check before I move on. Your progress is saved.'
+  }
   if (/\bbounded decision\b/i.test(label)) {
     return 'I’ve checked what I can. I need your decision on this next step.'
   }

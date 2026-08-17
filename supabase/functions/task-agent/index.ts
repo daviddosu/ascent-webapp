@@ -13258,6 +13258,98 @@ function applicationSemanticHandoffCanRecover(run: AgentRunRow) {
     safeString(run.error_code, 120) === 'application_semantic_handoff'
 }
 
+function applicationRecommendationSourceCanRecover(run: AgentRunRow) {
+  if (!isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) return false
+  if (run.status !== 'needs_context') return false
+  if (applicationRecommendationSourceRecoveryAttempts(run) >= 2) return false
+  const interaction = recordValue(run.context?.progress_detail_interaction)
+  return safeString(interaction.id, 300) === 'recommendation:requirements-source' &&
+    /(?:official recommendation instructions|programme page)/i.test(run.waiting_reason)
+}
+
+function applicationRecommendationSourceRecoveryAttempts(run: AgentRunRow) {
+  const value = Number(run.context?.recommendation_source_recovery_attempts ?? 0)
+  return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0
+}
+
+async function recoverApplicationRecommendationSourceInternally(
+  admin: AdminClient,
+  run: AgentRunRow,
+  openaiKey: string,
+) {
+  const attempts = applicationRecommendationSourceRecoveryAttempts(run)
+  if (attempts >= 2) return run
+  const campaign = recordValue(run.context?.recommendation_campaign)
+  const campaignContext = recordValue(campaign.context)
+  // This is an exact legacy-state transition, not an open-ended retry. Claim
+  // it with the current row version before clearing model state so two tabs
+  // can never start the same programme research turn in parallel.
+  const recovered = await admin.from('agent_runs').update({
+    status: 'planning',
+    waiting_reason: '',
+    error: null,
+    error_code: null,
+    retryable: true,
+    application_state: run.application_state
+      ? nextApplicationState(run, {
+          status: 'active',
+          stage: 'referee_coordination',
+          blockers: ['Checking the programme’s recommendation instructions.'],
+          nextAction: 'Check the verified programme’s recommendation instructions.',
+          progress: {
+            label: 'Checking recommendation instructions',
+            nextAction: 'Check the verified programme’s recommendation instructions.',
+            blockers: ['Checking the programme’s recommendation instructions.'],
+          },
+        })
+      : undefined,
+    context: {
+      ...(run.context ?? {}),
+      completion_continuations: 0,
+      last_context_question: null,
+      progress_detail_interaction: null,
+      progress_current: progressCurrent(run, 'David is checking the programme’s recommendation instructions.'),
+      recommendation_source_recovery_attempts: attempts + 1,
+      recommendation_source_research_required: true,
+      recommendation_campaign: Object.keys(campaign).length
+        ? {
+            ...campaign,
+            state: 'researching',
+            interaction: null,
+            context: {
+              ...campaignContext,
+              nextInteraction: null,
+              unresolved: ['programme_requirements_source_evidence'],
+            },
+          }
+        : run.context?.recommendation_campaign,
+    },
+    lease_owner: null,
+    lease_expires_at: null,
+    version: run.version + 1,
+    updated_at: new Date().toISOString(),
+  })
+    .eq('id', run.id)
+    .eq('user_id', run.user_id)
+    .eq('status', 'needs_context')
+    .eq('version', run.version)
+    .select('*')
+    .maybeSingle<AgentRunRow>()
+  if (recovered.error) throw new Error(recovered.error.message)
+  const planning = recovered.data
+  if (!planning) return await loadOwnedRun(admin, run.user_id, run.id) ?? run
+
+  await reopenApplicationTaskRecord(admin, planning)
+  const cleared = await admin.from('agent_model_state').delete().eq('run_id', planning.id).eq('user_id', planning.user_id)
+  if (cleared.error) throw new Error(cleared.error.message)
+  await addEvent(admin, planning, 'application_recommendation_source_recovery_started', planning.status,
+    'David is checking the programme’s recommendation instructions instead of asking the applicant for a public page.', {
+      recovery_attempt: attempts + 1,
+      application_case_id: safeString(run.context?.application_case_id, 80) || safeString(run.application_state?.currentCaseId, 80),
+    })
+  return advanceRun(admin, planning, openaiKey)
+}
+
 function applicationCvGroundingCanRecover(run: AgentRunRow) {
   if (!isApplicationIntent(run.objective, safeString(run.context?.description, 4_000))) return false
   if (!['waiting_for_user', 'needs_context'].includes(run.status)) return false
@@ -15694,6 +15786,8 @@ Deno.serve(async request => {
           run = await recoverApplicationCvGroundingInternally(admin, run, openaiKey)
         } else if (applicationSemanticHandoffCanRecover(run)) {
           run = await recoverApplicationSemanticHandoffInternally(admin, run, openaiKey)
+        } else if (applicationRecommendationSourceCanRecover(run)) {
+          run = await recoverApplicationRecommendationSourceInternally(admin, run, openaiKey)
         } else if (applicationStrategyPromptCanRecover(run)) {
           run = await recoverApplicationStrategyPromptInternally(admin, run, openaiKey)
         } else if (applicationIntermediateCompletionCanRecover(run)) {
