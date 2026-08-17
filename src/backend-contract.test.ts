@@ -489,6 +489,13 @@ describe('agent execution security contract', () => {
     expect(taskAgentFunction).toContain('? await recoverStalledRun(admin, run, openaiKey)')
   })
 
+  it('resolves a bounded referee contact slate without turning it into an email action', () => {
+    expect(agentWatchSweepFunction).toContain('applicationContactResolutionPayloads')
+    expect(agentWatchSweepFunction).toContain("kind: 'contacts_resolved'")
+    expect(agentWatchSweepFunction).toContain("status: 'waiting_user'")
+    expect(agentWatchSweepFunction).toContain('One or more recommended contacts are missing a name or email.')
+  })
+
   it('atomically completes only the real policy outcome and emits analytics', () => {
     expect(agentCompletionMigration).toContain('create or replace function public.complete_agent_run')
     expect(agentCompletionMigration).toContain('update public.agent_runs')

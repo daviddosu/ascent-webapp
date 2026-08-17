@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { executeGoogleTool, GoogleIntegrationError } from '../_shared/google.ts'
 import { classifyApplicationReply, matchApplicationOtp, nextApplicationCaseState, type OtpMessage, type OtpRequest } from '../_shared/david-applications.ts'
-import { applicationFailureIsRetryable, applicationFollowUpAllowed, applicationMessageQuery, applicationWriteIsApproved, isGenericProfessorOutreach, safeApplicationRequestKind } from '../_shared/application-roon.ts'
+import { applicationContactResolutionPayloads, applicationFailureIsRetryable, applicationFollowUpAllowed, applicationMessageQuery, applicationWriteIsApproved, isGenericProfessorOutreach, safeApplicationRequestKind } from '../_shared/application-roon.ts'
 import { persistedEmailArguments } from '../_shared/email-integrity.ts'
 import { constantTimeEqual } from '../_shared/crypto.ts'
 import { validateFirstContactSupervisorOutreachPayload, validateSupervisorOutreachPackage, supervisorFirstContactRequiresPackage, type SupervisorOutreachPackage } from '../_shared/supervisor-outreach.ts'
@@ -1009,11 +1009,58 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
 
 async function processApplicationContactRequest(admin: AdminClient, context: ApplicationRequestContext) {
   const payload = recordValue(context.request.payload)
-  const resolved = await resolveApplicationContact(admin, context, payload)
-  if (resolved.waiting) return { status: 'waiting_user', result: { kind: 'resolve_contact', resolution: resolved.result.value } }
-  const value = resolved.result.value
-  await recordApplicationWorkerEvent(admin, context, 'application_contact_resolved', 'succeeded', 'Roon resolved the application contact through Google Contacts or prior Gmail headers.', { contact_id: (resolved.contact as Record<string, unknown>).id, evidence: value.evidence ?? null })
-  return { status: 'completed', result: { kind: 'contact_resolved', contact_id: (resolved.contact as Record<string, unknown>).id, email: (resolved.contact as Record<string, unknown>).email, name: (resolved.contact as Record<string, unknown>).name, evidence: value.evidence ?? null } }
+  const batch = applicationContactResolutionPayloads(payload, `application-contact:${context.request.id}`)
+  if (batch.invalidIndexes.length || !batch.payloads.length) {
+    return {
+      status: 'waiting_user',
+      result: {
+        kind: 'resolve_contact',
+        code: 'contact_candidates_incomplete',
+        invalid_indexes: batch.invalidIndexes,
+        message: 'One or more recommended contacts are missing a name or email. Add the missing details and I’ll continue.',
+      },
+    }
+  }
+  const contacts: Array<Record<string, unknown>> = []
+  const unresolved: Array<Record<string, unknown>> = []
+  for (const contactPayload of batch.payloads) {
+    const resolved = await resolveApplicationContact(admin, context, contactPayload)
+    if (resolved.waiting) {
+      const value = recordValue(resolved.result.value)
+      unresolved.push({
+        recipient: safeString(contactPayload.recipient ?? contactPayload.email ?? contactPayload.name, 320),
+        state: safeString(value.state, 80) || 'not_found',
+        candidates: Array.isArray(value.candidates) ? value.candidates.slice(0, 5) : [],
+      })
+      continue
+    }
+    const contact = resolved.contact as Record<string, unknown>
+    const value = recordValue(resolved.result.value)
+    contacts.push({
+      id: safeString(contact.id, 80),
+      email: safeString(contact.email, 320),
+      name: safeString(contact.name, 240),
+      evidence: value.evidence ?? null,
+    })
+  }
+  if (unresolved.length) {
+    return {
+      status: 'waiting_user',
+      result: {
+        kind: 'resolve_contact',
+        contacts,
+        unresolved,
+        message: 'I need help confirming one or more recommender contacts before preparing anything to send.',
+      },
+    }
+  }
+  await recordApplicationWorkerEvent(admin, context, 'application_contact_resolved', 'succeeded', `Roon resolved ${contacts.length} application contact${contacts.length === 1 ? '' : 's'} through Google Contacts or prior Gmail headers.`, { contact_ids: contacts.map(contact => contact.id), count: contacts.length })
+  return {
+    status: 'completed',
+    result: contacts.length === 1
+      ? { kind: 'contact_resolved', contact_id: contacts[0]?.id, email: contacts[0]?.email, name: contacts[0]?.name, evidence: contacts[0]?.evidence ?? null }
+      : { kind: 'contacts_resolved', contacts },
+  }
 }
 
 function applicationContactKind(context: ApplicationRequestContext, payload: Record<string, unknown>) {

@@ -18,6 +18,53 @@ export function applicationWriteIsApproved(payload: Record<string, unknown>) {
   return payload.approved_for_send === true || payload.approvedForSend === true || payload.approved_for_calendar === true || payload.approvedForCalendar === true
 }
 
+function applicationContactText(value: unknown, maximum = 320) {
+  return typeof value === 'string' ? value.trim().slice(0, maximum) : ''
+}
+
+function applicationContactRecord(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+/**
+ * David may ask Roon to verify a small, ranked referee slate before any email
+ * is prepared. Expand that durable list into individual contact resolutions so
+ * each resulting application contact has its own idempotency key. An invalid
+ * list item is kept explicit for a user-facing correction instead of reaching
+ * the provider with an empty recipient.
+ */
+export function applicationContactResolutionPayloads(payload: Record<string, unknown>, idempotencyPrefix: string) {
+  const rawContacts = Array.isArray(payload.contacts) ? payload.contacts : []
+  if (!rawContacts.length) return { payloads: [payload], invalidIndexes: [] as number[] }
+  const { contacts: _contacts, ...basePayload } = payload
+  const payloads: Record<string, unknown>[] = []
+  const invalidIndexes: number[] = []
+  const seenEmails = new Set<string>()
+  for (const [index, rawContact] of rawContacts.entries()) {
+    const contact = applicationContactRecord(rawContact)
+    const email = applicationContactText(contact.email, 320) || applicationContactText(contact.referee_email ?? contact.refereeEmail, 320)
+    const name = applicationContactText(contact.name, 240) || applicationContactText(contact.referee_name ?? contact.refereeName, 240)
+    const recipient = applicationContactText(contact.recipient, 320) || email || name
+    if (!recipient) {
+      invalidIndexes.push(index)
+      continue
+    }
+    const normalizedEmail = email.toLocaleLowerCase()
+    if (normalizedEmail && seenEmails.has(normalizedEmail)) continue
+    if (normalizedEmail) seenEmails.add(normalizedEmail)
+    payloads.push({
+      ...basePayload,
+      ...contact,
+      recipient,
+      ...(email ? { email } : {}),
+      ...(name ? { name } : {}),
+      contact_kind: applicationContactText(contact.contact_kind ?? contact.contactKind ?? basePayload.contact_kind ?? basePayload.contactKind, 80) || 'referee',
+      contact_idempotency_key: `${idempotencyPrefix}:${payloads.length + 1}`,
+    })
+  }
+  return { payloads, invalidIndexes }
+}
+
 export function applicationFollowUpAllowed(payload: Record<string, unknown>, now = Date.now()) {
   if (payload.follow_up_stopped === true || payload.followUpStopped === true) return false
   if (['completed', 'refused', 'declined', 'replaced', 'opted_out', 'closed'].includes(String(payload.contact_status ?? payload.contactStatus ?? '').toLocaleLowerCase())) return false
