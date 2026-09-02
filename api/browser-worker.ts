@@ -1,18 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { timingSafeEqual } from 'node:crypto'
-import {
-  BrowserExecutionError,
-  isRecoverableBrowserRuntimeError,
-  isGoogleFlightsDomainAllowed,
-  normalizeFlightSearchInput,
-  resumeFlightSelection,
-  runLiveFlightSearch,
-  safeExternalProviderHandoffUrl,
-  withBrowser,
-  type FlightOption,
-  type FlightSearchInput,
-} from './_flight-browser.js'
-import { prepareFlightCheckout, safeGoogleFlightsBookingUrl, type FlightCheckoutInput } from './_flight-checkout.js'
+import { BrowserExecutionError, isRecoverableBrowserRuntimeError } from './_browser-error.js'
 import {
   actOnPublicPage,
   navigatePublicPage,
@@ -21,10 +9,9 @@ import {
   type PublicBrowserState,
 } from './_public-browser.js'
 
-// Google Flights can spend most of a minute resolving a round-trip result
-// page before the bounded DOM-read timeout starts. Keep one isolated worker
-// invocation alive long enough to finish that safe read; retries still remain
-// bounded at the task-owned session layer.
+// Application portals can spend most of a minute resolving a page before the
+// bounded DOM-read timeout starts. Keep one isolated worker invocation alive
+// long enough to finish that safe read.
 export const maxDuration = 120
 
 type WorkerRequest = {
@@ -41,7 +28,7 @@ type WorkerResponse = {
 
 type BrowserOperation = {
   id: string
-  type: 'navigate' | 'act' | 'submit' | 'search_flights' | 'select_flight' | 'prepare_flight_checkout'
+  type: 'navigate' | 'act' | 'submit'
   arguments: Record<string, unknown>
 }
 
@@ -55,15 +42,6 @@ type BrowserCheckpoint = {
     error?: { code: string; message: string; retryable: boolean }
     completedAt: string
   }
-  flightSearch?: {
-    input: FlightSearchInput
-    provider: 'Google Flights'
-    searchUrl: string
-    observedAt: string
-    options: FlightOption[]
-  }
-  selectedFlight?: Record<string, unknown>
-  flightCheckout?: Record<string, unknown>
   publicBrowser?: PublicBrowserState
   submissionAttempted?: {
     operationId: string
@@ -94,45 +72,6 @@ function parseBody(request: WorkerRequest) {
   return {}
 }
 
-export function flightSearchInputFromArguments(argumentsValue: Record<string, unknown>): FlightSearchInput {
-  return normalizeFlightSearchInput({
-    originCode: String(argumentsValue.origin_code),
-    destinationCode: String(argumentsValue.destination_code),
-    departureDate: String(argumentsValue.departure_date),
-    returnDate: argumentsValue.return_date === null ? null : String(argumentsValue.return_date),
-    cabin: argumentsValue.cabin as FlightSearchInput['cabin'],
-    maxStops: Number(argumentsValue.max_stops) as FlightSearchInput['maxStops'],
-    budgetAmount: argumentsValue.budget_amount === null
-      ? null
-      : Number(argumentsValue.budget_amount),
-    currency: argumentsValue.currency as FlightSearchInput['currency'],
-    preferredAirlines: Array.isArray(argumentsValue.preferred_airlines)
-      ? argumentsValue.preferred_airlines.map(value => String(value))
-      : [],
-    excludedAirlines: Array.isArray(argumentsValue.excluded_airlines)
-      ? argumentsValue.excluded_airlines.map(value => String(value))
-      : [],
-    adultCount: Number(argumentsValue.adults ?? 1),
-    childCount: Number(argumentsValue.children ?? 0),
-    childAges: Array.isArray(argumentsValue.children_ages)
-      ? argumentsValue.children_ages.map(value => Number(value))
-      : [],
-    infantCount: Number(argumentsValue.infants ?? 0),
-    infantSeatCount: Number(argumentsValue.infant_seats ?? 0),
-    allowNearbyAirports: argumentsValue.allow_nearby_airports === true,
-    departureTimeWindow: argumentsValue.departure_time_window === null
-      ? null
-      : String(argumentsValue.departure_time_window ?? ''),
-    arrivalTimeWindow: argumentsValue.arrival_time_window === null
-      ? null
-      : String(argumentsValue.arrival_time_window ?? ''),
-  })
-}
-
-function searchInput(argumentsValue: Record<string, unknown>) {
-  return flightSearchInputFromArguments(argumentsValue)
-}
-
 function publicError(error: unknown, operationType: BrowserOperation['type']) {
   if (error instanceof BrowserExecutionError) {
     return { code: error.code, message: error.message, retryable: error.retryable, details: error.details }
@@ -142,11 +81,7 @@ function publicError(error: unknown, operationType: BrowserOperation['type']) {
     : String(error).slice(0, 500)
   if (/timeout|timed out|exceeded/i.test(message)) {
     return {
-      code: operationType === 'search_flights'
-        ? 'flight_results_timeout'
-        : operationType === 'prepare_flight_checkout'
-          ? 'flight_checkout_timeout'
-          : 'browser_worker_timeout',
+      code: 'browser_worker_timeout',
       message: 'The browser worker timed out before the safe step finished.',
       retryable: operationType !== 'submit',
     }
@@ -249,7 +184,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
   if (
     !operation ||
     operation.id !== operationId ||
-    !['navigate', 'act', 'submit', 'search_flights', 'select_flight', 'prepare_flight_checkout'].includes(operation.type)
+    !['navigate', 'act', 'submit'].includes(operation.type)
   ) {
     if (
       checkpoint.lastOperation?.id === operationId &&
@@ -261,33 +196,9 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     response.status(409).json({ error: 'Browser operation changed or was already handled' })
     return
   }
-  if (
-    !Array.isArray(session.allowed_domains) ||
-    !session.allowed_domains.length ||
-    ((operation.type === 'search_flights' || operation.type === 'select_flight') &&
-      !isGoogleFlightsDomainAllowed(session.allowed_domains))
-  ) {
+  if (!Array.isArray(session.allowed_domains) || !session.allowed_domains.length) {
     response.status(403).json({ error: 'The requested domain is not allowed for this browser session' })
     return
-  }
-  if (operation.type === 'prepare_flight_checkout') {
-    const selectedFlight = checkpoint.selectedFlight
-    const handoffUrl = typeof selectedFlight?.handoffUrl === 'string'
-      ? selectedFlight.handoffUrl
-      : typeof selectedFlight?.handoff_url === 'string'
-        ? selectedFlight.handoff_url
-        : ''
-    const providerHandoff = safeExternalProviderHandoffUrl(handoffUrl)
-    const googleHandoff = safeGoogleFlightsBookingUrl(handoffUrl)
-    const handoffHost = providerHandoff ? new URL(providerHandoff).hostname.toLocaleLowerCase() : ''
-    const allowedHosts = session.allowed_domains.map((value: unknown) => String(value).toLocaleLowerCase())
-    const allowed = googleHandoff
-      ? isGoogleFlightsDomainAllowed(session.allowed_domains)
-      : Boolean(providerHandoff && allowedHosts.includes(handoffHost))
-    if (!allowed) {
-      response.status(403).json({ error: 'The selected provider handoff is not allowed for this browser session' })
-      return
-    }
   }
   if (operation.type === 'submit' && checkpoint.submissionAttempted?.operationId === operation.id) {
     const uncertainError = {
@@ -366,101 +277,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     let currentUrl: string
     let paymentBoundaryReached = false
 
-    if (operation.type === 'search_flights') {
-      const input = searchInput(operation.arguments)
-      const result = await runLiveFlightSearch(input)
-      output = result as unknown as Record<string, unknown>
-      currentUrl = result.searchUrl
-      nextCheckpoint = {
-        ...claimedCheckpoint,
-        pendingOperation: null,
-        flightSearch: { input, ...result },
-        lastOperation: {
-          id: operation.id,
-          type: operation.type,
-          status: 'succeeded',
-          output,
-          completedAt: new Date().toISOString(),
-        },
-      }
-    } else if (operation.type === 'select_flight') {
-      const flightSearch = checkpoint.flightSearch
-      const optionId = String(operation.arguments.option_id ?? '')
-      if (!flightSearch?.input || !Array.isArray(flightSearch.options)) {
-        throw new BrowserExecutionError(
-          'flight_search_checkpoint_missing',
-          'The original flight search is no longer resumable.',
-          false,
-        )
-      }
-      const result = await resumeFlightSelection(
-        flightSearch.input,
-        flightSearch.options,
-        optionId,
-      )
-      output = {
-        ...(result as unknown as Record<string, unknown>),
-        payment_boundary_reached: true,
-      }
-      currentUrl = result.handoffUrl
-      paymentBoundaryReached = true
-      nextCheckpoint = {
-        ...claimedCheckpoint,
-        pendingOperation: null,
-        selectedFlight: output,
-        lastOperation: {
-          id: operation.id,
-          type: operation.type,
-          status: 'succeeded',
-          output,
-          completedAt: new Date().toISOString(),
-        },
-      }
-    } else if (operation.type === 'prepare_flight_checkout') {
-      const selectedFlight = checkpoint.selectedFlight
-      const handoffUrl = typeof selectedFlight?.handoffUrl === 'string'
-        ? selectedFlight.handoffUrl
-        : typeof selectedFlight?.handoff_url === 'string'
-          ? selectedFlight.handoff_url
-          : ''
-      const handoffProvider = typeof selectedFlight?.handoffProvider === 'string'
-        ? selectedFlight.handoffProvider
-        : typeof selectedFlight?.handoff_provider === 'string'
-          ? selectedFlight.handoff_provider
-          : 'Airline provider'
-      if (!handoffUrl || (!safeExternalProviderHandoffUrl(handoffUrl) && !safeGoogleFlightsBookingUrl(handoffUrl))) {
-        throw new BrowserExecutionError(
-          'flight_provider_handoff_unavailable',
-          'The selected flight did not produce a direct safe airline booking page.',
-          false,
-        )
-      }
-      const result = await withBrowser(async (_browser, page) => prepareFlightCheckout(
-        page,
-        operation.arguments as unknown as FlightCheckoutInput,
-        handoffUrl,
-        handoffProvider,
-      ))
-      output = result as unknown as Record<string, unknown>
-      currentUrl = result.currentUrl
-      paymentBoundaryReached = true
-      nextCheckpoint = {
-        ...claimedCheckpoint,
-        pendingOperation: null,
-        flightCheckout: output,
-        selectedFlight: {
-          ...(claimedCheckpoint.selectedFlight ?? {}),
-          checkout: output,
-        },
-        lastOperation: {
-          id: operation.id,
-          type: operation.type,
-          status: 'succeeded',
-          output,
-          completedAt: new Date().toISOString(),
-        },
-      }
-    } else if (operation.type === 'navigate') {
+    if (operation.type === 'navigate') {
       const state = await navigatePublicPage(String(operation.arguments.url ?? ''), session.allowed_domains)
       output = { observation: state.observation, resumable: true }
       currentUrl = state.currentUrl
@@ -544,8 +361,6 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
       (Array.isArray(session.allowed_domains) ? session.allowed_domains : [])
         .map((value: unknown) => String(value).toLocaleLowerCase()),
     )
-    const externalHandoff = safeExternalProviderHandoffUrl(currentUrl)
-    if (externalHandoff) nextAllowedDomains.add(new URL(externalHandoff).hostname.toLocaleLowerCase())
     const finished = await admin
       .from('browser_execution_sessions')
       .update({

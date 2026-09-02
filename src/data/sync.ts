@@ -1,26 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PlannerRepository, SyncState, SyncStatus } from './contracts'
 import {
-  goalCloudFields,
-  normalizeGoal,
   normalizeTask,
-  normalizeTaskVisibility,
   subtaskCloudFields,
   taskCloudFields,
-  type Goal,
   type PlannerWorkspace,
   type Subtask,
   type Task,
 } from './planner-model'
 
-export type PlannerRecordType = 'workspace' | 'task' | 'goal' | 'subtask'
+export type PlannerRecordType = 'workspace' | 'task' | 'subtask'
 
 export type PlannerRecord = {
   user_id: string
   record_type: PlannerRecordType
   record_id: string
   parent_id: string | null
-  visibility?: 'private' | 'followers' | 'public'
   data: Record<string, unknown>
   field_versions: Record<string, string>
   deleted_at: string | null
@@ -72,7 +67,6 @@ type PlannerSyncOptions = {
 const cachePrefix = 'shotcount-workspace-cloud-v1:'
 const syncedFields = new Set<string>([
   ...taskCloudFields,
-  ...goalCloudFields,
   ...subtaskCloudFields,
 ])
 
@@ -99,7 +93,6 @@ function taskData(task: Task, now: string): Record<string, unknown> {
   return {
     title: normalized.title,
     description: normalized.description ?? '',
-    goalId: normalized.goalId ?? null,
     due: normalized.due ?? null,
     time: normalized.time ?? null,
     duration: normalized.duration ?? null,
@@ -108,7 +101,6 @@ function taskData(task: Task, now: string): Record<string, unknown> {
     reminder: normalized.reminder ?? null,
     location: normalized.location ?? null,
     attendees: normalized.attendees ?? null,
-    visibility: normalized.visibility ?? 'private',
     completedAt: normalized.completedAt ?? null,
     createdAt: normalized.createdAt,
   }
@@ -121,16 +113,6 @@ function desiredRecords(workspace: PlannerWorkspace, now: string): DesiredRecord
     parentId: null,
     data: { schemaVersion: 1 },
   }]
-
-  for (const goalValue of workspace.goals) {
-    const goal = normalizeGoal(goalValue, now)
-    records.push({
-      recordType: 'goal',
-      recordId: goal.id,
-      parentId: null,
-      data: { name: goal.name, color: goal.color, createdAt: goal.createdAt },
-    })
-  }
 
   for (const taskValue of workspace.tasks) {
     const task = normalizeTask(taskValue, now)
@@ -162,23 +144,13 @@ function active(records: PlannerRecord[], type: PlannerRecordType) {
 }
 
 export function workspaceFromRecords(records: PlannerRecord[]): PlannerWorkspace {
-  const goalRecords = active(records, 'goal')
   const taskRecords = active(records, 'task')
   const subtaskRecords = active(records, 'subtask')
-
-  const goals: Goal[] = goalRecords.map(record => normalizeGoal({
-    id: record.record_id,
-    name: String(record.data.name ?? ''),
-    color: String(record.data.color ?? '#78a7ff'),
-    createdAt: String(record.data.createdAt ?? record.created_at),
-    updatedAt: record.updated_at,
-  })).sort((first, second) => (first.createdAt ?? '').localeCompare(second.createdAt ?? ''))
 
   const tasks: Task[] = taskRecords.map(record => normalizeTask({
     id: record.record_id,
     title: String(record.data.title ?? ''),
     description: String(record.data.description ?? ''),
-    goalId: typeof record.data.goalId === 'string' ? record.data.goalId : undefined,
     due: typeof record.data.due === 'string' ? record.data.due : undefined,
     time: typeof record.data.time === 'string' ? record.data.time : undefined,
     duration: typeof record.data.duration === 'number' ? record.data.duration : undefined,
@@ -189,7 +161,6 @@ export function workspaceFromRecords(records: PlannerRecord[]): PlannerWorkspace
     reminder: typeof record.data.reminder === 'number' ? record.data.reminder : undefined,
     location: typeof record.data.location === 'string' ? record.data.location : undefined,
     attendees: typeof record.data.attendees === 'string' ? record.data.attendees : undefined,
-    visibility: normalizeTaskVisibility(record.visibility ?? record.data.visibility),
     completedAt: typeof record.data.completedAt === 'string' ? record.data.completedAt : undefined,
     createdAt: String(record.data.createdAt ?? record.created_at),
     updatedAt: record.updated_at,
@@ -205,7 +176,7 @@ export function workspaceFromRecords(records: PlannerRecord[]): PlannerWorkspace
       })),
   })).sort((first, second) => (second.createdAt ?? '').localeCompare(first.createdAt ?? ''))
 
-  return { tasks, goals }
+  return { tasks }
 }
 
 function applyMutation(records: PlannerRecord[], mutation: PlannerMutation, userId: string, now: string) {
@@ -216,7 +187,6 @@ function applyMutation(records: PlannerRecord[], mutation: PlannerMutation, user
     record_type: mutation.recordType,
     record_id: mutation.recordId,
     parent_id: mutation.parentId,
-    visibility: 'private',
     data: {},
     field_versions: {},
     deleted_at: null,
@@ -232,9 +202,6 @@ function applyMutation(records: PlannerRecord[], mutation: PlannerMutation, user
       next.data[field] = clone(mutation.patch[field])
       next.field_versions[field] = incomingVersion
     }
-  }
-  if (mutation.recordType === 'task') {
-    next.visibility = normalizeTaskVisibility(next.data.visibility)
   }
   const deleteVersion = mutation.fieldVersions._deleted
   if (deleteVersion && (!next.field_versions._deleted || deleteVersion >= next.field_versions._deleted)) {
@@ -378,7 +345,7 @@ export class CloudPlannerRepository implements PlannerRepository {
         this.pending = []
       } else {
         const legacy = await this.options.adapter.loadLegacyWorkspace?.(this.options.userId)
-        const seed = legacy && (legacy.tasks.length || legacy.goals.length) ? legacy : localFallback
+        const seed = legacy && legacy.tasks.length ? legacy : localFallback
         this.records = []
         this.pending = []
         this.queueWorkspace(seed)
@@ -498,33 +465,22 @@ export function createSupabasePlannerAdapter(client: SupabaseClient): PlannerClo
     },
 
     async loadLegacyWorkspace(userId) {
-      const [tasksResult, goalsResult, subtasksResult] = await Promise.all([
+      const [tasksResult, subtasksResult] = await Promise.all([
         client.from('tasks').select('*').eq('user_id', userId).is('archived_at', null),
-        client.from('goals').select('*').eq('user_id', userId),
         client.from('subtasks').select('*').eq('user_id', userId),
       ])
-      ;[tasksResult, goalsResult, subtasksResult].forEach(throwResultError)
+      ;[tasksResult, subtasksResult].forEach(throwResultError)
       const rows = (tasksResult.data ?? []) as Array<Record<string, unknown>>
-      const goalRows = (goalsResult.data ?? []) as Array<Record<string, unknown>>
-      if (!rows.length && !goalRows.length) return null
+      if (!rows.length) return null
       const subtaskRows = (subtasksResult.data ?? []) as Array<Record<string, unknown>>
       return {
-        goals: goalRows.map(row => normalizeGoal({
-          id: String(row.id),
-          name: String(row.title ?? ''),
-          color: String(row.color ?? '#78a7ff'),
-          createdAt: String(row.created_at ?? new Date().toISOString()),
-          updatedAt: String(row.updated_at ?? row.created_at ?? new Date().toISOString()),
-        })),
         tasks: rows.map(row => normalizeTask({
           id: String(row.id),
           title: String(row.title ?? ''),
           description: String(row.description ?? ''),
-          goalId: typeof row.goal_id === 'string' ? row.goal_id : undefined,
           due: typeof row.due_date === 'string' ? row.due_date : undefined,
           time: typeof row.due_time === 'string' ? row.due_time.slice(0, 5) : undefined,
           recurrence: row.recurrence === 'daily' || row.recurrence === 'weekly' ? row.recurrence : 'none',
-          visibility: normalizeTaskVisibility(row.visibility),
           completedAt: typeof row.completed_at === 'string' ? row.completed_at : undefined,
           createdAt: String(row.created_at ?? new Date().toISOString()),
           updatedAt: String(row.updated_at ?? row.created_at ?? new Date().toISOString()),

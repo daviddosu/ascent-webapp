@@ -348,6 +348,7 @@ export const applicationCaseStages = [
   'research',
   'shortlist_approval',
   'document_preparation',
+  'academic_evidence',
   'writer_assignment',
   'referee_coordination',
   'portal_preparation',
@@ -595,6 +596,146 @@ export type ApplicationProgress = {
   evidenceCount: number
 }
 
+export type ApplicationWorkstreamStatus = 'active' | 'queued' | 'ready_for_review' | 'ready_for_user' | 'waiting_external' | 'blocked'
+export type ApplicationWorkstreamOwner = 'you' | 'shotcount' | 'writer' | 'referee' | 'institution' | 'roon'
+
+export type ApplicationWorkstream = {
+  id: string
+  /** UI identity for a canonical requirement, when this lane represents one. */
+  requirementId?: string
+  /** Separate execution identity for orchestration-only lanes. */
+  planNodeId?: string
+  title: string
+  status: ApplicationWorkstreamStatus
+  owner: ApplicationWorkstreamOwner
+  detail: string
+  deadline: string | null
+  /** Source-backed wording for requirements such as essays and proposals. */
+  instructions?: string | null
+}
+
+export type ApplicationRequirementExecutionState =
+  | 'satisfied'
+  | 'runnable'
+  | 'running'
+  | 'waiting_on_user'
+  | 'waiting_external'
+  | 'blocked_by_dependency'
+  | 'not_applicable'
+
+export type ApplicationRequirementState = {
+  requirementId: string
+  name: string
+  state: ApplicationRequirementExecutionState
+  dependencyIds: string[]
+  blocker: string | null
+}
+
+export type ApplicationPendingInputField = {
+  id: string
+  kind: 'text' | 'number' | 'date' | 'email' | 'tel' | 'attachment'
+  label: string
+  placeholder: string
+  required: boolean
+  acceptedMimeTypes?: string[]
+  maximumCharacters?: number
+}
+
+export type ApplicationPendingInputOption = {
+  value: string
+  label: string
+  description: string
+}
+
+export type ApplicationPendingInputOwner = 'david' | 'roon'
+export type ApplicationPendingInputStatus = 'active' | 'parked' | 'answered'
+
+export type ApplicationPendingInputSource = {
+  label: string
+  url: string | null
+  section: string | null
+  field: string | null
+}
+
+export type ApplicationPortalFieldContext = {
+  portal: string | null
+  section: string | null
+  field: string
+  required: boolean
+  suggestedValue: string | number | boolean | null
+}
+
+export type ApplicationPendingInput = {
+  id: string
+  requirementId: string
+  title: string
+  question: string
+  detail: string
+  deadline: string | null
+  kind: 'document' | 'fact' | 'decision'
+  /** David owns application and portal questions; Roon owns provider communication facts. */
+  owner?: ApplicationPendingInputOwner
+  /** Owner of the unresolved value, which is distinct from the worker owner. */
+  missingValueOwner?: 'programme' | 'applicant' | 'external_provider' | 'user_choice'
+  /** Only one active request is shown. Parked requests stay durable without blocking other lanes. */
+  status?: ApplicationPendingInputStatus
+  priority?: number
+  source?: ApplicationPendingInputSource | null
+  portalField?: ApplicationPortalFieldContext | null
+  blockedRequirementIds?: string[]
+  allowLater?: boolean
+  askedAt?: string | null
+  /** Requirement type is persisted so the same choice contract survives refresh. */
+  requirementType?: string
+  options?: ApplicationPendingInputOption[]
+  fields?: ApplicationPendingInputField[]
+  submitLabel?: string
+}
+
+export type FacultyIntelligenceView = {
+  version: string
+  applicationCaseId: string
+  opportunityId: string
+  refreshedAt: string
+  verifiedFacultyCount: number
+  uncertainFacultyCount: number
+  primaryCallCount: number
+  targetedRepairCount: number
+  latencyMs: number
+  bestFitResearchRoutes?: string[]
+  /** Programme-level policy researched during programme intelligence. */
+  facultyContactPolicy?: 'required' | 'recommended' | 'allowed_or_neutral' | 'discouraged' | 'prohibited' | 'unknown_due_to_insufficient_evidence'
+  facultyContactPolicyExplanation?: string | null
+  facultyContactPolicyEvidence?: Array<{ url: string; relevantTextSummary: string }>
+  faculty: Array<{
+    facultyId: string
+    name: string
+    title: string | null
+    department: string | null
+    institution: string
+    officialProfileUrl: string
+    identitySourceUrl: string
+    identityVerification: 'official_verified' | 'uncertain'
+    researchDomain: string
+    researchSubdomains: string[]
+    researchSummary: string
+    relevantCurrentWork: Array<{ title: string; year: number | null; url: string; relevanceToApplicant: string }>
+    email: string | null
+    emailSourceUrl: string | null
+    emailVerification: 'official_verified' | 'missing' | 'unverified'
+    fitBreakdown: { overallScore: number; researchAreaFit: number; methodsFit: number; experienceFit: number; facultySpecificFit: number }
+    strongestConnections: Array<{ facultySignal: string; applicantEvidenceId: string; explanation: string }>
+    contactPolicy?: 'required' | 'recommended' | 'allowed_or_neutral' | 'discouraged' | 'prohibited' | 'unknown_due_to_insufficient_evidence'
+    outreachRecommendation: 'required' | 'strongly_recommended' | 'recommended' | 'optional' | 'skip'
+    outreachReason: string
+    draftRecommendation?: 'required' | 'useful' | 'skip'
+    sendRecommendation?: 'required_after_approval' | 'user_choice' | 'skip'
+    draftEmail: { subject: string; textBody: string; htmlBody: string; recipientEmail: string; attachmentArtifactIds: string[] } | null
+    draftStatus: 'draft_ready' | 'not_applicable' | 'identity_uncertain' | 'waiting_for_email' | 'waiting_for_cv'
+    sourceEvidence: Array<{ id: string; url: string; type: string; excerpt: string }>
+  }>
+}
+
 export type DavidApplicationState = {
   schemaVersion: typeof DAVID_APPLICATION_SCHEMA_VERSION
   campaignId: string | null
@@ -607,6 +748,14 @@ export type DavidApplicationState = {
   blockers: string[]
   verifiedOpportunityCount: number
   lastEvidenceAt: string | null
+  /** Runnable and waiting work is projected for the non-blocking application cockpit. */
+  workstreams?: ApplicationWorkstream[]
+  /** Complete requirement reconciliation; the cockpit may show only a window. */
+  requirementStates?: ApplicationRequirementState[]
+  pendingInputs?: ApplicationPendingInput[]
+  /** Number of unresolved questions behind the one currently shown. */
+  queuedInputCount?: number
+  facultyIntelligence?: FacultyIntelligenceView | null
 }
 
 export type InterAgentRequestKind =
@@ -640,8 +789,8 @@ export type InterAgentRequest = {
   taskId: string
   agentRunId: string
   applicationCaseId: string
-  fromSpecialistId: 'david' | 'roon' | 'caspian'
-  toSpecialistId: 'roon' | 'david' | 'caspian'
+  fromSpecialistId: 'david' | 'roon'
+  toSpecialistId: 'roon' | 'david'
   kind: InterAgentRequestKind
   payload: Record<string, unknown>
   idempotencyKey: string
@@ -877,6 +1026,20 @@ export function parseDeadline(value: string, timezone = 'UTC', sourceUrl: string
   return { dateTime: parsed.toISOString(), timezone, label: raw, sourceUrl: text(sourceUrl, 2_000) || null, retrievedAt: now }
 }
 
+/**
+ * Convert model/provider deadline values into the only shape that may reach a
+ * timestamp column. Human wording is intentionally not guessed: callers keep
+ * it in their exact-instructions/source text, while the persisted timestamp is
+ * left null until a machine-readable value is available.
+ */
+export function normalizeDeadlineForPersistence(value: unknown, timezone: unknown = 'UTC', sourceUrl: unknown = null) {
+  const raw = text(value, 120)
+  if (!raw) return { dateTime: null, timezone: null }
+  const rawTimezone = text(timezone, 120) || 'UTC'
+  const parsed = parseDeadline(raw, rawTimezone, text(sourceUrl, 2_000) || null)
+  return parsed ? { dateTime: parsed.dateTime, timezone: parsed.timezone } : { dateTime: null, timezone: null }
+}
+
 export function isValidTimezone(value: string) {
   try {
     new Intl.DateTimeFormat('en', { timeZone: value }).format()
@@ -1075,6 +1238,8 @@ export function buildReadinessReport(input: {
   refereeStatus?: string[]
   declarations?: string[]
   portalValidationState?: string[]
+  pendingInputs?: ApplicationPendingInput[]
+  portalCheckpoints?: PortalCheckpoint[]
   now?: string
 }): SubmissionReadinessReport {
   const { applicationCase, opportunity } = input
@@ -1107,6 +1272,12 @@ export function buildReadinessReport(input: {
     const normalized = state.toLocaleLowerCase()
     return /(?:error|invalid|ambiguous|required)/.test(normalized) && !/\bno\s+(?:errors?|issues?)\b/.test(normalized)
   })) blockers.push('The portal still reports a validation issue.')
+  const unresolvedInputs = (input.pendingInputs ?? []).filter(item => item.status !== 'answered')
+  if (unresolvedInputs.length) blockers.push(`${unresolvedInputs.length} application detail${unresolvedInputs.length === 1 ? ' still needs' : 's still need'} an answer.`)
+  const portalCheckpoints = input.portalCheckpoints ?? []
+  if (portalCheckpoints.length && portalCheckpoints.some(checkpoint => !canAdvancePortalCheckpoint(checkpoint))) {
+    blockers.push('One or more portal sections still need a verified save and read-back check.')
+  }
   for (const value of applicationCase.submittedValues) {
     if (!canUseFactForSubmission({ value: value.value, provenance: value.provenance })) blockers.push(`Factual value needs confirmation: ${value.field}`)
   }
@@ -1282,6 +1453,10 @@ export function buildRefereeSupportPack(input: {
     rankingReasons: [],
     portfolioRole: 'primary',
     sourceIds: [`application-case:${input.opportunity.id}:referee`],
+    identityEvidenceIds: [`application-case:${input.opportunity.id}:referee`],
+    relationshipEvidenceIds: input.relationshipContext ? [`application-case:${input.opportunity.id}:relationship`] : [],
+    contactEvidenceIds: input.referee.providerContactId ? [input.referee.providerContactId] : [],
+    applicantOwnership: 'verified',
   }
   const programme = {
     institution: input.opportunity.institution,

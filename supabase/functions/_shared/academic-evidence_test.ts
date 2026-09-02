@@ -126,6 +126,22 @@ Deno.test('source-backed multi-application evaluation is deduplicated and mapped
   assertEquals(plan.credentialEvaluationCases[0]?.sourceEvidence[0]?.id, source.id)
 })
 
+Deno.test('repeated rules collapse to one durable requirement identity', () => {
+  const transcriptRule = rule('transcript', {
+    officialStatus: 'official',
+    acceptedEvidenceTypes: ['transcript'],
+    submissionMethod: { mode: 'applicant_upload' },
+  })
+  const plan = coordinateAcademicEvidence({
+    applications: [application('case-duplicate', 'MSc Data Science', [transcriptRule, { ...transcriptRule }])],
+    context: { applicantId: 'applicant-1' },
+  })
+
+  assertEquals(plan.requirements.length, 1)
+  assertEquals(new Set(plan.requirements.map(requirement => requirement.id)).size, 1)
+  assertEquals(plan.requirements[0]?.acceptedEvidenceTypes, ['transcript'])
+})
+
 Deno.test('transcript, degree proof, and final-conferral rules remain distinct', () => {
   const transcript = transcriptArtifact()
   const degree = { ...transcript, id: 'artifact:degree', artifactType: 'degree_certificate', filename: 'degree.pdf', content: { ...transcript.content, degreeConferralPresent: true, gradingLegendPresent: false } }

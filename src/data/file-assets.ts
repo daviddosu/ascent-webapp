@@ -6,6 +6,7 @@ export const acceptedTaskFileTypes = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
+  'text/html',
   'application/zip',
   'application/x-zip-compressed',
   'application/json',
@@ -35,6 +36,7 @@ export type FileAsset = {
   revisionHistory: unknown[]
   approvalStatus: 'not_required' | 'pending' | 'approved' | 'rejected' | 'superseded'
   finalSubmissionDestination: string | null
+  artifactMetadata: Record<string, unknown> | null
 }
 
 type FileAssetRow = {
@@ -62,7 +64,7 @@ type FileAssetRow = {
   final_submission_destination?: string | null
 }
 
-function mapAsset(row: FileAssetRow): FileAsset {
+function mapAsset(row: FileAssetRow, artifactMetadata: Record<string, unknown> | null = null): FileAsset {
   return {
     id: row.id,
     taskId: row.task_id,
@@ -86,7 +88,93 @@ function mapAsset(row: FileAssetRow): FileAsset {
     revisionHistory: row.revision_history ?? [],
     approvalStatus: row.approval_status ?? (row.source === 'task_upload' ? 'not_required' : 'pending'),
     finalSubmissionDestination: row.final_submission_destination ?? null,
+    artifactMetadata,
   }
+}
+
+const finalGeneratedAssetKinds = new Set<FileAsset['assetKind']>(['approved_final', 'submitted_version'])
+const currentCvRendererVersion = '1.8.0'
+
+/** User task attachments exclude private research captures and other
+ * evidence plumbing even when an older row was stored with `task_upload`.
+ * The original asset remains available to the application evidence layer. */
+export function isUserVisibleTaskAttachment(asset: Pick<FileAsset, 'source' | 'originalFilename' | 'mimeType' | 'applicationCaseId' | 'artifactMetadata' | 'assetKind'>) {
+  if (asset.source === 'roon_generated') return false
+  const metadata = asset.artifactMetadata ?? {}
+  if (metadata.private_user_visible === false || metadata.user_visible === false || metadata.evidence_scope === 'internal' || metadata.evidence_scope === 'private') return false
+  if (asset.assetKind === 'generated_derivative' && asset.source !== 'task_upload') return false
+  const filename = asset.originalFilename.toLocaleLowerCase()
+  const internalEvidenceName = /(?:^|[-_. ])(?:source|evidence|capture|snapshot|research-source|page-source|validation|trace|compiler|ats)(?:[-_. ]|$)/i.test(filename)
+  if ((asset.mimeType === 'text/html' || asset.mimeType === 'application/json') && internalEvidenceName) return false
+  if (asset.applicationCaseId && /\.(?:html?|json|log|tex)$/i.test(filename) && /(?:harvard|programme|faculty|physics|application)/i.test(filename) && internalEvidenceName) return false
+  return true
+}
+
+function isCvFilename(filename: string) {
+  return /(?:^|[\s_.-])(?:cv|resume|curriculum[\s_.-]*vitae)(?:$|[\s_.-])/i.test(filename)
+}
+
+function generatedAssetPriority(asset: FileAsset) {
+  return (
+    (asset.finalSubmissionDestination ? 100 : 0) +
+    (asset.approvalStatus === 'approved' ? 20 : 0) +
+    (finalGeneratedAssetKinds.has(asset.assetKind) ? 10 : 0) +
+    (asset.approvalStatus === 'pending' ? 1 : 0)
+  )
+}
+
+function cvFilenameSpecificity(filename: string) {
+  return filename
+    .replace(/\.pdf$/i, '')
+    .split(/[\s_.-]+/)
+    .filter(Boolean)
+    .length
+}
+
+function newestGeneratedAsset(left: FileAsset, right: FileAsset) {
+  const priorityDifference = generatedAssetPriority(right) - generatedAssetPriority(left)
+  if (priorityDifference) return priorityDifference
+  const specificityDifference = cvFilenameSpecificity(right.originalFilename) - cvFilenameSpecificity(left.originalFilename)
+  if (specificityDifference) return specificityDifference
+  const timeDifference = Date.parse(right.createdAt) - Date.parse(left.createdAt)
+  if (Number.isFinite(timeDifference) && timeDifference) return timeDifference
+  return right.id.localeCompare(left.id)
+}
+
+function hasCurrentCvRenderingEvidence(asset: FileAsset) {
+  if (asset.mimeType !== 'application/pdf' || !isCvFilename(asset.originalFilename)) return true
+  const metadata = asset.artifactMetadata
+  // The artifact metadata join is a secondary read. A pending CV is already
+  // a durable review checkpoint, so keep that exact candidate visible if the
+  // join is temporarily unavailable; superseded or rejected PDFs remain
+  // hidden until their provenance can be verified.
+  if (!metadata) return asset.approvalStatus === 'pending'
+  return metadata?.artifact_role === 'compiled_pdf' && metadata.renderer_version === currentCvRendererVersion
+}
+
+/**
+ * Select the files that are safe to show as user deliverables.
+ *
+ * Generated LaTeX, compiler logs, ATS text, and previews are private quality
+ * checks. Older rows do not have the final-destination marker, so a PDF named
+ * like a CV is retained as a compatibility fallback and deduplicated to one
+ * latest candidate while new rows use the explicit marker.
+ */
+export function selectUserVisibleGeneratedFiles(assets: FileAsset[]) {
+  const generated = assets.filter(asset => asset.source === 'roon_generated')
+  const visible = generated.filter(asset => (
+    asset.mimeType === 'application/pdf' ||
+    Boolean(asset.finalSubmissionDestination) ||
+    finalGeneratedAssetKinds.has(asset.assetKind)
+  ) && hasCurrentCvRenderingEvidence(asset))
+  const cvCandidates = visible
+    .filter(asset => asset.mimeType === 'application/pdf' && isCvFilename(asset.originalFilename))
+    .sort(newestGeneratedAsset)
+  const selectedCv = cvCandidates[0]
+  const cvCandidateIds = new Set(cvCandidates.map(asset => asset.id))
+  return visible
+    .filter(asset => !cvCandidateIds.has(asset.id) || asset.id === selectedCv?.id)
+    .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
 }
 
 const fileAssetSelect = 'id,task_id,agent_run_id,original_filename,mime_type,size_bytes,checksum,source,reusable,original_asset_id,storage_key,created_at,asset_kind,application_case_id,opportunity_id,source_asset_ids,template_version,prompt_version,author_type,revision_history,approval_status,final_submission_destination'
@@ -107,12 +195,26 @@ export async function loadTaskFileAssets(taskId: string) {
     .order('created_at')
     .returns<FileAssetRow[]>()
   if (error) throw new Error(error.message)
-  return (data ?? []).map(mapAsset)
+  const rows = data ?? []
+  const artifactMetadataByAssetId = new Map<string, Record<string, unknown>>()
+  const assetIds = rows.map(row => row.id).filter(Boolean)
+  if (assetIds.length) {
+    const artifactResult = await client
+      .from('application_artifacts')
+      .select('file_asset_id,metadata')
+      .in('file_asset_id', assetIds)
+    if (artifactResult.error && artifactResult.error.code !== '42P01') throw new Error(artifactResult.error.message)
+    for (const artifact of (artifactResult.data ?? []) as Array<{ file_asset_id?: unknown; metadata?: unknown }>) {
+      if (!artifact.file_asset_id || !artifact.metadata || typeof artifact.metadata !== 'object' || Array.isArray(artifact.metadata)) continue
+      artifactMetadataByAssetId.set(String(artifact.file_asset_id), artifact.metadata as Record<string, unknown>)
+    }
+  }
+  return rows.map(row => mapAsset(row, artifactMetadataByAssetId.get(row.id) ?? null))
 }
 
 export async function uploadTaskFileAsset(taskId: string, file: File, reusable = false) {
   if (!acceptedTaskFileTypes.includes(file.type as typeof acceptedTaskFileTypes[number])) {
-    throw new Error('Choose a PNG, JPEG, PDF, DOCX, TXT, ZIP, or notebook file.')
+    throw new Error('Choose a PNG, JPEG, PDF, DOCX, HTML, TXT, ZIP, or notebook file.')
   }
   if (file.size > 20 * 1024 * 1024) throw new Error('Attachments must be 20 MB or smaller.')
   const client = await getCloudClient()

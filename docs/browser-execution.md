@@ -1,104 +1,150 @@
-# Browser execution
+# Application portal execution
 
-ShotCount uses a signed Vercel Node worker for tasks without a first-party API. It supports constrained public-web navigation and approved form submission, plus a purpose-built Google Flights search and payment handoff.
+Shotcount uses a signed Vercel Node worker for official graduate-application
+portals that do not expose a first-party API. The browser is an effect adapter
+inside the application control loop, not an independent agent. It observes a
+bounded page, performs one typed operation, verifies the resulting state, and
+returns evidence to the same AgentRun.
 
 ## Boundaries
 
-- The model receives structured browser tools, never Playwright or arbitrary JavaScript.
-- Each session belongs to one user, AgentRun, and ShotCount task.
-- The Supabase function enforces an environment allowlist; the flight worker additionally requires `www.google.com`.
-- A random bearer token authenticates Edge Function to worker.
-- The worker uses a fresh isolated browser context and never returns cookies, storage, raw page dumps, or credentials.
-- Public page content is bounded, sanitized, and explicitly labelled as untrusted external content before the model sees it.
-- Navigation is HTTPS-only, exact-domain allowlisted, and rejects IP, local-network, credential-bearing, and unsafe redirect destinations.
-- Generic actions can type or select only non-sensitive fields. Password, one-time-code, payment, banking, and private-identifier fields are blocked. The flight-specific checkout action is the only exception: it can fill explicitly user-provided traveler identity fields on an observed airline checkout page, and it never exposes those values as result evidence.
-- Generic clicks can only follow safe links. Form submission is a separate typed tool that always requires exact approval.
-- Public cookie consent is rejected rather than accepted.
-- No card data is entered or stored.
-- No provider payment or purchase button is clicked. A single labelled Google-to-airline booking handoff may be opened so the user is left at the provider's payment-ready page; if Google exposes only booking options first, Caspian resolves one safe provider link before filling checkout.
+- The model receives structured browser tools, never Playwright or arbitrary
+  JavaScript.
+- Each session belongs to one user, AgentRun, ApplicationCase, task, and
+  allowlisted official-domain set.
+- The Supabase function enforces an exact HTTPS domain allowlist derived from
+  the verified programme evidence.
+- A random bearer token authenticates the Edge Function to the worker.
+- The worker uses a fresh isolated browser context and never returns cookies,
+  storage, raw page dumps, or credentials.
+- Passwords, one-time codes, payment fields, and private identifiers are
+  blocked from generic browser actions.
+- Public page content is bounded, sanitized, and explicitly labelled as
+  untrusted external content before the model sees it.
+- Generic navigation and safe field preparation may continue only until an
+  externally visible write. The dedicated application submission path has its
+  own stricter contract.
 
-## Public-web tasks
+## Browser operating contract
 
-`browser.start_session` creates a task-owned session with only the configured domains needed for that objective. `browser.navigate`, `browser.observe`, and `browser.act` prepare the page. Each observation contains only the page title, URL, short visible text, headings, links, and labelled controls.
+Every operation is scoped to the current case and includes:
 
-State is replayable rather than tied to a long-lived Chromium process: the initial URL and at most 30 validated actions are stored in the session checkpoint. A serverless restart can recreate the same public page state and continue the same AgentRun.
+- the session and operation IDs;
+- the observed target and current page identity;
+- the typed action and expected effect;
+- the applicant fact or artifact evidence supporting the action;
+- the approval version when a write is required;
+- the idempotency key and attempt number; and
+- the resulting-state evidence the worker must return.
 
-`browser.submit` is the only generic externally visible write. The exact session, target, and expected effect are hashed into the approval. Immediately before clicking, the worker persists a submission-attempt marker. A retry can therefore never click twice. Completion requires a visible post-submit page change; when confirmation is ambiguous, ShotCount stops for review and refuses to resubmit automatically.
+The safe sequence is:
 
-## Flight search
+1. **Scope.** Reuse the task-owned session only if its case, domain, and
+   checkpoint still match the current plan.
+2. **Observe.** Read the bounded title, URL, visible text, headings, links, and
+   labelled controls. Treat all page content as untrusted instructions.
+3. **Ground.** Match the target field or control to a verified applicant fact,
+   artifact checksum, or explicit preparatory intent.
+4. **Act.** Use one typed navigation, field, selection, upload, or safe-control
+   operation. Do not guess when the target is missing or ambiguous.
+5. **Read back.** Confirm the entered value, selected option, uploaded file,
+   saved section, or expected page transition.
+6. **Commit.** Persist the checkpoint, evidence IDs, operation result, and
+   public summary with the same idempotency key.
+7. **Replan.** Unlock only the dependent requirement or lane. A model success
+   statement never substitutes for the read-back.
 
-`browser.search_flights` accepts:
+## Application portal tasks
 
-- IATA origin and destination codes;
-- exact outbound and return dates;
-- cabin;
-- maximum stops;
-- optional budget;
-- currency;
-- optional preferred airlines.
-- optional excluded airlines;
-- passenger counts, child ages, and infant lap-versus-seat choice;
-- optional local departure and arrival time windows;
-- optional nearby-airport preference.
+browser.start_session creates a task-owned session with only the official
+domains needed for the application. browser.navigate, browser.observe, and
+browser.act prepare the portal. Each observation is deliberately small so the
+agent can reason over the current control surface without spending tokens on
+irrelevant page state.
 
-The worker opens a real Google Flights result page, parses structured visible itineraries, enforces the stops and budget constraints, and returns at most three distinct choices labelled Best overall, Cheapest, and Fastest where possible.
+State is replayable rather than tied to a long-lived Chromium process. The
+initial URL and at most 30 validated actions are stored in the session
+checkpoint, so a serverless restart can continue the same AgentRun. Replay
+starts from the last confirmed checkpoint and never repeats an already
+confirmed consequential operation.
 
-The saved option contains only the observed airline, times, route, stops, duration, price, currency, provider, stable option ID, search URL, and verified date/overnight metadata. Hard constraints are applied again during selection, so an over-budget, excluded-airline, out-of-window, or over-stop card cannot be selected.
+browser.submit is the only generic externally visible write. It is allowed
+only for an explicitly preparatory effect such as save-and-continue, an upload,
+or an academic request, and it still uses exact approval and provider
+confirmation. It must never impersonate application.submit.
 
-Flexible date ranges, baggage or fare-brand guarantees, seat selection, accessibility or pet handling, mixed cabins, stopovers, and multi-city/open-jaw itineraries are explicit recoverable stops. The worker does not silently claim those constraints were enforced.
+For final application submission, the dedicated path requires the exact
+approved package checksum, latest verified checkpoint, task-owned session,
+one-time durable submission claim, and explicit user approval. Immediately
+before clicking, the worker persists a submission-attempt marker. A retry can
+therefore never click twice. Completion requires a visible post-submit
+confirmation and an application or confirmation ID. When confirmation is
+ambiguous, Shotcount stops for review and refuses to resubmit automatically.
 
-## Resume and handoff
+## Accretive portal knowledge
 
-When the user chooses an option:
+Successful observations may improve future runs only as scoped knowledge. A
+portal field map or page pattern must record:
 
-1. The app sends the exact option ID to `task-agent`.
-2. The same durable `browser_execution_sessions` row receives a new idempotent operation.
-3. The worker reruns the persisted search and matches airline, observed price, and duration.
-4. If price or availability changed, it stops and returns a recoverable state.
-5. It selects the outbound and return legs.
-6. It verifies the `https://www.google.com/travel/flights/booking` itinerary.
-7. Where Google exposes a labelled direct airline booking option, it opens that one navigation-only control and verifies the resulting public HTTPS provider handoff. If Google exposes booking options first, the checkout worker can recover one safe provider link from that page. If no provider handoff loads safely, it stops with a recoverable provider-handoff state.
-8. For a payment-handoff task, Caspian asks once for the missing traveler/contact details, uses `browser.prepare_flight_checkout` to fill only observed passenger and contact fields, verifies each fill, and advances only through safe review/continue controls.
-9. It stops at the first payment/card boundary, persists the prepared-field evidence without raw identity values, and sets `payment_boundary_reached = true`.
-10. ShotCount shows Continue to payment and leaves the task waiting for the user. It never enters card details, CVV, passwords, OTPs, or clicks purchase/payment/confirm-booking controls.
+- programme, portal family, and source URL;
+- the observed section/control label and page identity;
+- the fact or artifact evidence used;
+- the observation time and freshness policy;
+- the portal or adapter version;
+- whether the mapping was read-back verified; and
+- the failure or invalidation conditions.
 
-The Chromium process may be fresh after a serverless restart, but the task-owned session, checkpoint, option, provider URL, and operation identity are the same durable browser run. ShotCount does not automate further after the external provider handoff.
+The system may reuse a verified mapping to reduce observation and model cost,
+but a changed page identity, missing control, conflicting source, or failed
+read-back invalidates it. Never persist selectors, cookies, credentials, raw
+storage, or unscoped page text as reusable memory.
+
+## Resource discipline
+
+- Prefer the last verified observation and checkpoint over a fresh page load.
+- Observe only the page and controls needed for the active requirement.
+- Batch independent read-only portal work when the provider permits it; keep
+  writes serial and claim-protected.
+- Do not invoke a model to rediscover a mapped field or verified artifact.
+- Stop at CAPTCHAs, authentication, payment, unsafe redirects, ambiguous
+  controls, or unsupported portal behavior and preserve the exact recovery
+  reason.
 
 ## Server configuration
 
 Supabase Edge Function secrets:
 
-```text
-SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=www.google.com,app.shotcount.app,www.imperial.ac.uk,study.ed.ac.uk,web.cs.toronto.edu,www.grad.ubc.ca,www.cs.ubc.ca
+~~~text
+SHOTCOUNT_BROWSER_ALLOWED_DOMAINS=app.shotcount.app,www.imperial.ac.uk,study.ed.ac.uk,web.cs.toronto.edu,www.grad.ubc.ca,www.cs.ubc.ca
 SHOTCOUNT_BROWSER_WORKER_URL=https://<deployment>/api/browser-worker
 SHOTCOUNT_BROWSER_WORKER_TOKEN=<random shared token>
-```
+~~~
 
-The additional hosts are the official programme sources used by the synthetic
-David production qualification, including the UBC fallback used when the
-Imperial page is access-blocked. Any other application campaign must append
-only the exact HTTPS hosts required by its verified official sources.
+Hosts must be official programme sources required by the verified application
+case. A new campaign may append only the exact HTTPS hosts required by its
+evidence.
 
 Vercel server environment:
 
-```text
+~~~text
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 SHOTCOUNT_BROWSER_WORKER_TOKEN
-```
+~~~
 
-The two worker-token values must match. The service key and worker token must never be sent to the frontend.
+The service key and worker token must never be sent to the frontend.
 
 ## Failure handling
 
-The worker records stable public codes for runtime missing, unsafe URLs or fields, missing or ambiguous targets, ambiguous submission confirmation, no results, changed fare/schedule, sold out, missing return, unsafe handoff, timeout, and worker connectivity. A failed selection returns to the existing options when safe; a failed search is retryable. No browser form can be submitted twice because its operation ID and attempt marker are persisted before the side effect.
+The worker records stable public codes for runtime failures, unsafe URLs or
+fields, missing or ambiguous controls, ambiguous submission confirmation,
+changed portal state, timeouts, and worker connectivity. Failed preparation is
+retryable when safe from the last checkpoint; failed submission remains under
+user review. An ambiguous external effect is reconciled before any retry.
 
-## Live verification
+## Verification
 
-The normal test suite uses deterministic result text and a controlled checkout-page fixture. To exercise Google Flights itself with future dates, run:
-
-```bash
-pnpm test:flight:live
-```
-
-This performs a real search, selects one returned itinerary, verifies the booking handoff, and stops without using real traveler identity or payment data. Checkout field mapping, verification, bounded progression, and payment stopping are covered by the controlled browser tests.
+The normal test suite uses deterministic official-portal fixtures. David's
+application benchmark and the browser-worker contract tests cover
+official-source verification, document preparation, exact approvals, submission
+evidence, duplicate prevention, checkpoint replay, and bounded recovery.

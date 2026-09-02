@@ -20,10 +20,10 @@ export type ApplicationState = {
 
 export function isApplicationIntent(title: string, description = '') {
   const value = `${title} ${description}`.trim()
-  return /^apply\s+to\s+(?:this|it|that)$/i.test(value) ||
-    /\b(?:apply|applications?|admissions?|grad(?:uate)?\s+school|phd|doctoral|master'?s|msc|job\s+application|grant application|statement of purpose|personal statement|recommendation letters?|referees?)\b/i.test(value) ||
-    /\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b[\s\S]{0,100}\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b/i.test(value) ||
+  const graduateContext = /\b(?:grad(?:uate)?\s+school|postgraduate|phd|dphil|doctoral|master'?s|msc|university|college|admissions?|transcript|statement\s+of\s+purpose|personal\s+statement|recommendation\s+letters?|referees?|application\s+portal|fee\s+waiver|professors?|supervisors?|faculty|research\s+groups?|labs?)\b/i.test(value)
+  const facultyContact = /\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b[\s\S]{0,100}\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b/i.test(value) ||
     /\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b[\s\S]{0,100}\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b/i.test(value)
+  return graduateContext && (/\b(?:apply|applications?|admissions?|programmes?|programs?|phds?|dphil|doctorates?|masters?|msc|deadline|requirements?|documents?|research|funding|scholarship)\b/i.test(value) || facultyContact)
 }
 
 export function preferOfficialSource<T extends { url: string; value: string }>(

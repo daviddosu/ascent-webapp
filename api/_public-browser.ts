@@ -2,7 +2,7 @@ import chromium from '@sparticuz/chromium'
 import { access } from 'node:fs/promises'
 import { isIP } from 'node:net'
 import { chromium as playwright, type Browser, type Locator, type Page } from 'playwright-core'
-import { BrowserExecutionError } from './_flight-browser.js'
+import { BrowserExecutionError } from './_browser-error.js'
 import { normalizedIpLiteral, pinnedHostResolverRules, resolvePublicHostname } from './_egress-policy.js'
 import { discoverApplicationQuestions, type ApplicationQuestion, type PortalFieldObservation } from '../supabase/functions/_shared/application-questions.js'
 

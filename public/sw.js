@@ -33,10 +33,10 @@ self.addEventListener('push', event => {
     const openWindows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     if (openWindows.some(client => client.visibilityState === 'visible')) return
     await self.registration.showNotification(payload.title || 'Shotcount', {
-      body: payload.body || 'Someone you follow just finished today.',
+      body: payload.body || 'Your application workspace has an update.',
       icon: payload.icon || '/favicon.svg',
       badge: payload.badge || '/favicon.svg',
-      tag: payload.tag || 'shotcount-completion',
+      tag: payload.tag || 'shotcount-application-update',
       data: { url: payload.url || '/' },
       silent: false,
     })

@@ -238,6 +238,7 @@ export type SupplementalProgressInteraction = {
   required: boolean
   priority: number
   mapsToRequirement: string
+  questionType?: ApplicationQuestionType
   inputType: 'text' | 'number' | 'date' | 'boolean'
   unit: ApplicationQuestionUnit | null
   minimum: number | null
@@ -550,6 +551,17 @@ function knownContextLines(facts: VerifiedSupplementalFact[]) {
   return facts.slice(0, 5).map(fact => `${fact.factId}: ${typeof fact.value === 'string' ? fact.value : JSON.stringify(fact.value)}`)
 }
 
+function inferredQuestionOptions(question: ApplicationQuestion): ApplicationQuestionOption[] {
+  if (question.options.length) return question.options
+  if (question.questionType === 'yes_no' || question.inputType === 'radio' && /\b(?:yes|no)\b/i.test(question.exactPrompt)) {
+    return [
+      { value: 'yes', label: 'Yes' },
+      { value: 'no', label: 'No' },
+    ]
+  }
+  return []
+}
+
 function interactionFor(question: ApplicationQuestion, reason: string, facts: VerifiedSupplementalFact[]): SupplementalProgressInteraction {
   const inputType = question.questionType === 'yes_no' ? 'boolean' : question.inputType === 'number' || question.questionType === 'numeric' ? 'number' : question.inputType === 'date' || question.questionType === 'date' ? 'date' : 'text'
   return {
@@ -564,11 +576,12 @@ function interactionFor(question: ApplicationQuestion, reason: string, facts: Ve
     required: question.required,
     priority: question.required ? 1 : 4,
     mapsToRequirement: question.id,
+    questionType: question.questionType,
     inputType,
     unit: question.unit,
     minimum: question.minimum,
     maximum: question.maximum,
-    options: question.options,
+    options: inferredQuestionOptions(question),
     currentValue: question.answerValue,
     placeholder: question.unit && question.maximum !== null ? `Answer in ${question.maximum} ${question.unit} or fewer` : 'Answer the exact portal question',
   }

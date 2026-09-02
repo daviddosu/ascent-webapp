@@ -1,9 +1,0 @@
-scenario,harness,success,execution_precision,user_reexplanation_required,duplicate_or_unintended_side_effects,same_logical_run_resumed,restart_survival,approval_state_survival,time_to_resume_seconds,inference_cost_usd,final_state,failure_reason
-reply-calendar,ShotCount,true,1,false,false,true,,,11.46,0.010748,completed,
-timed-follow-up,ShotCount,false,1,false,false,true,,,,0.005946,waiting_external,timer/deadline handling
-restart-recovery,ShotCount,true,1,false,false,true,true,,20.462,0.010721,completed,
-approval-persistence,ShotCount,true,1,false,false,true,,true,,0.004062,completed,
-reply-calendar,Minimal generic OpenAI agent,true,1,false,false,true,,,10.516,0.009552,completed,
-timed-follow-up,Minimal generic OpenAI agent,true,1,false,false,true,,,114.575,0.011155,waiting_external,
-restart-recovery,Minimal generic OpenAI agent,true,1,false,false,true,true,,17.139,0.009586,completed,
-approval-persistence,Minimal generic OpenAI agent,true,1,false,false,true,,true,,0.003831,completed,

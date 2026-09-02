@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { canMarkApplicationReady, classifyApplicationContext, groundedClaims, isApplicationIntent, preferOfficialSource } from './data/application'
 
 describe('application vertical safeguards', () => {
-  it('detects generic application objectives without programme hardcoding', () => {
-    expect(isApplicationIntent('Apply to this programme')).toBe(true)
-    expect(isApplicationIntent('Apply for the accelerator', 'Use the attached screenshot')).toBe(true)
+  it('detects graduate application objectives and rejects unrelated application work', () => {
+    expect(isApplicationIntent('Apply to this university programme')).toBe(true)
+    expect(isApplicationIntent('Apply for the accelerator', 'Use the attached screenshot')).toBe(false)
     expect(isApplicationIntent('Research accelerator programmes')).toBe(false)
+    expect(isApplicationIntent('Prepare my Stanford Physics PhD application')).toBe(true)
   })
 
   it('gives official sources precedence over screenshot claims', () => {

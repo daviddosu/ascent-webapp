@@ -5,21 +5,26 @@ import {
   needsAgentContext,
   resolveAgentFunctionError,
 } from './agent'
+import { canUserContinueManually } from './agent-progress'
 
 describe('task agent model', () => {
+  it('does not expose Continue for internal runnable work', () => {
+    expect(canUserContinueManually({ userDecisionRequired: false, userInitiatedPauseCanResume: false })).toBe(false)
+    expect(canUserContinueManually({ userDecisionRequired: true, userInitiatedPauseCanResume: false })).toBe(true)
+    expect(canUserContinueManually({ userDecisionRequired: false, userInitiatedPauseCanResume: true })).toBe(true)
+  })
   it('classifies the supported MVP capabilities', () => {
-    expect(agentCapability({ id: '1', title: 'Research five relevant professors' })).toBe('research')
+    expect(agentCapability({ id: '1', title: 'Research five relevant professors' })).toBe('browser')
     expect(agentCapability({ id: '2', title: 'Draft a launch announcement' })).toBe('draft')
-    expect(agentCapability({ id: '3', title: 'Research professors and draft candidate profiles' })).toBe('research_draft')
+    expect(agentCapability({ id: '3', title: 'Research professors and draft candidate profiles' })).toBe('browser')
     expect(agentCapability({ id: '4', title: 'Follow up by email with everyone from last week' })).toBe('gmail')
-    expect(agentCapability({ id: '5', title: 'Find a return flight from Lagos to London' })).toBe('flight_search')
   })
 
   it('asks for context progressively only when the task is too vague', () => {
     expect(needsAgentContext({ id: '1', title: 'Research' })).toBe(true)
     expect(needsAgentContext({ id: '2', title: 'Research', description: 'Compare three particle physics programs.' })).toBe(false)
-    expect(needsAgentContext({ id: '3', title: 'Book flight' })).toBe(true)
-    expect(needsAgentContext({ id: '4', title: 'Book London flight', description: 'Return from Lagos next Thursday and come back Sunday.' })).toBe(false)
+    expect(needsAgentContext({ id: '3', title: 'Apply' })).toBe(true)
+    expect(needsAgentContext({ id: '4', title: 'Apply to Stanford Physics PhD' })).toBe(false)
     expect(needsAgentContext({ id: '5', title: "Reply to Sarah's email" })).toBe(false)
   })
 

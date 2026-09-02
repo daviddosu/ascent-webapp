@@ -12,8 +12,12 @@ import {
   GRADUATE_CV_TEMPLATE_ID,
   GRADUATE_CV_TEMPLATE_VERSION,
   validateCanonicalLatex,
-  type CvData,
 } from './cv.ts'
+import {
+  validateApplicationEmailAction,
+  type ApplicationEmailContext,
+  type EmailActionPackage,
+} from './application-email.ts'
 
 export const SUPERVISOR_OUTREACH_SCHEMA_VERSION = 1 as const
 export const SUPERVISOR_OUTREACH_WORKFLOW_VERSION = 'supervisor-outreach@1.0.0' as const
@@ -101,7 +105,6 @@ export type SupervisorCvReference = {
   applicant_name: string
   applicant_email: string
   latex?: string
-  cv_data?: CvData
 }
 
 export type SupervisorOutreachEmail = {
@@ -150,6 +153,8 @@ export type SupervisorOutreachPackage = {
   verified_email: string
   verified_email_source_id: string
   email: SupervisorOutreachEmail
+  application_email_context: ApplicationEmailContext
+  email_action_package: EmailActionPackage
   approved_email_version: string | null
   cv: SupervisorCvReference
   approved_cv_artifact_id: string
@@ -164,6 +169,7 @@ export type SupervisorOutreachPackage = {
 }
 
 export type GenerateSupervisorOutreachInput = {
+  task_id: string
   application_case_id: string
   opportunity_id: string
   target_programme: string
@@ -176,12 +182,7 @@ export type GenerateSupervisorOutreachInput = {
   applicant_name: string
   applicant_email: string
   applicant_role?: string | null
-  writing: {
-    research_connection: string
-    applicant_fit: string
-    request: string
-    closing_context: string
-  }
+  email_action_package: EmailActionPackage
   cv: SupervisorCvReference
   idempotency_key: string
   now?: string
@@ -208,18 +209,6 @@ export type OutreachValidationResult = {
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const genericPhrases = [
-  'i hope this email finds you well',
-  'i am reaching out to express my interest',
-  'i am excited to',
-  'align perfectly',
-  'cutting-edge',
-  'world-class',
-  'esteemed professor',
-  'leverage my skills',
-  'passionate about',
-  'game-changing',
-]
 const freeEmailDomains = new Set(['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'proton.me'])
 const fitWeights: Record<ApplicantFitEvidence['dimension'], number> = {
   research_interest: 20,
@@ -425,32 +414,28 @@ export function qualityCheckSupervisorOutreach(input: {
   const bodyHtml = text(packageValue.email.body_html, 30_000)
   const dossier = packageValue.supervisor_dossier
   const sources = sourceMap(dossier)
-  const sourceClaimsText = sourceClaims(dossier, packageValue.strongest_connection.supervisor_evidence_ids).join(' ')
-  const claimTokens = [...new Set(sourceClaimsText.toLocaleLowerCase().split(/[^a-z0-9]+/).filter(token => token.length >= 5))]
-  const researchOverlap = claimTokens.filter(token => bodyText.toLocaleLowerCase().includes(token)).length >= Math.min(3, Math.max(1, claimTokens.length))
   const fitEvidenceIds = new Set(packageValue.applicant_fit_evidence.map(item => item.id))
   const researchEvidenceIds = new Set(packageValue.research_evidence.map(item => item.id))
-  const emailEvidenceIds = Object.values(packageValue.email.evidence_map).flat()
+  const emailEvidenceIds = packageValue.email_action_package.claims.flatMap(claim => claim.evidenceIds)
   const identity = sameEmail(packageValue.email.to, dossier.verified_email) &&
-    text(packageValue.email.to) === canonicalEmail(dossier.verified_email) &&
-    bodyText.includes(text(packageValue.supervisor_dossier.name.split(/\s+/).slice(-1)[0], 120))
-  const research = researchOverlap && packageValue.strongest_connection.supervisor_evidence_ids.length > 0 &&
+    text(packageValue.email.to) === canonicalEmail(dossier.verified_email)
+  const research = packageValue.strongest_connection.supervisor_evidence_ids.length > 0 &&
     packageValue.strongest_connection.supervisor_evidence_ids.every(id => sources.has(id)) &&
     emailEvidenceIds.some(id => researchEvidenceIds.has(id))
   const applicantFit = packageValue.applicant_fit_evidence.length > 0 &&
     packageValue.applicant_fit_evidence.every(item => item.applicant_fact_ids.length > 0 && item.supervisor_evidence_ids.length > 0 && fitEvidenceIds.has(item.id)) &&
     emailEvidenceIds.some(id => fitEvidenceIds.has(id))
-  const prohibited = genericPhrases.filter(phrase => bodyText.toLocaleLowerCase().includes(phrase))
-  const writing = wordCount(bodyText) >= 120 && wordCount(bodyText) <= 220 &&
-    !/[—–]/.test(bodyText) && prohibited.length === 0 && !/^dear\s+(esteemed|honou?red)/i.test(bodyText) &&
-    bodyText.split(/\n\n/).filter(Boolean).length >= 4 && supervisorOutreachTextFromHtml(bodyHtml) === bodyText
+  const writing = wordCount(bodyText) > 0 && wordCount(bodyText) <= 220 &&
+    supervisorOutreachTextFromHtml(bodyHtml) === bodyText &&
+    Object.values(packageValue.email_action_package.quality).every(Boolean)
   const gmail = emailPattern.test(packageValue.email.to) && packageValue.email.subject.length >= 8 && packageValue.email.subject.length <= 180 &&
-    bodyText.length >= 300 && /^<p>/.test(bodyHtml) && !/<(?:style|script|table|img)\b/i.test(bodyHtml)
+    bodyText.length > 0 && /^<p>/.test(bodyHtml) && !/<(?:style|script|table|img)\b/i.test(bodyHtml)
   const attachment = validCvReference(packageValue.cv) && packageValue.approved_cv_artifact_id === packageValue.cv.artifact_id &&
     packageValue.approved_cv_checksum === packageValue.cv.checksum && packageValue.cv.ats_text.toLocaleLowerCase().includes(packageValue.cv.applicant_name.toLocaleLowerCase()) &&
     packageValue.cv.ats_text.toLocaleLowerCase().includes(packageValue.cv.applicant_email.toLocaleLowerCase()) &&
     (!packageValue.cv.latex || validateCanonicalLatex(packageValue.cv.latex).length === 0)
-  const consistency = sameEmail(packageValue.cv.applicant_email, packageValue.cv.applicant_email) &&
+  const consistency = sameEmail(packageValue.email_action_package.recipientEmail, packageValue.verified_email) &&
+    packageValue.email_action_package.attachmentArtifactIds.includes(packageValue.cv.artifact_id) &&
     packageValue.email.evidence_map.research_connection?.length > 0 &&
     packageValue.email.evidence_map.applicant_fit?.length > 0 &&
     packageValue.email.evidence_map.programme_policy?.length > 0
@@ -474,7 +459,7 @@ export function generateSupervisorOutreach(input: GenerateSupervisorOutreachInpu
   const dossierCheck = validateSupervisorResearchDossier(input.supervisor_dossier, now)
   const issues = [...policyDecision.issues, ...dossierCheck.issues, ...dossierCheck.warnings]
   if (!policyDecision.active) issues.push('Supervisor outreach is not active for this programme policy.')
-  if (!text(input.application_case_id, 80) || !text(input.opportunity_id, 80) || !text(input.idempotency_key, 300)) issues.push('Case, opportunity, and idempotency identifiers are required.')
+  if (!text(input.task_id, 80) || !text(input.application_case_id, 80) || !text(input.opportunity_id, 80) || !text(input.idempotency_key, 300)) issues.push('Task, case, opportunity, and idempotency identifiers are required.')
   if (!canonicalEmail(input.applicant_email) || !text(input.applicant_name, 240)) issues.push('Applicant identity is incomplete.')
   if (!validCvReference(input.cv)) issues.push('The approved canonical CV reference is incomplete.')
   if (input.cv.applicant_name !== input.applicant_name || !sameEmail(input.cv.applicant_email, input.applicant_email)) issues.push('The CV identity does not match the applicant identity.')
@@ -483,6 +468,45 @@ export function generateSupervisorOutreach(input: GenerateSupervisorOutreachInpu
   if (!fitEvidence.length) issues.push('At least one scored applicant-supervisor fit signal is required.')
   if (!input.strongest_connection.applicant_fact_ids.length || !input.strongest_connection.supervisor_evidence_ids.length) issues.push('The strongest research connection needs both applicant and supervisor evidence.')
   if (input.strongest_connection.supervisor_evidence_ids.some(id => !evidenceIds.has(id))) issues.push('The strongest research connection references missing supervisor evidence.')
+  const researchEvidence = input.strongest_connection.supervisor_evidence_ids.map(id => ({
+    id,
+    source_ids: [id],
+    claim: sourceClaims(input.supervisor_dossier, [id])[0] ?? input.strongest_connection.statement,
+  }))
+  const emailContext: ApplicationEmailContext = {
+    taskId: input.task_id,
+    applicationCaseId: input.application_case_id,
+    emailType: 'prospective_supervisor_first_contact',
+    purpose: input.email_action_package.communicationGoal,
+    recipient: {
+      name: input.supervisor_dossier.name,
+      role: input.supervisor_dossier.title,
+      institution: input.supervisor_dossier.institution,
+      email: input.supervisor_dossier.verified_email,
+      emailVerification: 'official_verified',
+      sourceEvidenceIds: [input.supervisor_dossier.verified_email_source_id],
+    },
+    programme: { institution: input.target_institution, programme: input.target_programme, programmeId: input.opportunity_id },
+    contactPolicy: {
+      value: input.policy.category === 'useful_optional' ? 'optional' : input.policy.category,
+      evidenceIds: input.policy.evidence_ids,
+    },
+    applicantEvidence: fitEvidence.map(item => ({ fact: item.text, evidenceId: item.id })),
+    programmeEvidence: input.policy.evidence_ids.map(evidenceId => ({ fact: input.policy.rationale, evidenceId })),
+    recipientResearch: {
+      themes: input.supervisor_dossier.research_themes.map(item => item.text),
+      recentWork: input.supervisor_dossier.recent_publications.map(item => {
+        const source = item.source_ids.map(id => input.supervisor_dossier.evidence.find(evidence => evidence.id === id)).find(Boolean)
+        return { title: source?.title ?? item.text, url: source?.url ?? '', relevance: item.text }
+      }),
+      evidenceIds: input.supervisor_dossier.source_ids,
+    },
+    attachments: [{ artifactId: input.cv.artifact_id, type: 'cv', filename: input.cv.filename, checksum: input.cv.checksum }],
+    communicationConstraints: { approvalRequired: true, maxWords: 220, attachmentRequired: true },
+  }
+  const emailValidation = validateApplicationEmailAction(emailContext, input.email_action_package)
+  issues.push(...emailValidation.issues, ...emailValidation.sendBlockers)
+  const emptyEmail: SupervisorOutreachEmail = { to: canonicalEmail(input.supervisor_dossier.verified_email), subject: '', body_text: '', body_html: '', version: 'application-email-v1', word_count: 0, evidence_map: {} }
   if (issues.length) {
     const rejectedBase = {
       schema_version: SUPERVISOR_OUTREACH_SCHEMA_VERSION,
@@ -501,7 +525,9 @@ export function generateSupervisorOutreach(input: GenerateSupervisorOutreachInpu
       strongest_connection: input.strongest_connection,
       verified_email: input.supervisor_dossier.verified_email,
       verified_email_source_id: input.supervisor_dossier.verified_email_source_id,
-      email: { to: canonicalEmail(input.supervisor_dossier.verified_email), subject: '', body_text: '', body_html: '', version: 'supervisor-outreach-email-v1', word_count: 0, evidence_map: {} },
+      email: emptyEmail,
+      application_email_context: emailContext,
+      email_action_package: input.email_action_package,
       approved_email_version: null,
       cv: input.cv,
       approved_cv_artifact_id: input.cv.artifact_id,
@@ -514,34 +540,14 @@ export function generateSupervisorOutreach(input: GenerateSupervisorOutreachInpu
     }
     return rejectedBase
   }
-  const surname = text(input.supervisor_dossier.name.split(/\s+/).filter(Boolean).slice(-1)[0], 120)
-  const connection = text(input.writing.research_connection, 3_500)
-  const fit = text(input.writing.applicant_fit, 3_500)
-  const request = text(input.writing.request, 2_500)
-  const closingContext = text(input.writing.closing_context, 1_500)
-  const applicantRole = text(input.applicant_role, 240)
-  const bodyText = [
-    `Dear Professor ${surname},`,
-    `I am preparing an application to the ${input.target_programme} at ${input.target_institution} for ${input.target_intake}, and I am writing to ask about potential PhD supervision.`,
-    connection,
-    `${fit}${applicantRole ? ` My current role is ${applicantRole}.` : ''}`,
-    `${request} ${closingContext}`.trim(),
-    `If this direction is within your current supervision plans, I would appreciate any guidance on whether you are considering new doctoral students and whether an initial conversation would be useful. I have attached my programme-specific CV for context.`,
-    `Thank you for your time and for your work on ${input.strongest_connection.short_area}.`,
-    `Kind regards,\n${input.applicant_name}`,
-  ].filter(Boolean).join('\n\n')
-  const bodyHtml = supervisorOutreachHtmlFromText(bodyText)
-  const researchEvidence = input.strongest_connection.supervisor_evidence_ids.map(id => ({
-    id,
-    source_ids: [id],
-    claim: sourceClaims(input.supervisor_dossier, [id])[0] ?? input.strongest_connection.statement,
-  }))
+  const bodyText = canonicalBody(input.email_action_package.textBody)
+  const bodyHtml = text(input.email_action_package.htmlBody, 30_000)
   const email: SupervisorOutreachEmail = {
     to: canonicalEmail(input.supervisor_dossier.verified_email),
-    subject: `PhD supervision inquiry - ${input.strongest_connection.short_area}`.slice(0, 180),
+    subject: text(input.email_action_package.subject, 180),
     body_text: bodyText,
     body_html: bodyHtml,
-    version: 'supervisor-outreach-email-v1',
+    version: 'application-email-v1',
     word_count: wordCount(bodyText),
     evidence_map: {
       research_connection: researchEvidence.map(item => item.id),
@@ -568,6 +574,8 @@ export function generateSupervisorOutreach(input: GenerateSupervisorOutreachInpu
     verified_email: email.to,
     verified_email_source_id: input.supervisor_dossier.verified_email_source_id,
     email,
+    application_email_context: emailContext,
+    email_action_package: input.email_action_package,
     approved_email_version: null,
     cv: input.cv,
     approved_cv_artifact_id: input.cv.artifact_id,
@@ -623,6 +631,8 @@ export function validateSupervisorOutreachPackage(
   if (!emailPattern.test(packageValue.email.to) || packageValue.email.to !== canonicalEmail(packageValue.verified_email)) issues.push('The canonical recipient is invalid.')
   if (supervisorOutreachTextFromHtml(packageValue.email.body_html) !== canonicalBody(packageValue.email.body_text)) issues.push('The Gmail HTML and plain-text bodies are not equivalent.')
   if (packageValue.email.word_count !== wordCount(packageValue.email.body_text)) issues.push('The stored email word count is incorrect.')
+  const emailActionValidation = validateApplicationEmailAction(packageValue.application_email_context, packageValue.email_action_package)
+  issues.push(...emailActionValidation.issues, ...emailActionValidation.sendBlockers)
   return { valid: issues.length === 0, issues: unique(issues), warnings: unique(warnings) }
 }
 

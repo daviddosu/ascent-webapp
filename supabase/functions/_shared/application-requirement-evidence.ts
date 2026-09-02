@@ -1,3 +1,5 @@
+import { missingValueOwnerForRequirement } from './application-value-ownership.ts'
+
 type RequirementInput = Record<string, unknown>
 
 function text(value: unknown, maximum = 500) {
@@ -27,17 +29,43 @@ export function isFundingRequirement(requirement: RequirementInput) {
 }
 
 /**
+ * Submission-method rules describe where the institution expects the packet
+ * to go. They are satisfied by the portal workflow, not by an applicant file
+ * or a free-form user answer. Keep them out of applicant-evidence waits.
+ */
+export function isApplicationSubmissionMethodRequirement(requirement: RequirementInput) {
+  const name = requirementName(requirement)
+  const type = requirementType(requirement)
+  return (!type || type === 'official_requirement' || type === 'portal' || type === 'portal_section' || type === 'portal_field') &&
+    /\b(?:application|supporting|supplemental)?\s*(?:materials?|documents?)\s+(?:must be\s+)?submitted electronically\b|\belectronic submission\b|\bmailed materials? (?:are )?not accepted\b/i.test(name)
+}
+
+/**
  * An official programme page can establish the institution's rule, but it
  * cannot prove anything about this particular applicant. Keep that line
  * explicit so a policy source never marks a CV, score report, referee, essay,
  * or personal choice complete.
  */
 export function requiresApplicantSpecificEvidence(requirement: RequirementInput) {
+  // A requirement may be stored with `responsible_party: applicant` because
+  // the applicant ultimately submits it, while the unresolved value itself is
+  // programme metadata (cycle, fee, deadline, or portal policy).  Ownership
+  // of the value is the gate, not the worker or submitter.
+  if (missingValueOwnerForRequirement({
+    name: requirement.name ?? requirement.label ?? requirement.title,
+    type: requirement.requirement_type ?? requirement.requirementType,
+    category: requirement.category,
+    responsible: requirement.responsible_party ?? requirement.responsibleParty,
+    exactInstructions: requirement.exact_instructions ?? requirement.exactInstructions,
+    source: requirement.source && typeof requirement.source === 'object' && !Array.isArray(requirement.source) ? requirement.source as Record<string, unknown> : null,
+  }) === 'programme') return false
   if (isFundingRequirement(requirement)) return false
   const name = requirementName(requirement)
   const category = requirementCategory(requirement)
   const type = requirementType(requirement)
   const responsible = responsibleParty(requirement)
+
+  if (isApplicationSubmissionMethodRequirement(requirement)) return false
 
   if (['applicant', 'writer', 'referee'].includes(responsible)) return true
   if (['identity', 'academic', 'test', 'essay', 'reference', 'portfolio'].includes(category)) return true
@@ -87,4 +115,22 @@ export function officialCitationSupportsRequirement(requirement: RequirementInpu
   const terms = name.match(/[a-z][a-z-]{3,}/g)?.filter(term => !ignored.has(term)) ?? []
   const matchedTerms = terms.filter(term => new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(value))
   return terms.length > 0 && matchedTerms.length >= Math.min(2, terms.length)
+}
+
+/**
+ * Validate that an official excerpt can be retained as requirement evidence.
+ * This is intentionally broader than `officialCitationSupportsRequirement`:
+ * applicant-specific documents (for example a transcript or CV) may have an
+ * official rule source, but that source must never be treated as proof that the
+ * applicant already supplied the document.
+ */
+export function officialSourceExcerptSupportsRequirement(requirement: RequirementInput, excerpt: string) {
+  if (officialCitationSupportsRequirement(requirement, excerpt)) return true
+  const name = requirementName(requirement)
+  const value = excerpt.replace(/\s+/g, ' ').trim()
+  if (!name || !value || isFundingRequirement(requirement)) return false
+  const ignored = new Set(['application', 'applications', 'admission', 'admissions', 'requirement', 'requirements', 'official', 'programme', 'program', 'university', 'doctoral', 'graduate', 'required', 'supporting'])
+  const terms = name.match(/[a-z][a-z-]{3,}/g)?.filter(term => !ignored.has(term)) ?? []
+  const matchedTerms = terms.filter(term => new RegExp(`\\b${term.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\b`, 'i').test(value))
+  return terms.length > 0 && matchedTerms.length >= Math.min(1, terms.length)
 }

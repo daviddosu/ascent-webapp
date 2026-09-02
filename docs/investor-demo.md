@@ -1,101 +1,143 @@
-# Investor demo
+# Graduate-application system demo
+
+The demo should make the system's control model visible: one natural-language
+request becomes a scoped contract, verified application state, parallel work
+lanes, exact human decisions, provider evidence, and a resumable result.
 
 ## Preflight
 
-1. Use the ShotCount development account.
+1. Use the Shotcount development account.
 2. Confirm Google execution says Connected in Settings.
-3. Confirm the server-side OpenAI project has API credits. A connected Google
-   account alone is not enough for the planner to run.
-4. Confirm browser alerts are allowed if the demo should show native notifications.
-5. Keep Today selected; Upcoming uses the same task inspector and agent states.
-6. Run:
+3. Confirm the server-side OpenAI project has API credits.
+4. Confirm browser alerts are allowed if the demo should show deadline reminders.
+5. Keep Today selected.
+6. Use only controlled application documents and development contacts.
+7. Run:
 
-```bash
+~~~bash
 pnpm check
 pnpm check:cloud
-pnpm test:e2e:ui
+pnpm benchmark:david
 npx --yes deno test supabase/functions/_shared/*_test.ts
-npx --yes deno check \
-  supabase/functions/task-agent/index.ts \
-  supabase/functions/google-oauth-start/index.ts \
-  supabase/functions/google-oauth-callback/index.ts \
-  supabase/functions/agent-watch-sweep/index.ts
-```
+~~~
 
-Do not demo with a personal inbox containing unrelated private material.
+## Scene 1 — One request becomes a contract
 
-## Gmail follow-up scenario
+Start with:
 
-Create:
+> I'm applying to the Stanford Physics PhD programme. Help me track the
+> requirements, tailor my research statement, request recommendations, and
+> prepare the portal materials. Do not submit anything or send messages without
+> showing me the exact action first.
 
-> Follow up with everyone I emailed about ShotCount last week who hasn’t replied.
+Show that Shotcount derives:
 
-Use a controlled development inbox containing a small, known set of relevant
-threads. Delegate from the normal task inspector.
+- one user-owned task and one application scope;
+- application preparation as the requested effect;
+- final submission and outbound communication as forbidden until their exact
+  approval boundaries are reached; and
+- David as the application owner, with no specialist selector or separate
+  agent chat.
 
-Show:
+The programme becomes the centre of the workspace. A research-only request
+should produce a bounded, official-source-verified shortlist and stop for
+selection; it should not silently create application cases.
 
-1. ShotCount searches last week’s sent mail and reads only the relevant threads.
-2. Threads with a reply are excluded.
-3. The exact recipients, subjects, and follow-up bodies appear for review.
-4. ShotCount remains at Approval needed; no email has been sent yet.
-5. Approve the exact outreach.
-6. Gmail confirms each send and the original task becomes done.
+## Scene 2 — The agent sees the situation, not a checklist
 
-If the draft changes after the review, ShotCount must request a new approval.
-Do not use this scenario against a personal inbox or a broad unreviewed result
-set.
+Open the selected application step and let the system work. Point out:
 
-## Scheduling scenario
+1. official programme evidence is attached to requirements;
+2. applicant facts and uploaded documents remain private and provenance-linked;
+3. programme-owned values such as deadlines, fees, and policy are researched
+   rather than asked back to the applicant;
+4. the detail panel shows one persisted current operation; and
+5. the application view projects real active, waiting, blocked, and reviewable
+   lanes instead of pretending the work is one sequential questionnaire.
 
-Create:
+The underlying requirement graph may contain more nodes than the human view.
+That is intentional: the graph is for deterministic control, while the view
+shows the few decisions and outcomes that matter now.
 
-> Set up a meeting with Blessing next week to discuss the ShotCount launch.
+## Scene 3 — Independent work continues
 
-Add a private description if needed with Blessing’s email and desired meeting length. Delegate from the normal task inspector.
+Show David starting genuinely independent lanes such as:
 
-Show:
+- faculty intelligence and a source-backed dossier;
+- programme-specific CV preparation;
+- academic-evidence checking;
+- official portal inspection;
+- fee and waiver verification; and
+- recommendation planning.
 
-1. The task pill and Dynamic Island move to In progress.
-2. ShotCount resolves the contact and checks Calendar.
-3. The exact outreach draft appears in the existing inspector.
-4. Approve Send.
-5. The same task becomes Waiting.
-6. Reply from the development contact in the same Gmail thread.
-7. Click Check now only if the automatic poll has not fired.
-8. Review and approve the exact Calendar event.
-9. Google confirms the event and the original task becomes done.
+Then show one lane waiting for a transcript, referee detail, or applicant
+choice. The important behavior is that the user-held lane is visible and
+scoped, while the other dependency-ready lanes keep moving without a generic
+Continue button.
 
-Never claim the task is complete before the provider confirmation.
+When a user question appears, show the exact missing value, why it is needed,
+the lane it unblocks, and a compact attachment/choice control. Do not show a
+generic routing quiz or ask the applicant to supply programme metadata.
 
-## Flight scenario
+## Scene 4 — Typed Roon handoff
 
-Create:
+Use a recommendation-letter or supervisor-outreach lane with a controlled
+development contact. Show:
 
-> Find me a return flight from Lagos to London next Thursday, returning Sunday. Economy, maximum one stop, preferably under $1,000.
+1. David prepares the evidence-backed contact package;
+2. Roon resolves the intended recipient through Google People;
+3. the exact draft appears with recipient, subject, body, and attachments;
+4. sending remains Approval needed;
+5. approval is bound to that exact payload; and
+6. Gmail returns a message ID and thread ID before the application lane
+   advances.
 
-Delegate. Show that the user never had to write a prompt or open an AI screen.
+If the provider reports an existing send after a worker restart, Shotcount
+reconciles the original message instead of sending a duplicate.
 
-Expected flow:
+## Scene 5 — Portal preparation and submission boundary
 
-1. The task shows a calm live-search progress state.
-2. Approximately three current Google Flights options return in the same inspector.
-3. Each option shows airline, route, stops, duration, and observed price.
-4. Choose one.
-5. Roon rechecks the option and resumes the same durable browser session.
-6. The task stops at Ready for you.
-7. Continue to payment opens the verified airline handoff or Google Flights booking page.
-8. Point out that ShotCount has not clicked a provider purchase button and the original task is not falsely marked booked.
+Show David:
 
-Live fares can change. A changed or sold-out option should produce a calm recoverable message, not a false success.
+1. opening an isolated, allowlisted official portal session;
+2. grounding a field in a verified applicant fact;
+3. saving a section and reading the value back;
+4. preserving the task-owned checkpoint; and
+5. preparing a readiness report with blockers, evidence, artifact checksums,
+   and the exact package that would be submitted.
+
+The demo must stop at the final approval boundary. Submission requires the
+exact package checksum, current checkpoint, one-time claim, explicit user
+approval, and provider-confirmed application ID. A draft, navigation event,
+screenshot, or model statement is never presented as submission evidence.
+
+## Scene 6 — Recovery and accretion
+
+Refresh or resume the task at a safe checkpoint. Show that:
+
+- the same AgentRun and application case continue;
+- completed artifacts and provider effects are reused;
+- an external wait does not erase independent progress;
+- an ambiguous effect is reconciled before retry;
+- a repeated lane failure is parked without blocking unrelated work; and
+- the visible status remains truthful after recovery.
+
+Call out that the run leaves behind reusable, scoped evidence: verified
+programme requirements, artifact lineage, portal observations, provider
+correlations, user decisions, and failure signatures. No raw credentials,
+OTPs, cookies, or unscoped transcript is retained.
 
 ## Product points to call out
 
-- The to-do item is the command.
-- There is no Agents page, chat home, or workflow builder.
-- Reads and private preparation happen automatically.
-- Email and Calendar writes are exact, versioned approvals.
-- Payment is always user-controlled.
-- Agent context remains private even when the task itself is public.
-- Today and Upcoming share the same execution states.
-- Navigation and refresh do not lose a running or waiting task.
+- One private workspace per applicant and programme.
+- Requirements, documents, references, deadlines, and portal progress stay
+  together.
+- The agent operates from a durable evidence graph and dependency-aware work
+  lanes.
+- David handles application preparation; Roon handles application-related
+  communication and scheduling.
+- External email, Calendar, portal, payment, and final-submission effects use
+  exact approvals and provider confirmation.
+- The system becomes cheaper and more accurate through verified, scoped
+  knowledge and regression evidence.
+- The app is intentionally focused on graduate-school applications.

@@ -594,5 +594,67 @@
     "reproduction": {
       "command": "pnpm benchmark:david -- --case work-sample-portfolio-northbridge"
     }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-writer-question:false_success",
+    "caseId": "e2e-writer-question",
+    "title": "Writer question",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260815075735-1b5528",
+    "failureClass": "false_success",
+    "expected": {
+      "state": "ready_for_final_review",
+      "prematureSends": 0,
+      "verified": true
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case e2e-writer-question"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:two-page-cv:false_success",
+    "caseId": "two-page-cv",
+    "title": "Produce a two-page CV when required",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260822020147-364cc6",
+    "failureClass": "false_success",
+    "expected": {
+      "pageTarget": "two_page",
+      "pageCount": 2
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case two-page-cv"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:upload-approved-cv:false_success",
+    "caseId": "upload-approved-cv",
+    "title": "Upload approved CV",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260825114446-ffa854",
+    "failureClass": "false_success",
+    "expected": {
+      "state": "saved",
+      "artifact": "cv-controlled-phd.pdf"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case upload-approved-cv"
+    }
+  },
+  {
+    "key": "david_application_engine_v3:e2e-writer-question:external_service_failure",
+    "caseId": "e2e-writer-question",
+    "title": "Writer question",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260825114446-ffa854",
+    "failureClass": "external_service_failure",
+    "expected": {
+      "state": "ready_for_final_review",
+      "prematureSends": 0,
+      "verified": true
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case e2e-writer-question"
+    }
   }
 ]

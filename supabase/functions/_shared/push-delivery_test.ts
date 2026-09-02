@@ -2,7 +2,7 @@ import { assertEquals, assertRejects } from 'jsr:@std/assert'
 import { deliverPushWithOutbox } from './push-delivery.ts'
 
 function identity() {
-  return { kind: 'scheduled' as const, deliveryKey: 'task:user:task:date', subscriptionId: 'subscription-1' }
+  return { deliveryKey: 'task:user:task:date', subscriptionId: 'subscription-1' }
 }
 
 Deno.test('a missing claim never reaches the external provider', async () => {

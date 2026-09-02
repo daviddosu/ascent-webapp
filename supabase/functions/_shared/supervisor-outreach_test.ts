@@ -11,6 +11,7 @@ import {
   type SupervisorOutreachPackage,
   type SupervisorResearchDossier,
 } from './supervisor-outreach.ts'
+import { APPLICATION_EMAIL_SCHEMA_VERSION, APPLICATION_EMAIL_WORKFLOW_VERSION, applicationEmailHtmlFromText } from './application-email.ts'
 
 const now = '2026-08-12T12:00:00.000Z'
 
@@ -51,7 +52,7 @@ function cv(): SupervisorCvReference {
     mime_type: 'application/pdf',
     template_id: 'graduate_application_cv_v1',
     template_version: '1.0.0',
-    renderer_version: '1.0.0',
+    renderer_version: '1.8.0',
     page_count: 2,
     applicant_name: 'Amara Okafor',
     applicant_email: 'amara.okafor@example.test',
@@ -60,7 +61,16 @@ function cv(): SupervisorCvReference {
 }
 
 function draftPackage(): SupervisorOutreachPackage {
+  const textBody = [
+    'Dear Professor Wang,',
+    'I am preparing an application to the Cell and Systems Biology PhD at the University of Toronto for Fall 2026 and am writing about potential supervision.',
+    'Your GraphComm work on graph-based deep learning for cell-cell communication is closely connected to the research direction I hope to pursue. I am particularly interested in interpretable graph models for spatial cell communication.',
+    'My research experience includes analysing single-cell RNA sequencing data with Python and building reproducible feature pipelines. This gives me a practical foundation for investigating the methodological questions raised by your work.',
+    'Would you be considering new doctoral students for Fall 2026, and would this direction merit a short conversation? I have attached my programme-specific CV for context.',
+    'Kind regards,\nAmara Okafor',
+  ].join('\n\n')
   return generateSupervisorOutreach({
+    task_id: 'task-1',
     application_case_id: 'case-1',
     opportunity_id: 'opportunity-1',
     target_programme: 'Cell and Systems Biology PhD',
@@ -88,11 +98,24 @@ function draftPackage(): SupervisorOutreachPackage {
     applicant_name: 'Amara Okafor',
     applicant_email: 'amara.okafor@example.test',
     applicant_role: 'research assistant in a synthetic computational biology lab',
-    writing: {
-      research_connection: 'Your GraphComm work on cell-cell communication using graph-based deep learning and spatial single-cell RNA sequencing is the clearest connection to my proposed direction. I was especially interested in how the method combines neighbourhood information with intracellular signalling rather than treating ligand-receptor pairs in isolation.',
-      applicant_fit: 'My confirmed research experience includes analysing single-cell RNA sequencing data with Python and building reproducible feature pipelines. I am now developing a proposal around interpretable graph models for spatial cell communication, grounded in the same methodological questions.',
-      request: 'Would you be considering new doctoral students for Fall 2026, and would this direction merit a short conversation?',
-      closing_context: '',
+    email_action_package: {
+      schemaVersion: APPLICATION_EMAIL_SCHEMA_VERSION,
+      workflowVersion: APPLICATION_EMAIL_WORKFLOW_VERSION,
+      emailType: 'prospective_supervisor_first_contact',
+      recipientEmail: 'bowang.wang@utoronto.ca',
+      subject: 'PhD supervision inquiry: graph models for cell communication',
+      textBody,
+      htmlBody: applicationEmailHtmlFromText(textBody),
+      communicationGoal: 'Ask whether Professor Wang is considering Fall 2026 doctoral students and whether a short research-fit conversation would be useful.',
+      strongestConnection: 'Graph models for spatial cell communication.',
+      attachmentArtifactIds: ['cv-artifact-1'],
+      claims: [
+        { claim: 'GraphComm uses graph-based deep learning for cell-cell communication.', evidenceIds: ['graphcomm'] },
+        { claim: 'Amara has single-cell RNA sequencing and Python research experience.', evidenceIds: ['fit-research'] },
+        { claim: 'The programme requires prospective-supervisor contact.', evidenceIds: ['official-programme'] },
+      ],
+      followUp: { recommended: true, afterDays: 10, purpose: 'Briefly check whether supervision capacity is known.' },
+      quality: { specific: true, concise: true, recipientSpecific: true, programmeSpecific: true, applicantEvidenceUsed: true },
     },
     cv: cv(),
     idempotency_key: 'outreach-case-1-uoft-bo-wang-v1',

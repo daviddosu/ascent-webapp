@@ -1,8 +1,0 @@
-Nadia Okoye
-nadia.okoye@example.test | +234 803 555 0198 | Lagos, Nigeria
-BSc Physics, University of Lagos, First Class, completed 2021-07-30
-MSc Computational Physics, University of Lagos
-Research: surrogate models for turbulent flow; uncertainty-aware numerical simulation
-Work: Research Engineer at Delta Systems Lab (2022–2025)
-Projects: open-source finite-volume solver; climate downscaling benchmark
-Skills: Python, Julia, PyTorch, HPC, numerical methods, LaTeX

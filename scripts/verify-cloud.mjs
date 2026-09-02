@@ -73,10 +73,6 @@ await check('Account deletion function deployed', {
   url: `${base}/functions/v1/delete-account`,
   options: { method: 'OPTIONS', headers },
 })
-await check('AI coach function deployed', {
-  url: `${base}/functions/v1/ai-coach`,
-  options: { method: 'OPTIONS', headers },
-})
 await check('Task agent rejects an anonymous execution request', {
   url: `${base}/functions/v1/task-agent`,
   options: {

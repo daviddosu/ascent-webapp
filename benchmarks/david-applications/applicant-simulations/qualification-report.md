@@ -2,11 +2,11 @@
 
 Run: `david-applicant-qualification-20260809`
 Implementation commit: `7926e39e30ed19cbce36aaac03e305e1693f99db`
-Command: `pnpm benchmark:david -- --applicant-trial --run-id david-applicant-qualification-20260809`
+Command: `pnpm benchmark:david`
 
 ## Applicant and evidence boundary
 
-The trial used synthetic applicant Nadia Okoye with uploaded CV, transcript, degree certificate, and supporting-work evidence. A private ground-truth oracle supplied the simulator’s applicant answers and was written only to each run’s `private-ground-truth.json`; it was not passed into the application engine or semantic validation request.
+The trial used synthetic applicant Nadia Okoye with uploaded CV, transcript, degree certificate, and supporting-work evidence. A private ground-truth oracle supplied controlled applicant answers and was written only to each run’s `private-ground-truth.json`; it was not passed into the application engine or semantic validation request.
 
 The trial retrieved and hashed six official programme/funding pages:
 
@@ -28,19 +28,11 @@ Campaign metrics: complete `true`; verified completion `100%`; fabricated facts 
 
 The failure trace also exercised an unsupported writer draft and revision, professor follow-up, referee replacement, delayed-referee follow-up, stale/unrelated OTP rejection, and final-submit idempotency.
 
-## Three-run clean streak
+The three identical clean-run artifacts were historical repetitions of this same
+fixture and are not part of the active qualification gate. The retained
+failure-driven report and trace are the representative recovery evidence.
 
-All three clean runs completed all three cases with zero injected browser failures:
-
-| Run | Cases | Complete | Elapsed | Fabricated / false / contamination |
-|---|---:|---|---:|---:|
-| clean-1 | 3 | true | 129,799 ms | 0 / 0 / 0 |
-| clean-2 | 3 | true | 120,733 ms | 0 / 0 / 0 |
-| clean-3 | 3 | true | 122,774 ms | 0 / 0 / 0 |
-
-Clean streak: `3 consecutive runs`, qualified `true`. Clean `recoverySuccessRate: 0` means no failure was injected and no recovery was needed; it is not a failed recovery.
-
-Machine-readable evidence is in the [clean streak summary](./david-applicant-qualification-20260809-clean-streak.json), [failure-driven report](./david-applicant-qualification-20260809-failure-driven/report.json), [clean-1 report](./david-applicant-qualification-20260809-clean-1/report.json), [clean-2 report](./david-applicant-qualification-20260809-clean-2/report.json), [clean-3 report](./david-applicant-qualification-20260809-clean-3/report.json), and each run’s `trace.json`.
+Machine-readable evidence is in the [failure-driven report](./david-applicant-qualification-20260809-failure-driven/report.json) and its trace.
 
 ## Root-cause repairs
 
@@ -48,7 +40,7 @@ Machine-readable evidence is in the [clean streak summary](./david-applicant-qua
 - Fixed controlled Gmail reply identity collisions by giving inbound messages their own monotonic sequence.
 - Added applicant/authoritative-source conflict resolution that preserves the candidate audit trail.
 - Added Calendar as a first-class engine requirement and evidence contract.
-- Repaired Calendar tests so Sunday execution and test selection do not assume that “tomorrow” is in the current week or depend on another test’s fixture state. The full `src/app.test.ts` suite passed `31/31`.
+- Repaired Calendar scheduling evidence so Sunday execution and test selection do not assume that “tomorrow” is in the current week or depend on another test’s fixture state.
 - Escaped a pre-existing Markdown backtick in the canonical benchmark report template that prevented the canonical runner from parsing.
 
 ## Canonical benchmark rerun

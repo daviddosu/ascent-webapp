@@ -24,6 +24,10 @@ Deno.serve(async request => {
   if (userError || !user) return new Response('Unauthorized', { status: 401, headers: corsHeaders })
 
   const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { count } = await admin.from('ai_usage').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('requested_at', since)
+  if ((count ?? 0) >= 10) return new Response('Daily coaching limit reached', { status: 429, headers: corsHeaders })
+
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const [tasksResult, reviewsResult] = await Promise.all([
     userClient.from('tasks').select('title,due_date,priority,estimate_minutes,completed_at,carried_count,last_carry_reason').gte('due_date', cutoff).limit(120),
@@ -31,16 +35,7 @@ Deno.serve(async request => {
   ])
   if (tasksResult.error || reviewsResult.error) return new Response('Could not read planning summary', { status: 500, headers: corsHeaders })
 
-  const claim = await admin.rpc('claim_ai_coach_usage', { p_user_id: user.id })
-  if (claim.error) return new Response('Could not reserve coaching capacity', { status: 502, headers: corsHeaders })
-  const usageId = typeof claim.data === 'number' ? claim.data : Number(claim.data)
-  if (!Number.isSafeInteger(usageId) || usageId <= 0) {
-    return new Response('Daily coaching limit reached', { status: 429, headers: corsHeaders })
-  }
-  const releaseClaim = () => admin.from('ai_usage').delete().eq('id', usageId).eq('user_id', user.id)
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${openaiKey}`,
@@ -78,28 +73,19 @@ Deno.serve(async request => {
         },
       },
     }),
-    })
-    if (!response.ok) {
-      await releaseClaim()
-      return new Response('Coaching service is unavailable', { status: 502, headers: corsHeaders })
-    }
+  })
+  if (!response.ok) return new Response('Coaching service is unavailable', { status: 502, headers: corsHeaders })
 
-    const result = await response.json()
-    const outputText = result.output
-      ?.flatMap((item: { content?: unknown[] }) => item.content ?? [])
-      .find((item: { type?: string }) => item.type === 'output_text')
-      ?.text
-    if (!outputText) {
-      await releaseClaim()
-      return new Response('Coaching response was empty', { status: 502, headers: corsHeaders })
-    }
+  const result = await response.json()
+  const outputText = result.output
+    ?.flatMap((item: { content?: unknown[] }) => item.content ?? [])
+    .find((item: { type?: string }) => item.type === 'output_text')
+    ?.text
+  if (!outputText) return new Response('Coaching response was empty', { status: 502, headers: corsHeaders })
 
-    const insight = JSON.parse(outputText)
-    return new Response(JSON.stringify(insight), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  } catch {
-    await releaseClaim()
-    return new Response('Coaching service is unavailable', { status: 502, headers: corsHeaders })
-  }
+  const insight = JSON.parse(outputText)
+  await admin.from('ai_usage').insert({ user_id: user.id })
+  return new Response(JSON.stringify(insight), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 })

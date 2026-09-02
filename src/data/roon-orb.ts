@@ -1,4 +1,4 @@
-export type RoonOrbState = 'waiting' | 'active' | 'complete'
+export type RoonOrbState = 'waiting' | 'active' | 'complete' | 'listening'
 
 type ProjectedDot = {
   x: number
@@ -60,9 +60,14 @@ function drawOrb(canvas: HTMLCanvasElement, state: RoonOrbState, elapsedSeconds:
   context.clearRect(0, 0, size, size)
 
   const isComplete = state === 'complete'
+  const isListening = state === 'listening'
   const dark = isDarkTheme()
-  const isAnimated = state === 'active' && !prefersReducedMotion()
-  const phase = isAnimated ? elapsedSeconds * 2.665 : 0.6
+  const isAnimated = (state === 'active' || isListening) && !prefersReducedMotion()
+  const phase = isAnimated ? elapsedSeconds * (isListening ? 3.998 : 2.665) : 0.6
+  if (isListening) {
+    drawListeningOrb(context, size, phase, dark)
+    return
+  }
   const spin = 0.5
   const yaw = phase * spin
   const tilt = 0.4 + (0.06 * Math.sin(phase * 0.35))
@@ -140,6 +145,65 @@ function drawOrb(canvas: HTMLCanvasElement, state: RoonOrbState, elapsedSeconds:
   }
 }
 
+function drawListeningOrb(context: CanvasRenderingContext2D, size: number, phase: number, dark: boolean) {
+  const center = { x: size / 2, y: size / 2 }
+  const sphereRadius = size * 0.437
+  const radiusScale = Math.pow(size / 300, 0.6)
+  const latRings = size <= 24 ? 12 : 15
+  const longitudeDensity = size <= 24 ? 32 : 40
+  const yaw = phase * 0.18
+  const tilt = 0.38 + (0.1 * Math.sin(phase * 0.9))
+  const dots: ProjectedDot[] = []
+
+  for (let ringIndex = 0; ringIndex <= latRings; ringIndex += 1) {
+    const latitude = -Math.PI / 2 + (ringIndex / latRings * Math.PI)
+    const cosLatitude = Math.cos(latitude)
+    const sinLatitude = Math.sin(latitude)
+    const wave = (0.62 * Math.sin(phase * 2.1 - ringIndex * 0.52))
+      + (0.38 * Math.sin(phase * 1.27 + ringIndex * 0.83))
+    const ringRadius = sphereRadius * (0.88 + (0.105 * wave))
+    const dotsPerRing = Math.max(1, Math.round(Math.abs(cosLatitude) * longitudeDensity))
+    const wavePeak = Math.max(0, wave)
+
+    for (let column = 0; column < dotsPerRing; column += 1) {
+      const longitude = column / dotsPerRing * 2 * Math.PI
+      const projected = project(
+        cosLatitude * Math.cos(longitude) * ringRadius,
+        sinLatitude * ringRadius,
+        cosLatitude * Math.sin(longitude) * ringRadius,
+        yaw,
+        tilt,
+        center,
+        1,
+      )
+      const depth = Math.min(1, Math.max(0, (projected.z / sphereRadius + 1) / 2))
+      const dotRadius = Math.max(
+        0.45,
+        (0.6 + (1.7 * depth)) * (1 + (0.4 * wavePeak)) * radiusScale,
+      )
+      const whiteValue = Math.min(1, Math.max(0, 0.66 - (0.56 * depth) - (0.1 * wavePeak)))
+      const opacity = 0.86 + (0.14 * depth)
+
+      dots.push({
+        x: projected.x,
+        y: projected.y,
+        depth: projected.z,
+        radius: dotRadius,
+        whiteValue: dark ? 1 - whiteValue : whiteValue,
+        opacity,
+      })
+    }
+  }
+
+  for (const dot of dots.sort((left, right) => left.depth - right.depth)) {
+    context.beginPath()
+    context.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2)
+    const channel = Math.round(dot.whiteValue * 255)
+    context.fillStyle = `rgba(${channel}, ${channel}, ${channel}, ${dot.opacity})`
+    context.fill()
+  }
+}
+
 function scheduleAnimation() {
   if (animationFrame !== null || typeof window === 'undefined') return
   const tick = (timestamp: number) => {
@@ -156,7 +220,7 @@ function scheduleAnimation() {
         continue
       }
       drawOrb(canvas, state, timestamp / 1_000)
-      animate = animate || state === 'active'
+      animate = animate || state === 'active' || state === 'listening'
     }
     if (animate && !prefersReducedMotion()) scheduleAnimation()
   }

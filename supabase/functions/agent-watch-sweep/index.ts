@@ -3,11 +3,16 @@ import { executeGoogleTool, GoogleIntegrationError } from '../_shared/google.ts'
 import { classifyApplicationReply, matchApplicationOtp, nextApplicationCaseState, type OtpMessage, type OtpRequest } from '../_shared/david-applications.ts'
 import { applicationContactResolutionPayloads, applicationFailureIsRetryable, applicationFollowUpAllowed, applicationMessageQuery, applicationWriteIsApproved, isGenericProfessorOutreach, safeApplicationRequestKind } from '../_shared/application-roon.ts'
 import { persistedEmailArguments } from '../_shared/email-integrity.ts'
+import {
+  controlledTestEmailRoute,
+  type ControlledTestEmailRoute,
+} from '../_shared/application-test-email.ts'
 import { constantTimeEqual } from '../_shared/crypto.ts'
 import { validateFirstContactSupervisorOutreachPayload, validateSupervisorOutreachPackage, supervisorFirstContactRequiresPackage, type SupervisorOutreachPackage } from '../_shared/supervisor-outreach.ts'
 import { classifyRecommendationReply, recommendationStateForReply, recommendationReplyIsPositive } from '../_shared/recommendation-workflow.ts'
 import { classifyAdmissionsReply, detectPostSubmissionRequests, interpretAdmissionsReply, postSubmissionRequestRow } from '../_shared/application-recovery.ts'
 import { APPLICATION_FEE_WORKFLOW_VERSION, applyFeeWorkflowEvent, buildFeeWaiverRequestEmail, classifyFeeWaiverReply, type ApplicationFeeWorkflow, type FeeWaiverDecision, type FeeWaiverRequest } from '../_shared/application-fee-workflow.ts'
+import { applicationEmailFollowUpAt, readApplicationEmailPackage, validateApplicationEmailAction } from '../_shared/application-email.ts'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -118,6 +123,31 @@ function stringArray(value: unknown, maximum = 120) {
 function normalizeEmail(value: unknown) {
   const candidate = safeString(value, 320).trim().toLocaleLowerCase()
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidate) ? candidate : ''
+}
+
+type ControlledEmailDelivery = {
+  route: ControlledTestEmailRoute
+  intendedTo: string[]
+  to: string[]
+  cc: string[]
+  bcc: string[]
+}
+
+function controlledEmailDelivery(
+  context: ApplicationRequestContext,
+  intendedTo: string[],
+) {
+  const route = controlledTestEmailRoute(context.run)
+  if (!route) return null
+  const delivery: ControlledEmailDelivery = {
+    route,
+    intendedTo: [...new Set(intendedTo.map(normalizeEmail).filter(Boolean))],
+    to: [route.recipient],
+    // A controlled test message must never leak a real contact through CC/BCC.
+    cc: [],
+    bcc: [],
+  }
+  return delivery
 }
 
 function base64FromBytes(bytes: Uint8Array) {
@@ -514,6 +544,29 @@ async function materializeApplicationAttachments(admin: AdminClient, context: Ap
   return attachments
 }
 
+async function exactEmailPackageAssetIds(admin: AdminClient, context: ApplicationRequestContext, payload: Record<string, unknown>) {
+  const packageValue = readApplicationEmailPackage(payload)
+  if (!packageValue || !packageValue.action.attachmentArtifactIds.length) return []
+  const ids = [...new Set(packageValue.action.attachmentArtifactIds)]
+  const artifacts = await admin.from('application_artifacts')
+    .select('id,file_asset_id,checksum')
+    .eq('user_id', context.request.user_id)
+    .eq('application_case_id', context.request.application_case_id)
+    .in('id', ids)
+  if (artifacts.error) throw new Error(artifacts.error.message)
+  const byId = new Map((artifacts.data ?? []).map(artifact => [safeString(artifact.id, 80), artifact]))
+  const contextAttachments = new Map(packageValue.context.attachments.map(attachment => [attachment.artifactId, attachment]))
+  return ids.map(id => {
+    const artifact = byId.get(id)
+    const expected = contextAttachments.get(id)
+    if (!artifact || !expected) throw new Error(`Email attachment ${id} is not owned by this application case.`)
+    if (!expected.checksum || safeString(artifact.checksum, 128) !== expected.checksum) throw new Error(`Email attachment ${id} checksum no longer matches the accepted package.`)
+    const assetId = safeString(artifact.file_asset_id, 80)
+    if (!assetId) throw new Error(`Email attachment ${id} has no private file asset.`)
+    return assetId
+  })
+}
+
 function messageDateAfter(value: unknown, requestedAt: string) {
   const received = Date.parse(safeString(value, 240))
   const requested = Date.parse(requestedAt)
@@ -744,9 +797,23 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   const rawPayload = recordValue(request.payload)
   const requestKind = safeApplicationRequestKind(request.request_kind)
   if (!requestKind || !['create_draft', 'send_email', 'follow_up', 'send_fee_waiver_request', 'admissions_clarification', 'post_submission_response'].includes(requestKind)) throw new Error('Unsupported application email request.')
-  const payload = (requestKind === 'send_fee_waiver_request'
+  let payload = (requestKind === 'send_fee_waiver_request'
     ? await feeWaiverEmailPayload(admin, context, rawPayload)
     : ['create_draft', 'send_email'].includes(requestKind) ? applicationRefereeDraftPayload(context, rawPayload) : rawPayload) as Record<string, unknown>
+  const genericEmailPackage = readApplicationEmailPackage(payload)
+  if (genericEmailPackage) {
+    if (genericEmailPackage.context.taskId !== request.task_id || genericEmailPackage.context.applicationCaseId !== request.application_case_id) throw new Error('The typed email context does not belong to this Roon request.')
+    const validation = validateApplicationEmailAction(genericEmailPackage.context, genericEmailPackage.action)
+    if (!validation.valid) throw new Error(validation.repairReason ?? validation.issues.join(' '))
+    if (!validation.readyForSend) throw new Error(validation.sendBlockers.join(' ') || 'The accepted email package is waiting for its final attachment.')
+    payload = {
+      ...payload,
+      to: [genericEmailPackage.action.recipientEmail],
+      subject: genericEmailPackage.action.subject,
+      body_text: genericEmailPackage.action.textBody,
+      body_html: genericEmailPackage.action.htmlBody,
+    }
+  }
   if (JSON.stringify(payload).match(/"(?:password|passcode|secret|card_number|cvv|cvc|bank_account|verification_code|otp|security_key)"\s*:/i)) throw new Error('Application email payload contains a sensitive value.')
   if (requestKind === 'follow_up' && !applicationFollowUpAllowed(payload)) {
     await recordApplicationWorkerEvent(admin, context, 'application_follow_up_stopped', 'succeeded', 'Roon stopped the follow-up cadence because the contact or application is no longer eligible for another message.', {})
@@ -788,6 +855,24 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   const inReplyTo = safeString(payload.in_reply_to_message_id ?? payload.inReplyToMessageId, 256) || safeString(context.assignment?.last_provider_message_id, 256) || null
   if (Boolean(threadId) !== Boolean(inReplyTo)) throw new Error('A threaded application reply must include both the Gmail thread and the message it answers.')
   if (requestKind === 'follow_up' && !threadId) throw new Error('Follow-ups must stay on the existing Gmail thread.')
+  if (requestKind === 'follow_up' && threadId && inReplyTo) {
+    const providerThread = await executeGoogleTool(admin, context.request.user_id, 'gmail.read_thread', { thread_id: threadId, sent_message_id: inReplyTo }, `application-roon-follow-up-thread:${request.id}`)
+    const threadMessages = Array.isArray(providerThread.value.messages) ? providerThread.value.messages.map(recordValue) : []
+    const integration = await admin.from('agent_integrations').select('account_email').eq('user_id', context.request.user_id).eq('provider', 'google').maybeSingle()
+    if (integration.error) throw new Error(integration.error.message)
+    const accountEmail = safeString(integration.data?.account_email, 320)
+    const sentMessage = threadMessages.find(message => safeString(message.id ?? message.message_id, 256) === inReplyTo)
+    const sentAt = Date.parse(safeString(sentMessage?.date ?? sentMessage?.sent_at, 120))
+    const replyExists = threadMessages.some(message => {
+      if (messageFromUser(message.from, accountEmail)) return false
+      const receivedAt = Date.parse(safeString(message.date ?? message.received_at, 120))
+      return Number.isFinite(sentAt) && Number.isFinite(receivedAt) && receivedAt > sentAt
+    })
+    if (replyExists) {
+      await recordApplicationWorkerEvent(admin, context, 'application_follow_up_stopped', 'succeeded', 'Roon cancelled the follow-up because Gmail shows a reply on the existing thread.', { thread_id: threadId })
+      return { status: 'completed', result: { kind: 'follow_up', stopped: true, reason: 'reply_received', thread_id: threadId } }
+    }
+  }
   const sendRequested = requestKind !== 'create_draft' && payload.send_mode !== 'draft' && payload.sendMode !== 'draft'
   if (sendRequested && contactId && !isFeeWaiverRequest) {
     const contact = await admin.from('application_contacts').select('id,kind,email,consent_to_contact').eq('id', contactId).eq('user_id', context.request.user_id).eq('application_case_id', context.request.application_case_id).maybeSingle()
@@ -804,15 +889,24 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   }
   const assignmentId = safeString(payload.human_assignment_id ?? payload.humanAssignmentId, 80) || safeString(context.assignment?.id, 80)
   const providedDraftId = safeString(payload.draft_id ?? payload.draftId, 256)
+  const delivery = await controlledEmailDelivery(
+    context,
+    to,
+  )
+  const deliveryTo = delivery?.to ?? to
+  const deliveryCc = delivery?.cc ?? (Array.isArray(payload.cc) ? payload.cc.map(normalizeEmail).filter(Boolean) : [])
+  const deliveryBcc = delivery?.bcc ?? (Array.isArray(payload.bcc) ? payload.bcc.map(normalizeEmail).filter(Boolean) : [])
+  const packageAssetIds = await exactEmailPackageAssetIds(admin, context, payload)
   const assetIds = [...new Set([
     ...stringArray(payload.attachment_asset_ids ?? payload.attachmentAssetIds),
+    ...packageAssetIds,
     ...(supervisorGate ? [supervisorGate.assetId] : []),
   ])]
   const attachments = providedDraftId ? [] : await materializeApplicationAttachments(admin, context, assetIds)
   const draftArguments: Record<string, unknown> = {
-    to,
-    cc: Array.isArray(payload.cc) ? payload.cc.map(normalizeEmail).filter(Boolean) : [],
-    bcc: Array.isArray(payload.bcc) ? payload.bcc.map(normalizeEmail).filter(Boolean) : [],
+    to: deliveryTo,
+    cc: deliveryCc,
+    bcc: deliveryBcc,
     subject,
     body_text: bodyText,
     ...(bodyHtml ? { body_html: bodyHtml } : {}),
@@ -829,7 +923,7 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   let draftActionId = ''
   if (providedDraftId) {
     const existingDraftAction = await admin.from('agent_actions')
-      .select('id,output')
+      .select('id,output,arguments')
       .eq('run_id', context.request.agent_run_id)
       .eq('user_id', context.request.user_id)
       .eq('tool_name', 'gmail.create_draft')
@@ -838,6 +932,15 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
       .maybeSingle()
     if (existingDraftAction.error) throw new Error(existingDraftAction.error.message)
     if (!existingDraftAction.data) throw new Error('The requested Gmail draft was not prepared by this application task.')
+    if (delivery) {
+      const existingArguments = recordValue(existingDraftAction.data.arguments)
+      const existingRecipients = Array.isArray(existingArguments.to)
+        ? existingArguments.to.map(normalizeEmail).filter(Boolean)
+        : []
+      if (existingRecipients.length !== 1 || existingRecipients[0] !== delivery.route.recipient) {
+        throw new Error('Prepare a fresh controlled test email before continuing; the existing draft has a different recipient.')
+      }
+    }
     draft = recordValue(existingDraftAction.data.output)
     draftActionId = safeString(existingDraftAction.data.id, 80)
   } else {
@@ -854,7 +957,20 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     excerpt: redactApplicationExcerpt(bodyText),
     idempotencyKey: `application-draft:${request.id}`,
     humanAssignmentId: assignmentId || null,
-    data: { status: 'draft', draft_id: safeString(draft.draft_id, 256), asset_ids: assetIds, action_id: draftActionId, reused: Boolean(providedDraftId), to: to[0] ?? null, contact_email: to[0] ?? null, contact_kind: payload.contact_kind ?? payload.contactKind ?? null },
+    data: {
+      status: 'draft',
+      email_type: genericEmailPackage?.action.emailType ?? null,
+      email_package_schema_version: genericEmailPackage?.action.schemaVersion ?? null,
+      email_intelligence_metrics: payload.email_intelligence_metrics ?? null,
+      draft_id: safeString(draft.draft_id, 256),
+      asset_ids: assetIds,
+      action_id: draftActionId,
+      reused: Boolean(providedDraftId),
+      to: deliveryTo[0] ?? null,
+      ...(delivery ? { intended_to: delivery.intendedTo, test_email_route: delivery.route.version } : {}),
+      contact_email: to[0] ?? null,
+      contact_kind: payload.contact_kind ?? payload.contactKind ?? null,
+    },
   })
   if (!sendRequested) {
     return { status: 'completed', result: { kind: 'email_draft', draft_id: safeString(draft.draft_id, 256), message_id: safeString(draft.message_id, 256), thread_id: safeString(draft.thread_id, 256) || threadId, attachment_count: Array.isArray(draft.attachments) ? draft.attachments.length : attachments.length, reused: Boolean(providedDraftId) } }
@@ -885,7 +1001,7 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   }
   const sendArguments: Record<string, unknown> = {
     draft_id: safeString(draft.draft_id, 256),
-    expected_to: to,
+    expected_to: deliveryTo,
     expected_cc: draftArguments.cc,
     expected_bcc: draftArguments.bcc,
     expected_subject: subject,
@@ -895,6 +1011,8 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
   const sendActionId = await persistApplicationAction(admin, context, 'gmail.send_message', sendArguments, sent, `application-roon-send:${request.id}`, safeString(sentResult.providerActionId, 256), 'Gmail confirmed the application email was sent.')
   const sentMessageId = safeString(sent.message_id, 256) || null
   const sentThreadId = safeString(sent.thread_id, 256) || threadId
+  const sentAt = new Date().toISOString()
+  const followUpDueAt = genericEmailPackage ? applicationEmailFollowUpAt(genericEmailPackage.action, sentAt) : null
   if (requestKind === 'send_fee_waiver_request') {
     const currentFee = await admin.from('application_fee_requirements').select('id,workflow').eq('id', safeString(payload.fee_requirement_id, 80)).eq('application_case_id', context.request.application_case_id).eq('user_id', context.request.user_id).maybeSingle()
     if (currentFee.error || !currentFee.data) throw new Error(currentFee.error?.message ?? 'The fee-waiver workflow disappeared before the request was sent.')
@@ -931,7 +1049,19 @@ async function processApplicationEmailRequest(admin: AdminClient, context: Appli
     excerpt: redactApplicationExcerpt(bodyText),
     idempotencyKey: `application-sent:${request.id}`,
     humanAssignmentId: assignmentId || null,
-    data: { status: 'sent', draft_id: safeString(draft.draft_id, 256), action_id: sendActionId, sent_at: new Date().toISOString(), to: to[0] ?? null, contact_email: to[0] ?? null, contact_kind: payload.contact_kind ?? payload.contactKind ?? null },
+    data: {
+      status: followUpDueAt ? 'follow_up_due' : 'sent',
+      draft_id: safeString(draft.draft_id, 256),
+      action_id: sendActionId,
+      sent_at: sentAt,
+      follow_up_due_at: followUpDueAt,
+      follow_up_purpose: genericEmailPackage?.action.followUp?.purpose ?? null,
+      email_type: genericEmailPackage?.action.emailType ?? null,
+      email_package_schema_version: genericEmailPackage?.action.schemaVersion ?? null,
+      to: to[0] ?? null,
+      contact_email: to[0] ?? null,
+      contact_kind: payload.contact_kind ?? payload.contactKind ?? null,
+    },
   })
   const sentEvidenceId = await persistApplicationEvidence(admin, context, {
     kind: 'sent_message',
@@ -1422,6 +1552,23 @@ async function processApplicationMessageMonitorRequest(admin: AdminClient, conte
     assetId: replyAssetIds[0] ?? null,
     idempotencyKey: `application-inbound-evidence:${context.request.id}:${messageId}`,
   })
+  if (threadId) {
+    const pendingFollowUps = await admin.from('application_communications')
+      .select('id,data')
+      .eq('user_id', context.request.user_id)
+      .eq('application_case_id', context.request.application_case_id)
+      .eq('direction', 'outbound')
+      .eq('provider_thread_id', threadId)
+    if (pendingFollowUps.error) throw new Error(pendingFollowUps.error.message)
+    for (const outbound of pendingFollowUps.data ?? []) {
+      const outboundData = recordValue(outbound.data)
+      if (safeString(outboundData.status, 80) !== 'follow_up_due') continue
+      const cancelled = await admin.from('application_communications').update({
+        data: { ...outboundData, status: 'replied', follow_up_cancelled_at: new Date().toISOString(), reply_message_id: messageId },
+      }).eq('id', outbound.id).eq('user_id', context.request.user_id)
+      if (cancelled.error) throw new Error(cancelled.error.message)
+    }
+  }
   await updateApplicationContact(admin, context, safeString(payload.contact_id ?? payload.contactId, 80), threadId, messageId)
   const stateChange = nextApplicationCaseState(classification as never)
   const caseData = recordValue(context.applicationCase.data)
@@ -1522,18 +1669,34 @@ function academicDeliverySearchQuery(payload: Record<string, unknown>) {
 async function processAcademicDeliveryRequest(admin: AdminClient, context: ApplicationRequestContext) {
   const request = context.request
   const requestKind = safeApplicationRequestKind(request.request_kind)
-  const payload = recordValue(request.payload)
+  let payload = recordValue(request.payload)
   if (!requestKind || !['request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery'].includes(requestKind)) throw new Error('Unsupported academic delivery request.')
   if (JSON.stringify(payload).match(/"(?:password|passcode|secret|card_number|cvv|cvc|bank_account|verification_code|otp|security_key)"\s*:/i)) throw new Error('Academic delivery payload contains a sensitive value.')
   if (['request_academic_document', 'request_credential_evaluation_delivery'].includes(requestKind)) {
+    const genericEmailPackage = readApplicationEmailPackage(payload)
+    if (!genericEmailPackage) throw new Error('Academic delivery email requires an accepted EmailActionPackage.')
+    if (genericEmailPackage.context.taskId !== request.task_id || genericEmailPackage.context.applicationCaseId !== request.application_case_id) throw new Error('The academic-delivery email context does not belong to this request.')
+    const validation = validateApplicationEmailAction(genericEmailPackage.context, genericEmailPackage.action)
+    if (!validation.valid || !validation.readyForSend) throw new Error(validation.repairReason ?? [...validation.issues, ...validation.sendBlockers].join(' '))
+    payload = {
+      ...payload,
+      to: [genericEmailPackage.action.recipientEmail],
+      subject: genericEmailPackage.action.subject,
+      body_text: genericEmailPackage.action.textBody,
+      body_html: genericEmailPackage.action.htmlBody,
+    }
     const to = Array.isArray(payload.to) ? payload.to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(payload.to ?? payload.destination_email ?? payload.destinationEmail)].filter(Boolean)
     const subject = safeString(payload.subject, 998)
     const bodyText = safeString(payload.body_text ?? payload.body, 30_000)
     if (!to.length || !subject || !bodyText) return { status: 'waiting_user', result: { kind: 'academic_delivery_draft', code: 'academic_email_details_missing', message: 'A verified recipient, subject, and grounded message are required before Roon can prepare the academic delivery email.' } }
-    const draft = await executeGoogleTool(admin, request.user_id, 'gmail.create_draft', {
+    const delivery = await controlledEmailDelivery(
+      context,
       to,
-      cc: Array.isArray(payload.cc) ? payload.cc.map(normalizeEmail).filter(Boolean) : [],
-      bcc: Array.isArray(payload.bcc) ? payload.bcc.map(normalizeEmail).filter(Boolean) : [],
+    )
+    const draft = await executeGoogleTool(admin, request.user_id, 'gmail.create_draft', {
+      to: delivery?.to ?? to,
+      cc: delivery?.cc ?? (Array.isArray(payload.cc) ? payload.cc.map(normalizeEmail).filter(Boolean) : []),
+      bcc: delivery?.bcc ?? (Array.isArray(payload.bcc) ? payload.bcc.map(normalizeEmail).filter(Boolean) : []),
       subject,
       body_text: bodyText,
       body_html: safeString(payload.body_html, 30_000) || null,
@@ -1985,21 +2148,53 @@ Deno.serve(async request => {
     .from('agent_runs')
     .select('id')
     .in('status', ['planning', 'running'])
-    // Flights are driven by their isolated browser session. Restarting a
-    // stalled model turn from the cron sweep can replay the visible progress
-    // instead of waiting for that session's authoritative update.
-    .neq('capability', 'flight_search')
     .lt('updated_at', staleCutoff)
+    // Prefer the newest stale runs so a current production qualification is
+    // not crowded out by historical rows that can never be useful to this
+    // sweep.
+    .order('updated_at', { ascending: false })
+    .limit(8)
+  const cvBoundaryResult = await admin
+    .from('agent_runs')
+    .select('id')
+    .in('status', ['waiting_for_user', 'needs_context'])
+    .in('error_code', [
+      'application_cv_source_unavailable',
+      'application_cv_source_page_count_mismatch',
+      'application_cv_factual_inventory_invalid',
+      'application_cv_compilation_failed',
+      'application_cv_layout_invalid',
+      'application_cv_tailoring_brief_invalid',
+      'application_cv_tailoring_target_mismatch',
+      'application_cv_tailoring_source_invalid',
+      'application_cv_programme_fit_ungrounded',
+      'application_cv_programme_fit_provenance_missing',
+      'application_cv_tailoring_rules_outdated',
+      'application_cv_render_invalid',
+    ])
     .order('updated_at', { ascending: true })
     .limit(8)
-  if (waitingResult.error || stalledResult.error) {
+  const stepLimitResult = await admin
+    .from('agent_runs')
+    .select('id')
+    .eq('status', 'failed')
+    .eq('error_code', 'step_limit_reached')
+    // Newest bounded failures are the only useful recovery candidates; old
+    // unrelated step-limit rows must not crowd out a current application run.
+    .order('updated_at', { ascending: false })
+    .limit(8)
+  if (waitingResult.error || stalledResult.error || cvBoundaryResult.error || stepLimitResult.error) {
     return jsonResponse({ error: 'Could not load waiting runs' }, 502)
   }
 
   const taskAgentEndpoint = `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/task-agent`
   const runIds = [...new Set([
-    ...(waitingResult.data ?? []).map(run => String(run.id)),
+    // Reclaim stale/failed runs first. A long-lived external wait must not
+    // crowd a newly stalled production application out of this bounded sweep.
     ...(stalledResult.data ?? []).map(run => String(run.id)),
+    ...(stepLimitResult.data ?? []).map(run => String(run.id)),
+    ...(cvBoundaryResult.data ?? []).map(run => String(run.id)),
+    ...(waitingResult.data ?? []).map(run => String(run.id)),
   ])].slice(0, 8)
   let continued = 0
   let unchanged = 0

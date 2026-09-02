@@ -108,6 +108,10 @@ export type RecommendationInteractionOption = {
   value: string
   label: string
   description?: string
+  /** Small, source-backed details shown in the UI's accessible info popover. */
+  info?: string
+  /** Optional public source URL for a compact, user-openable reference. */
+  href?: string
   candidateId?: string
   assetId?: string
   disabled?: boolean
@@ -259,6 +263,13 @@ export type RecommenderCandidate = {
   rankingReasons: string[]
   portfolioRole: 'primary' | 'complementary' | 'backup' | 'unassigned'
   sourceIds: string[]
+  /** Source-backed identity/relationship/contact provenance. These are
+   * optional for backwards-compatible in-memory callers, but production
+   * discovery filters out any candidate that lacks identity evidence. */
+  identityEvidenceIds?: string[]
+  relationshipEvidenceIds?: string[]
+  contactEvidenceIds?: string[]
+  applicantOwnership?: 'verified' | 'unverified'
 }
 
 export type RecommendationPortfolioStrategy = {
@@ -346,6 +357,7 @@ export type RecommendationContextResolution = {
   reusableContext: Record<string, string>
   reusableContextConsent: boolean
   unresolved: string[]
+  selectedCandidateIds?: string[]
   nextInteraction: RecommendationInteraction | null
   automaticContinuationRate: number
 }
@@ -425,6 +437,27 @@ function sourceIds(value: unknown) {
   ].filter(Boolean).filter((item, index, values) => values.indexOf(item) === index)
 }
 
+function uniqueIds(values: unknown[]) {
+  return [...new Set(values.flatMap(value => typeof value === 'string' ? [value.trim()] : []).filter(Boolean))]
+}
+
+function explicitRecordSourceIds(value: unknown, source: string, id: string, inheritedIds: string[]) {
+  const input = record(value)
+  const explicit = uniqueIds([
+    ...inheritedIds,
+    ...sourceIds(input),
+    ...stringArray(input.identityEvidenceIds ?? input.identity_evidence_ids, 240),
+    ...stringArray(input.relationshipEvidenceIds ?? input.relationship_evidence_ids, 240),
+    ...stringArray(input.contactEvidenceIds ?? input.contact_evidence_ids, 240),
+  ])
+  const providerContactId = text(input.providerContactId ?? input.provider_contact_id, 240)
+  if (providerContactId) explicit.push(providerContactId)
+  // A Contacts record's provider id is the identity source. A user-confirmed
+  // application-context/previous-application row may use its durable row id.
+  if ((source === 'contacts' || source === 'application_context' || source === 'previous_application') && id && !explicit.includes(id)) explicit.push(id)
+  return uniqueIds(explicit)
+}
+
 function now() {
   return new Date().toISOString()
 }
@@ -468,8 +501,9 @@ function evidence(
   sourceKind: RelationshipEvidence['sourceKind'],
   observedBoundary: RelationshipEvidence['observedBoundary'],
   confidence: RelationshipEvidence['confidence'] = 'medium',
+  sourceId = id,
 ): RelationshipEvidence {
-  return { id, text: value, sourceId: id, sourceKind, observedBoundary, confidence, observedAt: null }
+  return { id, text: value, sourceId, sourceKind, observedBoundary, confidence, observedAt: null }
 }
 
 function contactVerification(email: string | null, source: string): RecommenderCandidate['contactVerificationStatus'] {
@@ -482,36 +516,55 @@ function inferredRelationshipContext(value: Record<string, unknown>) {
   return text(value.relationshipContext ?? value.relationship_context ?? value.context ?? value.relationship, 2_000)
 }
 
-function directRelationshipEvidence(value: Record<string, unknown>, id: string) {
+function directRelationshipEvidence(value: Record<string, unknown>, id: string, sourceEvidenceIds: string[]) {
   const relationship = inferredRelationshipContext(value)
-  const direct = stringArray(value.directObservations ?? value.direct_observations, 2_000)
-  const result = direct.map((item, index) => evidence(`${id}:direct:${index + 1}`, item, 'direct_observation', 'personally_observed', 'high'))
-  if (relationship) result.push(evidence(`${id}:relationship`, relationship, 'direct_observation', 'personally_observed', 'high'))
+  const rawDirect = Array.isArray(value.directObservations ?? value.direct_observations) ? (value.directObservations ?? value.direct_observations) as unknown[] : []
+  const direct = rawDirect.map(item => {
+    const row = record(item)
+    return { text: text(row.text ?? row.claim ?? row.value ?? item, 2_000), sourceId: text(row.sourceId ?? row.source_id, 240) }
+  }).filter(item => item.text)
+  const fallbackSourceId = sourceEvidenceIds[0] ?? ''
+  const result = direct
+    .map((item, index) => item.sourceId || fallbackSourceId ? evidence(`${id}:direct:${index + 1}`, item.text, 'direct_observation', 'personally_observed', 'high', item.sourceId || fallbackSourceId) : null)
+    .filter((item): item is RelationshipEvidence => Boolean(item))
+  if (relationship && fallbackSourceId) result.push(evidence(`${id}:relationship`, relationship, 'direct_observation', 'personally_observed', 'high', fallbackSourceId))
   return result
 }
 
-function applicantUpdateEvidence(value: Record<string, unknown>, id: string) {
+function applicantUpdateEvidence(value: Record<string, unknown>, id: string, sourceEvidenceIds: string[]) {
   const updates = stringArray(value.applicantUpdates ?? value.applicant_updates ?? value.laterAccomplishments, 2_000)
-  return updates.map((item, index) => evidence(`${id}:update:${index + 1}`, item, 'applicant_update', 'reported_after_relationship', 'medium'))
+  const sourceId = sourceEvidenceIds[0] ?? ''
+  return sourceId ? updates.map((item, index) => evidence(`${id}:update:${index + 1}`, item, 'applicant_update', 'reported_after_relationship', 'medium', sourceId)) : []
 }
 
 function candidateFromRecord(value: unknown, source: string, index: number): RecommenderCandidate | null {
-  const input = record(value)
+  const raw = record(value)
+  const input = record(unwrap(value))
   const name = candidateName(input)
   if (!name) return null
   const email = normalizedEmail(input.email ?? input.emailAddress ?? input.email_address)
   const institution = text(input.institution ?? input.organization ?? input.organisation, 300) || null
   const id = text(input.id ?? input.providerContactId ?? input.provider_contact_id, 120) || `${slug(name)}-${index + 1}`
   const relationship = relationshipType(input.relationshipType ?? input.relationship_type ?? input.relationship, 'other')
-  const sourceId = `${source}:${id}`
-  const direct = directRelationshipEvidence(input, sourceId)
-  const updates = applicantUpdateEvidence(input, sourceId)
-  if (!direct.length && source === 'profile') {
-    direct.push(evidence(`${sourceId}:profile`, `${name} is recorded in the applicant's reusable recommender context.`, 'direct_observation', 'personally_observed', 'medium'))
-  }
-  if (!direct.length && source === 'gmail') {
-    direct.push(evidence(`${sourceId}:thread`, `A prior Gmail thread identifies ${name} in the recommendation context.`, 'direct_observation', 'personally_observed', 'medium'))
-  }
+  const inheritedIds = sourceIds(raw)
+  const provenanceIds = explicitRecordSourceIds(input, source, id, inheritedIds)
+  const sourceId = provenanceIds[0] ?? `${source}:${id}`
+  const direct = directRelationshipEvidence(input, sourceId, provenanceIds)
+  const updates = applicantUpdateEvidence(input, sourceId, provenanceIds)
+  const hasExplicitProvenanceEnvelope = Boolean(record(raw.provenance) && Object.keys(record(raw.provenance)).length) ||
+    Array.isArray(raw.identityEvidenceIds ?? raw.identity_evidence_ids)
+  const identityEvidenceIds = uniqueIds([
+    ...provenanceIds,
+    ...stringArray(input.identityEvidenceIds ?? input.identity_evidence_ids, 240),
+  ]).filter(evidenceId => !(source === 'profile' && !hasExplicitProvenanceEnvelope && new RegExp(`^profile:${slug(name)}(?:-\\d+)?$`, 'i').test(evidenceId)))
+  const relationshipEvidenceIds = uniqueIds([
+    ...direct.map(item => item.sourceId),
+    ...stringArray(input.relationshipEvidenceIds ?? input.relationship_evidence_ids, 240),
+  ])
+  const contactEvidenceIds = uniqueIds([
+    ...(email ? provenanceIds : []),
+    ...stringArray(input.contactEvidenceIds ?? input.contact_evidence_ids, 240),
+  ])
   const relevance = stringArray(input.relevanceToProgramme ?? input.relevance_to_programme ?? input.researchAreas ?? input.specialty, 500)
   const sourceType = candidateSourceKind(source)
   return {
@@ -535,7 +588,11 @@ function candidateFromRecord(value: unknown, source: string, index: number): Rec
     fitScore: 0,
     rankingReasons: [],
     portfolioRole: 'unassigned',
-    sourceIds: [...new Set([sourceId, ...sourceIds(input)])],
+    sourceIds: provenanceIds,
+    identityEvidenceIds,
+    relationshipEvidenceIds,
+    contactEvidenceIds,
+    applicantOwnership: identityEvidenceIds.length ? 'verified' : 'unverified',
   }
 }
 
@@ -558,6 +615,10 @@ function mergeCandidates(values: RecommenderCandidate[]) {
       department: previous.department ?? value.department,
       exactContextOfRelationship: previous.exactContextOfRelationship || value.exactContextOfRelationship,
       relationshipEvidence,
+      identityEvidenceIds: uniqueIds([...(previous.identityEvidenceIds ?? []), ...(value.identityEvidenceIds ?? [])]),
+      relationshipEvidenceIds: uniqueIds([...(previous.relationshipEvidenceIds ?? []), ...(value.relationshipEvidenceIds ?? [])]),
+      contactEvidenceIds: uniqueIds([...(previous.contactEvidenceIds ?? []), ...(value.contactEvidenceIds ?? [])]),
+      applicantOwnership: previous.applicantOwnership === 'verified' || value.applicantOwnership === 'verified' ? 'verified' : 'unverified',
       relevanceToProgramme: [...new Set([...previous.relevanceToProgramme, ...value.relevanceToProgramme])],
       sourceIds: [...new Set([...previous.sourceIds, ...value.sourceIds])],
       verifiedContactSource: previous.verifiedContactSource === 'none' ? value.verifiedContactSource : previous.verifiedContactSource,
@@ -566,6 +627,14 @@ function mergeCandidates(values: RecommenderCandidate[]) {
     })
   }
   return [...merged.values()]
+}
+
+export function hasVerifiedRecommenderIdentity(candidate: Pick<RecommenderCandidate, 'identityEvidenceIds' | 'applicantOwnership'>) {
+  return candidate.applicantOwnership === 'verified' && (candidate.identityEvidenceIds ?? []).length > 0
+}
+
+export function hasMeaningfulRelationshipEvidence(candidate: Pick<RecommenderCandidate, 'relationshipEvidence' | 'relationshipEvidenceIds'>) {
+  return candidate.relationshipEvidence.some(item => item.text.trim().length >= 12 && item.sourceId.trim().length > 0) && (candidate.relationshipEvidenceIds ?? []).length > 0
 }
 
 /** Reconstructs the relationship without turning later applicant updates into personal observations. */
@@ -614,7 +683,7 @@ export function discoverRecommenderCandidates(input: {
   for (const key of ['referees', 'professors', 'recommenders']) {
     const values = Array.isArray(profile[key]) ? profile[key] : []
     values.forEach((value, index) => {
-      const candidate = candidateFromRecord(unwrap(value), 'profile', index)
+      const candidate = candidateFromRecord(value, 'profile', index)
       if (candidate) candidates.push(candidate)
     })
   }
@@ -623,7 +692,7 @@ export function discoverRecommenderCandidates(input: {
     const educationRecord = record(unwrap(value))
     const instructors = Array.isArray(educationRecord.professors) ? educationRecord.professors : []
     instructors.forEach((item, instructorIndex) => {
-      const candidate = candidateFromRecord({ ...record(unwrap(item)), relationshipType: record(unwrap(item)).relationshipType ?? 'course_instructor', institution: record(unwrap(item)).institution ?? educationRecord.institution }, 'profile', index + instructorIndex + 1)
+      const candidate = candidateFromRecord({ ...record(unwrap(item)), relationshipType: record(unwrap(item)).relationshipType ?? 'course_instructor', institution: record(unwrap(item)).institution ?? educationRecord.institution, sourceIds: sourceIds(item) }, 'profile', index + instructorIndex + 1)
       if (candidate) candidates.push(candidate)
     })
   })
@@ -655,7 +724,7 @@ export function discoverRecommenderCandidates(input: {
     const application = record(value)
     const referees = Array.isArray(application.referees ?? application.recommenders) ? (application.referees ?? application.recommenders) as unknown[] : []
     referees.forEach((referee, refereeIndex) => {
-      const candidate = candidateFromRecord({ ...record(unwrap(referee)), applicantUpdates: stringArray(record(unwrap(referee)).applicantUpdates ?? application.updates, 2_000) }, 'previous_application', index + refereeIndex)
+      const candidate = candidateFromRecord({ ...record(unwrap(referee)), applicantUpdates: stringArray(record(unwrap(referee)).applicantUpdates ?? application.updates, 2_000), sourceIds: [...sourceIds(referee), ...sourceIds(value), ...sourceIds(application)] }, 'previous_application', index + refereeIndex)
       if (candidate) candidates.push(candidate)
     })
   }
@@ -663,7 +732,7 @@ export function discoverRecommenderCandidates(input: {
     const context = record(value)
     const referees = Array.isArray(context.referees ?? context.recommenders) ? (context.referees ?? context.recommenders) as unknown[] : []
     referees.forEach((referee, refereeIndex) => {
-      const candidate = candidateFromRecord(unwrap(referee), 'application_context', index + refereeIndex)
+      const candidate = candidateFromRecord(referee, 'application_context', index + refereeIndex)
       if (candidate) candidates.push(candidate)
     })
   }
@@ -671,11 +740,11 @@ export function discoverRecommenderCandidates(input: {
     const document = record(value)
     const extracted = Array.isArray(document.recommenders) ? document.recommenders : []
     extracted.forEach((referee, refereeIndex) => {
-      const candidate = candidateFromRecord(unwrap(referee), 'uploaded_document', index + refereeIndex)
+      const candidate = candidateFromRecord(referee, 'uploaded_document', index + refereeIndex)
       if (candidate) candidates.push(candidate)
     })
   }
-  return mergeCandidates(candidates)
+  return mergeCandidates(candidates).filter(hasVerifiedRecommenderIdentity)
 }
 
 function requirementField<T>(value: unknown, evidence: RecommendationSourceEvidence[], fieldName: string, fallback: T | null = null): RecommendationField<T> {
@@ -1304,8 +1373,21 @@ export function resolveRecommendationContext(input: {
   const programme = text(input.programme ?? input.requirements?.programme.value, 500)
   const ranked = rankRecommenderCandidates({ candidates, programme, requirements: input.requirements })
   const selected = input.selectedCandidateIds ?? []
-  const hasSelection = selected.length > 0
-  if (ranked.length && !hasSelection) unresolved.push('recommender_selection')
+  // A resumed model turn may replay a stale candidate id from an earlier
+  // context snapshot. Treat only ids present in the current ranked slate as
+  // a real selection; otherwise keep the bounded choice interaction visible.
+  const hasSelection = selected.some(id => ranked.some(candidate => candidate.id === id))
+  const requiredCount = Math.max(1, Math.round(input.requirements?.recommendationCount.value ?? 1))
+  const strongCandidates = ranked.filter(candidate => candidate.fitScore >= 65 && hasMeaningfulRelationshipEvidence(candidate))
+  const autoSelectedCandidateIds = !hasSelection && strongCandidates.length >= requiredCount
+    ? strongCandidates.slice(0, requiredCount).map(candidate => candidate.id)
+    : []
+  const effectiveSelection = [...new Set([...selected.filter(id => ranked.some(candidate => candidate.id === id)), ...autoSelectedCandidateIds])]
+  // An explicit user-provided selection is already a genuine decision; do
+  // not ask them to repeat it just because the programme still needs more
+  // slots. The strategy can carry the missing count as an unresolved lane.
+  const hasEffectiveSelection = hasSelection ? effectiveSelection.length > 0 : effectiveSelection.length >= requiredCount
+  if (ranked.length && !hasEffectiveSelection) unresolved.push('recommender_selection')
   // Source discovery is owned by the task agent. Keeping it out of Progress
   // Detail prevents an upload card from appearing for work David can complete
   // through the programme's official pages. If that bounded research truly
@@ -1313,9 +1395,9 @@ export function resolveRecommendationContext(input: {
   const nextInteraction = !input.requirements?.sourceBacked
     ? null
     : !ranked.length
-      ? createRecommendationInteraction({ kind: 'contact_select', id: 'recommendation:candidate', requirementId: 'recommender_candidate', question: 'Which eligible recommender should be considered for this application?', reason: 'No recommender was resolved from your profile, previous applications, Gmail, Contacts, or uploaded context.', options: [], knownContext: [], reusableContextKeys: [] })
-      : !hasSelection
-        ? createRecommendationInteraction({ kind: 'multiple_choice', id: 'recommendation:portfolio', requirementId: 'recommender_selection', question: 'Which recommender portfolio should I prepare?', reason: 'I found these candidates and ranked them by observed relationship evidence, programme relevance, and verified contact—not title prestige.', options: ranked.slice(0, 6).map(candidate => ({ value: candidate.id, label: `${candidate.name}${candidate.institution ? ` — ${candidate.institution}` : ''}`, description: `${candidate.fitScore}/100 · ${candidate.rankingReasons[0] ?? 'grounded relationship evidence'}`, candidateId: candidate.id })), knownContext: ranked.slice(0, 3).map(candidate => `${candidate.name}: ${candidate.rankingReasons[0] ?? 'ranked candidate'}`), reusableContextKeys: ['selected_recommender_ids'] })
+      ? createRecommendationInteraction({ kind: 'contact_select', id: 'recommendation:candidate', requirementId: 'recommender_candidate', question: `I need ${requiredCount} recommender${requiredCount === 1 ? '' : 's'} for this application`, reason: 'I could not verify a recommender identity and relationship from applicant-owned profile, Contacts, Gmail, previous applications, or uploaded evidence.', options: [], knownContext: [], reusableContextKeys: [] })
+      : !hasEffectiveSelection
+        ? createRecommendationInteraction({ kind: 'multiple_choice', id: 'recommendation:portfolio', requirementId: 'recommender_selection', question: strongCandidates.length < requiredCount ? `I need ${requiredCount - strongCandidates.length} more recommender${requiredCount - strongCandidates.length === 1 ? '' : 's'}` : 'Choose a recommender', reason: strongCandidates.length < requiredCount ? `The programme requires ${requiredCount} recommendation letter${requiredCount === 1 ? '' : 's'}; I can verify ${strongCandidates.length} candidate${strongCandidates.length === 1 ? '' : 's'} with direct relationship evidence so far.` : 'These verified candidates are meaningfully different on relationship evidence or programme fit. Choose the set you want to use.', options: ranked.slice(0, 6).map(candidate => ({ value: candidate.id, label: `${candidate.name}${candidate.currentTitle ? ` · ${candidate.currentTitle}` : ''}${candidate.institution ? ` · ${candidate.institution}` : ''}`, description: `${candidate.relationshipType.replaceAll('_', ' ')} · ${candidate.fitScore}/100 · ${candidate.rankingReasons[0] ?? 'relationship evidence needs strengthening'}`, candidateId: candidate.id })), knownContext: ranked.slice(0, 3).map(candidate => `${candidate.name}: ${candidate.exactContextOfRelationship || candidate.rankingReasons[0] || 'verified candidate'}`), reusableContextKeys: ['selected_recommender_ids'] })
         : null
   const totalQuestions = nextInteraction ? 1 : 0
   return {
@@ -1323,6 +1405,7 @@ export function resolveRecommendationContext(input: {
     checkedSources,
     autoResolvedFacts,
     candidates: ranked,
+    selectedCandidateIds: effectiveSelection,
     reusableContext,
     reusableContextConsent: input.reusableContextConsent === true,
     unresolved,

@@ -156,10 +156,14 @@ export type RequirementNodeStatus =
   | 'SUBMITTED'
   | 'BLOCKED'
 
+export type RequirementWaitingOn = 'user' | 'writer' | 'referee' | 'institution' | 'unknown'
+
 export type RequirementNode = {
   id: string
   caseId: string
   name: string
+  /** Exact programme wording used to execute or brief this requirement. */
+  exactInstructions?: string
   required: boolean
   status: RequirementNodeStatus
   sourceId: string | null
@@ -168,6 +172,8 @@ export type RequirementNode = {
   deadline: string | null
   evidenceIds: string[]
   blocker: string | null
+  waitingOn?: RequirementWaitingOn
+  waitingReason?: string | null
 }
 
 export type RequirementGraphIssue = {
@@ -306,7 +312,10 @@ export const applicationStateMachine: Record<ApplicationControllerState, StateDe
   SHORTLIST_APPROVAL: stateDefinition(['CASE_CREATION', 'BLOCKED'], ['approval', 'request_context'], ['verified_opportunities'], ['shortlist_approved'], 'SHORTLIST_APPROVAL'),
   CASE_CREATION: stateDefinition(['DOCUMENT_PREPARATION', 'BLOCKED'], ['case', 'requirement'], ['approved_shortlist'], ['case_and_requirement_graph_created'], 'CASE_CREATION'),
   DOCUMENT_PREPARATION: stateDefinition(['WRITER_EXECUTION', 'REFEREE_EXECUTION', 'PROFESSOR_OUTREACH', 'PORTAL_ACCOUNT', 'PORTAL_EXECUTION', 'READINESS_REVIEW', 'BLOCKED'], ['document', 'writer', 'referee', 'professor', 'portal', 'communication', 'evidence', 'requirement', 'payment', 'request_context'], ['case', 'verified_facts', 'requirement_graph'], ['required_documents_ready_or_delegated'], 'DOCUMENT_PREPARATION'),
-  WRITER_EXECUTION: stateDefinition(['DOCUMENT_PREPARATION', 'REFEREE_EXECUTION', 'PORTAL_EXECUTION', 'BLOCKED'], ['writer', 'communication', 'document'], ['case', 'writer_brief', 'source_fact_ids'], ['writer_artifact_verified'], 'WRITER_EXECUTION'),
+  // A writer assignment is one live lane, not a global lock. Source-backed
+  // faculty intelligence may continue in parallel and does not itself send
+  // outreach or weaken the later approval gate.
+  WRITER_EXECUTION: stateDefinition(['DOCUMENT_PREPARATION', 'REFEREE_EXECUTION', 'PORTAL_EXECUTION', 'BLOCKED'], ['writer', 'communication', 'document', 'professor'], ['case', 'writer_brief', 'source_fact_ids'], ['writer_artifact_verified'], 'WRITER_EXECUTION'),
   // Recommendation work can discover a more authoritative programme rule.
   // Recording that source and reconciling the affected requirement are safe
   // preparatory actions; they do not send a request or weaken approval gates.
@@ -481,6 +490,9 @@ export function validateApplicationAction(input: {
   completedIdempotencyKeys?: string[]
   readinessVerified?: boolean
   submissionApproved?: boolean
+  /** Allow the existing opportunity to be repaired while CASE_CREATION is
+   * held open by the durable official-requirements recovery path. */
+  allowRequirementsRecovery?: boolean
 }): ApplicationValidationError[] {
   const { action } = input
   const errors: ApplicationValidationError[] = []
@@ -505,7 +517,10 @@ export function validateApplicationAction(input: {
     add('illegal_state_transition', `The controller cannot advance from ${input.state} to ${action.intendedNextState}.`)
   }
   const allowed = applicationStateMachine[input.state].allowedActionKinds
-  if (allowed.length && !allowed.includes(action.kind) && action.kind !== 'request_context') {
+  const requirementsRecoveryAction = input.allowRequirementsRecovery === true &&
+    input.state === 'CASE_CREATION' &&
+    action.toolName === 'application.record_opportunity'
+  if (allowed.length && !allowed.includes(action.kind) && action.kind !== 'request_context' && !requirementsRecoveryAction) {
     add('action_outside_current_state', `${action.kind} is not allowed in ${input.state}.`, { allowedActionKinds: allowed })
   }
   if (action.consequential && action.idempotencyKey && (input.completedIdempotencyKeys ?? []).includes(action.idempotencyKey)) {
@@ -575,7 +590,8 @@ export type AuthoritativeApplicationContext = {
   state: ApplicationControllerState
   nextAction: string | null
   verifiedOpportunities: Array<{ id: string; institution: string; programmeTitle: string; officialUrl: string; applicationUrl: string | null; verificationStatus: string; confidence: number | null; fitScore: number | null }>
-  unresolvedRequirements: Array<Pick<RequirementNode, 'id' | 'name' | 'status' | 'dependencyIds' | 'responsible' | 'deadline' | 'evidenceIds' | 'blocker'>>
+  unresolvedRequirements: Array<Pick<RequirementNode, 'id' | 'name' | 'status' | 'dependencyIds' | 'responsible' | 'deadline' | 'evidenceIds' | 'blocker' | 'exactInstructions'>>
+  programmeInstructions: Array<{ id: string; name: string; instructions: string }>
   verifiedFacts: Array<Pick<FactResolution, 'factId' | 'value' | 'confidence' | 'provenance'>>
   artifacts: Array<{ id: string; checksum: string | null; status: string; caseId: string }>
   writer: Array<{ id: string; status: string; deadline: string | null }>
@@ -587,7 +603,7 @@ export type AuthoritativeApplicationContext = {
   deadlines: Array<{ requirementId: string; at: string }>
 }
 
-export function buildAuthoritativeApplicationContext(input: Omit<AuthoritativeApplicationContext, 'version' | 'unresolvedRequirements' | 'verifiedFacts' | 'deadlines'> & {
+export function buildAuthoritativeApplicationContext(input: Omit<AuthoritativeApplicationContext, 'version' | 'unresolvedRequirements' | 'programmeInstructions' | 'verifiedFacts' | 'deadlines'> & {
   requirements: RequirementNode[]
   facts: FactResolution[]
 }): AuthoritativeApplicationContext {
@@ -595,7 +611,11 @@ export function buildAuthoritativeApplicationContext(input: Omit<AuthoritativeAp
     .filter(node => node.required && !requirementIsComplete(node))
     .toSorted((left, right) => deadlineRisk(left.deadline, new Date().toISOString()) - deadlineRisk(right.deadline, new Date().toISOString()))
     .slice(0, 12)
-    .map(({ id, name, status, dependencyIds, responsible, deadline, evidenceIds, blocker }) => ({ id, name, status, dependencyIds, responsible, deadline, evidenceIds, blocker }))
+    .map(({ id, name, status, dependencyIds, responsible, deadline, evidenceIds, blocker, exactInstructions }) => ({ id, name, status, dependencyIds, responsible, deadline, evidenceIds, blocker, exactInstructions }))
+  const programmeInstructions = input.requirements
+    .map(node => ({ id: node.id, name: node.name, instructions: String(node.exactInstructions ?? '').replace(/\s+/g, ' ').trim() }))
+    .filter(node => node.instructions && /\b(?:essay|statement|proposal|prompt|word limit|submission format)\b/i.test(`${node.name} ${node.instructions}`))
+    .slice(0, 20)
   const verifiedFacts = input.facts
     .filter(fact => fact.verification === 'VERIFIED')
     .slice(0, 60)
@@ -609,6 +629,7 @@ export function buildAuthoritativeApplicationContext(input: Omit<AuthoritativeAp
     nextAction: input.nextAction,
     verifiedOpportunities: input.verifiedOpportunities.filter(opportunity => opportunity.verificationStatus === 'verified').slice(0, 12),
     unresolvedRequirements,
+    programmeInstructions,
     verifiedFacts,
     artifacts: input.artifacts.slice(0, 30),
     writer: input.writer.slice(0, 12),

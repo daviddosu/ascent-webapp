@@ -5,6 +5,8 @@ import {
   claimApplicationAction,
   createApplicationEngineState,
   planApplicationEngineStep,
+  projectApplicationWorkstreams,
+  projectApplicationRequirementStates,
   verifyApplicationRequirement,
   recordApplicationFailure,
   validateSemanticDecision,
@@ -61,6 +63,181 @@ it('searches before asking for an unresolved applicant fact', () => {
   expect(planApplicationEngineStep(unresolved)).toMatchObject({ kind: 'EXECUTE', action: 'search_verified_context', tier: 0 })
   unresolved.requirements[0]!.retry.attempts = 1
   expect(planApplicationEngineStep(unresolved)).toMatchObject({ kind: 'USER_HANDOFF', missingFactIds: ['profile:name'], tier: 5 })
+})
+
+it('keeps runnable application work moving when one requirement waits on the applicant', () => {
+  const transcript = requirement({
+    id: 'transcript',
+    name: 'Official transcript',
+    type: 'transcript',
+    status: 'WAITING',
+    waitingOn: 'user',
+    blocker: 'Attach an official transcript.',
+    requiredFactIds: [],
+    evidenceContract: ['artifact'],
+  })
+  const cv = requirement({
+    id: 'tailored-cv',
+    name: 'Tailored CV',
+    type: 'document',
+    requiredFactIds: [],
+    evidenceContract: ['artifact'],
+  })
+  const input = state([transcript, cv])
+  const step = planApplicationEngineStep(input)
+  expect(step).toMatchObject({ kind: 'EXECUTE', requirementId: 'tailored-cv' })
+  const projection = projectApplicationWorkstreams(input, step)
+  expect(projection.pendingInputs).toMatchObject([{ requirementId: 'transcript', kind: 'document' }])
+  expect(projection.workstreams.find(item => item.requirementId === 'tailored-cv')).toMatchObject({ status: 'active' })
+})
+
+it('marks every dependency-ready lane active while preserving one deterministic current step', () => {
+  const transcript = requirement({
+    id: 'transcript',
+    name: 'Official transcript',
+    type: 'transcript',
+    status: 'WAITING',
+    waitingOn: 'user',
+    blocker: 'Attach an official transcript.',
+    requiredFactIds: [],
+    evidenceContract: ['artifact'],
+  })
+  const cv = requirement({ id: 'cv', name: 'Tailored CV', type: 'document', requiredFactIds: [], evidenceContract: ['artifact'] })
+  const essay = requirement({ id: 'essay', name: 'Statement of purpose', type: 'writer', requiredFactIds: [], evidenceContract: ['artifact'] })
+  const input = state([transcript, essay, cv])
+  const step = planApplicationEngineStep(input)
+  const projection = projectApplicationWorkstreams(input, step)
+  expect(step).toMatchObject({ requirementId: 'cv' })
+  expect(projection.workstreams.filter(item => item.status === 'active').map(item => item.requirementId)).toEqual(['essay', 'cv'])
+  expect(projection.workstreams.find(item => item.requirementId === 'essay')?.detail).toContain('briefing the writer')
+})
+
+it('keeps writer-owned work out of the applicant question queue', () => {
+  const essay = requirement({
+    id: 'essay', name: 'Essay: Explain your research interests.', type: 'writer', status: 'WAITING', waitingOn: 'user',
+    exactInstructions: 'Explain your research interests in no more than 1,000 words.', requiredFactIds: [], evidenceContract: ['artifact'],
+  })
+  const projection = projectApplicationWorkstreams(state([essay]))
+  expect(projection.pendingInputs).toEqual([])
+  expect(projection.workstreams[0]).toMatchObject({ status: 'active', instructions: essay.exactInstructions })
+})
+
+it('does not ask for a programme-owned cycle or term even when its old status was user-waiting', () => {
+  const cycle = requirement({
+    id: 'cycle-term',
+    name: 'Application cycle and start term',
+    type: 'official_requirement',
+    status: 'WAITING',
+    waitingOn: 'user',
+    source: {
+      id: 'official-cycle',
+      authority: 'official',
+      missingValueOwner: 'programme',
+      programmeValue: 'Fall 2027 entry',
+    },
+    requiredFactIds: [],
+    evidenceContract: ['web'],
+  })
+  const projected = projectApplicationWorkstreams(state([cycle]))
+  expect(projected.pendingInputs).toEqual([])
+  expect(projected.workstreams.find(item => item.requirementId === 'cycle-term')).toMatchObject({ status: 'active' })
+  expect(planApplicationEngineStep(state([cycle]))).toMatchObject({ kind: 'WAIT', requirementId: 'cycle-term' })
+})
+
+it('names the exact transcript artifact in the applicant control', () => {
+  const transcript = requirement({
+    id: 'transcript',
+    name: 'Unofficial undergraduate transcript',
+    type: 'transcript',
+    status: 'WAITING',
+    waitingOn: 'user',
+    blocker: 'Attach the transcript.',
+    requiredFactIds: [],
+    evidenceContract: ['artifact'],
+  })
+  const projected = projectApplicationWorkstreams(state([transcript]))
+  expect(projected.pendingInputs[0]).toMatchObject({
+    requirementId: 'transcript',
+    kind: 'document',
+    question: expect.stringMatching(/transcript/i),
+    options: [expect.objectContaining({ value: 'have_document' })],
+  })
+})
+
+it('projects the full requirement graph into explicit execution states', () => {
+  const satisfied = requirement({ id: 'satisfied', status: 'VERIFIED', evidenceIds: ['e-satisfied'], requiredFactIds: [] })
+  const waitingUser = requirement({
+    id: 'waiting-user', name: 'Official transcript', type: 'transcript', status: 'WAITING', waitingOn: 'user',
+    blocker: 'Attach an official transcript.', requiredFactIds: [], evidenceContract: ['artifact'],
+  })
+  const runnable = requirement({ id: 'runnable', name: 'Tailored CV', type: 'document', requiredFactIds: [], evidenceContract: ['artifact'] })
+  const blocked = requirement({ id: 'blocked', name: 'Application upload', dependencyIds: ['waiting-user'], requiredFactIds: [], evidenceContract: ['portal'] })
+  const optional = requirement({ id: 'optional', required: false, requiredFactIds: [] })
+  const states = projectApplicationRequirementStates(state([satisfied, waitingUser, runnable, blocked, optional]), {
+    kind: 'CONTROLLER', caseId: 'case-1', action: 'continue_application_controller',
+  })
+  expect(states).toEqual(expect.arrayContaining([
+    expect.objectContaining({ requirementId: 'satisfied', state: 'satisfied' }),
+    expect.objectContaining({ requirementId: 'waiting-user', state: 'waiting_on_user' }),
+    expect.objectContaining({ requirementId: 'runnable', state: 'runnable' }),
+    expect.objectContaining({ requirementId: 'blocked', state: 'blocked_by_dependency', dependencyIds: ['waiting-user'] }),
+    expect.objectContaining({ requirementId: 'optional', state: 'not_applicable' }),
+  ]))
+})
+
+it('keeps post-admission requirements represented but out of active application work', () => {
+  const futureTranscript = requirement({
+    id: 'future-transcript',
+    name: 'Official transcripts after admission',
+    type: 'transcript',
+    exactInstructions: 'If admitted, submit official transcripts before enrollment.',
+    requiredFactIds: [],
+  })
+  const input = state([futureTranscript])
+  expect(projectApplicationWorkstreams(input).workstreams).toEqual([])
+  expect(projectApplicationRequirementStates(input)).toEqual([
+    expect.objectContaining({ requirementId: 'future-transcript', state: 'not_applicable' }),
+  ])
+})
+
+it('starts an attached-CV workstream before unrelated unresolved requirements', () => {
+  const transcript = requirement({
+    id: 'transcript',
+    name: 'Official transcript',
+    type: 'transcript',
+    status: 'WAITING',
+    waitingOn: 'user',
+    blocker: 'Attach an official transcript.',
+    requiredFactIds: [],
+    evidenceContract: ['artifact'],
+  })
+  const cv = requirement({
+    id: 'cv',
+    name: 'Tailored CV',
+    type: 'document',
+    evidenceContract: ['artifact'],
+  })
+  const essay = requirement({
+    id: 'essay',
+    name: 'Statement of purpose',
+    type: 'writer',
+    evidenceContract: ['artifact'],
+  })
+  expect(planApplicationEngineStep(state([transcript, essay, cv]))).toMatchObject({ kind: 'EXECUTE', requirementId: 'cv' })
+})
+
+it('hands back only the user-held requirement after all independent work is done', () => {
+  const transcript = requirement({
+    id: 'transcript',
+    name: 'Official transcript',
+    type: 'transcript',
+    status: 'WAITING',
+    waitingOn: 'user',
+    requiredFactIds: [],
+    evidenceContract: ['artifact'],
+  })
+  const input = state([transcript])
+  expect(planApplicationEngineStep(input)).toMatchObject({ kind: 'USER_HANDOFF', requirementId: 'transcript', tier: 5 })
 })
 
 it('makes a discovered supplemental question a first-class engine step', () => {

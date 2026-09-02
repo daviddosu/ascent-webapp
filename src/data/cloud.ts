@@ -1,7 +1,13 @@
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// Deployment dashboards sometimes preserve a trailing newline when a public
+// connection value is pasted into an environment variable. Supabase treats
+// that newline as part of the key, which breaks Realtime authentication even
+// though ordinary REST requests may still appear healthy.
+const configuredUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const configuredPublicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const url = typeof configuredUrl === 'string' ? configuredUrl.trim() : undefined
+const publicKey = typeof configuredPublicKey === 'string' ? configuredPublicKey.trim() : undefined
 
 export const cloudEnabled = Boolean(url && publicKey)
 export let cloud: SupabaseClient | null = null
@@ -9,8 +15,11 @@ let cloudPromise: Promise<SupabaseClient | null> | null = null
 let googleProviderToken: string | null = null
 
 function authFlowType() {
-  const query = new URLSearchParams(window.location.search)
-  return query.get('auth') === 'google' || query.has('code') ? 'pkce' : 'implicit'
+  // New OAuth attempts must use PKCE so Supabase returns a short-lived code
+  // instead of placing session credentials in the URL fragment. Keep the
+  // implicit flow only long enough to consume a legacy fragment callback.
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  return hash.has('access_token') || hash.has('refresh_token') ? 'implicit' : 'pkce'
 }
 
 function captureGoogleProviderToken(session: Session | null) {
@@ -86,7 +95,7 @@ export async function beginGoogleSignIn() {
   const { error } = await client.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo: `${window.location.origin}/app`,
       scopes: 'openid email profile',
     },
   })
@@ -99,7 +108,7 @@ export async function connectGoogleCalendar() {
   const { error } = await client.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo: `${window.location.origin}/app`,
       scopes: 'https://www.googleapis.com/auth/calendar.readonly',
       queryParams: {
         access_type: 'offline',

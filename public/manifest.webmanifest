@@ -1,7 +1,7 @@
 {
   "name": "Shotcount",
   "short_name": "Shotcount",
-  "description": "Shotcount is a calm planning system for goals, tasks, and review.",
+  "description": "Shotcount helps graduate applicants prepare and submit applications with confidence.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffd439",

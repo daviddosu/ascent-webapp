@@ -19,7 +19,6 @@ export const roonCapabilityIndex: readonly CapabilityDefinition[] = []
 export function roonCapabilityForTask(task: Pick<Task, 'title' | 'description'>): CapabilityDefinition | null {
   const text = `${task.title} ${task.description ?? ''}`
   const route = routeTask(task.title, task.description)
-  if (route.primarySpecialistId === 'caspian') return { capability: 'flight_search', label: 'Find flights', matches: /flight/i }
   if (route.primarySpecialistId === 'david') return { capability: 'browser', label: 'Complete online task', matches: /application/i }
   if (route.primarySpecialistId === 'roon') {
     const capability: AgentCapability = route.taskContract === 'communication.calendar'

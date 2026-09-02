@@ -3,7 +3,6 @@ export {
   REASONING_MODEL_ID,
   SPECIALIST_REGISTRY_SCHEMA_VERSION,
   createSpecialistHandoff,
-  flightStageNeedsPreflightHandoff,
   getSpecialist,
   routeTask,
   routeTaskWithSemanticSpecialist,

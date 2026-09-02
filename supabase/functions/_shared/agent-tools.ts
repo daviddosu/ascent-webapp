@@ -1,4 +1,5 @@
 import { applicationSemanticAllowedDecisions, applicationSemanticFunctions } from './application-engine.ts'
+import { GRADUATE_CV_META_PROMPT_VERSION, GRADUATE_CV_TAILORING_RULE_SET_ID } from './cv.ts'
 
 export type AgentRisk = 'read' | 'prepare' | 'external_write' | 'financial'
 
@@ -259,7 +260,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.record_opportunity',
-    description: 'Persist one source-backed opportunity in the current David campaign. The opportunity object must include institution, programme_title, and official_url (programme is accepted as a compatibility alias); each citation should include url, excerpt, retrievedAt, and sourceType such as official, official_programme_page, government, or secondary. Use official citations and never mark an opportunity verified without an official or government source.',
+    description: 'Persist one source-backed opportunity in the current David campaign. The opportunity object must include institution, programme_title, and official_url (programme is accepted as a compatibility alias); each citation should include url, excerpt, retrievedAt, and sourceType such as official, official_programme_page, government, or secondary. Use official citations and never mark an opportunity verified without an official or government source. For broad discovery, record every distinct verified programme you find; fit_score is an internal 0–100 score grounded in the attached CV and programme evidence, and the user sees it as a ranked CV-fit score out of 10.',
     parameters: objectSchema({
       campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
       opportunity: { type: 'object', description: 'Normalized opportunity fields and fit evidence.', additionalProperties: true },
@@ -270,8 +271,38 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'application.search_programmes',
+    description: 'Run the staged backend programme-discovery pipeline for the current David campaign. It decomposes intent, maps exact and adjacent official programme routes, verifies current source evidence, extracts research/faculty/eligibility context, matches the authorised CV across separate dimensions, computes the final weighted CV-fit score in code, and persists the ranked verified shortlist. Use this before recording individual opportunities when the user wants programmes discovered online; this never creates an application case or submits anything.',
+    parameters: objectSchema({
+      campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
+      query: stringValue('The programme, field, degree, location, funding, or other search intent to research.', 2_000),
+      candidate_count: { type: 'integer', minimum: 1, maximum: 20, description: 'Maximum number of verified candidates to return.' },
+      idempotency_key: stringValue('Stable key for this discovery request.', 300),
+    }, ['campaign_id', 'query', 'candidate_count', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
+    name: 'application.research_faculty',
+    description: 'Run the canonical selected-programme faculty resolution. The runtime makes one web-enabled research call that verifies the persisted faculty candidates, discovers only explicitly published institutional email addresses, assesses fit, ranks candidates, decides whether outreach is justified by the official pathway, and prepares final individualized email actions when allowed. Do not research faculty separately or supply dossiers; this tool never sends a message.',
+    parameters: {
+      type: 'object',
+      properties: {
+        application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+        opportunity_id: stringValue('Durable selected programme opportunity ID.', 64),
+        research_scope: stringValue('The narrow programme-specific faculty/research question being checked.', 2_000),
+        purpose: { type: 'string', enum: ['application_context', 'outreach'], description: 'Requested research purpose. The runtime derives and enforces the purpose from the verified programme pathway.' },
+        idempotency_key: stringValue('Stable key for this selected-programme faculty research pass.', 300),
+      },
+      required: ['application_case_id', 'opportunity_id', 'research_scope', 'purpose', 'idempotency_key'],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+  {
+    type: 'function',
     name: 'application.create_case',
-    description: 'Create or reuse one durable ApplicationCase after the user approves the shortlist. Every requirement must be explicit and source-backed.',
+    description: 'Create or reuse one durable ApplicationCase after the user approves the shortlist. Every requirement must be explicit and source-backed. Supply one requirement object per official transcript, test, essay, recommendation, portfolio, fee, portal, deadline, and additional rule; do not collapse the official requirements into one summary. When the verified opportunity already contains a structured official requirements snapshot, the runtime can expand it deterministically if this array is accidentally omitted, but the model should still provide the explicit array whenever possible.',
     parameters: objectSchema({
       campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
       opportunity_id: stringValue('Durable Opportunity ID.', 64),
@@ -366,6 +397,18 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
+    name: 'application.resolve_portal_fields',
+    description: 'Inspect every field in the current portal section, match grounded values to verified applicant facts, leave unsupported optional fields blank, and create one contextual David question for each unresolved required field. Call after every portal observation and after selections reveal conditional fields.',
+    parameters: objectSchema({
+      application_case_id: stringValue('Durable ApplicationCase ID.', 64),
+      session_id: stringValue('Task-owned browser session ID.', 64),
+      observation: { type: 'object', description: 'Current HTTPS URL, portal, section, and observed fields with required flags, current values, and source fact IDs.', additionalProperties: true },
+      idempotency_key: stringValue('Stable key for this observed portal section.', 300),
+    }, ['application_case_id', 'session_id', 'observation', 'idempotency_key']),
+    strict: true,
+  },
+  {
+    type: 'function',
     name: 'application.resolve_supplemental_questions',
     description: 'Persist every supplemental question found in the current portal observation, classify the exact prompt, resolve verified applicant context, select deterministic/David/writer/user routing, and return any typed Progress Detail interaction. Call after every portal observation and after selections that may reveal conditional questions.',
     parameters: objectSchema({
@@ -419,7 +462,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
     description: 'Create a durable writer or editor assignment with a factual brief, source materials, deadline, and review expectations. Roon handles the email communication.',
     parameters: objectSchema({
       application_case_id: stringValue('Durable ApplicationCase ID.', 64),
-      writer_id: stringValue('Writer or editor record identifier.', 160),
+      writer_id: stringValue('Canonical application_writers UUID or exact managed route: david-managed-writer, roon-managed-writer, or caspian-managed-writer. Never invent a display label.', 160),
       specialty: stringValue('Writer specialty.', 240),
       deliverable: stringValue('Exact document deliverable.', 500),
       brief: stringValue('Detailed assignment brief with factual constraints.', 12000),
@@ -607,6 +650,9 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
     name: 'application.generate_document',
     description: 'Create a private derived PDF application document from authorised applicant context. Never invent facts.',
     parameters: objectSchema({
+      application_case_id: nullableString('Durable ApplicationCase ID when this document belongs to a selected programme.', 64),
+      strategy_id: nullableString('The current durable admission-strategy ID for this application, when available.', 160),
+      strategy_revision: { type: ['integer', 'null'], minimum: 1, maximum: 1000, description: 'The current admission-strategy revision for this application, when available.' },
       title: stringValue('Document title.', 300),
       filename: stringValue('Safe PDF filename.', 255),
       body: stringValue('Grounded document text.', 30000),
@@ -721,27 +767,39 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.generate_cv',
-    description: 'Render a programme-specific CV from confirmed structured facts using the immutable graduate_application_cv_v1 template. The renderer, not the model, owns all LaTeX commands.',
+    description: 'Accept one complete programme-tailored LaTeX document produced by the base model after reading the actual task-attached CV PDF. ShotCount derives the page target from the physical source PDF, validates factual integrity and the canonical Jake/SB2Nov shell, compiles it, checks rendered layout, and returns exact repair diagnostics when needed.',
     parameters: objectSchema({
       application_case_id: stringValue('Durable ApplicationCase ID.', 64),
       filename: stringValue('Safe final PDF filename.', 255),
-      page_target: { type: 'string', enum: ['one_page', 'two_page', 'academic'] },
-      section_order: { type: 'array', items: stringValue('Structured CV section name.', 80), maxItems: 20 },
-      cv_data: { type: 'object', additionalProperties: true, description: 'Structured CV content. Every rendered item must include confirmed provenance.' },
-      meta_prompt_version: stringValue('Version of the programme-specific selection prompt.', 80),
+      page_target: { type: 'string', enum: ['one_page', 'two_page'] },
+      latex_content: stringValue('Complete compilable LaTeX using the exact checked-in Jake Gutierrez / SB2Nov template. Do not wrap it in Markdown fences.', 120_000),
+      tailoring_brief: objectSchema({
+        target_institution: stringValue('Exact verified institution name.', 500),
+        target_programme: stringValue('Exact verified programme name.', 800),
+        strategy_id: nullableString('The durable admission-strategy ID used for this artifact, when an ApplicationCase has orchestration state.', 160),
+        strategy_revision: { type: ['integer', 'null'], minimum: 1, maximum: 1000, description: 'The durable admission-strategy revision used for this artifact, when available.' },
+        official_source_urls: { type: 'array', items: stringValue('Official programme source URL.', 2_000), minItems: 1, maxItems: 12 },
+        priority_signals: { type: 'array', items: stringValue('Concrete programme research, method, or evaluation signal.', 300), minItems: 2, maxItems: 12 },
+        applicant_fit_fact_ids: { type: 'array', items: stringValue('Confirmed applicant fact ID supporting the fit.', 300), minItems: 2, maxItems: 40 },
+        fit_statement: stringValue('Concise evidence-backed explanation of the programme-specific emphasis.', 2_000),
+      }, ['target_institution', 'target_programme', 'official_source_urls', 'priority_signals', 'applicant_fit_fact_ids', 'fit_statement']),
+      meta_prompt_version: stringValue(`Must be the current graduate CV tailoring rule version: ${GRADUATE_CV_META_PROMPT_VERSION}.`, 80),
       idempotency_key: stringValue('Stable key for this CV version.', 300),
-    }, ['application_case_id', 'filename', 'page_target', 'section_order', 'cv_data', 'meta_prompt_version', 'idempotency_key']),
+    }, ['application_case_id', 'filename', 'page_target', 'latex_content', 'tailoring_brief', 'meta_prompt_version', 'idempotency_key']),
     strict: true,
   },
   {
     type: 'function',
     name: 'application.generate_supervisor_outreach',
-    description: 'Create the canonical, research-backed first-contact package for one prospective supervisor. The package includes the official programme-contact policy, verified institutional email, current research dossier, scored applicant fit evidence, the exact canonical CV artifact, both Gmail body representations, and a blocking quality result. This prepares only; Roon owns Gmail.',
+    description: 'Materialize the already resolved one-call faculty email as the canonical supervisor outreach package after the exact CV is ready. Supply the persisted faculty_id; the runtime reuses the stored research, decision, wording, evidence, and attachment identity without another composition call. Deterministic code validates it; Roon owns Gmail and nothing is sent here.',
     parameters: {
       type: 'object',
       properties: {
         application_case_id: stringValue('Durable ApplicationCase ID.', 64),
         opportunity_id: stringValue('Durable Opportunity ID.', 64),
+        faculty_id: nullableString('Persisted faculty seed ID from application.research_faculty.', 160),
+        strategy_id: nullableString('Current durable admission-strategy ID for this outreach package.', 160),
+        strategy_revision: { type: ['integer', 'null'], minimum: 1, maximum: 1000, description: 'Current admission-strategy revision for this outreach package.' },
         target_programme: stringValue('Exact graduate programme title.', 500),
         target_institution: stringValue('Institution name.', 240),
         target_intake: stringValue('Entry term or intake.', 120),
@@ -752,11 +810,11 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         applicant_name: stringValue('Applicant legal or preferred name from the profile.', 240),
         applicant_email: stringValue('Applicant verified email from the profile.', 320),
         applicant_role: nullableString('Applicant current role, if confirmed.', 240),
-        writing: { type: 'object', additionalProperties: true, description: 'Concise human-readable research connection, applicant fit, request, and closing context.' },
+        email_action_package: { type: 'object', additionalProperties: true, description: 'Complete EmailActionPackage: schemaVersion 1, workflowVersion application-email@1.0.0, emailType prospective_supervisor_first_contact, exact recipientEmail, final subject/textBody/htmlBody, communicationGoal, exact attachmentArtifactIds, evidence-mapped claims, optional followUp, and all five semantic quality booleans.' },
         cv: { type: 'object', additionalProperties: true, description: 'Exact compiled graduate_application_cv_v1 artifact metadata and checksum.' },
         idempotency_key: stringValue('Stable key for this canonical outreach package.', 300),
       },
-      required: ['application_case_id', 'opportunity_id', 'target_programme', 'target_institution', 'target_intake', 'policy', 'supervisor_dossier', 'applicant_fit_evidence', 'strongest_connection', 'applicant_name', 'applicant_email', 'applicant_role', 'writing', 'cv', 'idempotency_key'],
+      required: ['application_case_id', 'opportunity_id', 'faculty_id', 'idempotency_key'],
       additionalProperties: false,
     },
     strict: false,
@@ -764,7 +822,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.submit',
-    description: 'Submit one application through the verified portal session after a deterministic readiness report and exact user approval. This action is never available to Roon or Caspian and is idempotent per application case.',
+    description: 'Submit one application through the verified portal session after a deterministic readiness report and exact user approval. This action is only available to David and is idempotent per application case.',
     parameters: objectSchema({
       application_case_id: stringValue('Durable ApplicationCase ID.', 64),
       session_id: stringValue('Verified task-owned browser session ID.', 64),
@@ -778,13 +836,13 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.request_roon',
-    description: 'Create a typed, durable request for Roon to send or monitor application email, resolve a contact, schedule an interview, or retrieve an email verification code. Never perform Gmail or Calendar work directly as David.',
+    description: 'Create a typed, durable request for Roon to send or monitor application email, resolve a contact, schedule an interview, or retrieve an email verification code. For consequential email, write the complete final message in one call and include application_email_context plus email_action_package; do not send prose fragments or ask Roon to rewrite it. Never perform Gmail or Calendar work directly as David.',
     parameters: {
       type: 'object',
       properties: {
         application_case_id: stringValue('Durable ApplicationCase ID.', 64),
         request_kind: { type: 'string', enum: ['create_draft', 'send_email', 'monitor_thread', 'resolve_contact', 'follow_up', 'read_application_reply', 'schedule_interview', 'schedule_meeting', 'create_calendar_reminder', 'monitor_writer_deadline', 'monitor_referee_deadline', 'monitor_professor_reply', 'detect_application_messages', 'search_otp', 'request_academic_document', 'request_credential_evaluation_delivery', 'monitor_academic_delivery', 'monitor_test_score_delivery', 'send_fee_waiver_request', 'monitor_fee_waiver', 'admissions_clarification', 'post_submission_response'] },
-        payload: { type: 'object', additionalProperties: true, description: 'Typed request payload. Never include passwords, payment data, or a raw OTP.' },
+        payload: { type: 'object', additionalProperties: true, description: 'Typed request payload. Consequential email uses a verified ApplicationEmailContext and complete EmailActionPackage with claim provenance. Never include passwords, payment data, or a raw OTP.' },
         idempotency_key: stringValue('Stable request key for retries.', 300),
       },
       required: ['application_case_id', 'request_kind', 'payload', 'idempotency_key'],
@@ -795,7 +853,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'agent.request_context',
-    description: 'Pause and ask the user one concise question for genuinely missing information. For a calendar conflict, include up to three verified suggested_options the user can select.',
+    description: 'Pause and ask the user one concise question for genuinely missing information. If the answer is a finite decision, provide two or three verified suggested_options so the user can choose instead of typing. Leave suggested_options empty only when a short structured fact or file is genuinely required (for example a full name, email address, phone number, postal address, date, or score). Never ask the user to write a narrative when a choice, file, or short field will do.',
     parameters: objectSchema({
       question: stringValue('The single concise question shown to the user.', 400),
       missing_fields: {
@@ -1068,121 +1126,6 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   },
   {
     type: 'function',
-    name: 'browser.search_flights',
-    description: 'Run a live, bounded one-way or round-trip flight search in the task-owned browser session.',
-    parameters: objectSchema({
-      session_id: stringValue('Browser execution session ID.', 64),
-      origin_code: stringValue('Three-letter IATA origin code.', 3),
-      destination_code: stringValue('Three-letter IATA destination or city code.', 3),
-      departure_date: stringValue('Outbound date in YYYY-MM-DD format.', 10),
-      return_date: nullableString('Return date in YYYY-MM-DD format, or null for one-way travel.', 10),
-      cabin: {
-        type: 'string',
-        enum: ['economy', 'premium_economy', 'business', 'first'],
-      },
-      max_stops: { type: 'integer', minimum: 0, maximum: 3 },
-      budget_amount: {
-        type: ['number', 'null'],
-        minimum: 0,
-        maximum: 1_000_000,
-      },
-      currency: {
-        type: 'string',
-        enum: ['USD', 'GBP', 'EUR', 'NGN'],
-      },
-      preferred_airlines: {
-        type: 'array',
-        items: stringValue('Optional preferred airline.', 120),
-        maxItems: 10,
-      },
-      excluded_airlines: {
-        type: 'array',
-        items: stringValue('Airline to exclude from the results.', 120),
-        maxItems: 10,
-      },
-      adults: { type: 'integer', minimum: 1, maximum: 9 },
-      children: { type: 'integer', minimum: 0, maximum: 8 },
-      children_ages: {
-        type: 'array',
-        items: { type: 'integer', minimum: 2, maximum: 11 },
-        minItems: 0,
-        maxItems: 8,
-      },
-      infants: { type: 'integer', minimum: 0, maximum: 4 },
-      infant_seats: { type: 'integer', minimum: 0, maximum: 4 },
-      allow_nearby_airports: { type: 'boolean' },
-      departure_time_window: nullableString('Optional local departure time window, HH:MM-HH:MM.', 11),
-      arrival_time_window: nullableString('Optional local arrival time window, HH:MM-HH:MM.', 11),
-    }, [
-      'session_id',
-      'origin_code',
-      'destination_code',
-      'departure_date',
-      'return_date',
-      'cabin',
-      'max_stops',
-      'budget_amount',
-      'currency',
-      'preferred_airlines',
-      'excluded_airlines',
-      'adults',
-      'children',
-      'children_ages',
-      'infants',
-      'infant_seats',
-      'allow_nearby_airports',
-      'departure_time_window',
-      'arrival_time_window',
-    ]),
-    strict: true,
-  },
-  {
-    type: 'function',
-    name: 'browser.select_flight',
-    description: 'Resume the task-owned flight session with one exact option returned by browser.search_flights.',
-    parameters: objectSchema({
-      session_id: stringValue('Browser execution session ID.', 64),
-      option_id: stringValue('Exact option ID returned by the live search.', 128),
-    }, ['session_id', 'option_id']),
-    strict: true,
-  },
-  {
-    type: 'function',
-    name: 'browser.prepare_flight_checkout',
-    description: 'Fill the observed airline traveler and contact-information pages for the selected flight, advance only through safe review/payment handoff controls, and stop before any card or purchase action. Never provide payment details to this tool.',
-    parameters: objectSchema({
-      session_id: stringValue('Browser execution session ID.', 64),
-      travelers: {
-        type: 'array',
-        minItems: 1,
-        maxItems: 9,
-        items: objectSchema({
-          traveler_type: { type: 'string', enum: ['adult', 'child', 'infant'] },
-          title: nullableString('Passenger title or salutation, or null when not supplied.', 30),
-          given_name: stringValue('Legal given/first name exactly as on the travel document.', 80),
-          middle_name: nullableString('Legal middle name, or null.', 80),
-          family_name: stringValue('Legal family/surname exactly as on the travel document.', 80),
-          date_of_birth: stringValue('Date of birth in YYYY-MM-DD format.', 10),
-          gender: nullableString('Gender/sex when required by the provider, or null.', 40),
-          nationality: nullableString('Nationality/citizenship when supplied, or null.', 80),
-          residence_country: nullableString('Country of residence when supplied, or null.', 80),
-          document_type: { type: ['string', 'null'], description: 'passport, national_id, or null when the provider does not require a document yet.' },
-          document_number: nullableString('Passport or national ID number, or null until required.', 80),
-          document_issuing_country: nullableString('Document issuing country, or null.', 80),
-          document_expiry: nullableString('Document expiry date in YYYY-MM-DD format, or null.', 10),
-        }, [
-          'traveler_type', 'title', 'given_name', 'middle_name', 'family_name',
-          'date_of_birth', 'gender', 'nationality', 'residence_country',
-          'document_type', 'document_number', 'document_issuing_country', 'document_expiry',
-        ]),
-      },
-      contact_email: stringValue('Contact email for the booking provider.', 320),
-      contact_phone: stringValue('Contact phone number for the booking provider.', 80),
-    }, ['session_id', 'travelers', 'contact_email', 'contact_phone']),
-    strict: true,
-  },
-  {
-    type: 'function',
     name: 'browser.observe',
     description: 'Read the current task-owned browser page state.',
     parameters: objectSchema({
@@ -1216,27 +1159,21 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
     }, ['session_id', 'target', 'expected_effect']),
     strict: true,
   },
-  {
-    type: 'function',
-    name: 'browser.purchase',
-    description: 'Financial purchase boundary. ShotCount must never execute this tool.',
-    parameters: objectSchema({
-      session_id: stringValue('Browser execution session ID.', 64),
-    }, ['session_id']),
-    strict: true,
-  },
 ]
 
 const policies: Record<string, ToolPolicy> = {
   'agent.request_context': { risk: 'read', approvalKind: null },
   'agent.complete': { risk: 'read', approvalKind: null },
   'application.record_opportunity': { risk: 'prepare', approvalKind: null },
+  'application.search_programmes': { risk: 'prepare', approvalKind: null },
+  'application.research_faculty': { risk: 'prepare', approvalKind: null },
   'application.create_case': { risk: 'prepare', approvalKind: null },
   'application.record_contact': { risk: 'prepare', approvalKind: null },
   'application.register_writer': { risk: 'prepare', approvalKind: null },
   'application.select_writer': { risk: 'read', approvalKind: null },
   'application.update_requirement': { risk: 'prepare', approvalKind: null },
   'application.record_portal_checkpoint': { risk: 'prepare', approvalKind: null },
+  'application.resolve_portal_fields': { risk: 'prepare', approvalKind: null },
   'application.resolve_supplemental_questions': { risk: 'prepare', approvalKind: null },
   'application.record_evidence': { risk: 'prepare', approvalKind: null },
   'application.record_communication': { risk: 'prepare', approvalKind: null },
@@ -1276,13 +1213,9 @@ const policies: Record<string, ToolPolicy> = {
   'calendar.delete_event': { risk: 'external_write', approvalKind: 'calendar_write' },
   'browser.start_session': { risk: 'read', approvalKind: null },
   'browser.navigate': { risk: 'read', approvalKind: null },
-  'browser.search_flights': { risk: 'read', approvalKind: null },
-  'browser.select_flight': { risk: 'prepare', approvalKind: null },
-  'browser.prepare_flight_checkout': { risk: 'prepare', approvalKind: null },
   'browser.observe': { risk: 'read', approvalKind: null },
   'browser.act': { risk: 'prepare', approvalKind: null },
   'browser.submit': { risk: 'external_write', approvalKind: 'browser_submit' },
-  'browser.purchase': { risk: 'financial', approvalKind: null },
 }
 
 export function policyForAgentTool(toolName: string): ToolPolicy {
@@ -1346,17 +1279,6 @@ function validateRecipientBuckets(to: unknown, cc: unknown, bcc: unknown) {
   return new Set(values).size === values.length
 }
 
-function validateDateOnly(value: unknown) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const parsed = new Date(`${value}T00:00:00Z`)
-  return !Number.isNaN(parsed.getTime()) &&
-    parsed.toISOString().slice(0, 10) === value
-}
-
-function validatePastDateOnly(value: unknown) {
-  return validateDateOnly(value) && String(value) <= new Date().toISOString().slice(0, 10)
-}
-
 function validatePhone(value: unknown) {
   if (typeof value !== 'string') return false
   const digits = value.replace(/\D/g, '')
@@ -1408,6 +1330,17 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
       return validateString(value.campaign_id, 64) && isRecord(value.opportunity) &&
         Array.isArray(value.citations) && value.citations.length <= 20 && value.citations.every(isRecord) &&
         validateString(value.idempotency_key, 300)
+    case 'application.search_programmes':
+      return validateString(value.campaign_id, 64) &&
+        validateString(value.query, 2_000) &&
+        Number.isInteger(value.candidate_count) && Number(value.candidate_count) >= 1 && Number(value.candidate_count) <= 20 &&
+        validateString(value.idempotency_key, 300)
+    case 'application.research_faculty':
+      return validateString(value.application_case_id, 64) &&
+        validateString(value.opportunity_id, 64) &&
+        validateString(value.research_scope, 2_000) &&
+        ['application_context', 'outreach'].includes(String(value.purpose)) &&
+        validateString(value.idempotency_key, 300)
     case 'application.create_case':
       return validateString(value.campaign_id, 64) &&
         validateString(value.opportunity_id, 64) &&
@@ -1450,6 +1383,8 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         validateString(value.idempotency_key, 300)
     case 'application.record_portal_checkpoint':
       return validateString(value.application_case_id, 64) && validateString(value.session_id, 64) && isRecord(value.checkpoint) && validateString(value.idempotency_key, 300)
+    case 'application.resolve_portal_fields':
+      return validateString(value.application_case_id, 64) && validateString(value.session_id, 64) && isRecord(value.observation) && validateString(value.idempotency_key, 300)
     case 'application.resolve_supplemental_questions':
       return validateString(value.application_case_id, 64) && validateString(value.session_id, 64) && isRecord(value.observation) && validateString(value.idempotency_key, 300)
     case 'application.record_evidence':
@@ -1685,89 +1620,7 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
         )
     case 'browser.navigate':
       return validateString(value.session_id, 64) && validateUrl(value.url)
-    case 'browser.search_flights':
-      return validateString(value.session_id, 64) &&
-        /^[A-Z]{3}$/.test(String(value.origin_code)) &&
-        /^[A-Z]{3}$/.test(String(value.destination_code)) &&
-        value.origin_code !== value.destination_code &&
-        validateDateOnly(value.departure_date) &&
-        (value.return_date === null || (
-          validateDateOnly(value.return_date) &&
-          Date.parse(`${value.return_date}T00:00:00Z`) > Date.parse(`${value.departure_date}T00:00:00Z`)
-        )) &&
-        ['economy', 'premium_economy', 'business', 'first'].includes(String(value.cabin)) &&
-        Number.isInteger(value.max_stops) &&
-        Number(value.max_stops) >= 0 &&
-        Number(value.max_stops) <= 3 &&
-        (value.budget_amount === null ||
-          (typeof value.budget_amount === 'number' &&
-            Number.isFinite(value.budget_amount) &&
-            value.budget_amount >= 0 &&
-            value.budget_amount <= 1_000_000)) &&
-        ['USD', 'GBP', 'EUR', 'NGN'].includes(String(value.currency)) &&
-        validateStringArray(value.preferred_airlines, 10, 120) &&
-        validateStringArray(value.excluded_airlines, 10, 120) &&
-        Number.isInteger(value.adults) &&
-        Number(value.adults) >= 1 &&
-        Number(value.adults) <= 9 &&
-        Number.isInteger(value.children) &&
-        Number(value.children) >= 0 &&
-        Number(value.children) <= 8 &&
-        Array.isArray(value.children_ages) &&
-        value.children_ages.length === Number(value.children) &&
-        value.children_ages.every((age: unknown) => Number.isInteger(age) && Number(age) >= 2 && Number(age) <= 11) &&
-        Number.isInteger(value.infants) &&
-        Number(value.infants) >= 0 &&
-        Number(value.infants) <= 4 &&
-        Number(value.infants) <= Number(value.adults) &&
-        Number.isInteger(value.infant_seats) &&
-        Number(value.infant_seats) >= 0 &&
-        Number(value.infant_seats) <= Number(value.infants) &&
-        typeof value.allow_nearby_airports === 'boolean' &&
-        validateTimeWindow(value.departure_time_window) &&
-        validateTimeWindow(value.arrival_time_window)
-    case 'browser.select_flight':
-      return validateString(value.session_id, 64) &&
-        /^[a-f0-9]{16,128}$/i.test(String(value.option_id))
-    case 'browser.prepare_flight_checkout':
-      if (Object.keys(value).some(key => /card|cvv|cvc|security|payment|billing|bank|password|otp/i.test(key))) return false
-      return validateString(value.session_id, 64) &&
-        Array.isArray(value.travelers) &&
-        value.travelers.length >= 1 &&
-        value.travelers.length <= 9 &&
-        value.travelers.every((item: unknown) => {
-          if (!isRecord(item)) return false
-          const traveler = item as Record<string, unknown>
-          if (Object.keys(traveler).some(key => /card|cvv|cvc|security|payment|billing|bank|password|otp/i.test(key))) return false
-          const nullable = (candidate: unknown, maximum: number) => candidate === null || validateString(candidate, maximum)
-          const documentType = traveler.document_type
-          const documentNumber = traveler.document_number
-          const documentIssuingCountry = traveler.document_issuing_country
-          const documentExpiry = traveler.document_expiry
-          const anyDocumentDetail = documentType !== null || documentNumber !== null || documentIssuingCountry !== null || documentExpiry !== null
-          const completeDocument = documentType !== null &&
-            validateString(documentNumber, 80) &&
-            validateString(documentIssuingCountry, 80) &&
-            validateDateOnly(documentExpiry)
-          return ['adult', 'child', 'infant'].includes(String(traveler.traveler_type)) &&
-            nullable(traveler.title, 30) &&
-            validateString(traveler.given_name, 80) &&
-            nullable(traveler.middle_name, 80) &&
-            validateString(traveler.family_name, 80) &&
-            validatePastDateOnly(traveler.date_of_birth) &&
-            nullable(traveler.gender, 40) &&
-            nullable(traveler.nationality, 80) &&
-            nullable(traveler.residence_country, 80) &&
-            (documentType === null || documentType === 'passport' || documentType === 'national_id') &&
-            nullable(traveler.document_number, 80) &&
-            nullable(traveler.document_issuing_country, 80) &&
-            (traveler.document_expiry === null || validateDateOnly(traveler.document_expiry)) &&
-            (!anyDocumentDetail || completeDocument)
-        }) &&
-        validateEmail(value.contact_email) &&
-        validatePhone(value.contact_phone)
     case 'browser.observe':
-    case 'browser.purchase':
       return validateString(value.session_id, 64)
     case 'browser.act':
       return validateString(value.session_id, 64) &&
@@ -1838,27 +1691,28 @@ export function validateAgentToolArguments(toolName: string, value: unknown) {
       return validateString(value.application_case_id, 64) &&
         validateString(value.filename, 255) &&
         /\.pdf$/i.test(String(value.filename)) &&
-        ['one_page', 'two_page', 'academic'].includes(String(value.page_target)) &&
-        validateStringArray(value.section_order, 20, 80) &&
-        isRecord(value.cv_data) &&
-        validateString(value.meta_prompt_version, 80) &&
+        ['one_page', 'two_page'].includes(String(value.page_target)) &&
+        validateString(value.latex_content, 120_000) &&
+        isRecord(value.tailoring_brief) &&
+        validateString(value.tailoring_brief.target_institution, 500) &&
+        validateString(value.tailoring_brief.target_programme, 800) &&
+        validateStringArray(value.tailoring_brief.official_source_urls, 12, 2_000, 1) &&
+        validateStringArray(value.tailoring_brief.priority_signals, 12, 300, 2) &&
+        validateStringArray(value.tailoring_brief.applicant_fit_fact_ids, 40, 300, 2) &&
+        validateString(value.tailoring_brief.fit_statement, 2_000) &&
+        value.meta_prompt_version === GRADUATE_CV_META_PROMPT_VERSION &&
         validateString(value.idempotency_key, 300)
     case 'application.generate_supervisor_outreach':
       return validateString(value.application_case_id, 64) &&
         validateString(value.opportunity_id, 64) &&
-        validateString(value.target_programme, 500, true) &&
-        validateString(value.target_institution, 240, true) &&
-        validateString(value.target_intake, 120, true) &&
-        isRecord(value.policy) &&
-        isRecord(value.supervisor_dossier) &&
-        Array.isArray(value.applicant_fit_evidence) && value.applicant_fit_evidence.length >= 1 && value.applicant_fit_evidence.length <= 30 && value.applicant_fit_evidence.every(isRecord) &&
-        isRecord(value.strongest_connection) &&
-        validateString(value.applicant_name, 240, true) &&
-        validateString(value.applicant_email, 320, true) &&
-        (value.applicant_role === null || validateString(value.applicant_role, 240)) &&
-        isRecord(value.writing) &&
-        isRecord(value.cv) &&
-        validateString(value.idempotency_key, 300)
+        validateString(value.idempotency_key, 300) && (
+          validateString(value.faculty_id, 160) ||
+          validateString(value.target_programme, 500, true) && validateString(value.target_institution, 240, true) &&
+          validateString(value.target_intake, 120, true) && isRecord(value.policy) && isRecord(value.supervisor_dossier) &&
+          Array.isArray(value.applicant_fit_evidence) && value.applicant_fit_evidence.length >= 1 && value.applicant_fit_evidence.length <= 30 && value.applicant_fit_evidence.every(isRecord) &&
+          isRecord(value.strongest_connection) && validateString(value.applicant_name, 240, true) && validateString(value.applicant_email, 320, true) &&
+          (value.applicant_role === null || validateString(value.applicant_role, 240)) && isRecord(value.email_action_package) && isRecord(value.cv)
+        )
     case 'application.submit':
       return validateString(value.application_case_id, 64) &&
         validateString(value.session_id, 64) &&

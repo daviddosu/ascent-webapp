@@ -93,6 +93,18 @@ describe('David application controller v2.1', () => {
     }
   })
 
+  it('allows source-backed faculty intelligence while a writer lane is active', () => {
+    const facultyResearch: ProposedApplicationAction = {
+      id: 'faculty-research',
+      kind: 'professor',
+      toolName: 'application.research_faculty',
+      caseId: 'case-1',
+      expectedEvidenceTypes: ['OFFICIAL_SOURCE'],
+    }
+    const errors = validateApplicationAction({ state: 'WRITER_EXECUTION', currentCaseId: 'case-1', action: facultyResearch, facts: [], requirements })
+    expect(errors.map(error => error.code)).not.toContain('action_outside_current_state')
+  })
+
   it('allows canonical proposal and fee preparation without weakening submission gates', () => {
     const proposal: ProposedApplicationAction = {
       id: 'proposal', kind: 'document', toolName: 'application.prepare_research_proposal', caseId: 'case-1',
@@ -123,6 +135,20 @@ describe('David application controller v2.1', () => {
     const error = validateApplicationAction({ state: 'PORTAL_EXECUTION', currentCaseId: 'case-1', action, facts: [], requirements })[0]!
     expect(recoverInvalidApplicationAction({ state: 'PORTAL_EXECUTION', error, priorRetries: 0 })).toMatchObject({ state: 'PORTAL_EXECUTION', retryAllowed: true, fallback: 'MODEL_REPAIR' })
     expect(recoverInvalidApplicationAction({ state: 'PORTAL_EXECUTION', error, priorRetries: 1 })).toMatchObject({ state: 'PORTAL_EXECUTION', retryAllowed: false, fallback: 'HARNESS_FALLBACK' })
+  })
+
+  it('allows the bounded official-requirements repair to rewrite the opportunity in CASE_CREATION', () => {
+    const action: ProposedApplicationAction = {
+      id: 'requirements-repair', kind: 'research', toolName: 'application.record_opportunity', caseId: 'case-1',
+      expectedEvidenceTypes: ['OFFICIAL_SOURCE'],
+    }
+    expect(validateApplicationAction({
+      state: 'CASE_CREATION', currentCaseId: 'case-1', action, facts: [], requirements,
+      allowRequirementsRecovery: true,
+    })).toEqual([])
+    expect(validateApplicationAction({
+      state: 'CASE_CREATION', currentCaseId: 'case-1', action, facts: [], requirements,
+    }).map(error => error.code)).toContain('action_outside_current_state')
   })
 
   it('enforces legal transitions and NO_EVIDENCE => NO_COMPLETION', () => {

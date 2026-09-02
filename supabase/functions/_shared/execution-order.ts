@@ -1,4 +1,4 @@
-import { actionIsAffirmed, calendarWriteIsAffirmed } from './communication-safety.ts'
+import { classifyTaskOperation } from './agent-execution-plan.ts'
 
 export type ProviderActionEvidence = {
   tool_name: string
@@ -14,12 +14,12 @@ export type RequiredEffect = 'gmail_send' | 'calendar_write' | 'application_subm
  * Keep the ledger scoped to task contracts that actually mutate Calendar.
  */
 export function requiredEffectsForObjective(objective: string) {
-  const text = objective.toLocaleLowerCase()
+  const operation = classifyTaskOperation(objective)
   const required: RequiredEffect[] = []
-  if (calendarWriteIsAffirmed(text) && /\b(?:calendar|event|meeting|appointment|call|schedule|reschedule|move|update|cancel|delete)\b/.test(text)) {
+  if (operation.requestedEffects.includes('calendar_write')) {
     required.push('calendar_write')
   }
-  if (actionIsAffirmed(text, 'gmail_send') || /\bemail\s+(?:the\s+)?(?:options|attendee|participant)\b/i.test(text)) {
+  if (operation.requestedEffects.includes('gmail_send')) {
     required.push('gmail_send')
   }
   return required

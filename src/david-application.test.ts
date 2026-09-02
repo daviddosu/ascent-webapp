@@ -121,6 +121,28 @@ describe('David application execution domain', () => {
     expect(canSubmitApplication(report, true, submissionIdempotencyKey('case-1', 'checkpoint-1', 'package'))).toMatchObject({ allowed: false })
   })
 
+  it('does not declare readiness while a contextual application answer is unresolved', () => {
+    const report = buildReadinessReport({
+      applicationCase: applicationCase(),
+      opportunity,
+      artifacts: [],
+      pendingInputs: [{
+        id: 'application-input:phone',
+        requirementId: 'phone',
+        title: 'Add mobile phone',
+        question: 'What should I enter for mobile phone?',
+        detail: 'This appears in Personal details.',
+        deadline: null,
+        kind: 'fact',
+        status: 'parked',
+      }],
+      refereeStatus: ['referee-1: submitted'],
+      portalValidationState: ['No errors'],
+    })
+    expect(report.ready).toBe(false)
+    expect(report.blockers).toContain('1 application detail still needs an answer.')
+  })
+
   it('classifies post-submission mail into the next application stage', () => {
     expect(classifyApplicationReply('Interview invitation', 'We would like to invite you to an interview.')).toBe('interview_invitation')
     expect(nextApplicationCaseState('interview_invitation')).toMatchObject({ currentStage: 'interview', status: 'interview' })

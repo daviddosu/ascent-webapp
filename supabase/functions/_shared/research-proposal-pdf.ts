@@ -7,7 +7,10 @@
  * master document includes.
  */
 
-import { escapeLatex } from './cv.ts'
+// This renderer is also loaded by the Vercel LaTeX worker. Keep its small
+// escaping dependency in a JavaScript module so the worker does not ship a
+// Deno-only `.ts` runtime import.
+import { escapeLatex } from './cv-runtime.js'
 import type { ProposalCitation, ProposalDraft, ResearchProposalRequirement } from './research-proposal-workflow.ts'
 
 export const RESEARCH_PROPOSAL_TEMPLATE_ID = 'uc_shss_research_proposal_v1' as const

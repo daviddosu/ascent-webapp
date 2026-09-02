@@ -1468,6 +1468,43 @@ function enrichLanguageAndAdmissions(requirements: AcademicEvidenceRequirement[]
   })
 }
 
+/**
+ * Collapse repeated rules before they reach the durable evidence tables.
+ *
+ * Requirement identity is intentionally derived from the application case,
+ * evidence type, institution, and stage.  A model can nevertheless return
+ * the same rule more than once (for example once in `requirements` and once
+ * in `rules`).  Sending those duplicate identities in one PostgREST upsert
+ * causes PostgreSQL to reject the whole statement with "cannot affect row a
+ * second time".  Keep one canonical row while retaining additive evidence
+ * and dependency context from every equivalent rule.
+ */
+function deduplicateAcademicRequirements(requirements: AcademicEvidenceRequirement[]) {
+  const byId = new Map<string, AcademicEvidenceRequirement>()
+  for (const requirement of requirements) {
+    const existing = byId.get(requirement.id)
+    if (!existing) {
+      byId.set(requirement.id, requirement)
+      continue
+    }
+    const sourceEvidence = [...new Map([...existing.sourceEvidence, ...requirement.sourceEvidence].map(item => [item.id, item])).values()]
+    const completionEvidence = [...new Map([...existing.completionEvidence, ...requirement.completionEvidence].map(item => [item.id, item])).values()]
+    byId.set(requirement.id, {
+      ...existing,
+      acceptedEvidenceTypes: [...new Set([...existing.acceptedEvidenceTypes, ...requirement.acceptedEvidenceTypes])],
+      sourceEvidence,
+      dependencies: [...new Set([...existing.dependencies, ...requirement.dependencies])],
+      dependencyIds: [...new Set([...existing.dependencyIds, ...requirement.dependencyIds])],
+      currentArtifactIds: [...new Set([...existing.currentArtifactIds, ...requirement.currentArtifactIds])],
+      completionEvidence,
+      currentArtifact: existing.currentArtifact ?? requirement.currentArtifact,
+      blocker: existing.blocker ?? requirement.blocker,
+      cost: existing.cost ?? requirement.cost,
+    })
+  }
+  return [...byId.values()]
+}
+
 function nextAcademicAction(requirements: AcademicEvidenceRequirement[], context: AcademicContextResolution, credentialCases: CredentialEvaluationCase[]): { action: AcademicAcademicAction | null; interaction: AcademicProgressInteraction | null } {
   const relevant = requirements.filter(item => academicEvidenceRequirementIsRelevant(item) && !academicEvidenceRequirementIsComplete(item) && academicRequirementDependenciesSatisfied(item, requirements)).sort((left, right) => {
     const leftDeadline = left.deadline ? Date.parse(left.deadline) : Number.MAX_SAFE_INTEGER
@@ -1553,7 +1590,7 @@ export function coordinateAcademicEvidence(input: { applications: AcademicApplic
       return institutions.map(institution => normalizeRule({ application, rule, institution, context }))
     })
   })
-  const enriched = enrichLanguageAndAdmissions(rawRequirements, context, input.now ?? now())
+  const enriched = deduplicateAcademicRequirements(enrichLanguageAndAdmissions(rawRequirements, context, input.now ?? now()))
   const credential = buildCredentialEvaluationCases({ applicantId: input.context.applicantId, requirements: enriched, existing: context.credentialEvaluations })
   const coverageMap = buildAcademicEvidenceCoverageMap({ requirements: enriched, credentialEvaluationCases: credential.cases })
   const selected = nextAcademicAction(enriched, context, credential.cases)

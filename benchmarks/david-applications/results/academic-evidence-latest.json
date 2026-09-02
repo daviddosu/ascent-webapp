@@ -2,7 +2,7 @@
   "suiteVersion": "academic-evidence-qualification@1.0.0",
   "passed": true,
   "metrics": {
-    "requirementsDetected": 11,
+    "requirementsDetected": 10,
     "institutionsCovered": 2,
     "applicationsCovered": 2,
     "credentialEvaluationCases": 1,
@@ -285,17 +285,6 @@
           "type": "english_language_test",
           "status": "waiver_evidence_needed",
           "requiredness": "required",
-          "sourceEvidenceIds": [
-            "benchmark:official:academic-guide"
-          ],
-          "artifactId": null
-        },
-        {
-          "id": "academic:academic-case-b:admissions_test:lagos:application",
-          "institution": "University of Lagos",
-          "type": "admissions_test",
-          "status": "complete",
-          "requiredness": "not_accepted",
           "sourceEvidenceIds": [
             "benchmark:official:academic-guide"
           ],

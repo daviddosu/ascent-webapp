@@ -174,6 +174,45 @@ Deno.test('keeps a detailed browser snapshot when the opportunity already cites 
   assertEquals(result.sourceBacked, true)
 })
 
+Deno.test('accepts an applicant-supplied recommender without opening another choice question', () => {
+  const context = resolveRecommendationContext({
+    applicationContext: {
+      referees: [{
+        id: 'applicant-selected-referee:req-1',
+        name: 'Dr Example',
+        email: 'dr.example@northbridge.example',
+        relationshipType: 'other',
+      }],
+    },
+    requirements: requirements(),
+    programme: 'MSc Computational Social Science',
+    selectedCandidateIds: ['applicant-selected-referee:req-1'],
+  })
+
+  assertEquals(context.nextInteraction, null)
+  assertEquals(context.candidates[0]?.email, 'dr.example@northbridge.example')
+  assertEquals(context.unresolved.includes('recommender_selection'), false)
+})
+
+Deno.test('reopens the bounded choice when a resumed turn carries a stale candidate id', () => {
+  const context = resolveRecommendationContext({
+    applicationContext: {
+      referees: [{
+        id: 'current-referee',
+        name: 'Dr Current',
+        email: 'current@example.org',
+        relationshipType: 'professor',
+      }],
+    },
+    requirements: requirements(),
+    programme: 'MSc Computational Social Science',
+    selectedCandidateIds: ['stale-referee-from-an-earlier-slate'],
+  })
+
+  assertEquals(context.nextInteraction?.kind, 'multiple_choice')
+  assert(context.unresolved.includes('recommender_selection'))
+})
+
 Deno.test('discovers and merges profile, Gmail, Contacts, and previous-application candidates', () => {
   const candidates = discoverRecommenderCandidates({
     profile: {
@@ -188,6 +227,14 @@ Deno.test('discovers and merges profile, Gmail, Contacts, and previous-applicati
   assert(ada)
   assert(ada.relationshipEvidence.some(item => item.sourceKind === 'direct_observation'))
   assert(candidates.find(item => item.name === 'Prof Sam Green')?.relationshipEvidence.some(item => item.sourceKind === 'applicant_update'))
+})
+
+Deno.test('does not surface a recommender without applicant-owned identity provenance', () => {
+  const candidates = discoverRecommenderCandidates({
+    profile: { referees: [{ name: 'Example Referee', email: 'example@simulated.test', relationship: 'MSc supervisor' }] },
+    existingCandidates: [{ id: 'profile:example-referee-1', name: 'Example Referee', email: 'example@simulated.test', relationship: 'MSc supervisor', sourceIds: ['profile:example-referee-1'] }],
+  })
+  assertEquals(candidates, [])
 })
 
 Deno.test('ranks observed relationship evidence ahead of title prestige and builds a complementary portfolio', () => {

@@ -14,6 +14,21 @@ import {
   type RequirementNode,
 } from './application-controller.ts'
 import type { ApplicationQuestion } from './application-questions.ts'
+import type {
+  ApplicationPendingInput,
+  ApplicationRequirementExecutionState,
+  ApplicationRequirementState,
+  ApplicationWorkstream,
+  ApplicationWorkstreamOwner,
+} from './david-applications.ts'
+import { applicationPendingInputFor } from './application-pending-input.ts'
+import { applicationContextWindow } from './application-context-broker.ts'
+import { isApplicationSubmissionMethodRequirement } from './application-requirement-evidence.ts'
+import {
+  missingValueOwnerForRequirement,
+  programmeValueForRequirement,
+  type MissingValueOwner,
+} from './application-value-ownership.ts'
 
 export const APPLICATION_ENGINE_VERSION = 'david-application-engine@3' as const
 
@@ -48,7 +63,20 @@ export type RetryState = {
 
 export type EngineRequirement = RequirementNode & {
   type: RequirementType
-  source: { id: string; url?: string | null; authority?: 'official' | 'applicant' | 'provider' | 'generated' }
+  source: {
+    id: string
+    url?: string | null
+    authority?: 'official' | 'applicant' | 'provider' | 'generated'
+    field?: string | null
+    section?: string | null
+    portal?: string | null
+    suggestedValue?: string | number | boolean | null
+    applicantAvailability?: string | null
+    canonicalKey?: string | null
+    officialWording?: string | null
+    missingValueOwner?: MissingValueOwner | null
+    programmeValue?: string | number | boolean | null
+  }
   evidenceContract: ObservationKind[]
   retry: RetryState
   requiredFactIds: string[]
@@ -221,14 +249,71 @@ export function selectNextUnresolvedRequirement(state: ApplicationEngineState, n
   const candidates = state.requirements.filter(requirement =>
     requirement.required && !requirementIsComplete(requirement) && requirementDependenciesSatisfied(requirement, state.requirements),
   )
+  const missingFactIds = (requirement: EngineRequirement) => requirement.requiredFactIds.filter(id =>
+    state.facts.find(fact => fact.factId === id)?.verification !== 'VERIFIED',
+  )
+  const deferred = (requirement: EngineRequirement) =>
+    (requirement.status === 'WAITING' && requirementMissingValueOwner(requirement) !== 'programme') ||
+    requirement.status === 'BLOCKED' ||
+    (missingFactIds(requirement).length > 0 && requirement.retry.attempts > 0 && requirementMissingValueOwner(requirement) !== 'programme')
+  const executionPriority = (requirement: EngineRequirement) => {
+    const name = requirement.name.toLocaleLowerCase()
+    if (requirement.type === 'document' && /\b(?:cv|resume|curriculum vitae)\b/.test(name)) return 0
+    if (requirement.type === 'document') return 1
+    if (requirement.type === 'writer' || requirement.type === 'research_proposal') return 2
+    if (requirement.type === 'professor' || requirement.type === 'referee' || requirement.type === 'communication') return 3
+    return 4
+  }
   candidates.sort((left, right) => {
+    const leftPriority = executionPriority(left)
+    const rightPriority = executionPriority(right)
+    if (leftPriority !== rightPriority) return leftPriority - rightPriority
     const leftReady = time(left.waitUntil) <= time(now) ? 0 : 1
     const rightReady = time(right.waitUntil) <= time(now) ? 0 : 1
     const leftDependents = state.requirements.filter(item => item.dependencyIds.includes(left.id)).length
     const rightDependents = state.requirements.filter(item => item.dependencyIds.includes(right.id)).length
     return leftReady - rightReady || time(left.deadline) - time(right.deadline) || rightDependents - leftDependents || left.id.localeCompare(right.id)
   })
-  return { requirement: candidates[0] ?? null, blocked: null }
+  const runnable = candidates.find(requirement => !deferred(requirement))
+  return {
+    requirement: runnable ?? candidates[0] ?? null,
+    blocked: null,
+    deferredRequirements: candidates.filter(requirement => deferred(requirement)),
+  }
+}
+
+/**
+ * Return every dependency-ready lane that can run without applicant or
+ * provider input. The engine still exposes one deterministic next step to the
+ * model, but the cockpit needs the full runnable set so it can show genuine
+ * independent work as active instead of pretending it is all waiting behind
+ * one lane.
+ */
+export function selectRunnableRequirements(state: ApplicationEngineState, now = new Date().toISOString()) {
+  const selected = selectNextUnresolvedRequirement(state, now)
+  if (selected.blocked) return { requirements: [] as EngineRequirement[], blocked: selected.blocked }
+  const deferredIds = new Set((selected.deferredRequirements ?? []).map(requirement => requirement.id))
+  const missingFactIds = (requirement: EngineRequirement) => requirement.requiredFactIds.filter(id =>
+    state.facts.find(fact => fact.factId === id)?.verification !== 'VERIFIED',
+  )
+  const runnable = state.requirements.filter(requirement =>
+    requirement.required &&
+    !requirementIsComplete(requirement) &&
+    requirementDependenciesSatisfied(requirement, state.requirements) &&
+    !deferredIds.has(requirement.id) &&
+    (requirement.status !== 'WAITING' || requirementMissingValueOwner(requirement) === 'programme') &&
+    requirement.status !== 'BLOCKED' &&
+    !(missingFactIds(requirement).length > 0 && requirement.retry.attempts > 0 && requirementMissingValueOwner(requirement) !== 'programme'),
+  )
+  const first = selected.requirement && runnable.some(requirement => requirement.id === selected.requirement.id)
+    ? selected.requirement
+    : null
+  return {
+    requirements: first
+      ? [first, ...runnable.filter(requirement => requirement.id !== first.id)]
+      : runnable,
+    blocked: null,
+  }
 }
 
 function relatedVerifiedFacts(state: ApplicationEngineState, requirement: EngineRequirement) {
@@ -272,7 +357,11 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
       ? { kind: 'COMPLETE', caseId: state.caseId }
       : { kind: 'BLOCKED', caseId: state.caseId, reason: 'Submission has no verified resulting-state evidence.' }
   }
-  if (requirement.status === 'WAITING' && time(requirement.waitUntil) > time(now)) return { kind: 'WAIT', caseId: state.caseId, requirementId: requirement.id, until: requirement.waitUntil ?? null }
+  if (requirement.status === 'BLOCKED') return { kind: 'BLOCKED', caseId: state.caseId, reason: requirement.blocker ?? `Requirement ${requirement.name} is blocked.` }
+  if (requirement.status === 'WAITING' && requirement.waitingOn === 'user' && requirementMissingValueOwner(requirement) !== 'programme') {
+    return { kind: 'USER_HANDOFF', caseId: state.caseId, requirementId: requirement.id, missingFactIds: requirement.requiredFactIds.filter(id => state.facts.find(fact => fact.factId === id)?.verification !== 'VERIFIED'), tier: 5 }
+  }
+  if (requirement.status === 'WAITING') return { kind: 'WAIT', caseId: state.caseId, requirementId: requirement.id, until: requirement.waitUntil ?? null }
   if (!requirement.evidenceContract.length) return { kind: 'BLOCKED', caseId: state.caseId, reason: `Requirement ${requirement.id} has no evidence contract.` }
   if (requirement.type === 'supplemental_question') {
     const question = state.questions?.find(item => item.id === requirement.id || item.questionKey === requirement.source.id || item.id === requirement.source.id) ?? null
@@ -288,9 +377,10 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
       return { kind: 'SUPPLEMENTAL_QUESTION', caseId: state.caseId, requirementId: requirement.id, questionId: question.id, action: 'resolve', question }
     }
   }
+  const missingValueOwner = requirementMissingValueOwner(requirement)
   const missingFacts = requirement.requiredFactIds.filter(id => state.facts.find(fact => fact.factId === id)?.verification !== 'VERIFIED')
   if (missingFacts.length) {
-    const searched = requirement.retry.attempts > 0
+    const searched = requirement.retry.attempts > 0 && missingValueOwner !== 'programme'
     return searched
       ? { kind: 'USER_HANDOFF', caseId: state.caseId, requirementId: requirement.id, missingFactIds: missingFacts, tier: 5 }
       : { kind: 'EXECUTE', caseId: state.caseId, requirementId: requirement.id, tier: 0, action: 'search_verified_context', evidenceContract: ['artifact'], idempotencyKey: `fact-search:${state.caseId}:${requirement.id}` }
@@ -314,7 +404,7 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
   // research harness first; otherwise the model is asked to choose between
   // sources that the controller has not actually observed.
   const hasEvidenceForSemanticReview = requirement.type !== 'official_requirement' || semanticEvidence.length > 0
-  if (semanticFunction && hasEvidenceForSemanticReview && !verifiedRefereeFacts && !semanticEvidence.some(item => item.evidenceIds.includes(`semantic:${semanticFunction}`))) {
+  if (semanticFunction && hasEvidenceForSemanticReview && !verifiedRefereeFacts && !semanticEvidence.some(item => item.evidenceIds.includes(`semantic:${semanticFunction}`)) && (missingValueOwner !== 'programme' || semanticEvidence.length > 0)) {
     return { kind: 'SEMANTIC_DECISION', caseId: state.caseId, requirementId: requirement.id, tier: requirement.retry.attempts >= 1 ? 4 : 2, request: semanticRequestFor(state, requirement, semanticFunction) }
   }
   if (requirement.evidenceContract.every(kind => existing.some(item => item.kind === kind))) return { kind: 'VERIFY', caseId: state.caseId, requirementId: requirement.id, evidenceContract: requirement.evidenceContract }
@@ -324,6 +414,220 @@ export function planApplicationEngineStep(state: ApplicationEngineState, now = n
     action: harness ? 'execute_with_harness' : 'execute_primitive', evidenceContract: requirement.evidenceContract,
     idempotencyKey: `${requirement.type}:${state.caseId}:${requirement.id}`,
   }
+}
+
+function workstreamOwner(responsible: RequirementNode['responsible']): ApplicationWorkstreamOwner {
+  if (responsible === 'applicant') return 'you'
+  if (responsible === 'david') return 'shotcount'
+  return responsible
+}
+
+function requirementQuestion(requirement: EngineRequirement) {
+  const name = requirement.name.toLocaleLowerCase()
+  if (requirement.type === 'transcript' || /transcript|academic record|grade report/.test(name)) return 'Please attach the transcript required for this application so I can validate it.'
+  if (requirement.type === 'degree_certificate' || requirement.type === 'proof_of_graduation') return 'Can you provide your degree certificate or proof of graduation, or tell me when you can get it?'
+  if (requirement.type === 'referee') return 'Who should I contact for your recommendation letter?'
+  if (requirement.type === 'writer' || requirement.type === 'research_proposal') {
+    const instruction = String(requirement.exactInstructions ?? '').replace(/\s+/g, ' ').trim()
+    if (instruction && !/^verify the required essay or statement prompts?/i.test(instruction)) {
+      const summary = instruction.length > 180 ? `${instruction.slice(0, 177).trimEnd()}…` : instruction
+      return `Write about: ${summary}`
+    }
+    return 'I’m checking the programme instructions and will brief the writer automatically.'
+  }
+  if (requirement.type === 'admissions_test' || requirement.type === 'english_language_test') return 'Do you already have this score, or can you take the test before the deadline?'
+  if (requirement.source.missingValueOwner === 'programme') return ''
+  return `What ${requirement.name.toLocaleLowerCase()} should I use?`
+}
+
+function requirementMissingValueOwner(requirement: EngineRequirement): MissingValueOwner {
+  return requirement.source.missingValueOwner ?? missingValueOwnerForRequirement({
+    name: requirement.name,
+    type: requirement.type,
+    canonicalKey: requirement.source.canonicalKey,
+    responsible: requirement.responsible,
+    exactInstructions: requirement.exactInstructions ?? requirement.source.officialWording,
+    source: requirement.source,
+  })
+}
+
+function programmeRequirementValue(requirement: EngineRequirement) {
+  return requirement.source.programmeValue ?? requirement.source.suggestedValue ?? programmeValueForRequirement({
+    name: requirement.name,
+    canonicalKey: requirement.source.canonicalKey,
+    source: requirement.source,
+    exactInstructions: requirement.exactInstructions ?? requirement.source.officialWording,
+  })
+}
+
+function isTranscriptRequirement(requirement: EngineRequirement) {
+  return requirement.type === 'transcript' || /transcript|academic record|grade report/i.test(requirement.name)
+}
+
+/** Requirements that are only created after an offer must stay represented in
+ * the canonical map, but they are not active application work before admission. */
+function isFutureApplicationRequirement(requirement: Pick<EngineRequirement, 'name' | 'exactInstructions' | 'source'>) {
+  const text = `${requirement.name} ${requirement.exactInstructions ?? ''} ${JSON.stringify(requirement.source ?? {})}`
+  return /\b(?:after admission|after acceptance|once admitted|upon admission|upon enrollment|post[- ]admission|after you are admitted|following admission)\b/i.test(text)
+}
+
+function hasIncompleteDependencyOfType(
+  requirement: EngineRequirement,
+  graph: EngineRequirement[],
+  predicate: (candidate: EngineRequirement) => boolean,
+  visited = new Set<string>(),
+): boolean {
+  if (visited.has(requirement.id)) return false
+  const nextVisited = new Set(visited).add(requirement.id)
+  const byId = new Map(graph.map(item => [item.id, item]))
+  for (const dependencyId of requirement.dependencyIds) {
+    const dependency = byId.get(dependencyId)
+    if (!dependency) continue
+    if (predicate(dependency) && !requirementIsComplete(dependency)) return true
+    if (hasIncompleteDependencyOfType(dependency, graph, predicate, nextVisited)) return true
+  }
+  return false
+}
+
+/**
+ * Projects the requirement graph into user-facing lanes without changing the
+ * durable engine truth. A user-held document is one lane waiting for input;
+ * every other dependency-ready lane remains runnable.
+ */
+export function projectApplicationWorkstreams(state: ApplicationEngineState, step = planApplicationEngineStep(state)) {
+  const activeRequirementId = 'requirementId' in step ? step.requirementId : null
+  const runnableRequirementIds = new Set(selectRunnableRequirements(state).requirements.map(requirement => requirement.id))
+  const workstreams: ApplicationWorkstream[] = []
+  const pendingInputs: ApplicationPendingInput[] = []
+  for (const requirement of state.requirements.filter(item => item.required && !requirementIsComplete(item) && !isFutureApplicationRequirement(item) && !isApplicationSubmissionMethodRequirement({ name: item.name, requirement_type: item.type }))) {
+    const missingValueOwner = requirementMissingValueOwner(requirement)
+    const missingFacts = requirement.requiredFactIds.filter(id => state.facts.find(fact => fact.factId === id)?.verification !== 'VERIFIED')
+    const autonomousNarrative = (requirement.type === 'writer' || requirement.type === 'research_proposal') &&
+      !['applicant', 'user_choice'].includes(missingValueOwner)
+    const autonomousUserPause = autonomousNarrative && requirement.status === 'WAITING' && requirement.waitingOn === 'user'
+    const userWaiting = !autonomousNarrative && ['applicant', 'user_choice'].includes(missingValueOwner) && requirement.status === 'WAITING' && requirement.waitingOn === 'user'
+    const missingUserFact = !autonomousNarrative && ['applicant', 'user_choice'].includes(missingValueOwner) && missingFacts.length > 0 && requirement.retry.attempts > 0
+    const externalWaiting = requirement.status === 'WAITING' && !userWaiting && !autonomousUserPause && missingValueOwner !== 'programme'
+    const transcriptRequirement = isTranscriptRequirement(requirement)
+    const transcriptDependency = hasIncompleteDependencyOfType(requirement, state.requirements, isTranscriptRequirement)
+    const status: ApplicationWorkstream['status'] = requirement.status === 'BLOCKED'
+      ? 'blocked'
+      : userWaiting || missingUserFact
+        ? 'ready_for_user'
+        : autonomousUserPause
+          ? 'active'
+        : externalWaiting
+          ? 'waiting_external'
+          : requirement.id === activeRequirementId || runnableRequirementIds.has(requirement.id)
+            ? 'active'
+            : 'queued'
+    const owner = workstreamOwner(requirement.responsible)
+    const detail = transcriptDependency
+      ? status === 'blocked'
+        ? 'This cannot continue until your transcript is attached.'
+        : 'Waiting for your transcript before this can continue.'
+      : transcriptRequirement && status === 'ready_for_user'
+        ? 'Your transcript is required before this application can continue.'
+      : status === 'active' && requirement.id === activeRequirementId
+      ? 'I’m taking care of this now.'
+      : status === 'active' && autonomousNarrative
+        ? requirement.exactInstructions && !/^verify the required essay or statement prompts?/i.test(requirement.exactInstructions)
+          ? 'I’m briefing the writer with the programme instructions.'
+          : 'I’m checking the programme instructions and briefing the writer.'
+      : status === 'active'
+        ? 'I can work on this independently while you handle the items waiting on you.'
+      : status === 'ready_for_user'
+        ? 'You can add this while I continue with the other work.'
+          : status === 'waiting_external'
+          ? `Waiting for ${owner === 'institution' ? 'the institution' : owner === 'referee' ? 'your referee' : 'an update'}.`
+          : status === 'blocked'
+            ? 'Needs a decision before it can continue.'
+            : 'Available after its dependencies are verified.'
+    workstreams.push({
+      id: `application-workstream:${requirement.id}`,
+      requirementId: requirement.id,
+      title: requirement.name,
+      status,
+      owner,
+      detail,
+      deadline: requirement.deadline,
+      instructions: requirement.exactInstructions ?? null,
+    })
+    const parkedByApplicant = ['later', 'can_get', 'can_get_document', 'can_take_before_deadline'].includes(requirement.source.applicantAvailability ?? '')
+    if (status === 'ready_for_user' && !autonomousNarrative && !parkedByApplicant && ['applicant', 'user_choice'].includes(missingValueOwner)) {
+      pendingInputs.push(applicationPendingInputFor({
+        id: `application-input:${requirement.id}`,
+        requirementId: requirement.id,
+        name: requirement.name,
+        question: requirementQuestion(requirement),
+        detail: transcriptRequirement
+          ? 'Your transcript is required before the dependent application steps can continue.'
+          : 'This is waiting on you. I’ll keep moving on the rest of the application.',
+        deadline: requirement.deadline,
+        type: requirement.type,
+        instructions: requirement.exactInstructions,
+        required: requirement.required,
+        source: {
+          label: requirement.type === 'portal_field' ? 'Application form' : 'Official programme requirements',
+          url: requirement.source.url ?? null,
+          section: requirement.source.section ?? null,
+          field: requirement.source.field ?? null,
+        },
+        portal: requirement.source.portal ?? null,
+        suggestedValue: requirement.source.suggestedValue ?? null,
+        missingValueOwner,
+        programmeValue: programmeRequirementValue(requirement),
+        blockedRequirementIds: [requirement.id],
+      }))
+    }
+  }
+  const contextWindow = applicationContextWindow(pendingInputs)
+  return {
+    workstreams,
+    pendingInputs: contextWindow.active ? [contextWindow.active, ...contextWindow.queued] : contextWindow.queued,
+    queuedInputCount: contextWindow.active ? contextWindow.queued.length : contextWindow.unresolvedCount,
+  }
+}
+
+/**
+ * Reconcile every canonical requirement, including satisfied and optional
+ * items. This is deliberately separate from the concise workstream projection
+ * so a UI window can stay small without dropping execution truth.
+ */
+export function projectApplicationRequirementStates(state: ApplicationEngineState, step = planApplicationEngineStep(state)): ApplicationRequirementState[] {
+  const activeRequirementId = 'requirementId' in step ? step.requirementId : null
+  const runnableIds = new Set(selectRunnableRequirements(state).requirements.map(requirement => requirement.id))
+  const byId = new Map(state.requirements.map(requirement => [requirement.id, requirement]))
+  const dependencyComplete = (requirement: EngineRequirement) => requirement.dependencyIds.every(id => {
+    const dependency = byId.get(id)
+    return Boolean(dependency && requirementIsComplete(dependency))
+  })
+  const stateFor = (requirement: EngineRequirement): ApplicationRequirementExecutionState => {
+    if (isFutureApplicationRequirement(requirement)) return 'not_applicable'
+    if (isApplicationSubmissionMethodRequirement({ name: requirement.name, requirement_type: requirement.type })) {
+      if (requirementIsComplete(requirement)) return 'satisfied'
+      return dependencyComplete(requirement) ? 'runnable' : 'blocked_by_dependency'
+    }
+    if (!requirement.required) return 'not_applicable'
+    if (requirementIsComplete(requirement)) return 'satisfied'
+    if (requirement.status === 'BLOCKED') return 'blocked_by_dependency'
+    if (requirement.status === 'WAITING') {
+      const owner = requirementMissingValueOwner(requirement)
+      if (owner === 'programme') return dependencyComplete(requirement) ? 'runnable' : 'blocked_by_dependency'
+      return requirement.waitingOn === 'user' ? 'waiting_on_user' : 'waiting_external'
+    }
+    if (!dependencyComplete(requirement)) return 'blocked_by_dependency'
+    if (requirement.id === activeRequirementId || requirement.status === 'IN_PROGRESS') return 'running'
+    if (runnableIds.has(requirement.id)) return 'runnable'
+    return 'blocked_by_dependency'
+  }
+  return state.requirements.map(requirement => ({
+    requirementId: requirement.id,
+    name: requirement.name,
+    state: stateFor(requirement),
+    dependencyIds: [...requirement.dependencyIds],
+    blocker: requirement.blocker ?? requirement.waitingReason ?? null,
+  }))
 }
 
 export function validateSemanticDecision(state: ApplicationEngineState, request: SemanticRequest, decision: SemanticDecision) {
@@ -407,10 +711,14 @@ export function verifyPortalExecutionContract(contract: PortalExecutionContract,
 export function applicationEngineDirective(state: ApplicationEngineState, step = planApplicationEngineStep(state)) {
   if (step.kind === 'CONTROLLER') {
     return [
-      'APPLICATION_ENGINE_DIRECTIVE_V3',
+      'APPLICATION_ENGINE_DIRECTIVE_V4',
       'The application controller owns pre-case campaign progress. This is an active controller step, not completion. Continue with the exposed campaign research, approval, or case-creation tool; never call agent.complete for an empty case requirement graph.',
       JSON.stringify({ engineVersion: state.version, caseId: state.caseId, step }),
     ].join('\n')
   }
-  return ['APPLICATION_ENGINE_DIRECTIVE_V3', 'The engine owns progress. Execute only this step; never create a long-horizon plan.', JSON.stringify({ engineVersion: state.version, caseId: state.caseId, step })].join('\n')
+  return [
+    'APPLICATION_ENGINE_DIRECTIVE_V4',
+    'The engine owns progress. Schedule every dependency-ready safe lane in the current parallel batch and advance them within the bounded scheduler concurrency; do not wait on a user or external lane while another safe lane is available. Never create a long-horizon plan or claim work is complete without its evidence.',
+    JSON.stringify({ engineVersion: state.version, caseId: state.caseId, step }),
+  ].join('\n')
 }

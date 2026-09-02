@@ -9,6 +9,12 @@ import {
 import { needsSharedAgentContext } from '../../supabase/functions/_shared/agent-intent'
 import { isApplicationIntent } from '../../supabase/functions/_shared/application'
 import {
+  compileAgentTaskSpec,
+  compileExecutionPlan,
+  type AgentTaskSpec,
+  type ExecutionPlanNode,
+} from '../../supabase/functions/_shared/agent-execution-plan'
+import {
   REASONING_MODEL_ID,
   legacySpecialistRoute,
   routeTask,
@@ -22,7 +28,9 @@ import {
   type TaskContract,
 } from '../../supabase/functions/_shared/specialists'
 import type { Task } from './planner-model'
-import type { DavidApplicationState } from '../../supabase/functions/_shared/david-applications'
+import type { DavidApplicationState, FacultyIntelligenceView } from '../../supabase/functions/_shared/david-applications'
+import { normalizeFacultyContactPolicyClassification } from '../../supabase/functions/_shared/application-programme-discovery'
+import type { ExternalWait } from '../../supabase/functions/_shared/application-runtime-policy'
 import type { RecommendationInteraction } from '../../supabase/functions/_shared/recommendation-workflow'
 import type { WorkSampleInteraction } from '../../supabase/functions/_shared/work-sample-workflow'
 import type { SupplementalProgressInteraction } from '../../supabase/functions/_shared/application-questions'
@@ -45,20 +53,6 @@ export type AgentResult = {
   drafts: Array<{ title: string; body: string }>
   followUps: string[]
   sources: AgentSource[]
-  flightOptions?: AgentFlightOption[]
-  selectedFlight?: AgentFlightOption
-  selectedReturnFlight?: AgentFlightOption
-  paymentHandoffUrl?: string
-  paymentHandoffProvider?: string
-  paymentHandoffStage?: 'provider_booking' | 'google_booking_options'
-  flightCheckout?: {
-    provider?: string
-    preparedFields?: string[]
-    preparedTravelerCount?: number
-    paymentBoundaryReached?: boolean
-    handoffUrl?: string
-    currentUrl?: string
-  }
   applicationReviewUrl?: string
   application?: {
     campaignId?: string | null
@@ -76,28 +70,6 @@ export type AgentResult = {
     paymentBoundaryReached: boolean
     purchaseConfirmed: boolean
   }
-}
-
-export type AgentFlightOption = {
-  id: string
-  label: string
-  airline: string
-  departureTime: string
-  arrivalTime: string
-  duration: string
-  route: string
-  stops: string
-  price: string
-  currency: string
-  provider: string
-  durationMinutes?: number
-  stopCount?: number
-  amount?: number
-  searchUrl?: string
-  departureDate?: string
-  returnDate?: string | null
-  arrivalDate?: string
-  arrivalDayOffset?: number
 }
 
 export type AgentRun = {
@@ -120,10 +92,10 @@ export type AgentRun = {
   specialistVersion: SpecialistVersion | null
   activeSpecialistId: SpecialistId | null
   activeSpecialistVersion: SpecialistVersion | null
-  /** Roon owns the user-facing question while a specialist remains active. */
-  contextOwnerSpecialistId?: SpecialistId | null
   reasoningModel: typeof REASONING_MODEL_ID
   taskContract: TaskContract | null
+  taskSpec?: AgentTaskSpec | null
+  executionPlan?: ExecutionPlanNode[]
   routingSource: 'deterministic' | 'semantic' | 'legacy_migration'
   specialistStageIndex: number
   specialistStages: SpecialistStage[]
@@ -140,6 +112,9 @@ export type AgentRun = {
   applicationCaseId?: string | null
   applicationCaseIds?: string[]
   applicationRequirementId?: string | null
+  applicationSelectedOpportunityId?: string | null
+  applicationProgrammeSelectionCompleted?: boolean
+  externalWaits?: ExternalWait[]
   error?: string
   errorCode?: string
   durable: boolean
@@ -181,17 +156,19 @@ type AgentRunRow = {
     application_case_id?: string
     application_case_ids?: string[]
     application_requirement_id?: string
+    application_selected_opportunity_id?: string
+    application_programme_selection_completed?: boolean
     recipient_resolution_pending?: AgentRun['recipientResolution']
     scheduling_options?: AgentRun['schedulingOptions']
     progress_detail_interaction?: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction | null
-    flight_context_owner_specialist_id?: SpecialistId | null
+    external_wait?: ExternalWait | null
+    external_waits?: ExternalWait[]
     progress_current?: {
       specialist_id?: SpecialistId | null
       label?: string | null
     } | null
   } | null
   recipientResolution?: AgentRun['recipientResolution']
-  contextOwnerSpecialistId?: SpecialistId | null
   capability: AgentCapability
   intent: AgentIntent | null
   specialist_id?: SpecialistId | null
@@ -200,6 +177,8 @@ type AgentRunRow = {
   active_specialist_version?: SpecialistVersion | null
   reasoning_model?: string | null
   task_contract?: TaskContract | null
+  task_spec?: AgentTaskSpec | null
+  plan?: ExecutionPlanNode[] | null
   routing_source?: AgentRun['routingSource'] | null
   specialist_stage_index?: number | null
   specialist_stages?: SpecialistStage[] | null
@@ -229,10 +208,178 @@ type AgentApprovalRow = {
   expires_at: string | null
 }
 
-const agentE2EFixtureEnabled = import.meta.env.VITE_AGENT_E2E === 'true'
-
-async function agentE2EFixture() {
-  return import('./agent-e2e-fixture')
+function reconcileFacultyIntelligence(state: DavidApplicationState | null | undefined, caseData: unknown): DavidApplicationState | null | undefined {
+  if (!state) return state
+  const existing = state.facultyIntelligence
+  const data = caseData && typeof caseData === 'object' && !Array.isArray(caseData) ? caseData as Record<string, unknown> : {}
+  const resolution = data.applicationFacultyOutreachResolution && typeof data.applicationFacultyOutreachResolution === 'object' && !Array.isArray(data.applicationFacultyOutreachResolution)
+    ? data.applicationFacultyOutreachResolution as Record<string, unknown>
+    : null
+  const persistedRows = Array.isArray(resolution?.faculty)
+    ? resolution.faculty.filter((value): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value)))
+    : []
+  if (!persistedRows.length) return state
+  const research = data.applicationFacultyResearch && typeof data.applicationFacultyResearch === 'object' && !Array.isArray(data.applicationFacultyResearch)
+    ? data.applicationFacultyResearch as Record<string, unknown>
+    : {}
+  const metrics = resolution?.metrics && typeof resolution.metrics === 'object' && !Array.isArray(resolution.metrics)
+    ? resolution.metrics as Record<string, unknown>
+    : {}
+  // A concurrent continuation can leave the run-level faculty snapshot empty
+  // even though the case has already persisted the validated resolution. Build
+  // a minimal view from that case record so a refresh still exposes the same
+  // evidence-backed cards and drafts.
+  const current: FacultyIntelligenceView = existing ?? {
+    version: typeof resolution?.resultContractVersion === 'string' ? resolution.resultContractVersion : 'verified-faculty-match@5',
+    applicationCaseId: typeof resolution?.applicationCaseId === 'string' ? resolution.applicationCaseId : state.currentCaseId ?? '',
+    opportunityId: typeof resolution?.programmeId === 'string' ? resolution.programmeId : '',
+    refreshedAt: typeof resolution?.completedAt === 'string' ? resolution.completedAt : new Date().toISOString(),
+    verifiedFacultyCount: 0,
+    uncertainFacultyCount: typeof research.uncertainFacultyCount === 'number' ? research.uncertainFacultyCount : 0,
+    primaryCallCount: Math.max(0, Number(research.modelCalls ?? metrics.modelCalls ?? 0) - Number(research.repairAttempts ?? metrics.repairAttempts ?? 0)),
+    targetedRepairCount: Number(research.repairAttempts ?? metrics.repairAttempts ?? 0),
+    latencyMs: Number(metrics.modelLatencyMs ?? 0),
+    bestFitResearchRoutes: [],
+    facultyContactPolicy: undefined,
+    facultyContactPolicyExplanation: null,
+    facultyContactPolicyEvidence: [],
+    faculty: [],
+  }
+  const persistedProgrammePolicy = typeof resolution?.programmeContactPolicy === 'string'
+    ? normalizeFacultyContactPolicyClassification(resolution.programmeContactPolicy)
+    : typeof resolution?.facultyContactPolicy === 'string'
+      ? normalizeFacultyContactPolicyClassification(resolution.facultyContactPolicy)
+      : current.facultyContactPolicy
+  const persistedProgrammePolicyDetails = resolution?.programmeContactPolicyDetails && typeof resolution.programmeContactPolicyDetails === 'object' && !Array.isArray(resolution.programmeContactPolicyDetails)
+    ? resolution.programmeContactPolicyDetails as Record<string, unknown>
+    : null
+  const programmeDraftAllowed = !['discouraged', 'prohibited', 'unknown_due_to_insufficient_evidence'].includes(persistedProgrammePolicy ?? '')
+  const currentById = new Map(current.faculty.map(item => [item.facultyId, item]))
+  const faculty = persistedRows.map(persisted => {
+    const identityEvidence = persisted.identityEvidence && typeof persisted.identityEvidence === 'object' && !Array.isArray(persisted.identityEvidence)
+      ? persisted.identityEvidence as Record<string, unknown>
+      : {}
+    const fit = persisted.applicantFit && typeof persisted.applicantFit === 'object' && !Array.isArray(persisted.applicantFit)
+      ? persisted.applicantFit as Record<string, unknown>
+      : {}
+    const facultyId = typeof persisted.facultyId === 'string' ? persisted.facultyId : ''
+    const item = currentById.get(facultyId) ?? {
+      facultyId,
+      name: typeof persisted.name === 'string' ? persisted.name : 'Faculty member',
+      title: typeof persisted.title === 'string' ? persisted.title : null,
+      department: typeof persisted.department === 'string' ? persisted.department : null,
+      institution: typeof identityEvidence.institution === 'string' ? identityEvidence.institution : 'Harvard University',
+      officialProfileUrl: typeof persisted.officialProfileUrl === 'string' ? persisted.officialProfileUrl : typeof identityEvidence.officialProfileUrl === 'string' ? identityEvidence.officialProfileUrl : '',
+      identitySourceUrl: typeof identityEvidence.identitySourceUrl === 'string' ? identityEvidence.identitySourceUrl : typeof persisted.officialProfileUrl === 'string' ? persisted.officialProfileUrl : '',
+      identityVerification: persisted.identityVerification === 'official_verified' ? 'official_verified' as const : 'uncertain' as const,
+      researchDomain: typeof persisted.researchDomain === 'string' ? persisted.researchDomain : '',
+      researchSubdomains: Array.isArray(persisted.researchSubdomains) ? persisted.researchSubdomains.filter((value): value is string => typeof value === 'string') : [],
+      researchSummary: typeof persisted.researchSummary === 'string' ? persisted.researchSummary : '',
+      relevantCurrentWork: Array.isArray(persisted.relevantCurrentWork) ? persisted.relevantCurrentWork.filter((value): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value))).map(work => ({
+        title: typeof work.title === 'string' ? work.title : '',
+        year: typeof work.year === 'number' ? work.year : null,
+        url: typeof work.url === 'string' ? work.url : '',
+        relevanceToApplicant: typeof work.relevanceToApplicant === 'string' ? work.relevanceToApplicant : '',
+      })) : [],
+      email: null,
+      emailSourceUrl: null,
+      emailVerification: 'missing' as const,
+      fitBreakdown: {
+        overallScore: typeof fit.score === 'number' ? fit.score : 0,
+        researchAreaFit: typeof fit.researchAreaFit === 'number' ? fit.researchAreaFit : 0,
+        methodsFit: typeof fit.methodsFit === 'number' ? fit.methodsFit : 0,
+        experienceFit: typeof fit.experienceFit === 'number' ? fit.experienceFit : 0,
+        facultySpecificFit: typeof fit.facultySpecificFit === 'number' ? fit.facultySpecificFit : 0,
+      },
+      strongestConnections: [],
+      contactPolicy: undefined,
+      outreachRecommendation: 'skip' as const,
+      outreachReason: '',
+      draftRecommendation: 'skip' as const,
+      sendRecommendation: 'skip' as const,
+      draftEmail: null,
+      draftStatus: 'waiting_for_email' as const,
+      sourceEvidence: Array.isArray(persisted.sources) ? persisted.sources.filter((value): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value))).map(source => ({
+        id: typeof source.sourceKey === 'string' ? source.sourceKey : typeof source.url === 'string' ? source.url : '',
+        url: typeof source.url === 'string' ? source.url : '',
+        type: typeof source.type === 'string' ? source.type : 'official_source',
+        excerpt: typeof source.excerpt === 'string' ? source.excerpt : '',
+      })) : [],
+    } satisfies FacultyIntelligenceView['faculty'][number]
+    const numberOr = (value: unknown, fallback: number) => typeof value === 'number' && Number.isFinite(value) ? value : fallback
+    const emailVerified = persisted.emailVerification === 'official_source_supplied' && typeof persisted.email === 'string' && persisted.email.includes('@')
+    const persistedContactPolicy = typeof persisted.contactPolicy === 'string'
+      ? normalizeFacultyContactPolicyClassification(persisted.contactPolicy)
+      : item.contactPolicy
+        ? normalizeFacultyContactPolicyClassification(item.contactPolicy)
+        : 'unknown_due_to_insufficient_evidence' as const
+    const persistedDraftRecommendation = typeof persisted.draftRecommendation === 'string'
+      ? persisted.draftRecommendation as FacultyIntelligenceView['faculty'][number]['draftRecommendation']
+      : item.draftRecommendation
+    const rawEmailAction = persisted.emailAction && typeof persisted.emailAction === 'object' && !Array.isArray(persisted.emailAction)
+      ? persisted.emailAction as Record<string, unknown>
+      : null
+    const draftAllowed = programmeDraftAllowed && !['discouraged', 'prohibited', 'unknown_due_to_insufficient_evidence'].includes(persistedContactPolicy ?? '') && persistedDraftRecommendation !== 'skip'
+    const draftEmail = emailVerified && rawEmailAction && draftAllowed &&
+      typeof rawEmailAction.subject === 'string' && typeof rawEmailAction.textBody === 'string' && typeof rawEmailAction.htmlBody === 'string'
+      ? {
+          subject: rawEmailAction.subject,
+          textBody: rawEmailAction.textBody,
+          htmlBody: rawEmailAction.htmlBody,
+          recipientEmail: persisted.email as string,
+          attachmentArtifactIds: Array.isArray(rawEmailAction.attachmentArtifactIds)
+            ? rawEmailAction.attachmentArtifactIds.filter((value): value is string => typeof value === 'string')
+            : [],
+        }
+      : draftAllowed ? item.draftEmail : null
+    const strongestConnections = Array.isArray(fit.strongestConnections)
+      ? fit.strongestConnections.filter((value): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value))).map(connection => ({
+          facultySignal: typeof connection.facultySignal === 'string' ? connection.facultySignal : '',
+          applicantEvidenceId: typeof connection.applicantEvidenceId === 'string' ? connection.applicantEvidenceId : '',
+          explanation: typeof connection.explanation === 'string' ? connection.explanation : '',
+        }))
+      : item.strongestConnections
+    return {
+      ...item,
+      name: typeof persisted.name === 'string' ? persisted.name : item.name,
+      title: typeof persisted.title === 'string' ? persisted.title : item.title,
+      department: typeof persisted.department === 'string' ? persisted.department : item.department,
+      researchDomain: typeof persisted.researchDomain === 'string' ? persisted.researchDomain : item.researchDomain,
+      researchSubdomains: Array.isArray(persisted.researchSubdomains) ? persisted.researchSubdomains.filter((value): value is string => typeof value === 'string') : item.researchSubdomains,
+      researchSummary: typeof persisted.researchSummary === 'string' ? persisted.researchSummary : item.researchSummary,
+      email: emailVerified ? persisted.email as string : null,
+      emailSourceUrl: emailVerified && typeof persisted.emailSourceUrl === 'string' ? persisted.emailSourceUrl : null,
+      emailVerification: (emailVerified ? 'official_verified' : 'missing') as 'official_verified' | 'missing',
+      fitBreakdown: {
+        overallScore: numberOr(fit.score, item.fitBreakdown.overallScore),
+        researchAreaFit: numberOr(fit.researchAreaFit, item.fitBreakdown.researchAreaFit),
+        methodsFit: numberOr(fit.methodsFit, item.fitBreakdown.methodsFit),
+        experienceFit: numberOr(fit.experienceFit, item.fitBreakdown.experienceFit),
+        facultySpecificFit: numberOr(fit.facultySpecificFit, item.fitBreakdown.facultySpecificFit),
+      },
+      strongestConnections,
+      contactPolicy: persistedContactPolicy,
+      outreachRecommendation: typeof persisted.outreachRecommendation === 'string' ? persisted.outreachRecommendation as FacultyIntelligenceView['faculty'][number]['outreachRecommendation'] : item.outreachRecommendation,
+      outreachReason: typeof persisted.outreachReason === 'string' ? persisted.outreachReason : item.outreachReason,
+      draftRecommendation: persistedDraftRecommendation,
+      sendRecommendation: typeof persisted.sendRecommendation === 'string' ? persisted.sendRecommendation as FacultyIntelligenceView['faculty'][number]['sendRecommendation'] : item.sendRecommendation,
+      draftEmail,
+      draftStatus: draftEmail ? 'draft_ready' : !draftAllowed ? 'not_applicable' : emailVerified ? item.draftStatus : 'waiting_for_email',
+    }
+  }).sort((left, right) => right.fitBreakdown.overallScore - left.fitBreakdown.overallScore || right.fitBreakdown.researchAreaFit - left.fitBreakdown.researchAreaFit || right.fitBreakdown.facultySpecificFit - left.fitBreakdown.facultySpecificFit || left.name.localeCompare(right.name))
+  return {
+    ...state,
+    facultyIntelligence: {
+      ...current,
+      version: typeof resolution?.resultContractVersion === 'string' ? resolution.resultContractVersion : current.version,
+      refreshedAt: typeof resolution?.completedAt === 'string' ? resolution.completedAt : current.refreshedAt,
+      verifiedFacultyCount: faculty.length,
+      facultyContactPolicy: persistedProgrammePolicy as FacultyIntelligenceView['facultyContactPolicy'],
+      facultyContactPolicyExplanation: typeof persistedProgrammePolicyDetails?.explanation === 'string' ? persistedProgrammePolicyDetails.explanation : current.facultyContactPolicyExplanation,
+      facultyContactPolicyEvidence: Array.isArray(persistedProgrammePolicyDetails?.evidence) ? persistedProgrammePolicyDetails.evidence as FacultyIntelligenceView['facultyContactPolicyEvidence'] : current.facultyContactPolicyEvidence,
+      faculty,
+    },
+  }
 }
 
 function mapAgentRun(row: AgentRunRow): AgentRun {
@@ -259,15 +406,23 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
     recipientResolution: row.recipientResolution ?? row.context?.recipient_resolution_pending ?? null,
     schedulingOptions: Array.isArray(row.context?.scheduling_options) ? row.context.scheduling_options : [],
     contextInteraction: row.context?.progress_detail_interaction ?? null,
+    applicationSelectedOpportunityId: typeof row.context?.application_selected_opportunity_id === 'string'
+      ? row.context.application_selected_opportunity_id
+      : null,
+    applicationProgrammeSelectionCompleted: row.context?.application_programme_selection_completed === true || Boolean(row.context?.application_selected_opportunity_id),
+    externalWaits: Array.isArray(row.context?.external_waits)
+      ? row.context.external_waits
+      : row.context?.external_wait ? [row.context.external_wait] : [],
     capability: row.capability,
     intent,
     specialistId,
     specialistVersion: row.specialist_version ?? specialist?.version ?? null,
     activeSpecialistId: row.active_specialist_id ?? specialistId,
     activeSpecialistVersion: row.active_specialist_version ?? row.specialist_version ?? specialist?.version ?? null,
-    contextOwnerSpecialistId: row.contextOwnerSpecialistId ?? row.context?.flight_context_owner_specialist_id ?? null,
     reasoningModel: REASONING_MODEL_ID,
     taskContract: row.task_contract ?? route.taskContract,
+    taskSpec: row.task_spec ?? null,
+    executionPlan: Array.isArray(row.plan) ? row.plan : [],
     routingSource: row.routing_source ?? 'legacy_migration',
     specialistStageIndex: row.specialist_stage_index ?? 0,
     specialistStages: stages,
@@ -324,17 +479,7 @@ export function needsAgentContext(task: Task) {
   return needsSharedAgentContext(task.title, task.description)
 }
 
-const scholarshipPlanFixture: RoonPlanTask[] = [
-  { title: 'Find scholarships', description: 'Find fully funded study opportunities in Europe that fit the user’s background and accept international applicants. Capture eligibility, funding, deadlines, and application requirements.' },
-  { title: 'Shortlist programmes', description: 'Compare the strongest eligible programmes and create a practical shortlist based on academic fit, funding, location, and deadlines.' },
-  { title: 'Build application pack', description: 'Prepare an academic CV, achievement inventory, transcripts, certificates, identification, and test results for the shortlisted applications.' },
-  { title: 'Write tailored statements', description: 'Draft focused statements that connect the user’s background and goals to each programme, then obtain a critical review.' },
-  { title: 'Secure references and submit', description: 'Brief suitable referees early, complete every required field and attachment, and submit each application before its deadline.' },
-]
-
-export async function generateRoonPlan(goal: string, clarification = ''): Promise<RoonPlanResponse> {
-  if (agentE2EFixtureEnabled) return { clarification: '', tasks: scholarshipPlanFixture }
-
+export async function generateRoonPlan(outcome: string, clarification = ''): Promise<RoonPlanResponse> {
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) throw new Error('Sign in to ask Roon for a plan.')
@@ -343,7 +488,7 @@ export async function generateRoonPlan(goal: string, clarification = ''): Promis
     method: 'POST',
     body: {
       action: 'plan_tasks',
-      goal,
+      outcome,
       clarification: clarification || undefined,
     },
   })
@@ -359,6 +504,15 @@ export function createAgentRun(task: Task, context = ''): AgentRun {
   const route = routeTask(task.title, task.description)
   const specialist = specialistIdentity(route.primarySpecialistId)
   const needsContext = needsAgentContext(task)
+  const taskSpec = compileAgentTaskSpec({
+    objective: task.title,
+    description: task.description,
+    capability: intent.capability,
+    taskContract: route.taskContract,
+    specialistId: route.primarySpecialistId,
+    stages: route.stages,
+    missingInputs: needsContext && !context ? ['the concrete outcome or task detail needed to continue'] : [],
+  })
   return {
     id: crypto.randomUUID(),
     taskId: task.id,
@@ -373,6 +527,8 @@ export function createAgentRun(task: Task, context = ''): AgentRun {
     activeSpecialistVersion: specialist?.version ?? null,
     reasoningModel: REASONING_MODEL_ID,
     taskContract: route.taskContract,
+    taskSpec,
+    executionPlan: compileExecutionPlan(taskSpec),
     routingSource: route.classification === 'deterministic' ? 'deterministic' : 'semantic',
     specialistStageIndex: 0,
     specialistStages: route.stages,
@@ -446,9 +602,6 @@ export async function resolveAgentFunctionError(
 }
 
 export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentRun> {
-  if (agentE2EFixtureEnabled) {
-    return (await agentE2EFixture()).startFixtureRun(task, run)
-  }
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) throw new Error(`Sign in to delegate this task to ${specialistIdentity(run.activeSpecialistId ?? run.specialistId)?.name ?? 'ShotCount'}.`)
@@ -466,7 +619,6 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
       specialistVersion: run.specialistVersion,
       taskContract: run.taskContract,
       routingSource: run.routingSource,
-      goalId: task.goalId ?? null,
       due: task.due ?? null,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     },
@@ -478,27 +630,43 @@ export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentR
 }
 
 export async function loadAgentRuns(): Promise<AgentRun[]> {
-  if (agentE2EFixtureEnabled) return (await agentE2EFixture()).fixtureRuns()
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) return []
   const { data, error } = await client
     .from('agent_runs')
-    .select('id,task_id,status,objective,context,capability,intent,specialist_id,specialist_version,active_specialist_id,active_specialist_version,reasoning_model,task_contract,routing_source,specialist_stage_index,specialist_stages,completed_effects,unsatisfied_effects,current_step,waiting_reason,progress,application_state,result,error,error_code,created_at,updated_at')
+    .select('id,task_id,status,objective,context,capability,intent,specialist_id,specialist_version,active_specialist_id,active_specialist_version,reasoning_model,task_contract,task_spec,plan,routing_source,specialist_stage_index,specialist_stages,completed_effects,unsatisfied_effects,current_step,waiting_reason,progress,application_state,result,error,error_code,created_at,updated_at')
     .eq('user_id', user.id)
+    // A task can have more than one durable run after a retry or recovery.
+    // The most recently updated run is the live state; choosing by creation
+    // time can surface an older stale question (for example, programme
+    // selection) after the canonical run has already reached a transcript
+    // boundary.
+    .order('updated_at', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(250)
     .returns<AgentRunRow[]>()
   if (error) throw new Error(error.message)
+  const mappedRows = (data ?? []).map(mapAgentRun)
+  const caseIds = [...new Set(mappedRows.map(run => run.applicationCaseId).filter((value): value is string => Boolean(value)))]
+  const caseDataById = new Map<string, unknown>()
+  if (caseIds.length) {
+    const cases = await client
+      .from('application_cases')
+      .select('id,data')
+      .eq('user_id', user.id)
+      .in('id', caseIds)
+      .returns<Array<{ id: string; data: unknown }>>()
+    if (!cases.error) for (const row of cases.data ?? []) caseDataById.set(row.id, row.data)
+  }
   const latestByTask = new Map<string, AgentRun>()
-  for (const row of data ?? []) {
-    if (!latestByTask.has(row.task_id)) latestByTask.set(row.task_id, mapAgentRun(row))
+  for (const run of mappedRows) {
+    if (!latestByTask.has(run.taskId)) latestByTask.set(run.taskId, { ...run, applicationState: reconcileFacultyIntelligence(run.applicationState, run.applicationCaseId ? caseDataById.get(run.applicationCaseId) : null) })
   }
   return [...latestByTask.values()]
 }
 
 export async function loadAgentApprovals(runId: string): Promise<AgentApproval[]> {
-  if (agentE2EFixtureEnabled) return (await agentE2EFixture()).fixtureApprovals(runId)
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) return []
@@ -517,9 +685,6 @@ async function invokeRunAction(
   body: Record<string, unknown>,
   fallback: string,
 ) {
-  if (agentE2EFixtureEnabled) {
-    return (await agentE2EFixture()).invokeFixtureAction(body)
-  }
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) throw new Error('Sign in to continue this ShotCount task.')
@@ -535,26 +700,26 @@ export function resumeAgentRun(runId: string, context = '', interactionResponse?
   return invokeRunAction({ action: 'resume', runId, context, ...(interactionResponse ? { interactionResponse } : {}) }, 'ShotCount could not resume this task.')
 }
 
+export type ApplicationAvailabilityDisposition = 'have_now' | 'can_get' | 'can_get_document' | 'need_help' | 'have_score' | 'can_take_before_deadline' | 'cannot_get' | 'cannot_take_before_deadline' | 'not_sure' | 'have_referee' | 'can_find_referee' | 'provide_now' | 'keep_preparing' | 'change_plan' | 'attach_score' | 'enter_score' | 'provide_referee_details' | 'later'
+
+export function updateApplicationRequirementAvailability(
+  runId: string,
+  requirementId: string,
+  disposition: ApplicationAvailabilityDisposition,
+  values?: Record<string, unknown>,
+) {
+  return invokeRunAction(
+    { action: 'resume', runId, applicationAvailability: { requirementId, disposition, ...(values ? { values } : {}) } },
+    'ShotCount could not update this application item.',
+  )
+}
+
 export function selectAgentRecipient(runId: string, recipientEmail: string) {
   return invokeRunAction({ action: 'select_recipient', runId, recipientEmail }, 'ShotCount could not select that recipient.')
 }
 
 export function pollAgentRun(runId: string) {
   return invokeRunAction({ action: 'poll', runId }, 'ShotCount could not check the external work.')
-}
-
-export function simulateAgentReply(runId: string, simulationReply: string) {
-  return invokeRunAction(
-    { action: 'simulate_reply', runId, simulationReply },
-    'ShotCount could not simulate this development reply.',
-  )
-}
-
-export function selectAgentFlight(runId: string, optionId: string) {
-  return invokeRunAction(
-    { action: 'select_flight', runId, optionId },
-    'Caspian could not continue with this flight.',
-  )
 }
 
 export function cancelAgentRunRemote(runId: string) {

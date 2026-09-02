@@ -5,7 +5,7 @@ import {
   submitPublicPage,
   type PublicBrowserState,
 } from '../../api/_public-browser'
-import { BrowserExecutionError } from '../../api/_flight-browser'
+import { BrowserExecutionError } from '../../api/_browser-error'
 import { internalAgentToolName } from '../../supabase/functions/_shared/agent-tools'
 import {
   classifyApplicationFailure,

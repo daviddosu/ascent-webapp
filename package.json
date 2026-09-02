@@ -9,18 +9,17 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:fast": "vitest run src/application.test.ts src/application-campaign-projection.test.ts src/application-cv.test.ts src/application-execution-e2e.test.ts src/application-execution-policy.test.ts src/application-security-contract.test.ts src/auth-routing-contract.test.ts src/data/agent-runtime.test.ts src/david-application.test.ts src/email-integrity.test.ts src/file-assets-contract.test.ts api/_egress-policy.test.ts api/_public-browser.test.ts api/application-portal-fixture.test.ts api/application-portal-fixture-v2.test.ts supabase/functions/_shared/application-controller.test.ts supabase/functions/_shared/application-engine.test.ts supabase/functions/_shared/application-orchestration.test.ts supabase/functions/_shared/application-questions.test.ts supabase/functions/_shared/application-value-ownership.test.ts benchmarks/david-applications/graduate-application-orchestration.test.ts",
+    "test:application": "vitest run src/application*.test.ts src/david-application*.test.ts src/email-integrity.test.ts src/file-assets-contract.test.ts src/recipient-hydration.test.ts src/research-proposal-latex.test.ts api/application-portal-fixture*.test.ts api/browser-fixture.test.ts benchmarks/david-applications/graduate-application-orchestration.test.ts supabase/functions/_shared/application*.test.ts",
+    "test:qualification": "pnpm benchmark:david",
+    "test:full": "vitest run --config vitest.full.config.ts",
     "test:deno": "npx --yes deno test supabase/functions/_shared/*_test.ts",
     "test:watch": "vitest",
-    "test:e2e:ui": "VITE_AGENT_E2E=true pnpm build && node scripts/agent-ui.e2e.mjs",
-    "test:flight:live": "SHOTCOUNT_LIVE_FLIGHT_TEST=true vitest run api/_flight-browser.live.test.ts",
-    "benchmark:agent": "vitest run benchmarks/agent-execution/run-benchmark.test.ts && node benchmarks/agent-execution/generate-report.mjs",
-    "benchmark:agent:live": "node benchmarks/agent-execution-live/run-live.mjs",
     "benchmark:david": "node benchmarks/david-applications/cli.mjs",
     "check:deno": "npx --yes deno check supabase/functions/*/index.ts",
     "test:db-hardening": "sh scripts/qualify-hardening-migrations.sh",
-    "check": "pnpm test && pnpm test:deno && pnpm check:deno && pnpm build",
-    "check:cloud": "node scripts/verify-cloud.mjs",
-    "check:cloud:auth": "node scripts/verify-cloud-auth.mjs"
+    "check": "pnpm test:fast && pnpm test:deno && pnpm check:deno && pnpm build",
+    "check:cloud": "node scripts/verify-cloud.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
@@ -31,8 +30,10 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.7",
     "@sparticuz/chromium": "^149.0.0",
     "@supabase/supabase-js": "^2.110.0",
+    "pdfjs-dist": "^6.2.108",
     "playwright-core": "^1.61.1"
   }
 }

@@ -1,8 +1,16 @@
 # Shotcount
 
-Shotcount is a calm, cloud-based planning app built around one loop:
+Internally, the system runs one durable control loop:
+Intent → Contract → Situation → Work graph → Bounded action → Observed effect
+→ Replan → Accrete. The agent works from scoped evidence and dependency-aware
+lanes, so it can keep useful work moving without treating preparation, waiting,
+or model text as proof of completion.
 
-`Goal → Plan → Today → Finish → Review → Improve`
+Shotcount is a private, cloud-based workspace for graduate-school applications.
+It keeps each programme’s requirements, documents, references, deadlines, and
+portal steps together:
+
+`Programme → Requirements → Documents → Review → Submit`
 
 ## Run locally
 
@@ -19,7 +27,10 @@ The production planner loads the signed-in user's Supabase workspace first. It a
 pnpm check
 ```
 
-This runs the browser and domain tests, automated accessibility checks, Deno tests and Edge Function type checks, TypeScript checking, and the production build.
+This runs the compact high-signal application tier, Deno tests and Edge Function
+type checks, TypeScript checking, and the production build. Use `pnpm test:application`
+for the broader application integration tier, `pnpm test:full` for all active Vitest
+tests, and `pnpm test:qualification` for qualification.
 
 ## Enable secure cloud accounts
 
@@ -39,9 +50,7 @@ supabase login
 supabase link --project-ref "$SUPABASE_PROJECT_REF"
 supabase db push
 supabase functions deploy delete-account
-supabase functions deploy ai-coach
 supabase functions deploy transcribe-description
-supabase functions deploy send-completion-push
 supabase functions deploy send-scheduled-reminders
 supabase functions deploy task-agent
 supabase functions deploy agent-watch-sweep
@@ -80,14 +89,22 @@ curl -fsS -X POST "https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/agen
   -d '{"scheduled_at":"manual-readiness-check"}'
 ```
 
-The durable execution layer also uses server-only Google OAuth and signed browser-worker values listed in `.env.example`. Internal implementation and demo notes live in:
+The durable execution layer also uses server-only Google OAuth and signed
+browser-worker values listed in `.env.example`. The canonical operating model,
+provider contracts, demo plan, and qualification methodology are below.
 
-- [`docs/agent-architecture.md`](docs/agent-architecture.md)
-- [`docs/google-integration.md`](docs/google-integration.md)
-- [`docs/browser-execution.md`](docs/browser-execution.md)
-- [`docs/investor-demo.md`](docs/investor-demo.md)
+Cloud mode adds sign-up, sign-in, secure row-level data isolation, private
+cross-device application-workspace synchronization, and Google execution access.
+The service-role key must never be placed in the frontend.
 
-Cloud mode adds sign-up, sign-in, secure row-level data isolation, cross-device workspace synchronization, and accountability invitation acceptance. The service-role key must never be placed in the frontend.
+The canonical documents are:
+
+- [Agent operating architecture](docs/agent-architecture.md)
+- [Application-agent capability contract](docs/application-agent-capabilities.md)
+- [Application portal execution](docs/browser-execution.md)
+- [Google provider adapter](docs/google-integration.md)
+- [David benchmark methodology](benchmarks/david-applications/methodology.md)
+- [Graduate-application system demo](docs/investor-demo.md)
 
 After deployment, verify the reachable cloud surface without printing credentials:
 
@@ -95,20 +112,12 @@ After deployment, verify the reachable cloud surface without printing credential
 pnpm check:cloud
 ```
 
-For a disposable test account, add `SHOTCOUNT_TEST_EMAIL` and `SHOTCOUNT_TEST_PASSWORD`, then verify signed-in RLS create/read/delete behavior:
-
-```bash
-pnpm check:cloud:auth
-```
-
-Set `SHOTCOUNT_TEST_AI=true` only when you also want this check to make one real, billable AI-coach request.
-
 ## Production behavior
 
 - Local changes save immediately to a user-scoped offline backup, then sync to Supabase.
 - An existing cloud workspace is loaded before the planner is shown after sign-in.
 - A new account receives its current local workspace, and an older account is imported once from the original task tables when needed.
-- Tasks, goals, visibility choices, subtasks, and completions merge by field so independent changes from two devices are kept.
+- Application steps, requirements, documents, subtasks, and completions merge by field so independent changes from two devices are kept.
 - The planner shows Loading, Offline, Saving, Saved, and Save failed states.
 - The production build is installable and keeps working offline after its first successful load.
-- Account data can be exported from Settings.
+- Application workspace settings can be updated from Settings.

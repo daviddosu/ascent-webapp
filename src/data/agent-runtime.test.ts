@@ -38,7 +38,7 @@ describe('agent policy', () => {
     expect(policyForTool('gmail.create_draft').decision).toBe('allow')
     expect(policyForTool('gmail.wait_for_reply').decision).toBe('allow')
     expect(policyForTool('calendar.get_availability').risk).toBe('read')
-    expect(policyForTool('browser.prepare_flight_checkout')).toMatchObject({ risk: 'prepare', decision: 'allow' })
+    expect(policyForTool('browser.act')).toMatchObject({ risk: 'prepare', decision: 'allow' })
   })
 
   it('requires approval for external writes and never delegates payment', () => {
@@ -84,29 +84,15 @@ describe('agent intent and completion semantics', () => {
       strategy: 'structured',
       outcomeType: 'prepared_result',
     })
-    expect(classifyAgentIntent('Find a return flight from Lagos to London')).toEqual({
-      capability: 'flight_search',
-      strategy: 'browser',
-      outcomeType: 'prepared_result',
-    })
-    expect(classifyAgentIntent('Book a return flight from Lagos to London')).toEqual({
-      capability: 'flight_search',
-      strategy: 'browser',
-      outcomeType: 'payment_handoff',
-    })
     expect(classifyAgentIntent(
-      'Find a return flight from Lagos to London',
-      'Continue to the payment boundary, then stop before payment.',
-    ).outcomeType).toBe('payment_handoff')
+      'Apply to Stanford Physics PhD',
+      'Research the requirements and prepare the application.',
+    )).toEqual({ capability: 'browser', strategy: 'hybrid', outcomeType: 'prepared_result' })
   })
 
-  it('does not confuse preparation or payment handoff with the real outcome', () => {
+  it('does not confuse preparation with the real external outcome', () => {
     const scheduling = classifyAgentIntent('Set up a meeting with Blessing and email her next week')
     expect(outcomeCompletesTask(scheduling, { preparedResult: true })).toBe(false)
     expect(outcomeCompletesTask(scheduling, { externalChangeConfirmed: true })).toBe(true)
-
-    const booking = classifyAgentIntent('Book a return flight to London')
-    expect(outcomeCompletesTask(booking, { paymentBoundaryReached: true })).toBe(false)
-    expect(outcomeCompletesTask(booking, { purchaseConfirmed: true })).toBe(true)
   })
 })

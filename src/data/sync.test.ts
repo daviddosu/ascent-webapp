@@ -33,7 +33,6 @@ class MemoryCloud implements PlannerCloudAdapter {
         record_type: mutation.recordType,
         record_id: mutation.recordId,
         parent_id: mutation.parentId,
-        visibility: 'private',
         data: {},
         field_versions: {},
         deleted_at: null,
@@ -49,11 +48,6 @@ class MemoryCloud implements PlannerCloudAdapter {
         record.data[field] = copy(mutation.patch[field])
         record.field_versions[field] = version
       }
-    }
-    if (mutation.recordType === 'task') {
-      record.visibility = record.data.visibility === 'followers' || record.data.visibility === 'public'
-        ? record.data.visibility
-        : 'private'
     }
     const deleteVersion = mutation.fieldVersions._deleted
     if (deleteVersion && (!record.field_versions._deleted || deleteVersion >= record.field_versions._deleted)) {
@@ -74,13 +68,11 @@ function clock(start: number) {
 
 function workspace(title = 'First task'): PlannerWorkspace {
   return {
-    goals: [{ id: 'goal-1', name: 'Ship it', color: '#2878ff' }],
     tasks: [{
       id: 'task-1',
       title,
       description: '',
       due: '2026-07-14',
-      visibility: 'private',
       subtaskItems: [{ id: 'subtask-1', title: 'Small step', completed: false }],
     }],
   }
@@ -158,7 +150,7 @@ describe('cloud planner repository', () => {
     expect(merged.tasks[0]).toMatchObject({ title: 'Title from phone', due: '2026-07-20' })
   })
 
-  it('keeps a visibility change and subtasks added independently on two devices', async () => {
+  it('keeps application tasks private while merging subtasks from two devices', async () => {
     const cloud = new MemoryCloud()
     const deviceA = new CloudPlannerRepository({
       userId: 'items-user', storage: new MemoryStorage(), adapter: cloud,
@@ -172,7 +164,6 @@ describe('cloud planner repository', () => {
     const a = await deviceA.refresh()
     const b = await deviceB.initialize(workspace('ignored'))
 
-    a.tasks[0]!.visibility = 'public'
     a.tasks[0]!.subtaskItems!.push({ id: 'subtask-phone', title: 'Phone step', completed: false })
     deviceA.save(a)
     await deviceA.syncNow()
@@ -182,7 +173,6 @@ describe('cloud planner repository', () => {
     await deviceB.syncNow()
 
     const merged = await deviceA.refresh()
-    expect(merged.tasks[0]!.visibility).toBe('public')
     expect(new Set(merged.tasks[0]!.subtaskItems!.map(item => item.title))).toEqual(
       new Set(['Small step', 'Phone step', 'Laptop step']),
     )

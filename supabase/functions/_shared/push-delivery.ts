@@ -2,17 +2,14 @@ type RpcResult<T> = { data: T; error: { message: string } | null }
 type RpcClient = { rpc(name: string, argumentsValue: Record<string, unknown>): PromiseLike<RpcResult<unknown>> }
 
 export type PushDeliveryIdentity = {
-  kind: 'completion' | 'scheduled'
-  deliveryKey?: string
-  completionEventId?: string
+  deliveryKey: string
   subscriptionId: string
 }
 
 function rpcArguments(identity: PushDeliveryIdentity) {
   return {
-    p_kind: identity.kind,
-    p_delivery_key: identity.deliveryKey ?? null,
-    p_completion_event_id: identity.completionEventId ?? null,
+    p_kind: 'scheduled',
+    p_delivery_key: identity.deliveryKey,
     p_subscription_id: identity.subscriptionId,
   }
 }

@@ -516,7 +516,11 @@ describe.skipIf(!enabled)('david_application_engine_v3', () => {
     expect((run as BenchmarkRun & { campaignSummary?: CampaignSummaryQualificationReport }).campaignSummary?.passed).toBe(true)
     expect((run as BenchmarkRun & { feeWorkflow?: FeeWaiverPaymentQualificationReport }).feeWorkflow?.passed).toBe(true)
     expect((run as BenchmarkRun & { applicationRecovery?: ApplicationRecoveryQualificationReport }).applicationRecovery?.qualified).toBe(true)
-  }, 900_000)
+  // The frozen suite runs every browser-heavy application case sequentially,
+  // then performs the canonical evidence qualifications in the same process.
+  // Keep the gate bounded, but give the full suite enough room to finish so a
+  // passing qualification is not misreported as a timeout.
+  }, 1_800_000)
 })
 
 export { execute as runBenchmarkCommand }

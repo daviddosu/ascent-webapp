@@ -70,11 +70,13 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@napi-rs/canvas@^1.0.7",
         "npm:@sparticuz/chromium@149",
         "npm:@supabase/supabase-js@^2.110.0",
         "npm:@types/node@^26.1.0",
         "npm:axe-core@^4.12.1",
         "npm:jsdom@^29.1.1",
+        "npm:pdfjs-dist@^6.2.108",
         "npm:playwright-core@^1.61.1",
         "npm:typescript@~6.0.2",
         "npm:vite@^8.1.0",

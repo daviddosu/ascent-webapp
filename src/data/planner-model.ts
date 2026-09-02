@@ -1,7 +1,6 @@
 import type { Recurrence } from '../domain'
 
 export type PlannerKind = 'task' | 'event'
-export type TaskVisibility = 'private' | 'followers' | 'public'
 
 export type Subtask = {
   id: string
@@ -19,7 +18,6 @@ export type Task = {
   id: string
   title: string
   description?: string
-  goalId?: string
   due?: string
   time?: string
   duration?: number
@@ -28,7 +26,6 @@ export type Task = {
   reminder?: number
   location?: string
   attendees?: string
-  visibility?: TaskVisibility
   subtasks?: number
   subtaskItems?: Subtask[]
   completedAt?: string
@@ -36,23 +33,13 @@ export type Task = {
   updatedAt?: string
 }
 
-export type Goal = {
-  id: string
-  name: string
-  color: string
-  createdAt?: string
-  updatedAt?: string
-}
-
 export type PlannerWorkspace = {
   tasks: Task[]
-  goals: Goal[]
 }
 
 export const taskCloudFields = [
   'title',
   'description',
-  'goalId',
   'due',
   'time',
   'duration',
@@ -61,25 +48,18 @@ export const taskCloudFields = [
   'reminder',
   'location',
   'attendees',
-  'visibility',
   'completedAt',
   'createdAt',
   'updatedAt',
 ] as const
 
-export const goalCloudFields = ['name', 'color', 'createdAt', 'updatedAt'] as const
 export const subtaskCloudFields = ['title', 'completed', 'createdAt', 'updatedAt'] as const
-
-export function normalizeTaskVisibility(value: unknown): TaskVisibility {
-  return value === 'followers' || value === 'public' ? value : 'private'
-}
 
 export function normalizeTask(task: Task, now = new Date().toISOString()): Task {
   return {
     id: task.id,
     title: task.title,
     description: task.description ?? '',
-    goalId: task.goalId,
     due: task.due,
     time: task.time,
     duration: task.duration,
@@ -88,7 +68,6 @@ export function normalizeTask(task: Task, now = new Date().toISOString()): Task 
     reminder: task.reminder,
     location: task.location,
     attendees: task.attendees,
-    visibility: normalizeTaskVisibility(task.visibility),
     subtasks: task.subtaskItems?.length ?? task.subtasks ?? 0,
     subtaskItems: (task.subtaskItems ?? []).map(item => ({
       ...item,
@@ -98,13 +77,5 @@ export function normalizeTask(task: Task, now = new Date().toISOString()): Task 
     completedAt: task.completedAt,
     createdAt: task.createdAt ?? now,
     updatedAt: task.updatedAt ?? task.createdAt ?? now,
-  }
-}
-
-export function normalizeGoal(goal: Goal, now = new Date().toISOString()): Goal {
-  return {
-    ...goal,
-    createdAt: goal.createdAt ?? now,
-    updatedAt: goal.updatedAt ?? goal.createdAt ?? now,
   }
 }

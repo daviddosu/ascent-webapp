@@ -51,3 +51,22 @@ Deno.test('validates proposal tool envelopes before execution', () => {
     idempotency_key: 'proposal:delivery:1',
   }), false)
 })
+
+Deno.test('validates the direct-LaTeX CV envelope without the retired section-order field', () => {
+  assert(validateAgentToolArguments('application.generate_cv', {
+    application_case_id: 'case-1',
+    filename: 'graduate-cv.pdf',
+    page_target: 'one_page',
+    latex_content: '\\documentclass{article}\\begin{document}CV\\end{document}',
+    tailoring_brief: {
+      target_institution: 'Harvard University',
+      target_programme: 'Physics PhD',
+      official_source_urls: ['https://physics.harvard.edu/graduate'],
+      priority_signals: ['quantum optics', 'computational physics'],
+      applicant_fit_fact_ids: ['fact-1', 'fact-2'],
+      fit_statement: 'Evidence-backed programme fit.',
+    },
+    meta_prompt_version: 'graduate-cv-tailoring-v4',
+    idempotency_key: 'cv:1',
+  }))
+})

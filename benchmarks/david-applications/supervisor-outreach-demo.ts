@@ -10,6 +10,7 @@ import {
   type SupervisorResearchDossier,
 } from '../../supabase/functions/_shared/supervisor-outreach.ts'
 import { renderGmailMimeMessage } from '../../supabase/functions/_shared/google.ts'
+import { APPLICATION_EMAIL_SCHEMA_VERSION, APPLICATION_EMAIL_WORKFLOW_VERSION, applicationEmailHtmlFromText } from '../../supabase/functions/_shared/application-email.ts'
 
 const root = Deno.cwd()
 const outputDir = join(root, 'output', 'pdf', 'supervisor-outreach-demo')
@@ -140,7 +141,17 @@ const dossier: SupervisorResearchDossier = {
   ],
 }
 
+const outreachTextBody = [
+  'Dear Professor Wang,',
+  'I am preparing an application to the Cell and Systems Biology PhD at the University of Toronto for Fall 2026 and am writing about potential supervision.',
+  'Your GraphComm work on graph-based deep learning for cell-cell communication is closely connected to the research direction I hope to pursue. I am particularly interested in interpretable graph models for spatial cell communication.',
+  'My research experience includes analysing single-cell RNA sequencing data with Python and building reproducible feature pipelines. This gives me a practical foundation for investigating the methodological questions raised by your work.',
+  'Would you be considering new doctoral students for Fall 2026, and would this direction merit a short conversation? I have attached my programme-specific CV for context.',
+  `Kind regards,\n${applicantName}`,
+].join('\n\n')
+
 const packageDraft = generateSupervisorOutreach({
+  task_id: 'demo-task-001',
   application_case_id: 'demo-application-case-001',
   opportunity_id: 'demo-opportunity-utoronto-csb-phd',
   target_programme: 'Cell and Systems Biology PhD',
@@ -167,11 +178,24 @@ const packageDraft = generateSupervisorOutreach({
   applicant_name: applicantName,
   applicant_email: applicantEmail,
   applicant_role: 'research assistant at a synthetic computational biology lab',
-  writing: {
-    research_connection: 'Your GraphComm work on cell-cell communication using graph-based deep learning and spatial single-cell RNA sequencing is the clearest connection to my proposed direction. I was especially interested in how the method combines neighbourhood information with intracellular signalling rather than treating ligand-receptor pairs in isolation.',
-    applicant_fit: 'My confirmed research experience includes analysing single-cell RNA sequencing data with Python and building reproducible feature pipelines. I am now developing a proposal around interpretable graph models for spatial cell communication, grounded in the same methodological questions.',
-    request: 'Would you be considering new doctoral students for Fall 2026, and would this direction merit a short conversation about fit and supervision?',
-    closing_context: '',
+  email_action_package: {
+    schemaVersion: APPLICATION_EMAIL_SCHEMA_VERSION,
+    workflowVersion: APPLICATION_EMAIL_WORKFLOW_VERSION,
+    emailType: 'prospective_supervisor_first_contact',
+    recipientEmail: dossier.verified_email,
+    subject: 'PhD supervision inquiry: graph models for cell communication',
+    textBody: outreachTextBody,
+    htmlBody: applicationEmailHtmlFromText(outreachTextBody),
+    communicationGoal: 'Ask whether Professor Wang is considering Fall 2026 doctoral students and whether a short research-fit conversation would be useful.',
+    strongestConnection: 'Graph models for spatial cell communication.',
+    attachmentArtifactIds: ['demo-cv-artifact-001'],
+    claims: [
+      { claim: 'GraphComm uses graph-based deep learning for cell-cell communication.', evidenceIds: ['source:graphcomm'] },
+      { claim: 'Amara has single-cell RNA sequencing and Python research experience.', evidenceIds: ['fit:single-cell'] },
+      { claim: 'The programme directs applicants to contact prospective supervisors.', evidenceIds: ['source:programme'] },
+    ],
+    followUp: { recommended: true, afterDays: 10, purpose: 'Briefly check whether supervision capacity is known.' },
+    quality: { specific: true, concise: true, recipientSpecific: true, programmeSpecific: true, applicantEvidenceUsed: true },
   },
   cv: {
     artifact_id: 'demo-cv-artifact-001',

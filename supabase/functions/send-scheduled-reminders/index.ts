@@ -74,7 +74,7 @@ async function sendOnce(
 ) {
   const result = await deliverPushWithOutbox({
     admin,
-    identity: { kind: 'scheduled', deliveryKey, subscriptionId: subscription.id },
+    identity: { deliveryKey, subscriptionId: subscription.id },
     send: () => webpush.sendNotification({
       endpoint: subscription.endpoint,
       keys: { p256dh: subscription.p256dh, auth: subscription.auth },
@@ -155,19 +155,19 @@ Deno.serve(async request => {
     if (local.hour === 7 && local.minute === 30 && !tasks.some(task => taskAppearsOnToday(task, local.date, timezone))) {
       deliveries.push({
         key: `today-plan:${userId}:${local.date}`,
-        payload: { title: 'Make today’s list', body: 'Take two minutes to choose what matters today.', tag: `shotcount-plan-today-${local.date}`, url: '/app?plan=today' },
+        payload: { title: 'Review today’s application steps', body: 'Take two minutes to choose the graduate-application work that matters today.', tag: `shotcount-plan-today-${local.date}`, url: '/app?plan=today' },
       })
     }
     if (local.hour === 18 && local.minute === 30 && !tasks.some(task => taskIsIncompleteTomorrow(task, addLocalDays(local.date, 1)))) {
       deliveries.push({
         key: `tomorrow-plan:${userId}:${local.date}`,
-        payload: { title: 'Set up tomorrow', body: 'Take two minutes to choose tomorrow’s tasks.', tag: `shotcount-plan-tomorrow-${local.date}`, url: '/app?plan=tomorrow' },
+        payload: { title: 'Plan tomorrow’s application steps', body: 'Choose the graduate-application work you want ready tomorrow.', tag: `shotcount-plan-tomorrow-${local.date}`, url: '/app?plan=tomorrow' },
       })
     }
     for (const task of tasks) {
       const reminder = taskReminder(task, now, timezone)
       if (!reminder) continue
-      const title = String(task.data.title ?? 'Task reminder').trim() || 'Task reminder'
+      const title = String(task.data.title ?? 'Application step reminder').trim() || 'Application step reminder'
       deliveries.push({
         key: `task:${userId}:${task.record_id}:${reminder.due}:${reminder.time}:${reminder.reminderMinutes}`,
         payload: {

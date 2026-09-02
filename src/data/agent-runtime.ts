@@ -22,7 +22,6 @@ export const agentCapabilities = [
   'calendar',
   'scheduling',
   'browser',
-  'flight_search',
 ] as const
 
 export type AgentCapability = typeof agentCapabilities[number]
@@ -33,7 +32,7 @@ export type PolicyDecision = 'allow' | 'require_approval' | 'deny'
 export type AgentIntent = {
   capability: AgentCapability
   strategy: AgentStrategy
-  outcomeType: 'prepared_result' | 'external_change' | 'payment_handoff'
+  outcomeType: 'prepared_result' | 'external_change'
 }
 
 export type AgentRunState = {
@@ -143,21 +142,6 @@ const toolPolicies: Record<string, ToolPolicy> = {
     decision: 'allow',
     reason: 'Navigation to an allowed public domain is read-only.',
   },
-  'browser.search_flights': {
-    risk: 'read',
-    decision: 'allow',
-    reason: 'Searching live public flight results is read-only.',
-  },
-  'browser.select_flight': {
-    risk: 'prepare',
-    decision: 'allow',
-    reason: 'Selecting a returned itinerary may prepare checkout but cannot cross the payment boundary.',
-  },
-  'browser.prepare_flight_checkout': {
-    risk: 'prepare',
-    decision: 'allow',
-    reason: 'Filling observed traveler details may prepare checkout but cannot enter payment data or cross the payment boundary.',
-  },
   'browser.observe': {
     risk: 'read',
     decision: 'allow',
@@ -182,11 +166,6 @@ const toolPolicies: Record<string, ToolPolicy> = {
     risk: 'prepare',
     decision: 'allow',
     reason: 'Creating a typed handoff keeps Gmail, Calendar, contacts, and OTP work with Roon without performing the external action here.',
-  },
-  'browser.purchase': {
-    risk: 'financial',
-    decision: 'deny',
-    reason: 'Financial purchases must remain under direct user control.',
   },
 }
 
@@ -276,9 +255,8 @@ export function outcomeCompletesTask(intent: AgentIntent, result: {
   preparedResult?: boolean
   externalChangeConfirmed?: boolean
   paymentBoundaryReached?: boolean
-  purchaseConfirmed?: boolean
 }) {
   if (intent.outcomeType === 'prepared_result') return result.preparedResult === true
   if (intent.outcomeType === 'external_change') return result.externalChangeConfirmed === true
-  return result.purchaseConfirmed === true
+  return false
 }

@@ -40,7 +40,7 @@ export function createPdf(title: string, body: string) {
   const pageIds: number[] = []
   const contentIds: number[] = []
   let nextId = 4
-  for (const page of pages) {
+  for (const _page of pages) {
     pageIds.push(nextId++)
     contentIds.push(nextId++)
   }

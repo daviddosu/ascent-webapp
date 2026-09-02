@@ -2,6 +2,7 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   canUseOfficialRequirementEvidence,
   fundingCitationSupportsFullFunding,
+  isApplicationSubmissionMethodRequirement,
   officialCitationSupportsRequirement,
   requiresApplicantSpecificEvidence,
 } from './application-requirement-evidence.ts'
@@ -32,4 +33,15 @@ Deno.test('official pages may verify a deadline and full doctoral funding only w
   assertEquals(officialCitationSupportsRequirement(funding, fundingExcerpt), true)
   assertEquals(officialCitationSupportsRequirement(deadline, deadlineExcerpt), true)
   assertEquals(officialCitationSupportsRequirement(funding, 'Funding may be available from several sources.'), false)
+})
+
+Deno.test('submission-method rules stay with the portal instead of becoming applicant questions', () => {
+  const submissionMethod = {
+    name: 'Application materials submitted electronically',
+    requirement_type: 'official_requirement',
+    responsible_party: 'applicant',
+  }
+  assertEquals(isApplicationSubmissionMethodRequirement(submissionMethod), true)
+  assertEquals(requiresApplicantSpecificEvidence(submissionMethod), false)
+  assertEquals(canUseOfficialRequirementEvidence(submissionMethod), true)
 })

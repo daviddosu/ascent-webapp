@@ -14,39 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      accountability_invites: {
-        Row: {
-          accepted_by: string | null
-          created_at: string
-          expires_at: string
-          id: string
-          invitee_email: string
-          inviter_id: string
-          status: string
-          token: string
-        }
-        Insert: {
-          accepted_by?: string | null
-          created_at?: string
-          expires_at?: string
-          id?: string
-          invitee_email?: string
-          inviter_id: string
-          status?: string
-          token: string
-        }
-        Update: {
-          accepted_by?: string | null
-          created_at?: string
-          expires_at?: string
-          id?: string
-          invitee_email?: string
-          inviter_id?: string
-          status?: string
-          token?: string
-        }
-        Relationships: []
-      }
       agent_actions: {
         Row: {
           arguments: Json
@@ -548,6 +515,7 @@ export type Database = {
           strategy: string
           task_completion_policy: string
           task_contract: string
+          task_spec: Json
           task_id: string | null
           unsatisfied_effects: Json
           updated_at: string
@@ -592,6 +560,7 @@ export type Database = {
           strategy?: string
           task_completion_policy?: string
           task_contract?: string
+          task_spec?: Json
           task_id?: string | null
           unsatisfied_effects?: Json
           updated_at?: string
@@ -636,6 +605,7 @@ export type Database = {
           strategy?: string
           task_completion_policy?: string
           task_contract?: string
+          task_spec?: Json
           task_id?: string | null
           unsatisfied_effects?: Json
           updated_at?: string
@@ -3265,96 +3235,6 @@ export type Database = {
           },
         ]
       }
-      completion_events: {
-        Row: {
-          completed_at: string
-          completed_count: number
-          creator_id: string
-          id: string
-          local_date: string
-          task_title: string
-          total_count: number
-        }
-        Insert: {
-          completed_at?: string
-          completed_count: number
-          creator_id: string
-          id?: string
-          local_date: string
-          task_title?: string
-          total_count: number
-        }
-        Update: {
-          completed_at?: string
-          completed_count?: number
-          creator_id?: string
-          id?: string
-          local_date?: string
-          task_title?: string
-          total_count?: number
-        }
-        Relationships: []
-      }
-      connections: {
-        Row: {
-          addressee_id: string
-          created_at: string
-          id: string
-          requester_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          addressee_id: string
-          created_at?: string
-          id?: string
-          requester_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          addressee_id?: string
-          created_at?: string
-          id?: string
-          requester_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      daily_reviews: {
-        Row: {
-          blocker: string
-          created_at: string
-          id: string
-          review_date: string
-          tomorrow: string
-          updated_at: string
-          user_id: string
-          win: string
-        }
-        Insert: {
-          blocker?: string
-          created_at?: string
-          id?: string
-          review_date: string
-          tomorrow?: string
-          updated_at?: string
-          user_id: string
-          win?: string
-        }
-        Update: {
-          blocker?: string
-          created_at?: string
-          id?: string
-          review_date?: string
-          tomorrow?: string
-          updated_at?: string
-          user_id?: string
-          win?: string
-        }
-        Relationships: []
-      }
       file_assets: {
         Row: {
           agent_run_id: string | null
@@ -3461,63 +3341,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      follows: {
-        Row: {
-          created_at: string
-          followed_id: string
-          follower_id: string
-        }
-        Insert: {
-          created_at?: string
-          followed_id: string
-          follower_id: string
-        }
-        Update: {
-          created_at?: string
-          followed_id?: string
-          follower_id?: string
-        }
-        Relationships: []
-      }
-      goals: {
-        Row: {
-          color: string
-          created_at: string
-          id: string
-          position: number
-          status: string
-          target_date: string | null
-          title: string
-          updated_at: string
-          user_id: string
-          why: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          id?: string
-          position?: number
-          status?: string
-          target_date?: string | null
-          title: string
-          updated_at?: string
-          user_id: string
-          why?: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          id?: string
-          position?: number
-          status?: string
-          target_date?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-          why?: string
-        }
-        Relationships: []
       }
       google_calendar_events: {
         Row: {
@@ -3738,92 +3561,8 @@ export type Database = {
           },
         ]
       }
-      lists: {
-        Row: {
-          color: string
-          created_at: string
-          id: string
-          name: string
-          position: number
-          user_id: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          id?: string
-          name: string
-          position?: number
-          user_id: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          id?: string
-          name?: string
-          position?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
-      milestones: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          goal_id: string
-          id: string
-          position: number
-          title: string
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          goal_id: string
-          id?: string
-          position?: number
-          title: string
-          user_id: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          goal_id?: string
-          id?: string
-          position?: number
-          title?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "milestones_goal_id_fkey"
-            columns: ["goal_id"]
-            isOneToOne: false
-            referencedRelation: "goals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      muted_creators: {
-        Row: {
-          created_at: string
-          creator_id: string
-          viewer_id: string
-        }
-        Insert: {
-          created_at?: string
-          creator_id: string
-          viewer_id: string
-        }
-        Update: {
-          created_at?: string
-          creator_id?: string
-          viewer_id?: string
-        }
-        Relationships: []
-      }
       notification_preferences: {
         Row: {
-          completion_alerts: boolean
           quiet_end: string
           quiet_hours_enabled: boolean
           quiet_start: string
@@ -3833,7 +3572,6 @@ export type Database = {
           web_push_enabled: boolean
         }
         Insert: {
-          completion_alerts?: boolean
           quiet_end?: string
           quiet_hours_enabled?: boolean
           quiet_start?: string
@@ -3843,7 +3581,6 @@ export type Database = {
           web_push_enabled?: boolean
         }
         Update: {
-          completion_alerts?: boolean
           quiet_end?: string
           quiet_hours_enabled?: boolean
           quiet_start?: string
@@ -3866,7 +3603,6 @@ export type Database = {
           revision: number
           updated_at: string
           user_id: string
-          visibility: string
         }
         Insert: {
           created_at?: string
@@ -3879,7 +3615,6 @@ export type Database = {
           revision?: number
           updated_at?: string
           user_id: string
-          visibility?: string
         }
         Update: {
           created_at?: string
@@ -3892,7 +3627,6 @@ export type Database = {
           revision?: number
           updated_at?: string
           user_id?: string
-          visibility?: string
         }
         Relationships: []
       }
@@ -3976,92 +3710,32 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string
-          bio: string
           created_at: string
           dark_mode: boolean
-          default_task_visibility: string
           display_name: string
           id: string
-          onboarding_completed: boolean
           timezone: string
           updated_at: string
-          username: string | null
         }
         Insert: {
           avatar_url?: string
-          bio?: string
           created_at?: string
           dark_mode?: boolean
-          default_task_visibility?: string
           display_name?: string
           id: string
-          onboarding_completed?: boolean
           timezone?: string
           updated_at?: string
-          username?: string | null
         }
         Update: {
           avatar_url?: string
-          bio?: string
           created_at?: string
           dark_mode?: boolean
-          default_task_visibility?: string
           display_name?: string
           id?: string
-          onboarding_completed?: boolean
           timezone?: string
           updated_at?: string
-          username?: string | null
         }
         Relationships: []
-      }
-      push_deliveries: {
-        Row: {
-          attempt_count: number
-          claim_token: string | null
-          claimed_at: string | null
-          completion_event_id: string
-          delivered_at: string | null
-          last_error: string | null
-          push_subscription_id: string
-          status: string
-        }
-        Insert: {
-          attempt_count?: number
-          claim_token?: string | null
-          claimed_at?: string | null
-          completion_event_id: string
-          delivered_at?: string | null
-          last_error?: string | null
-          push_subscription_id: string
-          status?: string
-        }
-        Update: {
-          attempt_count?: number
-          claim_token?: string | null
-          claimed_at?: string | null
-          completion_event_id?: string
-          delivered_at?: string | null
-          last_error?: string | null
-          push_subscription_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "push_deliveries_completion_event_id_fkey"
-            columns: ["completion_event_id"]
-            isOneToOne: false
-            referencedRelation: "completion_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "push_deliveries_push_subscription_id_fkey"
-            columns: ["push_subscription_id"]
-            isOneToOne: false
-            referencedRelation: "push_subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       push_subscriptions: {
         Row: {
@@ -4093,71 +3767,6 @@ export type Database = {
           updated_at?: string
           user_agent?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      reactions: {
-        Row: {
-          created_at: string
-          emoji: string
-          update_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          emoji: string
-          update_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          emoji?: string
-          update_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reactions_update_id_fkey"
-            columns: ["update_id"]
-            isOneToOne: false
-            referencedRelation: "shared_updates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reviews: {
-        Row: {
-          blockers: string
-          continue_doing: string
-          created_at: string
-          id: string
-          review_date: string
-          stop_doing: string
-          updated_at: string
-          user_id: string
-          wins: string
-        }
-        Insert: {
-          blockers?: string
-          continue_doing?: string
-          created_at?: string
-          id?: string
-          review_date: string
-          stop_doing?: string
-          updated_at?: string
-          user_id: string
-          wins?: string
-        }
-        Update: {
-          blockers?: string
-          continue_doing?: string
-          created_at?: string
-          id?: string
-          review_date?: string
-          stop_doing?: string
-          updated_at?: string
-          user_id?: string
-          wins?: string
         }
         Relationships: []
       }
@@ -4202,48 +3811,6 @@ export type Database = {
           },
         ]
       }
-      shared_updates: {
-        Row: {
-          created_at: string
-          goal_id: string | null
-          id: string
-          message: string
-          milestone_id: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          goal_id?: string | null
-          id?: string
-          message?: string
-          milestone_id?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          goal_id?: string | null
-          id?: string
-          message?: string
-          milestone_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shared_updates_goal_id_fkey"
-            columns: ["goal_id"]
-            isOneToOne: false
-            referencedRelation: "goals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shared_updates_milestone_id_fkey"
-            columns: ["milestone_id"]
-            isOneToOne: false
-            referencedRelation: "milestones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       subtasks: {
         Row: {
           completed_at: string | null
@@ -4282,63 +3849,6 @@ export type Database = {
           },
         ]
       }
-      tags: {
-        Row: {
-          color: string
-          created_at: string
-          id: string
-          name: string
-          user_id: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          id?: string
-          name: string
-          user_id: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          id?: string
-          name?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      task_tags: {
-        Row: {
-          tag_id: string
-          task_id: string
-          user_id: string
-        }
-        Insert: {
-          tag_id: string
-          task_id: string
-          user_id: string
-        }
-        Update: {
-          tag_id?: string
-          task_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_tags_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "tags"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_tags_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tasks: {
         Row: {
           archived_at: string | null
@@ -4349,10 +3859,8 @@ export type Database = {
           due_date: string | null
           due_time: string | null
           estimate_minutes: number
-          goal_id: string | null
           id: string
           last_carry_reason: string
-          list_id: string | null
           position: number
           priority: string
           recurrence: string
@@ -4360,7 +3868,6 @@ export type Database = {
           top_three: boolean
           updated_at: string
           user_id: string
-          visibility: string
         }
         Insert: {
           archived_at?: string | null
@@ -4371,10 +3878,8 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           estimate_minutes?: number
-          goal_id?: string | null
           id?: string
           last_carry_reason?: string
-          list_id?: string | null
           position?: number
           priority?: string
           recurrence?: string
@@ -4382,7 +3887,6 @@ export type Database = {
           top_three?: boolean
           updated_at?: string
           user_id: string
-          visibility?: string
         }
         Update: {
           archived_at?: string | null
@@ -4393,10 +3897,8 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           estimate_minutes?: number
-          goal_id?: string | null
           id?: string
           last_carry_reason?: string
-          list_id?: string | null
           position?: number
           priority?: string
           recurrence?: string
@@ -4404,24 +3906,8 @@ export type Database = {
           top_three?: boolean
           updated_at?: string
           user_id?: string
-          visibility?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_goal_id_fkey"
-            columns: ["goal_id"]
-            isOneToOne: false
-            referencedRelation: "goals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_list_id_fkey"
-            columns: ["list_id"]
-            isOneToOne: false
-            referencedRelation: "lists"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       academic_evidence_requirements: {
         Row: {
@@ -4810,22 +4296,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_accountability_invite: {
-        Args: { invite_token: string }
-        Returns: boolean
-      }
-      can_read_planner_task: {
-        Args: { p_owner_id: string; p_task_id: string }
-        Returns: boolean
-      }
       claim_ai_coach_usage: {
         Args: { p_user_id: string }
         Returns: number
       }
       claim_push_delivery: {
         Args: {
-          p_completion_event_id: string | null
-          p_delivery_key: string | null
+          p_delivery_key: string
           p_kind: string
           p_lease_seconds?: number
           p_subscription_id: string
@@ -4970,102 +4447,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      complete_demo_flight_handoff: {
-        Args: { p_expected_version: number; p_result: Json; p_run_id: string }
-        Returns: {
-          active_specialist_id: string
-          active_specialist_version: string
-          application_state: Json | null
-          attempt_count: number
-          browser_session_id: string | null
-          cancelled_at: string | null
-          capability: string
-          completed_at: string | null
-          completed_effects: Json
-          context: Json
-          created_at: string
-          current_step: number
-          error: string | null
-          error_code: string | null
-          external_correlation_id: string | null
-          id: string
-          intent: Json
-          lease_expires_at: string | null
-          lease_owner: string | null
-          objective: string
-          openai_response_id: string | null
-          plan: Json
-          progress: Json
-          reasoning_model: string
-          result: Json | null
-          retryable: boolean
-          routing_source: string
-          specialist_id: string
-          specialist_stage_index: number
-          specialist_stages: Json
-          specialist_version: string
-          started_at: string | null
-          status: string
-          strategy: string
-          task_completion_policy: string
-          task_contract: string
-          task_id: string | null
-          unsatisfied_effects: Json
-          updated_at: string
-          user_id: string
-          version: number
-          waiting_reason: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "agent_runs"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      completion_alert_feed: {
-        Args: { p_after: string }
-        Returns: {
-          avatar_url: string
-          completed_at: string
-          completed_count: number
-          creator_id: string
-          display_name: string
-          id: string
-          task_title: string
-          total_count: number
-          username: string
-        }[]
-      }
-      creator_directory: {
-        Args: { p_username?: string }
-        Returns: {
-          avatar_url: string
-          bio: string
-          display_name: string
-          followed_by_me: boolean
-          follower_count: number
-          id: string
-          username: string
-        }[]
-      }
-      creator_today: {
-        Args: { p_creator_id: string }
-        Returns: {
-          completed_at: string
-          due: string
-          id: string
-          time: string
-          title: string
-          visibility: string
-        }[]
-      }
       finish_push_delivery: {
         Args: {
           p_claim_token: string
-          p_completion_event_id: string | null
           p_delivered: boolean
-          p_delivery_key: string | null
+          p_delivery_key: string
           p_error_code?: string | null
           p_kind: string
           p_retryable?: boolean
@@ -5073,7 +4459,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      get_creator_today: { Args: { p_username: string }; Returns: Json }
       google_agent_connection_status: {
         Args: never
         Returns: {
@@ -5104,7 +4489,6 @@ export type Database = {
           revision: number
           updated_at: string
           user_id: string
-          visibility: string
         }
         SetofOptions: {
           from: "*"
