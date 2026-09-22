@@ -5,9 +5,17 @@ import {
   actOnPublicPage,
   navigatePublicPage,
   submitPublicPage,
+  publicBrowserHumanBoundary,
   type PublicBrowserAction,
+  type PublicBrowserRuntime,
   type PublicBrowserState,
 } from './_public-browser.js'
+import { acquireBrowserbaseSession, browserbaseConfigured } from './_browserbase.js'
+import {
+  GRADUATE_APPLICATION_ONLY_CODE,
+  GRADUATE_APPLICATION_ONLY_MESSAGE,
+  isGraduateApplicationTask,
+} from '../supabase/functions/_shared/application.js'
 
 // Application portals can spend most of a minute resolving a page before the
 // bounded DOM-read timeout starts. Keep one isolated worker invocation alive
@@ -43,6 +51,11 @@ type BrowserCheckpoint = {
     completedAt: string
   }
   publicBrowser?: PublicBrowserState
+  browserProvider?: {
+    kind: 'browserbase'
+    contextId: string
+    sessionId: string
+  }
   submissionAttempted?: {
     operationId: string
     attemptedAt: string
@@ -50,6 +63,25 @@ type BrowserCheckpoint = {
   workerAttempts?: number
   workerAttemptsByOperation?: Record<string, number>
   [key: string]: unknown
+}
+
+function humanBoundaryError(state: PublicBrowserState) {
+  const boundary = publicBrowserHumanBoundary(state.observation)
+  if (!boundary) return null
+  const messages = {
+    authentication: 'Sign in securely in the live application browser, then return to ShotCount.',
+    captcha: 'Complete the human verification securely in the live application browser, then return to ShotCount.',
+    sensitive_field: 'Complete the private application field securely in the live application browser, then return to ShotCount.',
+  } as const
+  const codes = {
+    authentication: 'browser_authentication_required',
+    captcha: 'browser_captcha_required',
+    sensitive_field: 'browser_sensitive_field_blocked',
+  } as const
+  return new BrowserExecutionError(codes[boundary], messages[boundary], false, {
+    takeoverAvailable: true,
+    humanBoundary: boundary,
+  })
 }
 
 function headerValue(request: WorkerRequest, name: string) {
@@ -179,6 +211,68 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
   }
 
   const session = sessionResult.data
+  const runResult = await admin
+    .from('agent_runs')
+    .select('task_id,objective,context')
+    .eq('id', session.run_id)
+    .eq('user_id', session.user_id)
+    .maybeSingle()
+  if (runResult.error || !runResult.data) {
+    response.status(404).json({ error: 'Agent run not found' })
+    return
+  }
+  const [plannerResult, taskResult] = await Promise.all([
+    admin.from('planner_records')
+      .select('data,deleted_at')
+      .eq('record_type', 'task')
+      .eq('record_id', runResult.data.task_id)
+      .eq('user_id', session.user_id)
+      .maybeSingle(),
+    admin.from('tasks')
+      .select('title,description')
+      .eq('id', runResult.data.task_id)
+      .eq('user_id', session.user_id)
+      .maybeSingle(),
+  ])
+  if (plannerResult.error && !['42P01', 'PGRST205'].includes(plannerResult.error.code ?? '')) {
+    response.status(500).json({ error: 'The browser task scope could not be verified' })
+    return
+  }
+  if (taskResult.error) {
+    response.status(500).json({ error: 'The browser task scope could not be verified' })
+    return
+  }
+  const plannerTask = plannerResult.data && plannerResult.data.deleted_at === null
+    ? plannerResult.data.data && typeof plannerResult.data.data === 'object' && !Array.isArray(plannerResult.data.data)
+      ? plannerResult.data.data as Record<string, unknown>
+      : {}
+    : null
+  const currentTask = plannerTask && typeof plannerTask.title === 'string' && plannerTask.title.trim()
+    ? plannerTask
+    : taskResult.data
+  if (currentTask && !isGraduateApplicationTask(
+    typeof currentTask.title === 'string' ? currentTask.title : '',
+    typeof currentTask.description === 'string' ? currentTask.description : '',
+  )) {
+    response.status(409).json({
+      error: GRADUATE_APPLICATION_ONLY_MESSAGE,
+      code: GRADUATE_APPLICATION_ONLY_CODE,
+    })
+    return
+  }
+  const runContext = runResult.data.context && typeof runResult.data.context === 'object' && !Array.isArray(runResult.data.context)
+    ? runResult.data.context as Record<string, unknown>
+    : {}
+  if (!isGraduateApplicationTask(
+    typeof runResult.data.objective === 'string' ? runResult.data.objective : '',
+    typeof runContext.description === 'string' ? runContext.description : '',
+  )) {
+    response.status(409).json({
+      error: GRADUATE_APPLICATION_ONLY_MESSAGE,
+      code: GRADUATE_APPLICATION_ONLY_CODE,
+    })
+    return
+  }
   const checkpoint = (session.checkpoint ?? {}) as BrowserCheckpoint
   const operation = checkpoint.pendingOperation
   if (
@@ -276,9 +370,39 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
     let nextCheckpoint: BrowserCheckpoint
     let currentUrl: string
     let paymentBoundaryReached = false
+    let runtime: PublicBrowserRuntime | undefined
+
+    if (browserbaseConfigured()) {
+      const provider = await acquireBrowserbaseSession(claimedCheckpoint.browserProvider)
+      claimedCheckpoint = {
+        ...claimedCheckpoint,
+        browserProvider: {
+          kind: 'browserbase',
+          contextId: provider.contextId,
+          sessionId: provider.id,
+        },
+      }
+      runtime = { connectUrl: provider.connectUrl, preserveSession: true }
+      const providerCheckpoint = await admin.from('browser_execution_sessions').update({
+        checkpoint: claimedCheckpoint,
+        last_observed_at: new Date().toISOString(),
+      }).eq('id', session.id).eq('worker_session_id', workerSessionId)
+      if (providerCheckpoint.error) throw new Error(providerCheckpoint.error.message)
+    } else if (process.env.NODE_ENV === 'production') {
+      throw new BrowserExecutionError(
+        'browser_provider_not_configured',
+        'Authenticated application portals are unavailable until the production browser provider is configured.',
+        false,
+      )
+    }
 
     if (operation.type === 'navigate') {
-      const state = await navigatePublicPage(String(operation.arguments.url ?? ''), session.allowed_domains)
+      const state = await navigatePublicPage(String(operation.arguments.url ?? ''), session.allowed_domains, runtime)
+      claimedCheckpoint = { ...claimedCheckpoint, publicBrowser: state }
+      if (runtime) {
+        const boundary = humanBoundaryError(state)
+        if (boundary) throw boundary
+      }
       output = { observation: state.observation, resumable: true }
       currentUrl = state.currentUrl
       nextCheckpoint = {
@@ -302,7 +426,12 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
         target: String(operation.arguments.target ?? ''),
         value: operation.arguments.value === null ? null : String(operation.arguments.value ?? ''),
       }
-      const state = await actOnPublicPage(checkpoint.publicBrowser, action, session.allowed_domains, assetId => materializeApplicationAsset(admin, session, operation, assetId))
+      const state = await actOnPublicPage(checkpoint.publicBrowser, action, session.allowed_domains, assetId => materializeApplicationAsset(admin, session, operation, assetId), runtime)
+      claimedCheckpoint = { ...claimedCheckpoint, publicBrowser: state }
+      if (runtime) {
+        const boundary = humanBoundaryError(state)
+        if (boundary) throw boundary
+      }
       output = { observation: state.observation, upload_evidence: state.lastEvidence ?? null, resumable: true }
       currentUrl = state.currentUrl
       nextCheckpoint = {
@@ -326,6 +455,7 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
         String(operation.arguments.target ?? ''),
         session.allowed_domains,
         assetId => materializeApplicationAsset(admin, session, operation, assetId),
+        runtime,
       )
       if (!result.confirmationObserved) {
         throw new BrowserExecutionError(
@@ -337,6 +467,9 @@ export default async function handler(request: WorkerRequest, response: WorkerRe
       output = {
         submitted: result.submitted,
         confirmation_observed: result.confirmationObserved,
+        application_id: result.applicationId,
+        confirmation_id: result.confirmationId,
+        confirmation_url: result.confirmationUrl,
         expected_effect: String(operation.arguments.expected_effect ?? ''),
         persisted_values: result.persistedValues,
         read_back_values: result.readBackValues,

@@ -13,6 +13,7 @@ import {
   type RecommenderCandidate,
 } from './recommendation-workflow.ts'
 import type { ApplicationFeeRequirement, ApplicationFeeWorkflow, FeeApplicantFact } from './application-fee-workflow.ts'
+import { classifyGraduateApplicationTask, isApplicationIntent } from './application.ts'
 
 export const DAVID_APPLICATION_SCHEMA_VERSION = 1 as const
 
@@ -1317,15 +1318,14 @@ export function submissionIdempotencyKey(applicationCaseId: string, portalCheckp
 
 export function classifyApplicationIntent(title: string, description = '') {
   const value = `${title} ${description}`.toLocaleLowerCase()
-  const application = /\b(?:apply|applications?|admissions?|grad(?:uate)?\s+school|phd|doctoral|master'?s|msc|job\s+application|grant application|statement of purpose|personal statement|recommendation letters?|referees?)\b/.test(value) ||
-    /\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b[\s\S]{0,100}\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b/.test(value) ||
-    /\b(?:professors?|supervisors?|faculty|research groups?|labs?)\b[\s\S]{0,100}\b(?:contact|email|message|outreach|ask|follow[ -]?up)\b/.test(value)
+  const graduateApplication = classifyGraduateApplicationTask(title, description)
+  const application = isApplicationIntent(title, description)
   const research = /\b(?:professor|faculty|supervisor|lab|research group)\b/.test(value)
   const finalSubmission = /\b(?:submit|send in|finalize|final submission|application fee|pay the application)\b/.test(value)
   return {
     isApplication: application,
     owner: application ? 'david' as const : null,
-    applicationKind: /\bphd\b|doctoral/.test(value) ? 'phd' as const : /scholarship|chevening/.test(value) ? 'scholarship' as const : /fellowship|studentship/.test(value) ? 'fellowship' as const : /accelerator/.test(value) ? 'accelerator' as const : /internship/.test(value) ? 'internship' as const : /master/.test(value) ? 'masters' as const : 'other' as const,
+    applicationKind: graduateApplication.targetKind === 'scholarship' ? 'scholarship' as const : /\bphd\b|doctoral/.test(value) ? 'phd' as const : /fellowship|studentship/.test(value) ? 'fellowship' as const : /accelerator/.test(value) ? 'accelerator' as const : /internship/.test(value) ? 'internship' as const : /master/.test(value) ? 'masters' as const : 'other' as const,
     researchWorkflow: research,
     requiresFinalSubmissionApproval: finalSubmission,
     delegatesToRoon: /\b(?:email|contact|professors?|faculty|supervisors?|follow up|referees?|recommendation|interview|schedule|otp|verification code)\b/.test(value),

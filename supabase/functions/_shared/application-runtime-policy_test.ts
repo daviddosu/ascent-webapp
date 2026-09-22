@@ -94,6 +94,17 @@ Deno.test('dependency-ready orchestration lanes can use safe preparation tools t
   assert(tools.has('browser.navigate'))
   assert(tools.has('application.research_faculty'))
 
+  const scholarshipTools = toolsForCanonicalApplicationStep({
+    state: 'DOCUMENT_PREPARATION',
+    step: execute,
+    requirementType: 'scholarship',
+    targetKind: 'scholarship',
+    orchestrationRunnableNodeTypes: ['faculty_intelligence', 'portal'],
+  })
+  assert(scholarshipTools.has('browser.navigate'))
+  assert(!scholarshipTools.has('application.research_faculty'))
+  assert(!scholarshipTools.has('application.generate_supervisor_outreach'))
+
   const refreshTools = toolsForCanonicalApplicationStep({
     state: 'DOCUMENT_PREPARATION',
     step: execute,

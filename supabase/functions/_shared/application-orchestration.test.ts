@@ -54,6 +54,48 @@ describe('graduate application orchestration', () => {
     expect(pathway.recommendationModel).toMatchObject({ count: 3, academicRequired: true, submissionMethod: 'portal_invitation' })
   })
 
+  it('keeps a graduate scholarship on its own target path', () => {
+    const pathway = classifyGraduateApplicationPathway({
+      targetKind: 'scholarship',
+      evidence: evidence([
+        'The scholarship is applied for through the official provider portal.',
+        'Applicants must meet the award eligibility rules and submit three scholarship essays.',
+        'The award covers tuition and living costs for an eligible graduate course.',
+      ]),
+    })
+    const strategy = strategyFor(pathway, [
+      { id: 'award', name: 'Scholarship eligibility and award conditions', type: 'scholarship', required: true },
+      { id: 'essays', name: 'Scholarship essays', type: 'writer', required: true },
+    ])
+    const plan = buildApplicationExecutionPlan({
+      applicationCaseId: 'case-scholarship',
+      objective: 'Apply for Chevening Scholarship',
+      programmeTitle: 'Chevening Scholarship',
+      pathway,
+      strategy,
+      requirements: [
+        { id: 'award', name: 'Scholarship eligibility and award conditions', type: 'scholarship', required: true },
+        { id: 'essays', name: 'Scholarship essays', type: 'writer', required: true },
+      ],
+    })
+    expect(pathway.targetKind).toBe('scholarship')
+    expect(plan.nodes.some(node => node.type === 'faculty_intelligence' || node.type === 'faculty_outreach')).toBe(false)
+    expect(plan.nodes.some(node => node.id === 'cv')).toBe(false)
+    expect(plan.nodes.find(node => node.id === 'requirement:award')).toMatchObject({ type: 'scholarship', kind: 'required' })
+    expect(plan.nodes.some(node => node.type === 'portal')).toBe(true)
+    expect(plan.nodes.some(node => node.id === 'readiness')).toBe(true)
+  })
+
+  it('derives an external award-first route from official wording without a provider name', () => {
+    const pathway = classifyGraduateApplicationPathway({ evidence: evidence([
+      'Applicants must first apply for the award before submitting a university course application.',
+      'The award application is submitted through the provider portal.',
+    ]) })
+    expect(pathway.admissionModel).toBe('scholarship_coupled')
+    expect(pathway.applicationRoute).toBe('external_scholarship_then_programme')
+    expect(pathway.fundingModel).toBe('scholarship_required')
+  })
+
   it('keeps downstream application work closed when the pathway has no official evidence', () => {
     const pathway = classifyGraduateApplicationPathway({ evidence: [] })
     const strategy = strategyFor(pathway)

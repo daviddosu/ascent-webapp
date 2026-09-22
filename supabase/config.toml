@@ -7,7 +7,9 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.task-agent]
-verify_jwt = true
+# The entry point validates user sessions or the dedicated internal-worker secret.
+# Gateway JWT verification would reject scheduler continuations before that check.
+verify_jwt = false
 
 [functions.agent-watch-sweep]
 verify_jwt = false

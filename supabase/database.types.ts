@@ -907,6 +907,8 @@ export type Database = {
           task_id: string
           updated_at: string
           user_id: string
+          workflow_graph: Json
+          workflow_version: string
         }
         Insert: {
           application_kind: string
@@ -924,6 +926,8 @@ export type Database = {
           task_id: string
           updated_at?: string
           user_id: string
+          workflow_graph?: Json
+          workflow_version?: string
         }
         Update: {
           application_kind?: string
@@ -941,6 +945,8 @@ export type Database = {
           task_id?: string
           updated_at?: string
           user_id?: string
+          workflow_graph?: Json
+          workflow_version?: string
         }
         Relationships: [
           {
@@ -1506,6 +1512,8 @@ export type Database = {
           task_id: string
           updated_at: string
           user_id: string
+          workflow_target_key: string | null
+          workflow_target_role: string | null
         }
         Insert: {
           application_id?: string | null
@@ -1525,6 +1533,8 @@ export type Database = {
           task_id: string
           updated_at?: string
           user_id: string
+          workflow_target_key?: string | null
+          workflow_target_role?: string | null
         }
         Update: {
           application_id?: string | null
@@ -1544,6 +1554,8 @@ export type Database = {
           task_id?: string
           updated_at?: string
           user_id?: string
+          workflow_target_key?: string | null
+          workflow_target_role?: string | null
         }
         Relationships: [
           {

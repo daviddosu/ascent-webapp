@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { GRADUATE_APPLICATION_ONLY_CODE, GRADUATE_APPLICATION_ONLY_MESSAGE, isGraduateApplicationTask } from '../_shared/application.ts'
+import { requestApplicationModel } from '../_shared/application-model-request.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,30 +32,37 @@ Deno.serve(async request => {
 
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const [tasksResult, reviewsResult] = await Promise.all([
-    userClient.from('tasks').select('title,due_date,priority,estimate_minutes,completed_at,carried_count,last_carry_reason').gte('due_date', cutoff).limit(120),
+    userClient.from('tasks').select('title,description,due_date,priority,estimate_minutes,completed_at,carried_count,last_carry_reason').gte('due_date', cutoff).limit(120),
     userClient.from('reviews').select('review_date,wins,blockers,stop_doing,continue_doing').order('review_date', { ascending: false }).limit(4),
   ])
   if (tasksResult.error || reviewsResult.error) return new Response('Could not read planning summary', { status: 500, headers: corsHeaders })
+  const applicationTasks = (tasksResult.data ?? []).filter(task => isGraduateApplicationTask(task.title, task.description ?? ''))
+  const applicationContext = applicationTasks.map(task => `${task.title} ${task.description ?? ''}`).join(' ')
+  if (!applicationTasks.length) {
+    return new Response(JSON.stringify({ error: GRADUATE_APPLICATION_ONLY_MESSAGE, code: GRADUATE_APPLICATION_ONLY_CODE }), {
+      status: 409,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${openaiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  let result: Record<string, unknown>
+  try {
+    const response = await requestApplicationModel<Record<string, unknown>>({
+      apiKey: openaiKey,
+      maxRetries: 1,
+      body: {
       model: 'gpt-5.4-mini',
       reasoning: { effort: 'low' },
       store: false,
       max_output_tokens: 500,
       instructions: [
-        'You are Shotcount’s calm planning coach.',
-        'Find one useful pattern in the supplied task and review summary.',
+        'You are Shotcount’s calm graduate-school application planning coach.',
+        'Find one useful pattern in the supplied graduate-school application tasks and review summary.',
         'Be warm, specific, non-judgmental, and concise.',
         'Never diagnose health, infer protected traits, or claim certainty.',
-        'Do not change plans. Offer up to three optional next actions.',
+        'Do not change plans. Offer up to three optional next actions, and keep every action inside the graduate-school application workflow.',
       ].join(' '),
-      input: JSON.stringify({ tasks: tasksResult.data ?? [], reviews: reviewsResult.data ?? [] }),
+      input: JSON.stringify({ tasks: applicationTasks, reviews: reviewsResult.data ?? [] }),
       text: {
         verbosity: 'low',
         format: {
@@ -72,20 +81,29 @@ Deno.serve(async request => {
           },
         },
       },
-    }),
-  })
-  if (!response.ok) return new Response('Coaching service is unavailable', { status: 502, headers: corsHeaders })
+      },
+    })
+    result = response.payload
+  } catch {
+    return new Response('Coaching service is unavailable', { status: 502, headers: corsHeaders })
+  }
 
-  const result = await response.json()
-  const outputText = result.output
-    ?.flatMap((item: { content?: unknown[] }) => item.content ?? [])
+  const outputItems = Array.isArray(result.output) ? result.output as Array<{ content?: Array<{ type?: string; text?: string }> }> : []
+  const outputText = outputItems
+    .flatMap(item => item.content ?? [])
     .find((item: { type?: string }) => item.type === 'output_text')
     ?.text
   if (!outputText) return new Response('Coaching response was empty', { status: 502, headers: corsHeaders })
 
-  const insight = JSON.parse(outputText)
+  const insight = JSON.parse(outputText) as { actions?: unknown }
+  const scopedInsight = {
+    ...insight,
+    actions: (Array.isArray(insight.actions) ? insight.actions : [])
+      .filter((action): action is string => typeof action === 'string' && isGraduateApplicationTask(action, applicationContext))
+      .slice(0, 3),
+  }
   await admin.from('ai_usage').insert({ user_id: user.id })
-  return new Response(JSON.stringify(insight), {
+  return new Response(JSON.stringify(scopedInsight), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })

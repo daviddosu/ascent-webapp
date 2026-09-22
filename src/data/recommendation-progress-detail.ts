@@ -43,6 +43,7 @@ function programmeSelectionOptions(
 ) {
   const labels = interaction.options.map(option => humanizeAgentProgressLabel(option.label))
   const institutionPrefix = sharedInstitutionPrefix(labels)
+  const multiple = interaction.kind === 'multiple_choice'
   const render = (option: typeof interaction.options[number]) => {
     const fullLabel = humanizeAgentProgressLabel(option.label)
     const label = institutionPrefix && fullLabel.startsWith(institutionPrefix)
@@ -56,8 +57,8 @@ function programmeSelectionOptions(
       : ''
     return `<div class="application-shortlist-option-row">
       <label class="application-shortlist-option${option.disabled ? ' application-shortlist-option--disabled' : ''}">
-        <input class="application-shortlist-option-input" type="radio" name="application-programme-${escapeHtml(interaction.id)}" data-recommendation-choice data-interaction-value="${escapeHtml(option.value)}" ${option.value === selectedValue ? 'checked' : ''} ${option.disabled ? 'disabled' : ''}>
-        <span class="application-shortlist-radio" aria-hidden="true"></span>
+        <input class="application-shortlist-option-input" type="${multiple ? 'checkbox' : 'radio'}" name="application-programme-${escapeHtml(interaction.id)}" data-recommendation-choice data-interaction-value="${escapeHtml(option.value)}" ${option.value === selectedValue ? 'checked' : ''} ${option.disabled ? 'disabled' : ''}>
+        <span class="application-shortlist-radio${multiple ? ' application-shortlist-checkbox' : ''}" aria-hidden="true"></span>
         <span class="application-shortlist-option-copy"><span class="application-shortlist-option-main"><strong>${escapeHtml(label)}</strong>${description}</span>${infoDisclosure}</span>
       </label>
     </div>`
@@ -88,12 +89,21 @@ function options(interaction: Extract<RecommendationInteraction, { kind: 'single
 /** Render the bounded Progress Detail contract; no interaction falls back to a broad question. */
 export function renderRecommendationProgressDetail(interaction: RecommendationInteraction, taskId: string, busy = false, selectedProgrammeValue = '') {
   if (isProgrammeSelectionInteraction(interaction)) {
-    return `<section class="recommendation-progress-detail recommendation-progress-detail--application" data-recommendation-interaction-id="${escapeHtml(interaction.id)}">
-      <header><strong>Choose a programme</strong><span class="task-agent-header-mark" role="img" aria-label="Your choice is needed">?</span></header>
-      <h4>Which programme do you want to apply to?</h4>
-      <p class="recommendation-interaction-reason">I checked official programme pages and matched the verified options to your CV. Choose one programme and I’ll continue the application here.</p>
+    const targetKind = 'targetKind' in interaction && interaction.targetKind === 'scholarship' ? 'scholarship' : 'programme'
+    const targetLabel = targetKind === 'scholarship' ? 'graduate scholarship' : 'programme'
+    const multiple = interaction.kind === 'multiple_choice'
+    const minSelections = multiple ? interaction.minSelections : 1
+    const maxSelections = multiple ? interaction.maxSelections : 1
+    const initiallyDisabled = busy || multiple || !selectedProgrammeValue
+    const selectionInstruction = multiple
+      ? minSelections === maxSelections ? `Choose exactly ${minSelections}.` : `Choose between ${minSelections} and ${maxSelections}.`
+      : `Choose one ${targetLabel}.`
+    return `<section class="recommendation-progress-detail recommendation-progress-detail--application" data-recommendation-interaction-id="${escapeHtml(interaction.id)}" data-selection-min="${minSelections}" data-selection-max="${maxSelections}">
+      <header><strong>${multiple ? 'Choose the required application targets' : `Choose a ${targetLabel}`}</strong><span class="task-agent-header-mark" role="img" aria-label="Your choice is needed">?</span></header>
+      <h4>${escapeHtml(interaction.question || `Which ${targetLabel} do you want to apply for?`)}</h4>
+      <p class="recommendation-interaction-reason">${escapeHtml(interaction.reason || `I checked official ${targetLabel} pages and matched the verified options to your CV.`)} ${selectionInstruction}</p>
       <div class="application-shortlist-options">${programmeSelectionOptions(interaction as Extract<RecommendationInteraction, { kind: 'single_choice' | 'multiple_choice' | 'contact_select' | 'attachment_selection' }>, selectedProgrammeValue)}</div>
-      <button class="agent-primary" type="button" data-action="submit-recommendation-single" data-task-id="${escapeHtml(taskId)}" ${busy || !selectedProgrammeValue ? 'disabled' : ''}>Choose programme</button>
+      <button class="agent-primary" type="button" data-action="${multiple ? 'submit-recommendation-multiple' : 'submit-recommendation-single'}" data-task-id="${escapeHtml(taskId)}" ${initiallyDisabled ? 'disabled' : ''}>${multiple ? 'Save target selection' : `Choose ${targetLabel}`}</button>
     </section>`
   }
   const knownContextWindow = progressDetailWindow(interaction.knownContext)

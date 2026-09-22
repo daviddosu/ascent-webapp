@@ -9,6 +9,7 @@
  */
 
 import type { ApplicationWorkstream } from './david-applications.ts'
+import { classifyGraduateApplicationTask, type GraduateApplicationTargetKind } from './application.ts'
 import { isApplicationSubmissionMethodRequirement, requiresApplicantSpecificEvidence } from './application-requirement-evidence.ts'
 import { asPlanNodeId, asRequirementIdOrNull, type RequirementCardinality, type RequirementId } from './application-requirement-contract.ts'
 import { missingValueOwnerForRequirement, type MissingValueOwner } from './application-value-ownership.ts'
@@ -32,6 +33,8 @@ export type OrchestrationSourceEvidence = {
 
 export type GraduateApplicationPathway = {
   schemaVersion: 1
+  /** The durable target identity: a university programme or a graduate award. */
+  targetKind: GraduateApplicationTargetKind
   admissionModel:
     | 'central_committee'
     | 'supervisor_first'
@@ -541,9 +544,10 @@ export function resolveFacultyContactPolicy(input: {
   }
 }
 
-function pathwayDefaults(now: string): GraduateApplicationPathway {
+function pathwayDefaults(now: string, targetKind: GraduateApplicationTargetKind = 'programme'): GraduateApplicationPathway {
   return {
     schemaVersion: 1,
+    targetKind,
     admissionModel: 'unknown',
     applicationRoute: 'unknown',
     facultyContactPolicy: 'unknown_due_to_insufficient_evidence',
@@ -568,11 +572,12 @@ export function classifyGraduateApplicationPathway(input: {
   evidence: OrchestrationSourceEvidence[]
   facultyContactPolicy?: unknown
   cycle?: string | null
+  targetKind?: GraduateApplicationTargetKind
   now?: string
 }): GraduateApplicationPathway {
   const now = input.now ?? new Date().toISOString()
   const sources = officialSources(input.evidence).slice(0, 40)
-  const result = pathwayDefaults(now)
+  const result = pathwayDefaults(now, input.targetKind ?? 'programme')
   result.evidence = sources.slice(0, 20)
   const suppliedPolicy = normalizeFacultyContactPolicy(input.facultyContactPolicy)
   result.facultyContactPolicyDetails = resolveFacultyContactPolicy({ sources, supplied: suppliedPolicy, cycle: input.cycle, now })
@@ -585,7 +590,8 @@ export function classifyGraduateApplicationPathway(input: {
   const projectSpecific = has([/project[- ]specific/i, /advertised\s+(?:phd|doctoral)\s+(?:project|position)/i, /doctoral\s+(?:researcher|student)\s+vacanc/i, /apply\s+for\s+the\s+project/i])
   const rotation = has([/lab\s+rotation/i, /rotations?\s+(?:through|across|in)\s+(?:the|our)\s+(?:labs?|groups?)/i, /first[- ]year\s+rotations?/i])
   const directLab = has([/apply\s+directly\s+to\s+(?:a\s+)?(?:lab|laboratory|research\s+group)/i, /lab[- ]based\s+admission/i])
-  const scholarship = has([/(?:external|separate)\s+scholarship.*(?:required|must|before)/i, /scholarship.*(?:prerequisite|condition).*application/i, /funding\s+application.*required/i])
+  const scholarship = has([/(?:external|separate|provider)\s+(?:scholarship|fellowship|award|funding)\b[^.]{0,180}\b(?:required|must|before|eligible|course|programme|program)\b/i, /(?:scholarship|fellowship|award|funding)[^.]{0,180}\b(?:required|must|before|eligible|course|programme|program)\b/i, /apply\s+for\s+(?:the\s+)?(?:scholarship|fellowship|award)\b/i, /scholarship.*(?:prerequisite|condition).*application/i, /funding\s+application.*required/i])
+  const scholarshipBeforeProgramme = scholarship && has([/apply\s+for\s+(?:the\s+)?(?:scholarship|fellowship|award)[^.]{0,180}\b(?:before|prior\s+to|first)\b/i, /(?:external|separate|provider)[^.]{0,180}(?:scholarship|fellowship|award)[^.]{0,120}\b(?:then|before)\b[^.]{0,120}(?:programme|program|course|university)/i, /(?:programme|program|course|university)[^.]{0,180}\b(?:requires|depends\s+on)\b[^.]{0,120}(?:scholarship|fellowship|award)/i])
   const coursework = has([/coursework[- ]based/i, /professional\s+(?:doctorate|programme|program)/i, /taught\s+(?:master|doctor)/i])
   const committee = has([/admission(?:s)?\s+(?:is|are)\s+(?:made|decided|determined)\s+by\s+(?:the\s+)?(?:departmental\s+)?(?:admissions?\s+)?committee/i, /applications?\s+are\s+reviewed\s+by\s+(?:the\s+|a\s+)?(?:departmental\s+)?(?:admissions?\s+)?committee/i, /central\s+admissions?/i])
 
@@ -598,11 +604,12 @@ export function classifyGraduateApplicationPathway(input: {
   else if (coursework) result.admissionModel = 'professional_or_coursework'
   else if (committee) result.admissionModel = 'central_committee'
 
-  if (has([/apply\s+(?:through|via)\s+(?:the\s+)?(?:central|university|graduate\s+school|graduate\s+admissions?)\s+portal/i, /(?:submit|submitted)\s+(?:(?:your\s+)?application\s+)?through\b[^.]{0,120}\bapplication\s+portal/i, /university[- ]wide\s+application\s+portal/i, /central\s+(?:graduate\s+)?admissions?\s+portal/i])) result.applicationRoute = 'central_portal'
+  if (scholarshipBeforeProgramme) result.applicationRoute = 'external_scholarship_then_programme'
+  else if (has([/apply\s+(?:through|via)\s+(?:the\s+)?(?:central|university|graduate\s+school|graduate\s+admissions?)\s+portal/i, /(?:submit|submitted)\s+(?:(?:your\s+)?application\s+)?through\b[^.]{0,120}\bapplication\s+portal/i, /university[- ]wide\s+application\s+portal/i, /central\s+(?:graduate\s+)?admissions?\s+portal/i])) result.applicationRoute = 'central_portal'
   else if (has([/department(?:al)?\s+application\s+portal/i, /apply\s+through\s+the\s+department/i])) result.applicationRoute = 'department_portal'
   else if (projectSpecific) result.applicationRoute = 'job_vacancy'
   else if (supervisorRequired) result.applicationRoute = 'supervisor_then_portal'
-  else if (scholarship && has([/apply\s+for\s+(?:the\s+)?scholarship\s+before/i, /external\s+scholarship\s+then/i])) result.applicationRoute = 'external_scholarship_then_programme'
+  else if (scholarshipBeforeProgramme) result.applicationRoute = 'external_scholarship_then_programme'
   else if (has([/submit\s+your\s+application\s+by\s+email/i, /email\s+application/i])) result.applicationRoute = 'email_application'
 
   // The policy package is authoritative for contact semantics. Supervisor
@@ -655,10 +662,10 @@ export function classifyGraduateApplicationPathway(input: {
   return result
 }
 
-export function validateGraduateApplicationPathway(value: unknown, authoritativeEvidence: OrchestrationSourceEvidence[]) {
+export function validateGraduateApplicationPathway(value: unknown, authoritativeEvidence: OrchestrationSourceEvidence[], targetKind: GraduateApplicationTargetKind = 'programme') {
   const candidate = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
   const allowed = <T extends string>(raw: unknown, values: readonly T[], fallback: T) => values.includes(String(raw) as T) ? String(raw) as T : fallback
-  const baseline = classifyGraduateApplicationPathway({ evidence: authoritativeEvidence })
+  const baseline = classifyGraduateApplicationPathway({ evidence: authoritativeEvidence, targetKind })
   const safeEvidence = officialSources(authoritativeEvidence)
   const evidenceIds = new Set(safeEvidence.map(item => item.id))
   const candidateEvidence = Array.isArray(candidate.evidence)
@@ -675,6 +682,7 @@ export function validateGraduateApplicationPathway(value: unknown, authoritative
     : normalizeFacultyContactPolicyClassification(candidatePolicyValue)
   const candidatePolicyDetails = normalizeFacultyContactPolicy(candidate.facultyContactPolicyDetails ?? candidate.facultyContactPolicyEvidence)
   const output = { ...baseline,
+    targetKind: allowed(candidate.targetKind, ['programme', 'scholarship'] as const, baseline.targetKind),
     admissionModel: allowed(candidate.admissionModel, admissionModels, baseline.admissionModel),
     applicationRoute: allowed(candidate.applicationRoute, ['central_portal', 'department_portal', 'supervisor_then_portal', 'job_vacancy', 'email_application', 'external_scholarship_then_programme', 'mixed', 'unknown'] as const, baseline.applicationRoute),
     facultyContactPolicy: FACULTY_CONTACT_POLICY_VALUES.includes(candidatePolicy) ? candidatePolicy : baseline.facultyContactPolicy,
@@ -691,6 +699,8 @@ export function validateGraduateApplicationPathway(value: unknown, authoritative
 }
 
 function typeForRequirement(requirement: ApplicationOrchestrationRequirement): ApplicationPlanType | null {
+  const explicitType = lower(requirement.type)
+  if (explicitType === 'scholarship') return 'scholarship'
   const value = lower(`${requirement.type ?? ''} ${requirement.name}`)
   if (/official[_ ]requirement|admission[_ ]requirement/.test(value)) {
     return isApplicationSubmissionMethodRequirement(requirement) ? 'portal' : 'programme_research'
@@ -952,13 +962,16 @@ export function buildAdmissionStrategy(input: {
   evidenceVersion?: number
 }): AdmissionStrategy {
   const now = input.now ?? new Date().toISOString()
+  const scholarshipTarget = input.pathway.targetKind === 'scholarship'
   const areas = unique((input.researchAreas ?? []).map(text).filter(Boolean)).slice(0, 6)
   const methods = unique((input.methods ?? []).map(text).filter(Boolean)).slice(0, 6)
   const signals = (input.applicantSignals ?? []).filter(signal => signal.id && text(signal.signal)).slice(0, 8)
   const requirements = input.requirements ?? []
   const materialEvents = unique((input.materialEvents ?? []).map(text).filter(Boolean)).slice(-12)
   const requiredNames = requirements.filter(item => item.required && !completeStatus(item)).map(item => item.name).slice(0, 8)
-  const route = input.pathway.admissionModel === 'project_specific_position'
+  const route = scholarshipTarget
+    ? `the ${input.programmeTitle} scholarship eligibility and application route`
+    : input.pathway.admissionModel === 'project_specific_position'
     ? 'the advertised project and its named research team'
     : input.pathway.admissionModel === 'supervisor_first' || input.pathway.admissionModel === 'direct_lab_admission'
       ? 'a verified supervisor or lab fit before the formal portal route'
@@ -973,7 +986,7 @@ export function buildAdmissionStrategy(input: {
     supersedes: input.existing ? `${input.existing.id}@${input.existing.revision}` : null,
     basedOnEvidenceVersion: input.evidenceVersion ?? null,
     applicationCaseId: input.applicationCaseId,
-    objective: `Build the strongest evidence-backed application for ${input.programmeTitle} at ${input.institution}.`,
+    objective: `Build the strongest evidence-backed ${scholarshipTarget ? 'scholarship application' : 'application'} for ${input.programmeTitle} at ${input.institution}.`,
     primaryResearchRoute: route,
     alternateResearchRoutes: areas.slice(1, 4),
     researchNarrative: areas.length
@@ -981,30 +994,44 @@ export function buildAdmissionStrategy(input: {
       : 'Use the programme’s verified research areas and the applicant’s confirmed record to define one coherent research direction.',
     strongestApplicantSignals: signals.slice(0, 5).map(signal => ({ signal: signal.signal, evidenceId: signal.id })),
     weaknessesOrGaps: requiredNames.map(name => ({ gap: `The requirement “${name}” is not yet verified.`, mitigation: 'Start the evidence or preparation route early and keep unrelated work moving.' })),
-    facultyStrategy: outreachAllowed ? {
+    facultyStrategy: scholarshipTarget ? null : outreachAllowed ? {
       targetFacultyIds: (input.facultyCandidates ?? []).slice(0, 5).map(candidate => candidate.id),
       outreachPriority: input.pathway.facultyContactPolicy === 'required' || input.pathway.supervisorApprovalBeforeApplication === 'required' ? ['required', 'recommended'] : ['recommended', 'optional'],
       rationale: input.pathway.facultyContactPolicy === 'unknown_due_to_insufficient_evidence'
         ? 'Faculty contact needs one targeted policy-evidence repair before outreach is decided.'
         : `Faculty work will be used only where the official pathway and applicant fit make contact worthwhile (${input.pathway.facultyContactPolicy}).`,
     } : null,
-    cvStrategy: [
+    cvStrategy: scholarshipTarget ? [
+      'Use a CV only when the official scholarship requirements call for one.',
+      'Keep every factual claim traceable to the authoritative CV or applicant evidence.',
+    ] : [
       `Tailor the CV to ${input.programmeTitle}, not to the institution in general.`,
       'Lead with the applicant’s strongest verified research signals and methods.',
       'Keep every factual claim traceable to the authoritative CV or applicant evidence.',
     ],
-    statementStrategy: [
+    statementStrategy: scholarshipTarget ? [
+      'Address the exact scholarship prompts, selection criteria, and length limits from official sources.',
+      areas.length ? `Connect the applicant’s record to ${areas.slice(0, 3).join(', ')} without overstating programme fit.` : 'Use only verified scholarship and applicant evidence until the award criteria are clear.',
+      'Keep the scholarship narrative consistent with every selected course, degree, and supporting document.',
+    ] : [
       'Use the same research narrative as the CV and proposal.',
       areas.length ? `Connect the applicant’s record to ${areas.slice(0, 3).join(', ')}.` : 'Use only verified programme and applicant evidence until research fit is clearer.',
       'Address the exact programme prompt and length limit from the official source.',
       ...(materialEvents.some(event => /professor_replied|supervisor_accepted/.test(event)) ? ['Incorporate only the supervisor or faculty guidance that is preserved in the latest verified communication evidence.'] : []),
       ...(materialEvents.some(event => /supervisor_declined|funding_changed|source_conflict_found/.test(event)) ? ['Recheck the research route and remove stale references to the changed or rejected path.'] : []),
     ],
-    proposalStrategy: input.pathway.researchProposalPolicy === 'not_required' ? [] : ['Create a proposal only when the official route requires, recommends, or materially benefits from it.', 'Tie methods, feasibility, and programme fit to verified evidence.'],
+    proposalStrategy: input.pathway.researchProposalPolicy === 'not_required' ? [] : [
+      scholarshipTarget ? 'Create a proposal only when the scholarship or linked course route explicitly requires or recommends it.' : 'Create a proposal only when the official route requires, recommends, or materially benefits from it.',
+      'Tie methods, feasibility, and programme fit to verified evidence.',
+    ],
     recommendationStrategy: ['Use the official recommender count, relationship, and submission method.', 'Start long-lead referee work early and never claim a letter is complete without provider evidence.'],
-    fundingStrategy: input.pathway.fundingModel === 'unknown' ? ['Verify the programme funding model before promising a funding route.'] : [`Follow the ${input.pathway.fundingModel.replaceAll('_', ' ')} route and its separate deadlines where applicable.`],
+    fundingStrategy: scholarshipTarget
+      ? ['Verify the award coverage, duration, eligible study routes, conditions, and separate deadlines from the official scholarship source.']
+      : input.pathway.fundingModel === 'unknown' ? ['Verify the programme funding model before promising a funding route.'] : [`Follow the ${input.pathway.fundingModel.replaceAll('_', ' ')} route and its separate deadlines where applicable.`],
     portalStrategy: ['Inspect the official portal early.', 'Map fields only to verified applicant facts, leave unsupported optional fields blank, and read back every saved section.', ...(materialEvents.some(event => /official_requirement_changed|portal_requirement_discovered|deadline_changed/.test(event)) ? ['Revalidate the affected portal sections and current deadline before relying on any earlier checkpoint.'] : [])],
-    optionalHighLeverageActions: outreachAllowed ? ['Research a small number of high-fit faculty rather than mass emailing.'] : ['Use faculty research to strengthen the application without creating unnecessary outreach.'],
+    optionalHighLeverageActions: scholarshipTarget
+      ? ['Keep the scholarship narrative, selected study routes, and supporting documents mutually consistent.']
+      : outreachAllowed ? ['Research a small number of high-fit faculty rather than mass emailing.'] : ['Use faculty research to strengthen the application without creating unnecessary outreach.'],
     timeSensitiveActions: [
       ...(input.pathway.supervisorApprovalBeforeApplication === 'required' ? ['Identify and contact viable supervisors before the formal application can be treated as ready.'] : []),
       ...(input.pathway.recommendationModel.count ? [`Resolve ${input.pathway.recommendationModel.count} recommendation route${input.pathway.recommendationModel.count === 1 ? '' : 's'} early.`] : []),
@@ -1037,36 +1064,45 @@ export function buildApplicationExecutionPlan(input: {
 }): ApplicationExecutionPlan {
   const now = input.now ?? new Date().toISOString()
   const caseId = input.applicationCaseId
+  const targetKind = input.pathway.targetKind ?? classifyGraduateApplicationTask(input.objective).targetKind ?? 'programme'
+  const scholarshipTarget = targetKind === 'scholarship'
+  const targetNoun = scholarshipTarget ? 'scholarship' : 'programme'
+  const requirements = input.requirements ?? []
+  const shouldPrepareCv = !scholarshipTarget || requirements.some(requirement => typeForRequirement(requirement) === 'cv')
   const nodes: ApplicationPlanNode[] = []
   const add = (node: ApplicationPlanNode) => nodes.push(node)
-  add(newNode({ id: 'programme-research', applicationCaseId: caseId, kind: 'required', type: 'programme_research', title: `Refresh ${input.programmeTitle} requirements`, priority: 5, expectedImpact: 'critical', dependencies: [], produces: ['official-programme-evidence'], owner: 'david', executionMode: 'autonomous', status: 'completed', deadline: null, estimatedMinutes: 20, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'research' }))
-  add(newNode({ id: 'pathway:classification', applicationCaseId: caseId, kind: 'required', type: 'pathway_classification', title: 'Classify the admissions pathway', priority: 6, expectedImpact: 'critical', dependencies: ['programme-research'], produces: ['verified-admission-pathway'], owner: 'deterministic_engine', executionMode: 'autonomous', status: input.pathway.evidence.length ? 'completed' : 'ready', evidenceIds: input.pathway.evidence.map(source => source.id), deadline: null, estimatedMinutes: 10, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'research' }))
-  add(newNode({ id: `strategy:${input.strategy.id}`, applicationCaseId: caseId, kind: 'required', type: 'programme_research', title: 'Build one application strategy', priority: 8, expectedImpact: 'critical', dependencies: ['pathway:classification'], produces: ['shared-admission-strategy'], owner: 'david', executionMode: 'autonomous', status: input.pathway.evidence.length ? 'completed' : 'planned', deadline: null, estimatedMinutes: 15, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'planning' }))
+  add(newNode({ id: 'programme-research', applicationCaseId: caseId, kind: 'required', type: 'programme_research', title: `Refresh ${input.programmeTitle} ${targetNoun} requirements`, priority: 5, expectedImpact: 'critical', dependencies: [], produces: [scholarshipTarget ? 'official-scholarship-evidence' : 'official-programme-evidence'], owner: 'david', executionMode: 'autonomous', status: 'completed', deadline: null, estimatedMinutes: 20, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'research' }))
+  add(newNode({ id: 'pathway:classification', applicationCaseId: caseId, kind: 'required', type: 'pathway_classification', title: `Classify the ${targetNoun} application route`, priority: 6, expectedImpact: 'critical', dependencies: ['programme-research'], produces: ['verified-admission-pathway'], owner: 'deterministic_engine', executionMode: 'autonomous', status: input.pathway.evidence.length ? 'completed' : 'ready', evidenceIds: input.pathway.evidence.map(source => source.id), deadline: null, estimatedMinutes: 10, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'research' }))
+  add(newNode({ id: `strategy:${input.strategy.id}`, applicationCaseId: caseId, kind: 'required', type: 'programme_research', title: `Build one ${targetNoun} application strategy`, priority: 8, expectedImpact: 'critical', dependencies: ['pathway:classification'], produces: ['shared-admission-strategy'], owner: 'david', executionMode: 'autonomous', status: input.pathway.evidence.length ? 'completed' : 'planned', deadline: null, estimatedMinutes: 15, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'planning' }))
 
   // Faculty research remains useful even when contact is discouraged or
   // prohibited: it can still inform programme-specific application work. Keep
   // the node for an unresolved policy even without faculty seeds so the
   // bounded faculty pass can perform its one targeted policy repair instead
   // of silently skipping the lane.
-  add(newNode({ id: 'faculty:intelligence', applicationCaseId: caseId, kind: input.pathway.facultyContactPolicy === 'required' ? 'required' : 'strategic', type: 'faculty_intelligence', title: 'Research relevant faculty and labs', priority: input.pathway.facultyContactPolicy === 'required' ? 12 : 35, expectedImpact: input.pathway.facultyContactPolicy === 'required' ? 'critical' : 'high', dependencies: ['pathway:classification'], produces: ['faculty-fit-dossiers'], owner: 'david', executionMode: 'autonomous', status: 'ready', deadline: null, estimatedMinutes: 35, externalWaitRisk: 'medium', applicantBlockingRisk: 'low', parallelGroup: 'application-preparation' }))
+  if (!scholarshipTarget) {
+    add(newNode({ id: 'faculty:intelligence', applicationCaseId: caseId, kind: input.pathway.facultyContactPolicy === 'required' ? 'required' : 'strategic', type: 'faculty_intelligence', title: 'Research relevant faculty and labs', priority: input.pathway.facultyContactPolicy === 'required' ? 12 : 35, expectedImpact: input.pathway.facultyContactPolicy === 'required' ? 'critical' : 'high', dependencies: ['pathway:classification'], produces: ['faculty-fit-dossiers'], owner: 'david', executionMode: 'autonomous', status: 'ready', deadline: null, estimatedMinutes: 35, externalWaitRisk: 'medium', applicantBlockingRisk: 'low', parallelGroup: 'application-preparation' }))
+  }
 
-  add(newNode({ id: 'cv', applicationCaseId: caseId, kind: 'strategic', type: 'cv', title: `Tailor the CV to ${input.programmeTitle}`, priority: 18, expectedImpact: 'high', dependencies: [`strategy:${input.strategy.id}`], produces: ['programme-specific-cv'], owner: 'david', executionMode: 'autonomous', deadline: null, estimatedMinutes: 45, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'application-preparation' }))
+  if (shouldPrepareCv) {
+    add(newNode({ id: 'cv', applicationCaseId: caseId, kind: 'strategic', type: 'cv', title: scholarshipTarget ? `Prepare the CV required by ${input.programmeTitle}` : `Tailor the CV to ${input.programmeTitle}`, priority: 18, expectedImpact: 'high', dependencies: [`strategy:${input.strategy.id}`], produces: [scholarshipTarget ? 'scholarship-specific-cv' : 'programme-specific-cv'], owner: 'david', executionMode: 'autonomous', deadline: null, estimatedMinutes: 45, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'application-preparation' }))
+  }
   // Portal inspection is safe preparation and can reveal conditional fields
   // before every document is ready. It is deliberately not a dependency of
   // the CV, statement, or faculty lanes.
-  add(newNode({ id: 'portal:inspect', applicationCaseId: caseId, kind: 'strategic', type: 'portal', title: 'Inspect the application portal early', priority: 22, expectedImpact: 'high', dependencies: [`strategy:${input.strategy.id}`], produces: ['portal-schema', 'conditional-questions'], owner: 'browser', executionMode: 'autonomous', deadline: null, estimatedMinutes: 20, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'application-preparation' }))
+  add(newNode({ id: 'portal:inspect', applicationCaseId: caseId, kind: 'strategic', type: 'portal', title: `Inspect the ${targetNoun} application portal early`, priority: 22, expectedImpact: 'high', dependencies: [`strategy:${input.strategy.id}`], produces: ['portal-schema', 'conditional-questions'], owner: 'browser', executionMode: 'autonomous', deadline: null, estimatedMinutes: 20, externalWaitRisk: 'low', applicantBlockingRisk: 'low', parallelGroup: 'application-preparation' }))
 
   const outreachAllowed = !['discouraged', 'prohibited'].includes(input.pathway.facultyContactPolicy)
   const outreachRequired = input.pathway.facultyContactPolicy === 'required' || input.pathway.supervisorApprovalBeforeApplication === 'required'
   const hasFacultyTarget = (input.facultyCandidates?.length ?? 0) > 0
-  if (outreachAllowed && (outreachRequired || (hasFacultyTarget && !['discouraged', 'prohibited'].includes(input.pathway.facultyContactPolicy)))) {
+  if (!scholarshipTarget && outreachAllowed && (outreachRequired || (hasFacultyTarget && !['discouraged', 'prohibited'].includes(input.pathway.facultyContactPolicy)))) {
     const draftId = 'faculty:outreach:draft'
     add(newNode({ id: draftId, applicationCaseId: caseId, kind: outreachRequired ? 'required' : 'recommended', type: 'faculty_outreach', title: outreachRequired ? 'Prepare required supervisor outreach' : 'Prepare targeted faculty outreach', priority: outreachRequired ? 14 : 45, expectedImpact: outreachRequired ? 'critical' : 'medium', dependencies: ['faculty:intelligence', `strategy:${input.strategy.id}`].filter(id => nodes.some(node => node.id === id)), produces: ['faculty-outreach-draft'], owner: 'david', executionMode: 'autonomous', deadline: null, estimatedMinutes: 30, externalWaitRisk: 'high', applicantBlockingRisk: outreachRequired ? 'high' : 'low', parallelGroup: 'application-preparation' }))
     add(newNode({ id: 'faculty:outreach:send', applicationCaseId: caseId, kind: outreachRequired ? 'required' : 'recommended', type: 'faculty_outreach', title: outreachRequired ? 'Send required supervisor outreach' : 'Send approved faculty outreach', priority: outreachRequired ? 15 : 50, expectedImpact: outreachRequired ? 'critical' : 'medium', dependencies: [draftId, 'cv'], produces: ['faculty-contact-evidence'], owner: 'roon', executionMode: 'approval_required', deadline: null, estimatedMinutes: 10, externalWaitRisk: 'high', applicantBlockingRisk: outreachRequired ? 'high' : 'low', parallelGroup: 'external-actions' }))
   }
 
   nodes.push(...compileApplicationRequirementsToPlanNodes({
-    requirements: input.requirements ?? [],
+    requirements,
     strategyId: input.strategy.id,
     applicationCaseId: caseId,
   }))
@@ -1086,17 +1122,17 @@ export function buildApplicationExecutionPlan(input: {
     if (input.pathway.admissionModel === 'project_specific_position' && nodes.some(node => node.id === 'faculty:intelligence')) fundingDependencies.push('faculty:intelligence')
     add(newNode({ id: 'conditional:funding', applicationCaseId: caseId, kind: 'required', type: 'funding', title: input.pathway.fundingModel === 'project_funded' ? 'Verify project funding and its application route' : 'Verify supervisor funding and its application route', priority: 17, expectedImpact: 'critical', dependencies: fundingDependencies, produces: ['funding-evidence'], owner: 'david', executionMode: 'autonomous', deadline: null, estimatedMinutes: 30, externalWaitRisk: 'high', applicantBlockingRisk: 'high', parallelGroup: 'external-actions' }))
   }
-  if (input.pathway.fundingModel === 'scholarship_required' && !nodes.some(node => node.type === 'scholarship')) {
-    add(newNode({ id: 'funding:scholarship', applicationCaseId: caseId, kind: 'required', type: 'scholarship', title: 'Prepare the required scholarship application', priority: 13, expectedImpact: 'critical', dependencies: [`strategy:${input.strategy.id}`], produces: ['scholarship-application'], owner: 'david', executionMode: 'autonomous', deadline: null, estimatedMinutes: 45, externalWaitRisk: 'high', applicantBlockingRisk: 'high', parallelGroup: 'external-actions' }))
+  if ((scholarshipTarget || input.pathway.fundingModel === 'scholarship_required') && !nodes.some(node => node.type === 'scholarship')) {
+    add(newNode({ id: 'funding:scholarship', applicationCaseId: caseId, kind: 'required', type: 'scholarship', title: scholarshipTarget ? `Prepare the ${input.programmeTitle} scholarship application` : 'Prepare the required scholarship application', priority: 13, expectedImpact: 'critical', dependencies: [`strategy:${input.strategy.id}`], produces: ['scholarship-application'], owner: 'david', executionMode: 'autonomous', deadline: null, estimatedMinutes: 45, externalWaitRisk: 'high', applicantBlockingRisk: 'high', parallelGroup: 'external-actions' }))
   }
   if (input.deadline) {
-    // A programme deadline is a planning constraint even for strategic work;
+    // The opportunity deadline is a planning constraint even for strategic work;
     // individual requirement deadlines still win when the official source
     // gives one. This lets long external waits rise onto the critical path.
     for (const node of nodes) if (!node.deadline && node.type !== 'monitoring') node.deadline = input.deadline
   }
   const requiredWork = nodes.filter(node => node.kind === 'required' && !['programme_research', 'pathway_classification'].includes(node.type))
-  const readinessDeps = unique(requiredWork.map(node => node.id).concat(['cv']))
+  const readinessDeps = unique(requiredWork.map(node => node.id).concat(shouldPrepareCv ? ['cv'] : []))
   add(newNode({ id: 'readiness', applicationCaseId: caseId, kind: 'required', type: 'approval', title: 'Check the complete application package', priority: 90, expectedImpact: 'critical', dependencies: readinessDeps, produces: ['deterministic-readiness-report'], owner: 'deterministic_engine', executionMode: 'autonomous', deadline: null, estimatedMinutes: 20, externalWaitRisk: 'low', applicantBlockingRisk: 'high', parallelGroup: 'final-review' }))
   add(newNode({ id: 'submission:approval', applicationCaseId: caseId, kind: 'required', type: 'approval', title: 'Request final submission approval', priority: 95, expectedImpact: 'critical', dependencies: ['readiness'], produces: ['submission-approval'], owner: 'user', executionMode: 'approval_required', deadline: null, estimatedMinutes: 5, externalWaitRisk: 'low', applicantBlockingRisk: 'high', parallelGroup: 'final-review' }))
   add(newNode({ id: 'submission', applicationCaseId: caseId, kind: 'required', type: 'submission', title: 'Submit the approved application', priority: 100, expectedImpact: 'critical', dependencies: ['submission:approval'], produces: ['submission-confirmation', 'application-id'], owner: 'browser', executionMode: 'approval_required', deadline: null, estimatedMinutes: 10, externalWaitRisk: 'low', applicantBlockingRisk: 'high', parallelGroup: 'final-review' }))

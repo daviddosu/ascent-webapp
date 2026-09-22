@@ -136,9 +136,13 @@ supabase db lint --local
 
 Prefer product-contract and boundary integration tests centered on task/application ownership, idempotent consequential actions, evidence and provenance, exact artifact handoffs, approval gates, provider confirmation, dependency unlocking, and representative application pathways. Use the existing test tiers intentionally: `pnpm test:fast`, `pnpm test:application`, `pnpm test:qualification` (or `pnpm benchmark:david`), and `pnpm test:full`. Keep fixtures small and pathway-distinct; provider/live tests require explicit credentials and opt-in environment flags.
 
+Use `docs/production-readiness-gaps.md` as the single frozen completeness register. Do not create a new “remaining gaps” list unless a security defect, data-loss defect, regression, or explicitly approved product requirement is found.
+
 ### Native iOS client
 
 The native iOS client is maintained in the sibling repository `../shotcount-ios`, which contains `ios/Shotcount.xcodeproj`. When an iOS request is in scope, inspect that repository and its `AGENTS.md`; do not say that Shotcount has no iOS app. This web checkout alone does not provide Apple build coverage, so run native checks from the companion repository.
+
+For local simulator work, follow the SimSlim default workflow in `../shotcount-ios/AGENTS.md`: use an exact simulator UDID, prefer a runtime with verified SimSlim persistence (iOS 18.5+), and preserve any feature the scenario requires.
 
 ### Database and security
 

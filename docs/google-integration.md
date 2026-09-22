@@ -9,7 +9,8 @@ case and its requirement state.
 ## Provider contract
 
 Every Google operation belongs to one user, AgentRun, application case or
-communication task, and provider correlation. The adapter separates:
+application communication step, and provider correlation. The adapter
+separates:
 
 1. **Read.** Fetch the smallest bounded set of messages, contacts, events, or
    availability needed by the active lane.
@@ -153,7 +154,8 @@ reusable memory.
 
 ## Scheduling composition
 
-For “Set up a meeting with Blessing next week” the planner can:
+For “Coordinate an interview with Professor Blessing for the Stanford Physics
+PhD application next week” the planner can:
 
 1. resolve Blessing;
 2. read the user's availability;

@@ -69,6 +69,9 @@ function categoryFor(path: string[], name: string) {
 function requirementTypeFor(path: string[], name: string) {
   const value = [...path, name].join(' ').toLocaleLowerCase()
   if (/deadline/.test(value)) return 'deadline'
+  const namesAnAward = /scholarship|fellowship|studentship/.test(value)
+  const namesAnotherRequirement = /test|gre|gmat|toefl|ielts|english|exam|essay|statement|writing|letter|recommend|reference|referee|transcript|degree|education|academic|credential|portfolio|sample|publication|paper|code|resume|cv|portal|application.?form|account|upload|document/.test(value)
+  if (namesAnAward && !namesAnotherRequirement) return 'scholarship'
   if (/test|gre|gmat|toefl|ielts|english|exam/.test(value)) return 'test'
   if (/essay|statement|writing/.test(value)) return 'essay'
   if (/letter|recommend|reference|referee/.test(value)) return 'reference'

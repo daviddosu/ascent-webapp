@@ -58,40 +58,17 @@ describe('agent policy', () => {
 })
 
 describe('agent intent and completion semantics', () => {
-  it('routes Gmail, scheduling, and browser work deliberately', () => {
-    expect(classifyAgentIntent('Follow up with everyone I emailed last week')).toEqual({
-      capability: 'gmail',
-      strategy: 'structured',
-      outcomeType: 'external_change',
+  it('routes every request through graduate application intake', () => {
+    expect(classifyAgentIntent('apply to harvard physics')).toEqual({
+      capability: 'browser', strategy: 'hybrid', outcomeType: 'prepared_result',
     })
-    expect(classifyAgentIntent('Set up a meeting with Blessing and email her next week')).toEqual({
-      capability: 'scheduling',
-      strategy: 'hybrid',
-      outcomeType: 'external_change',
+    expect(classifyAgentIntent('Help me with this')).toEqual({
+      capability: 'browser', strategy: 'hybrid', outcomeType: 'prepared_result',
     })
-    expect(classifyAgentIntent('Set up a meeting with Blessing next week to discuss the ShotCount launch')).toEqual({
-      capability: 'scheduling',
-      strategy: 'hybrid',
-      outcomeType: 'external_change',
-    })
-    expect(classifyAgentIntent('Summarize the subject and sender of my latest Gmail message')).toEqual({
-      capability: 'gmail',
-      strategy: 'structured',
-      outcomeType: 'prepared_result',
-    })
-    expect(classifyAgentIntent('Check my Calendar availability next week')).toEqual({
-      capability: 'calendar',
-      strategy: 'structured',
-      outcomeType: 'prepared_result',
-    })
-    expect(classifyAgentIntent(
-      'Apply to Stanford Physics PhD',
-      'Research the requirements and prepare the application.',
-    )).toEqual({ capability: 'browser', strategy: 'hybrid', outcomeType: 'prepared_result' })
   })
 
   it('does not confuse preparation with the real external outcome', () => {
-    const scheduling = classifyAgentIntent('Set up a meeting with Blessing and email her next week')
+    const scheduling = { capability: 'scheduling', strategy: 'hybrid', outcomeType: 'external_change' } as const
     expect(outcomeCompletesTask(scheduling, { preparedResult: true })).toBe(false)
     expect(outcomeCompletesTask(scheduling, { externalChangeConfirmed: true })).toBe(true)
   })

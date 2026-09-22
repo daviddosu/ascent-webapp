@@ -42,6 +42,27 @@ correlations, portal observations, failure signatures, and user decisions.
 Knowledge is reused only when its scope, authority, freshness, and version make
 that reuse safe. A transcript is not the memory system.
 
+## Product scope invariant
+
+Shotcount has one public execution domain: graduate-school applications. A
+task must name or clearly imply a graduate degree or programme and an
+application step. Programme research, requirements, statements, transcripts,
+referees, prospective supervisors, funding, deadlines, portal work, Gmail,
+Calendar, and browser operations are in scope only when they are steps inside
+that application workflow. Standalone email, calendar, research, document,
+browser, job, internship, grant, or unrelated application tasks are not
+Shotcount work and must be rejected before routing, model calls, provider
+dispatch, or browser execution.
+
+The execution authority is the strict shared predicate
+`isGraduateApplicationTask`, enforced at client intake, the task-agent Edge
+Function, run continuation and approval paths, provider dispatch, and the
+browser worker. The older `isApplicationIntent` classifier may remain for
+legacy projections and compatibility data, but it never authorizes execution.
+Every agent-generated plan and user-facing suggestion must preserve the same
+application context; when the context is absent, the agent asks for it or
+stops.
+
 ## The tower of linked abstractions
 
 The layers below are intentionally boring and composable. A higher layer may
@@ -52,20 +73,23 @@ layer's intent or policy.
 | --- | --- | --- | --- |
 | Intent | task title, description, user interaction | What outcome is wanted? | User, interpreted by the router |
 | Contract | AgentTaskSpec on agent_runs.task_spec | What may happen, what is forbidden, and what proves success? | Orchestrator |
-| Scope | user, task, AgentRun, application case, programme, provider session | Which world is this action allowed to touch? | Orchestrator and ownership checks |
+| Scope | user, task, AgentRun, application campaign, target lane, ApplicationCase, provider session | Which world is this action allowed to touch? | Orchestrator and ownership checks |
 | Situation | opportunities, cases, requirements, facts, artifacts, contacts, communications, portal state | What is currently known? | Domain records and their evidence links |
 | Truth | evidence ledger and provenance fields | Is each claim verified, contested, stale, or merely proposed? | Deterministic engines and providers |
-| Work | outer AgentRun.plan plus inner ApplicationExecutionPlan | What work exists, what depends on what, and what can run now? | Orchestrator and deterministic application engine |
+| Work | outer AgentRun.plan plus canonical application workflow graph plus per-case ApplicationExecutionPlan | What work exists, what depends on what, and what can run now? | Orchestrator and deterministic application engine |
 | Control | specialist contract, active node, allowed tools, preconditions | What may the model do in this turn? | Tool policy and active work node |
 | Effect | approval, action claim, provider operation, browser checkpoint | What external or durable change is being attempted? | Provider harness and approval boundary |
 | Proof | provider read-back, resulting-state observation, artifact checksum, durable event | Did the intended effect actually happen? | Provider harness and verifier |
 | Accretion | reusable knowledge record, failure signature, benchmark regression | What should make the next run cheaper or more accurate? | Deterministic admission policy, with reviewed changes |
 
-The outer plan selects the domain and specialist stage. The application plan
-then expands one selected programme into dependency-aware lanes. They are not
-two competing sources of truth: the outer plan controls the run; the inner
-plan controls application work. Both use the same semantics for ownership,
-dependencies, evidence, retries, and waiting.
+The outer plan selects the domain and specialist stage. The application
+workflow graph then compiles the provider's actual route into a bundle of
+targets, selection groups, dependencies, and lanes. Each selected target gets
+one private ApplicationCase and its own target-scoped requirement plan. These
+are not competing sources of truth: the outer plan controls the run, the
+workflow graph controls target cardinality and cross-target coordination, and
+the case plan controls target-local work. All three use the same semantics for
+ownership, dependencies, evidence, retries, and waiting.
 
 ## Implementation anchors
 
@@ -76,6 +100,8 @@ The design maps to a small set of owning modules:
 - application requirement truth and semantic-step planning: supabase/functions/_shared/application-engine.ts;
 - programme pathway, strategy, lanes, and re-planning: supabase/functions/_shared/application-orchestration.ts;
 - applicant-question prioritization and lane-scoped context: supabase/functions/_shared/application-context-broker.ts and application-pending-input.ts;
+- per-turn working set, admission, recovery validation, and model resource accounting: supabase/functions/_shared/application-agent-control.ts;
+- bounded, retryable model transport: supabase/functions/_shared/application-model-request.ts;
 - tool policy, approval boundaries, and scheduler decisions: supabase/functions/_shared/application-runtime-policy.ts;
 - durable persistence, provider dispatch, reconciliation, and run completion: supabase/functions/task-agent/index.ts; and
 - human projection of persisted progress: src/data/agent-progress.ts and src/main.ts.
@@ -128,6 +154,16 @@ The packet should contain relevant IDs and short excerpts, not full provider
 responses, cookies, raw browser dumps, secrets, or unrelated application
 cases. A missing field must be represented as a typed missing precondition,
 not left for the model to infer.
+
+The production implementation of this packet is the
+`APPLICATION_TURN_ADMISSION_V1` contract and its nested
+`APPLICATION_WORKING_SET_V1` projection. Before each David model call it
+records the graduate-application scope, current controller operation, exact
+allowed tools, forbidden effects, required evidence, pending boundary, and
+remaining model budget. The model receives that same compact admission in its
+input; dispatch validates the proposed tool against it again. This makes the
+turn a replayable control unit instead of a prompt assembled from accidental
+transcript history.
 
 The model's response should be normalized to one bounded control decision:
 
@@ -200,10 +236,13 @@ The scheduler must:
 - surface a deadlock when unfinished work has neither a runnable lane nor a
   legitimate user or external wait.
 
-The resource budget should become explicit and durable at the node level. At a
-minimum it should cover model calls/tokens, browser operations, provider calls,
-retry attempts, elapsed deadline risk, and user interruptions. Budgets are
-policy inputs, not a reason for the model to silently lower evidence quality.
+The application run persists an `application_resource_budget` and cumulative
+`application_resource_usage` record. The active scheduler slice admits model
+calls and input volume against that budget, while provider and browser effects
+remain governed by their existing typed idempotency/recovery limits. Usage is
+recorded from provider-reported tokens when available, with a bounded estimate
+as fallback; retries and latency are recorded separately. Budgets are policy
+inputs, not a reason for the model to silently lower evidence quality.
 
 ## Ownership and handoffs
 
@@ -313,20 +352,25 @@ orchestration, context-question broker, approval/evidence gates, browser
 checkpoints, Google watches, and the canonical David benchmark. The remaining
 work is to make the shared operating model explicit and measurable.
 
-### Phase 1 — Make the state packet canonical
+### Phase 1 — Make the state packet canonical (implemented)
 
 - Keep AgentTaskSpec, the outer plan, the inner application plan, and the
   evidence ledger as separate named layers.
-- Define one serialized CONTEXT_PACKET_V1 projection with stable IDs,
-  missing-precondition reasons, freshness, allowed tools, and remaining budget.
+- Define one serialized `APPLICATION_TURN_ADMISSION_V1` projection with stable
+  IDs, missing-precondition reasons, freshness, allowed tools, and remaining
+  budget. The compact working set explicitly lists what is excluded and what
+  durable knowledge is being reused.
 - Define one bounded model-decision envelope and reject decisions outside the
-  active node.
-- Add contract fixtures for stale projections, case mismatch, cross-case
-  contamination, and an unfinished graph with no legal wait.
+  active application operation at dispatch.
+- Validate recovery slices before another model/provider turn, detecting
+  duplicate model calls, duplicate idempotency keys, missing provider
+  confirmation, terminal-run activity, and stale case/admission anchors.
 
-### Phase 2 — Make scheduling economical
+### Phase 2 — Make scheduling economical (core implemented)
 
-- Persist node-level resource budgets and actual usage.
+- Persist application-run resource budgets and actual model usage; keep node
+  budgets and historical lane scoring as follow-on work only where a measured
+  application pathway proves they are needed.
 - Rank runnable lanes using unlock value, deadline/lead time, information gain,
   user attention, consequence, and historical reliability.
 - Measure cache/reuse hits and ensure a verified result is not recomputed on a
@@ -334,7 +378,7 @@ work is to make the shared operating model explicit and measurable.
 - Keep independent lanes moving while one lane waits for the user or a
   provider; preserve the one-operation human projection.
 
-### Phase 3 — Make accretion explicit
+### Phase 3 — Make accretion explicit (existing foundations retained)
 
 - Add a scoped knowledge-admission contract for facts, official requirements,
   artifacts, portal observations, recovery signatures, and user decisions.

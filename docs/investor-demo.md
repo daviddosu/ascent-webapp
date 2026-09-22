@@ -39,9 +39,9 @@ Show that Shotcount derives:
 - David as the application owner, with no specialist selector or separate
   agent chat.
 
-The programme becomes the centre of the workspace. A research-only request
-should produce a bounded, official-source-verified shortlist and stop for
-selection; it should not silently create application cases.
+The programme becomes the centre of the workspace. A graduate-programme
+research request should produce a bounded, official-source-verified shortlist
+and stop for selection; it should not silently create application cases.
 
 ## Scene 2 — The agent sees the situation, not a checklist
 

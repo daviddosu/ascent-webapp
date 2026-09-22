@@ -18,12 +18,14 @@ returns evidence to the same AgentRun.
 - The worker uses a fresh isolated browser context and never returns cookies,
   storage, raw page dumps, or credentials.
 - Passwords, one-time codes, payment fields, and private identifiers are
-  blocked from generic browser actions.
+  blocked from non-application browser actions.
 - Public page content is bounded, sanitized, and explicitly labelled as
   untrusted external content before the model sees it.
-- Generic navigation and safe field preparation may continue only until an
-  externally visible write. The dedicated application submission path has its
-  own stricter contract.
+- The worker rejects a session whose AgentRun is not clearly a graduate-school
+  application before duplicate handling, claim, or browser execution.
+- Non-submission navigation and safe field preparation may continue only until
+  an externally visible write. The dedicated application submission path has
+  its own stricter contract.
 
 ## Browser operating contract
 
@@ -62,14 +64,25 @@ browser.act prepare the portal. Each observation is deliberately small so the
 agent can reason over the current control surface without spending tokens on
 irrelevant page state.
 
-State is replayable rather than tied to a long-lived Chromium process. The
-initial URL and at most 30 validated actions are stored in the session
-checkpoint, so a serverless restart can continue the same AgentRun. Replay
-starts from the last confirmed checkpoint and never repeats an already
-confirmed consequential operation.
+Production uses a persistent, isolated Browserbase context. The checkpoint
+stores only opaque provider context and session IDs; cookies, credentials, and
+raw browser storage never enter ShotCount's database or model context. A
+serverless restart reconnects to the active session or starts a new session on
+the same persistent context. Local and deterministic fixture runs retain the
+bounded replay fallback.
 
-browser.submit is the only generic externally visible write. It is allowed
-only for an explicitly preparatory effect such as save-and-continue, an upload,
+When a portal requires authentication, CAPTCHA/human verification, or a
+private identity field, ShotCount pauses with the exact browser session
+identity and exposes a short-lived secure live-view URL through the
+authenticated `/api/browser-session` endpoint. The user completes that step
+directly in the browser surface, then resumes the same AgentRun. The agent
+never receives the password, OTP, CAPTCHA answer, private identifier, cookies,
+or live-view URL. Stale, expired, completed, or failed sessions cannot be
+opened again; the user must resume the task to obtain a fresh session when the
+boundary is retryable.
+
+browser.submit is the only non-final portal write. It is allowed only for an
+explicitly preparatory application effect such as save-and-continue, an upload,
 or an academic request, and it still uses exact approval and provider
 confirmation. It must never impersonate application.submit.
 
@@ -130,17 +143,27 @@ Vercel server environment:
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 SHOTCOUNT_BROWSER_WORKER_TOKEN
+BROWSERBASE_API_KEY
+BROWSERBASE_PROJECT_ID
+BROWSERBASE_SESSION_TIMEOUT_SECONDS=900
+BROWSERBASE_RECORD_SESSION=false
+BROWSERBASE_LOG_SESSION=false
 ~~~
+
+The timeout defaults to 900 seconds so the free Browserbase plan can be used for beta qualification. Persistent contexts carry portal login state into a replacement session. Raise the timeout only when the selected plan permits longer sessions. Browser recordings and provider logs are disabled by default because they can contain applicant data; enable them only for a controlled qualification run with an approved retention policy.
 
 The service key and worker token must never be sent to the frontend.
 
 ## Failure handling
 
 The worker records stable public codes for runtime failures, unsafe URLs or
-fields, missing or ambiguous controls, ambiguous submission confirmation,
-changed portal state, timeouts, and worker connectivity. Failed preparation is
-retryable when safe from the last checkpoint; failed submission remains under
-user review. An ambiguous external effect is reconciled before any retry.
+fields, missing or ambiguous controls, authentication, CAPTCHA, private-field
+boundaries, ambiguous submission confirmation, changed portal state, timeouts,
+and worker connectivity. Human-only boundaries are shown as explicit secure
+takeover actions instead of being auto-recovered or sent through the model.
+Failed preparation is retryable when safe from the last checkpoint; failed
+submission remains under user review. An ambiguous external effect is
+reconciled before any retry.
 
 ## Verification
 

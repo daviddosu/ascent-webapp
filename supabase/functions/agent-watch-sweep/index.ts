@@ -13,6 +13,7 @@ import { classifyRecommendationReply, recommendationStateForReply, recommendatio
 import { classifyAdmissionsReply, detectPostSubmissionRequests, interpretAdmissionsReply, postSubmissionRequestRow } from '../_shared/application-recovery.ts'
 import { APPLICATION_FEE_WORKFLOW_VERSION, applyFeeWorkflowEvent, buildFeeWaiverRequestEmail, classifyFeeWaiverReply, type ApplicationFeeWorkflow, type FeeWaiverDecision, type FeeWaiverRequest } from '../_shared/application-fee-workflow.ts'
 import { applicationEmailFollowUpAt, readApplicationEmailPackage, validateApplicationEmailAction } from '../_shared/application-email.ts'
+import { GRADUATE_APPLICATION_ONLY_CODE, GRADUATE_APPLICATION_ONLY_MESSAGE, isGraduateApplicationTask } from '../_shared/application.ts'
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store',
@@ -20,6 +21,16 @@ const noStoreHeaders = {
 }
 
 type AdminClient = SupabaseClient<any, 'public', 'public', any, any>
+
+class GraduateApplicationScopeError extends Error {
+  readonly code = GRADUATE_APPLICATION_ONLY_CODE
+  readonly retryable = false
+
+  constructor() {
+    super(GRADUATE_APPLICATION_ONLY_MESSAGE)
+    this.name = 'GraduateApplicationScopeError'
+  }
+}
 
 function jsonResponse(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: noStoreHeaders })
@@ -74,6 +85,51 @@ type ApplicationRequestContext = {
 
 function recordValue(value: unknown) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function requireGraduateApplicationRun(run: Record<string, unknown>) {
+  const context = recordValue(run.context)
+  if (!isGraduateApplicationTask(safeString(run.objective, 2_000), safeString(context.description, 8_000))) {
+    throw new GraduateApplicationScopeError()
+  }
+  return run
+}
+
+async function requireCurrentGraduateApplicationTask(
+  admin: AdminClient,
+  run: Record<string, unknown>,
+  userId: string,
+  taskId: string,
+) {
+  requireGraduateApplicationRun(run)
+  const [plannerResult, taskResult] = await Promise.all([
+    admin.from('planner_records')
+      .select('data,deleted_at')
+      .eq('record_type', 'task')
+      .eq('record_id', taskId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+    admin.from('tasks')
+      .select('title,description')
+      .eq('id', taskId)
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ])
+  if (plannerResult.error && !['42P01', 'PGRST205'].includes(plannerResult.error.code ?? '')) {
+    throw new Error(plannerResult.error.message)
+  }
+  if (taskResult.error) throw new Error(taskResult.error.message)
+  const plannerTask = plannerResult.data && plannerResult.data.deleted_at === null
+    ? recordValue(plannerResult.data.data)
+    : {}
+  const currentTask = safeString(plannerTask.title, 1_000).trim()
+    ? plannerTask
+    : recordValue(taskResult.data)
+  const title = safeString(currentTask.title, 1_000).trim()
+  if (title && !isGraduateApplicationTask(title, safeString(currentTask.description, 4_000))) {
+    throw new GraduateApplicationScopeError()
+  }
+  return run
 }
 
 function feeWorkflowFromRow(row: Record<string, unknown>) {
@@ -191,6 +247,7 @@ async function loadApplicationRequestContext(admin: AdminClient, request: Applic
   if (!runResult.data || !caseResult.data || safeString(caseResult.data.task_id, 120) !== request.task_id || safeString(runResult.data.task_id, 120) !== request.task_id) {
     throw new Error('Application handoff ownership could not be verified.')
   }
+  await requireCurrentGraduateApplicationTask(admin, runResult.data as Record<string, unknown>, request.user_id, request.task_id)
   const campaignResult = await admin.from('application_campaigns').select('*').eq('id', caseResult.data.campaign_id).eq('user_id', request.user_id).eq('task_id', request.task_id).maybeSingle()
   if (campaignResult.error || !campaignResult.data) throw new Error(campaignResult.error?.message ?? 'The application campaign is unavailable for this handoff.')
   const payload = recordValue(request.payload)
@@ -1767,11 +1824,12 @@ async function processApplicationRoonRequests(admin: AdminClient) {
       else if (result.status === 'waiting_user') counts.failed += 1
       else counts.pending += 1
     } catch (error) {
-      const retryable = error instanceof GoogleIntegrationError ? error.retryable : applicationFailureIsRetryable(error)
+      const scopeError = error instanceof GraduateApplicationScopeError
+      const retryable = scopeError ? false : error instanceof GoogleIntegrationError ? error.retryable : applicationFailureIsRetryable(error)
       const attempt = Number(row.attempt_count ?? 0) + 1
       const status = retryable && attempt < 4 ? 'queued' : 'failed'
       const retryAt = new Date(Date.now() + Math.min(30 * 60 * 1000, 30_000 * 2 ** Math.max(0, attempt - 1))).toISOString()
-      const code = error instanceof GoogleIntegrationError ? error.code : 'application_roon_worker_error'
+      const code = scopeError ? GRADUATE_APPLICATION_ONLY_CODE : error instanceof GoogleIntegrationError ? error.code : 'application_roon_worker_error'
       const message = error instanceof Error ? error.message.slice(0, 500) : 'Roon could not complete the application action.'
       await admin.from('application_inter_agent_requests').update({ status, result: { code, message }, last_error: { code, message, retryable }, next_attempt_at: status === 'queued' ? retryAt : null }).eq('id', row.id).eq('status', 'running')
       if (context) await recordApplicationWorkerEvent(admin, context, status === 'queued' ? 'application_worker_retry_scheduled' : 'application_worker_failed', status === 'queued' ? 'waiting_external' : 'failed', message, { code, retryable, attempt })
@@ -1882,6 +1940,9 @@ async function processApplicationOtpRequests(admin: AdminClient, continuation?: 
     if (subjectClues.length) queryParts.push(`{${subjectClues.map(value => `subject:"${value}"`).join(' OR ')}}`)
     else if (senderClues.length) queryParts.push(`{${senderClues.map(value => `from:${value}`).join(' OR ')}}`)
     try {
+      const runResult = await admin.from('agent_runs').select('task_id,objective,context').eq('id', claimed.data.agent_run_id).eq('user_id', claimed.data.user_id).maybeSingle()
+      if (runResult.error || !runResult.data) throw new Error(runResult.error?.message ?? 'The application run for this OTP request could not be verified.')
+      await requireCurrentGraduateApplicationTask(admin, runResult.data as Record<string, unknown>, claimed.data.user_id, safeString(claimed.data.task_id, 120) || safeString(runResult.data.task_id, 120))
       const search = await executeGoogleTool(admin, claimed.data.user_id, 'gmail.search_messages', {
         query: queryParts.join(' '),
         max_results: 10,
@@ -1966,10 +2027,11 @@ async function processApplicationOtpRequests(admin: AdminClient, continuation?: 
       })
       completed += 1
     } catch (error) {
-      const retryable = error instanceof GoogleIntegrationError ? error.retryable : true
+      const scopeError = error instanceof GraduateApplicationScopeError
+      const retryable = scopeError ? false : error instanceof GoogleIntegrationError ? error.retryable : true
       await admin.from('application_inter_agent_requests').update({
         status: retryable ? 'queued' : 'failed',
-        result: { code: error instanceof GoogleIntegrationError ? error.code : 'otp_worker_error', message: error instanceof Error ? error.message.slice(0, 500) : 'OTP retrieval failed.' },
+        result: { code: scopeError ? GRADUATE_APPLICATION_ONLY_CODE : error instanceof GoogleIntegrationError ? error.code : 'otp_worker_error', message: error instanceof Error ? error.message.slice(0, 500) : 'OTP retrieval failed.' },
       }).eq('id', request.id).eq('status', 'running')
       if (retryable) pending += 1
       else failed += 1
@@ -1981,7 +2043,7 @@ async function processApplicationOtpRequests(admin: AdminClient, continuation?: 
 async function processApplicationReplyRequests(admin: AdminClient) {
   const queued = await admin
     .from('application_inter_agent_requests')
-    .select('id,user_id,application_case_id,from_specialist_id,to_specialist_id,request_kind,payload,status')
+    .select('id,user_id,task_id,agent_run_id,application_case_id,from_specialist_id,to_specialist_id,request_kind,payload,status')
     .eq('from_specialist_id', 'david')
     .eq('to_specialist_id', 'roon')
     .eq('request_kind', 'read_application_reply')
@@ -2000,7 +2062,7 @@ async function processApplicationReplyRequests(admin: AdminClient) {
       .update({ status: 'running' })
       .eq('id', request.id)
       .eq('status', 'queued')
-      .select('id,user_id,application_case_id,request_kind,payload,status')
+      .select('id,user_id,task_id,agent_run_id,application_case_id,request_kind,payload,status')
       .maybeSingle()
     if (claimed.error || !claimed.data) {
       if (claimed.error) failed += 1
@@ -2029,6 +2091,9 @@ async function processApplicationReplyRequests(admin: AdminClient) {
     if (subjectClues.length) queryParts.push(`{${subjectClues.map((value: string) => `subject:"${value}"`).join(' OR ')}}`)
     else if (senderClues.length) queryParts.push(`{${senderClues.map((value: string) => `from:${value}`).join(' OR ')}}`)
     try {
+      const runResult = await admin.from('agent_runs').select('task_id,objective,context').eq('id', claimed.data.agent_run_id).eq('user_id', claimed.data.user_id).maybeSingle()
+      if (runResult.error || !runResult.data) throw new Error(runResult.error?.message ?? 'The application run for this reply request could not be verified.')
+      await requireCurrentGraduateApplicationTask(admin, runResult.data as Record<string, unknown>, claimed.data.user_id, safeString(claimed.data.task_id, 120) || safeString(runResult.data.task_id, 120))
       const search = await executeGoogleTool(admin, claimed.data.user_id, 'gmail.search_messages', { query: queryParts.join(' '), max_results: 10 }, `application-reply-search:${request.id}`)
       const candidates = Array.isArray(search.value.messages) ? search.value.messages as Array<Record<string, unknown>> : []
       let matched: { id: string; threadId: string | null; subject: string; body: string; receivedAt: string } | null = null
@@ -2089,8 +2154,9 @@ async function processApplicationReplyRequests(admin: AdminClient) {
       await admin.from('application_inter_agent_requests').update({ status: 'completed', result: { kind: 'application_reply', classification, message_id: matched.id, thread_id: matched.threadId, subject: matched.subject, received_at: matched.receivedAt } }).eq('id', request.id).eq('status', 'running')
       completed += 1
     } catch (error) {
-      const retryable = error instanceof GoogleIntegrationError ? error.retryable : true
-      await admin.from('application_inter_agent_requests').update({ status: retryable ? 'queued' : 'failed', result: { code: error instanceof GoogleIntegrationError ? error.code : 'application_reply_worker_error', message: error instanceof Error ? error.message.slice(0, 500) : 'Application reply monitoring failed.' } }).eq('id', request.id).eq('status', 'running')
+      const scopeError = error instanceof GraduateApplicationScopeError
+      const retryable = scopeError ? false : error instanceof GoogleIntegrationError ? error.retryable : true
+      await admin.from('application_inter_agent_requests').update({ status: retryable ? 'queued' : 'failed', result: { code: scopeError ? GRADUATE_APPLICATION_ONLY_CODE : error instanceof GoogleIntegrationError ? error.code : 'application_reply_worker_error', message: error instanceof Error ? error.message.slice(0, 500) : 'Application reply monitoring failed.' } }).eq('id', request.id).eq('status', 'running')
       if (retryable) pending += 1
       else failed += 1
     }

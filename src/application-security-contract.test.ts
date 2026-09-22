@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 const executionMigration = readFileSync('supabase/migrations/202608050001_david_application_execution.sql', 'utf8')
 const assetMigration = readFileSync('supabase/migrations/202608050003_application_file_case_identity.sql', 'utf8')
 const writerLoadMigration = readFileSync('supabase/migrations/202608100001_atomic_writer_assignment_load.sql', 'utf8')
+const agentRunMigration = readFileSync('supabase/migrations/202609220001_prevent_duplicate_active_agent_runs.sql', 'utf8')
 
 describe('application security boundaries', () => {
   it('scopes records to the user and application case before idempotent writes', () => {
@@ -30,5 +31,12 @@ describe('application security boundaries', () => {
     expect(writerLoadMigration).toContain('after insert or delete or update of writer_id, user_id, status')
     expect(writerLoadMigration).toContain("assignment.status not in ('approved', 'cancelled')")
     expect(writerLoadMigration).toContain('create or replace function public.sync_application_writer_assignment_load')
+  })
+
+  it('allows only one in-flight execution per task while preserving terminal history', () => {
+    expect(agentRunMigration).toContain('agent_runs_one_nonterminal_task_idx')
+    expect(agentRunMigration).toContain("'waiting_for_user'")
+    expect(agentRunMigration).toContain("'planning'")
+    expect(agentRunMigration).not.toContain("status in ('completed', 'cancelled')")
   })
 })

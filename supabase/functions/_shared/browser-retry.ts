@@ -77,7 +77,7 @@ export function browserFailureClass(code: string) {
 }
 
 export function isBrowserUserInterventionFailure(code: string) {
-  return ['browser_sensitive_field_blocked', 'browser_submission_status_unknown'].includes(code)
+  return ['browser_sensitive_field_blocked', 'browser_authentication_required', 'browser_captcha_required', 'browser_submission_status_unknown'].includes(code)
 }
 
 export function shouldRecycleBrowserSession(operationType: string, code: string, completedAttempts: number) {

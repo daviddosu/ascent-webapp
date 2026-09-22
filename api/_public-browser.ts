@@ -25,6 +25,11 @@ export type PublicBrowserState = {
   lastEvidence?: Record<string, unknown>
 }
 
+export type PublicBrowserRuntime = {
+  connectUrl: string
+  preserveSession: true
+}
+
 export type PublicBrowserObservation = {
   title: string
   url: string
@@ -37,10 +42,42 @@ export type PublicBrowserObservation = {
   untrustedExternalContent: true
 }
 
+export type PublicBrowserHumanBoundary = 'authentication' | 'captcha' | 'sensitive_field'
+
 const sensitivePattern = /\b(?:password|passcode|otp|one[- ]?time|card|credit|debit|cvv|cvc|security code|account number|routing|bank|ssn|social security|passport)\b/i
 const publicBrowserPrimaryLinkLimit = 20
 const publicBrowserRelevantLinkLimit = 20
 const publicBrowserLinkScanLimit = 160
+
+/**
+ * Detect human-only browser boundaries from the bounded observation. This is
+ * deliberately conservative: it does not infer that a portal is unsupported
+ * and it never asks the model to handle credentials or CAPTCHA challenges.
+ */
+export function publicBrowserHumanBoundary(observation: PublicBrowserObservation): PublicBrowserHumanBoundary | null {
+  const fields = observation.fields ?? []
+  const visibleFields = fields.filter(field => field.visible !== false)
+  const text = [
+    observation.title,
+    ...observation.headings,
+    observation.text,
+    ...(observation.controls ?? []).map(control => control.label),
+  ].join(' ')
+  const hasCaptchaKeyword = /\b(?:captcha|reCAPTCHA|hCaptcha|turnstile)\b/i.test(text)
+  const hasHumanChallenge = /\b(?:i['’]?m not a robot|verify (?:that )?you(?: are)? human|human verification|security challenge)\b/i.test(text)
+  const hasCaptchaInstruction = /(?:please|must|need(?: to)?|complete|solve|click|check|enter|verify).{0,80}\b(?:captcha|reCAPTCHA|hCaptcha|turnstile)\b|\b(?:captcha|reCAPTCHA|hCaptcha|turnstile)\b.{0,80}(?:required|challenge|complete|solve|click|check|enter|please|must|need)/i.test(text)
+  if (hasHumanChallenge || (hasCaptchaKeyword && hasCaptchaInstruction)) {
+    return 'captcha'
+  }
+  const hasCredentialField = visibleFields.some(field => field.type === 'password' || /password|passcode|one[- ]?time|verification code|otp/i.test(`${field.name} ${field.label} ${field.prompt}`))
+  if (hasCredentialField && /\b(?:sign in|log in|login|create account|verify(?: your)? (?:email|identity)|authentication|continue with google|sign in with google)\b/i.test(text)) {
+    return 'authentication'
+  }
+  if (visibleFields.some(field => /\b(?:password|passcode|otp|one[- ]?time|verification code|ssn|social security|passport|security code)\b/i.test(`${field.name} ${field.label} ${field.prompt}`))) {
+    return 'sensitive_field'
+  }
+  return null
+}
 
 /**
  * Keep the compact, DOM-order link list used by generic browser work while
@@ -96,7 +133,8 @@ async function executablePath() {
   }
 }
 
-async function launchBrowser(domains: unknown) {
+async function launchBrowser(domains: unknown, runtime?: PublicBrowserRuntime) {
+  if (runtime?.connectUrl) return playwright.connectOverCDP(runtime.connectUrl, { timeout: 20_000 })
   const benchmark = benchmarkModeEnabled()
   const allowedDomains = normalizedAllowedDomains(domains)
   let resolverRules = ''
@@ -137,6 +175,19 @@ async function launchBrowser(domains: unknown) {
       ...(!benchmark && resolverRules ? [`--host-resolver-rules=${resolverRules}`] : []),
     ],
   })
+}
+
+async function activePage(browser: Browser, runtime?: PublicBrowserRuntime) {
+  if (!runtime) return browser.newPage()
+  const context = browser.contexts()[0]
+  if (!context) throw new BrowserExecutionError('browser_provider_context_missing', 'The production browser session has no active context.', true)
+  return context.pages().at(-1) ?? context.newPage()
+}
+
+async function closeBrowser(browser: Browser, runtime?: PublicBrowserRuntime) {
+  // Disconnecting a serverless worker must not terminate a keep-alive remote
+  // session. Browserbase owns its lifecycle and persists the opaque context.
+  if (!runtime) await browser.close()
 }
 
 function normalizedAllowedDomains(domains: unknown) {
@@ -457,10 +508,10 @@ async function restore(page: Page, state: PublicBrowserState, domains: unknown, 
   for (const action of state.actions.slice(0, 30)) await applyAction(page, action, domains, true, materialize)
 }
 
-export async function navigatePublicPage(rawUrl: string, domains: unknown) {
-  const browser = await launchBrowser(domains)
+export async function navigatePublicPage(rawUrl: string, domains: unknown, runtime?: PublicBrowserRuntime) {
+  const browser = await launchBrowser(domains, runtime)
   try {
-    const page = await browser.newPage()
+    const page = await activePage(browser, runtime)
     await installRequestGuard(page, domains)
     const url = allowedPublicUrl(rawUrl, domains)
     await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 })
@@ -468,17 +519,17 @@ export async function navigatePublicPage(rawUrl: string, domains: unknown) {
     const observation = await observe(page)
     return { entryUrl: url.toString(), currentUrl: page.url(), actions: [], observation } satisfies PublicBrowserState
   } finally {
-    await browser.close()
+    await closeBrowser(browser, runtime)
   }
 }
 
-export async function actOnPublicPage(state: PublicBrowserState, action: PublicBrowserAction, domains: unknown, materialize?: FileMaterializer) {
+export async function actOnPublicPage(state: PublicBrowserState, action: PublicBrowserAction, domains: unknown, materialize?: FileMaterializer, runtime?: PublicBrowserRuntime) {
   if (state.actions.length >= 30) throw new BrowserExecutionError('browser_action_limit', 'This browser session reached its safe action limit.', false)
-  const browser: Browser = await launchBrowser(domains)
+  const browser: Browser = await launchBrowser(domains, runtime)
   try {
-    const page = await browser.newPage()
+    const page = await activePage(browser, runtime)
     await installRequestGuard(page, domains)
-    await restore(page, state, domains, materialize)
+    if (!runtime || page.url() === 'about:blank' || page.url() !== state.currentUrl) await restore(page, state, domains, materialize)
     const evidence = await applyAction(page, action, domains, false, materialize)
     const observation = await observe(page)
     return {
@@ -489,19 +540,32 @@ export async function actOnPublicPage(state: PublicBrowserState, action: PublicB
       ...(evidence ? { lastEvidence: evidence } : {}),
     } satisfies PublicBrowserState
   } finally {
-    await browser.close()
+    await closeBrowser(browser, runtime)
   }
 }
 
-export async function submitPublicPage(state: PublicBrowserState, target: string, domains: unknown, materialize?: FileMaterializer) {
-  const browser: Browser = await launchBrowser(domains)
+export function extractSubmissionConfirmation(observation: PublicBrowserObservation) {
+  const text = `${observation.title}\n${observation.headings.join('\n')}\n${observation.text}`
+  const success = /\b(?:application|submission)\s+(?:has\s+been\s+)?(?:submitted|received|complete|confirmed)\b/i.test(text) ||
+    /\bthank\s+you\b[\s\S]{0,120}\b(?:application|submission)\b/i.test(text)
+  const idMatch = text.match(/\b(?:application|submission|confirmation|reference)\s*(?:id|number|no\.?|#)\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{4,63})\b/i)
+  const applicationId = idMatch?.[1]?.trim() ?? ''
+  return {
+    confirmed: success && Boolean(applicationId),
+    applicationId: applicationId || null,
+    confirmationId: applicationId || null,
+  }
+}
+
+export async function submitPublicPage(state: PublicBrowserState, target: string, domains: unknown, materialize?: FileMaterializer, runtime?: PublicBrowserRuntime) {
+  const browser: Browser = await launchBrowser(domains, runtime)
   try {
-    const page = await browser.newPage()
+    const page = await activePage(browser, runtime)
     await installRequestGuard(page, domains)
     // Uploads are part of the resumable browser state. Re-materialise them
     // before an approved submit so a worker restart cannot silently lose a
     // valid document or report a false submission state.
-    await restore(page, state, domains, materialize)
+    if (!runtime || page.url() === 'about:blank' || page.url() !== state.currentUrl) await restore(page, state, domains, materialize)
     const before = await observe(page)
     const locator = await uniqueTarget(page, target)
     const metadata = await locator.evaluate(element => ({
@@ -539,6 +603,10 @@ export async function submitPublicPage(state: PublicBrowserState, target: string
     await page.waitForLoadState('domcontentloaded', { timeout: 20_000 }).catch(() => undefined)
     await assertPageAllowed(page, domains)
     const observation = await observe(page)
+    const confirmation = extractSubmissionConfirmation(observation)
+    // Generic saves and uploads only need an observable resulting-state
+    // change. The dedicated final application.submit path separately requires
+    // the durable application/confirmation identity extracted below.
     const confirmationObserved = before.url !== observation.url || before.text !== observation.text
     const fieldValues = (fields: PublicBrowserObservation['fields']) => Object.fromEntries(fields
       .filter(field => field.name || field.label)
@@ -556,10 +624,13 @@ export async function submitPublicPage(state: PublicBrowserState, target: string
       } satisfies PublicBrowserState,
       submitted: true,
       confirmationObserved,
+      applicationId: confirmation.applicationId,
+      confirmationId: confirmation.confirmationId,
+      confirmationUrl: confirmation.confirmed ? observation.url : null,
       persistedValues: fieldValues(before.fields),
       readBackValues: fieldValues(observation.fields),
     }
   } finally {
-    await browser.close()
+    await closeBrowser(browser, runtime)
   }
 }

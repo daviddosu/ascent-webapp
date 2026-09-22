@@ -144,6 +144,7 @@ const requirementTools: Readonly<Partial<Record<RequirementType, readonly string
   // source. Give David the same bounded research surface as other official
   // requirements so it can be verified rather than guessed or waived.
   funding: ['application.record_evidence', 'application.update_requirement', 'web_search', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'],
+  scholarship: ['application.record_evidence', 'application.update_requirement', 'web_search', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act'],
   document: ['application.generate_document', 'application.generate_cv', 'application.coordinate_work_samples', 'application.update_requirement'],
   transcript: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
   degree_certificate: ['application.coordinate_academic_evidence', 'application.update_requirement', 'application.record_evidence', 'application.request_roon', 'browser.start_session', 'browser.navigate', 'browser.observe', 'browser.act', 'browser.submit'],
@@ -209,6 +210,7 @@ export function toolsForCanonicalApplicationStep(input: {
   state: ApplicationControllerState
   step: EngineStep
   requirementType?: RequirementType | null
+  targetKind?: 'programme' | 'scholarship'
   orchestrationRunnableNodeTypes?: readonly string[]
 }) {
   const { state, step } = input
@@ -220,6 +222,10 @@ export function toolsForCanonicalApplicationStep(input: {
       for (const nodeType of input.orchestrationRunnableNodeTypes ?? []) {
         for (const tool of orchestrationToolsByNodeType[nodeType] ?? []) output.add(tool)
       }
+    }
+    if (input.targetKind === 'scholarship') {
+      output.delete('application.research_faculty')
+      output.delete('application.generate_supervisor_outreach')
     }
     return output
   }

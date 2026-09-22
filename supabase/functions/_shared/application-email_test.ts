@@ -111,6 +111,71 @@ Deno.test('validates the exact attachment artifact and checksum', () => {
   assertEquals(drifted.valid, false)
 })
 
+Deno.test('requires one current canonical CV for first-contact faculty email', () => {
+  const body = 'Dear Professor Example,\n\nI am applying to the Physics PhD and was interested in your recent work on quantum materials. My confirmed research experience in computational condensed matter makes this a strong fit. Would you expect to take students for the coming cycle, and would a brief conversation be useful?\n\nBest,\nAmara Okafor'
+  const input = context({
+    emailType: 'prospective_supervisor_first_contact',
+    recipient: { name: 'Professor Example', role: 'faculty', institution: 'Example University', email: 'prof@example.edu', emailVerification: 'official_verified', sourceEvidenceIds: ['official-contact'] },
+    attachments: [{ artifactId: 'cv-1', type: 'cv', filename: 'Amara_Okafor_CV.pdf', checksum: 'a'.repeat(64) }],
+    communicationConstraints: { approvalRequired: true, maxWords: 220, attachmentRequired: true },
+  })
+  const packageValue = action({
+    emailType: 'prospective_supervisor_first_contact',
+    recipientEmail: 'prof@example.edu',
+    subject: 'Physics PhD — quantum materials fit',
+    textBody: body,
+    htmlBody: applicationEmailHtmlFromText(body),
+    communicationGoal: 'Ask whether the faculty member expects to take students.',
+    attachmentArtifactIds: ['cv-1'],
+  })
+  const validation = validateApplicationEmailAction(input, packageValue)
+  assertEquals(validation.valid, true)
+  assertEquals(validation.readyForSend, true)
+})
+
+Deno.test('blocks first-contact email without the exact canonical CV', () => {
+  const body = 'Dear Dr. Example,\n\nI am applying to the Physics PhD and was interested in your recent work. My confirmed research experience is relevant. Would you expect to take students for the coming cycle?\n\nKind regards,\nAmara Okafor'
+  const input = context({
+    emailType: 'prospective_supervisor_first_contact',
+    recipient: { name: 'Dr. Example', role: 'faculty', institution: 'Example University', email: 'prof@example.edu', emailVerification: 'official_verified', sourceEvidenceIds: ['official-contact'] },
+    attachments: [],
+    communicationConstraints: { approvalRequired: true, maxWords: 220, attachmentRequired: true },
+  })
+  const packageValue = action({
+    emailType: 'prospective_supervisor_first_contact',
+    recipientEmail: 'prof@example.edu',
+    subject: 'Physics PhD — research fit',
+    textBody: body,
+    htmlBody: applicationEmailHtmlFromText(body),
+    attachmentArtifactIds: [],
+  })
+  const validation = validateApplicationEmailAction(input, packageValue)
+  assertEquals(validation.valid, true)
+  assertEquals(validation.readyForSend, false)
+  assert(validation.sendBlockers.some(issue => issue.includes('canonical CV')))
+})
+
+Deno.test('rejects extra attachments on first-contact faculty email', () => {
+  const body = 'Dear Professor Example,\n\nI am applying to the Physics PhD and was interested in your recent work. My confirmed research experience is relevant. Would you expect to take students for the coming cycle?\n\nBest,\nAmara Okafor'
+  const input = context({
+    emailType: 'prospective_supervisor_first_contact',
+    recipient: { name: 'Professor Example', role: 'faculty', institution: 'Example University', email: 'prof@example.edu', emailVerification: 'official_verified', sourceEvidenceIds: ['official-contact'] },
+    attachments: [{ artifactId: 'cv-1', type: 'cv', filename: 'CV.pdf', checksum: 'a'.repeat(64) }],
+    communicationConstraints: { approvalRequired: true, maxWords: 220, attachmentRequired: true },
+  })
+  const packageValue = action({
+    emailType: 'prospective_supervisor_first_contact',
+    recipientEmail: 'prof@example.edu',
+    subject: 'Physics PhD — research fit',
+    textBody: body,
+    htmlBody: applicationEmailHtmlFromText(body),
+    attachmentArtifactIds: ['cv-1', 'extra-1'],
+  })
+  const validation = validateApplicationEmailAction(input, packageValue)
+  assertEquals(validation.valid, false)
+  assert(validation.sendBlockers.some(issue => issue.includes('exactly the current canonical CV')))
+})
+
 Deno.test('uses one compact reply package for interpretation and response', () => {
   const input = context({ emailType: 'supervisor_reply', threadContext: { threadId: 'thread-1', relevantMessages: ['Professor: I may have capacity next year.'], evidenceIds: ['gmail-message-1'] } })
   const packageValue = action({

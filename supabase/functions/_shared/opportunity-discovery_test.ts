@@ -5,6 +5,7 @@ import {
   decomposeOpportunityIntent,
   rankOpportunityCandidates,
 } from './opportunity-discovery.ts'
+import { normalizeProgrammeDiscoveryResponse } from './application-programme-discovery.ts'
 import type { ProgrammeDiscoveryCandidate } from './application-programme-discovery.ts'
 
 function candidate(overrides: Partial<ProgrammeDiscoveryCandidate> = {}): ProgrammeDiscoveryCandidate {
@@ -81,6 +82,26 @@ Deno.test('keeps a verified opportunity when the deadline is missing', () => {
   assertEquals(ranked.length, 1)
   assertEquals(ranked[0].currentCycle?.deadlineStatus, 'not_found')
   assert(ranked[0].dimensions.applicationFeasibility > 0)
+})
+
+Deno.test('requires graduate evidence before accepting a scholarship discovery candidate', () => {
+  const unqualified = normalizeProgrammeDiscoveryResponse({ candidates: [{
+    institution: 'Summer Research Foundation',
+    programme_title: 'Summer Scholarship',
+    official_url: 'https://summer.example/scholarship',
+    sources: [{ url: 'https://summer.example/scholarship', excerpt: 'Supports a summer research placement.', source_type: 'official' }],
+  }] }, { opportunityKind: 'scholarship' })
+  assertEquals(unqualified.candidates.length, 0)
+  assert(unqualified.rejected[0]?.reason.includes('graduate study') === true)
+
+  const qualified = normalizeProgrammeDiscoveryResponse({ candidates: [{
+    institution: 'Graduate Award Foundation',
+    programme_title: 'Graduate Scholarship',
+    official_url: 'https://graduate.example/scholarship',
+    sources: [{ url: 'https://graduate.example/scholarship', excerpt: 'Applicants must enrol on a full-time postgraduate course.', source_type: 'official' }],
+  }] }, { opportunityKind: 'scholarship' })
+  assertEquals(qualified.candidates.length, 1)
+  assertEquals(qualified.candidates[0]?.opportunityKind, 'scholarship')
 })
 
 function decomposeApplicant(profile: ReturnType<typeof buildApplicantResearchProfile>) {

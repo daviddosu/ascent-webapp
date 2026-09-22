@@ -7,7 +7,10 @@ import {
   type DurableAgentRunStatus,
 } from './agent-runtime'
 import { needsSharedAgentContext } from '../../supabase/functions/_shared/agent-intent'
-import { isApplicationIntent } from '../../supabase/functions/_shared/application'
+import {
+  GRADUATE_APPLICATION_ONLY_MESSAGE,
+  isGraduateApplicationTask,
+} from '../../supabase/functions/_shared/application'
 import {
   compileAgentTaskSpec,
   compileExecutionPlan,
@@ -114,6 +117,10 @@ export type AgentRun = {
   applicationRequirementId?: string | null
   applicationSelectedOpportunityId?: string | null
   applicationProgrammeSelectionCompleted?: boolean
+  applicationPendingRequestId?: string | null
+  browserTakeoverSessionId?: string | null
+  authenticationRequired?: boolean
+  browserHumanBoundary?: 'authentication' | 'captcha' | 'sensitive_field' | null
   externalWaits?: ExternalWait[]
   error?: string
   errorCode?: string
@@ -158,6 +165,10 @@ type AgentRunRow = {
     application_requirement_id?: string
     application_selected_opportunity_id?: string
     application_programme_selection_completed?: boolean
+    application_pending_request_id?: string
+    browser_takeover_session_id?: string | null
+    authentication_required?: boolean
+    browser_human_boundary?: 'authentication' | 'captcha' | 'sensitive_field' | null
     recipient_resolution_pending?: AgentRun['recipientResolution']
     scheduling_options?: AgentRun['schedulingOptions']
     progress_detail_interaction?: RecommendationInteraction | WorkSampleInteraction | SupplementalProgressInteraction | null
@@ -268,7 +279,7 @@ function reconcileFacultyIntelligence(state: DavidApplicationState | null | unde
       name: typeof persisted.name === 'string' ? persisted.name : 'Faculty member',
       title: typeof persisted.title === 'string' ? persisted.title : null,
       department: typeof persisted.department === 'string' ? persisted.department : null,
-      institution: typeof identityEvidence.institution === 'string' ? identityEvidence.institution : 'Harvard University',
+      institution: typeof identityEvidence.institution === 'string' ? identityEvidence.institution : 'Institution not yet verified',
       officialProfileUrl: typeof persisted.officialProfileUrl === 'string' ? persisted.officialProfileUrl : typeof identityEvidence.officialProfileUrl === 'string' ? identityEvidence.officialProfileUrl : '',
       identitySourceUrl: typeof identityEvidence.identitySourceUrl === 'string' ? identityEvidence.identitySourceUrl : typeof persisted.officialProfileUrl === 'string' ? persisted.officialProfileUrl : '',
       identityVerification: persisted.identityVerification === 'official_verified' ? 'official_verified' as const : 'uncertain' as const,
@@ -410,6 +421,12 @@ function mapAgentRun(row: AgentRunRow): AgentRun {
       ? row.context.application_selected_opportunity_id
       : null,
     applicationProgrammeSelectionCompleted: row.context?.application_programme_selection_completed === true || Boolean(row.context?.application_selected_opportunity_id),
+    applicationPendingRequestId: typeof row.context?.application_pending_request_id === 'string' ? row.context.application_pending_request_id : null,
+    browserTakeoverSessionId: typeof row.context?.browser_takeover_session_id === 'string' ? row.context.browser_takeover_session_id : null,
+    authenticationRequired: row.context?.authentication_required === true,
+    browserHumanBoundary: ['authentication', 'captcha', 'sensitive_field'].includes(row.context?.browser_human_boundary ?? '')
+      ? row.context?.browser_human_boundary ?? null
+      : row.context?.authentication_required === true ? 'authentication' : null,
     externalWaits: Array.isArray(row.context?.external_waits)
       ? row.context.external_waits
       : row.context?.external_wait ? [row.context.external_wait] : [],
@@ -480,6 +497,9 @@ export function needsAgentContext(task: Task) {
 }
 
 export async function generateRoonPlan(outcome: string, clarification = ''): Promise<RoonPlanResponse> {
+  if (!isGraduateApplicationTask(outcome, clarification)) {
+    throw new Error(GRADUATE_APPLICATION_ONLY_MESSAGE)
+  }
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) throw new Error('Sign in to ask Roon for a plan.')
@@ -546,7 +566,7 @@ export function createAgentRun(task: Task, context = ''): AgentRun {
         ? { specialistId: specialist.id, label: `${specialist.name} is preparing the first verified operation.` }
         : null,
     result: null,
-    applicationState: isApplicationIntent(task.title, task.description)
+    applicationState: isGraduateApplicationTask(task.title, task.description)
       ? {
           schemaVersion: 1,
           campaignId: null,
@@ -602,6 +622,9 @@ export async function resolveAgentFunctionError(
 }
 
 export async function executeAgentRun(task: Task, run: AgentRun): Promise<AgentRun> {
+  if (!isGraduateApplicationTask(task.title, task.description)) {
+    throw new Error(GRADUATE_APPLICATION_ONLY_MESSAGE)
+  }
   const client = await getCloudClient()
   const user = await currentUser()
   if (!client || !user) throw new Error(`Sign in to delegate this task to ${specialistIdentity(run.activeSpecialistId ?? run.specialistId)?.name ?? 'ShotCount'}.`)
@@ -698,6 +721,24 @@ async function invokeRunAction(
 
 export function resumeAgentRun(runId: string, context = '', interactionResponse?: { interactionId: string; kind: string; value: unknown; reusable?: boolean }) {
   return invokeRunAction({ action: 'resume', runId, context, ...(interactionResponse ? { interactionResponse } : {}) }, 'ShotCount could not resume this task.')
+}
+
+export function approveApplicationHandoff(runId: string) {
+  return invokeRunAction({ action: 'resume', runId, applicationApproval: true }, 'ShotCount could not approve this application action.')
+}
+
+export async function openBrowserTakeover(sessionId: string) {
+  const client = await getCloudClient()
+  if (!client) throw new Error('Sign in to continue this application.')
+  const { data } = await client.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) throw new Error('Sign in to continue this application.')
+  const response = await fetch(`/api/browser-session?session_id=${encodeURIComponent(sessionId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const payload = await response.json().catch(() => ({})) as { live_view_url?: string; error?: string }
+  if (!response.ok || !payload.live_view_url) throw new Error(payload.error || 'The secure browser could not be opened.')
+  window.open(payload.live_view_url, '_blank', 'noopener,noreferrer')
 }
 
 export type ApplicationAvailabilityDisposition = 'have_now' | 'can_get' | 'can_get_document' | 'need_help' | 'have_score' | 'can_take_before_deadline' | 'cannot_get' | 'cannot_take_before_deadline' | 'not_sure' | 'have_referee' | 'can_find_referee' | 'provide_now' | 'keep_preparing' | 'change_plan' | 'attach_score' | 'enter_score' | 'provide_referee_details' | 'later'

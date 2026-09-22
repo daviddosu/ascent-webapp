@@ -2,11 +2,13 @@ import type {
   RecommendationInteraction,
   RecommendationInteractionOption,
 } from './recommendation-workflow.ts'
+import type { ApplicationWorkflowSelectionGroup } from './application-workflow.ts'
 
 export type ApplicationProgrammeSelectionOpportunity = {
   id: string
   institution: string
   programmeTitle: string
+  opportunityKind?: 'programme' | 'scholarship' | null
   officialUrl: string
   fitScore: number
   deadlineAt: string | null
@@ -26,7 +28,10 @@ export type ApplicationProgrammeSelectionOpportunity = {
 }
 
 type RecommendationChoiceInteraction = Extract<RecommendationInteraction, { kind: 'single_choice' | 'contact_select' | 'attachment_selection' }>
-export type ApplicationProgrammeSelectionInteraction = Omit<RecommendationChoiceInteraction, 'kind'> & { kind: 'single_choice' }
+type RecommendationMultipleChoiceInteraction = Extract<RecommendationInteraction, { kind: 'multiple_choice' }>
+export type ApplicationProgrammeSelectionInteraction =
+  | (Omit<RecommendationChoiceInteraction, 'kind'> & { kind: 'single_choice'; targetKind?: 'programme' | 'scholarship'; selectionGroupId?: string | null; selectionLabel?: string | null; minSelections?: 1; maxSelections?: 1 })
+  | (Omit<RecommendationMultipleChoiceInteraction, 'kind'> & { kind: 'multiple_choice'; targetKind?: 'programme' | 'scholarship'; selectionGroupId?: string | null; selectionLabel?: string | null })
 
 export type ApplicationProgrammeSelectionCaseReference = {
   opportunityId: string
@@ -41,6 +46,10 @@ export type ApplicationProgrammeSelectionCommit = {
 } | {
   kind: 'conflict'
   error: string
+} | {
+  kind: 'committed' | 'replayed'
+  opportunityIds: string[]
+  applicationCaseIds: string[]
 }
 
 /**
@@ -48,30 +57,46 @@ export type ApplicationProgrammeSelectionCommit = {
  * safe while preventing a stale client from changing an active task's target.
  */
 export function resolveApplicationProgrammeSelectionCommit(input: {
-  selectedOpportunityId: string
+  selectedOpportunityId?: string
+  selectedOpportunityIds?: string[]
   committedOpportunityId?: string | null
+  committedOpportunityIds?: string[]
+  allowExpansion?: boolean
   taskId: string
   existingCases?: ApplicationProgrammeSelectionCaseReference[]
 }): ApplicationProgrammeSelectionCommit {
-  const selectedOpportunityId = input.selectedOpportunityId.trim()
-  const committedOpportunityId = input.committedOpportunityId?.trim() || ''
+  const selectedOpportunityIds = [...new Set([
+    ...(input.selectedOpportunityIds ?? []),
+    ...(input.selectedOpportunityId ? [input.selectedOpportunityId] : []),
+  ].map(value => value.trim()).filter(Boolean))]
+  const committedOpportunityIds = [...new Set([
+    ...(input.committedOpportunityIds ?? []),
+    ...(input.committedOpportunityId ? [input.committedOpportunityId] : []),
+  ].map(value => value.trim()).filter(Boolean))]
   const existingCases = input.existingCases ?? []
-  if (!selectedOpportunityId) return { kind: 'conflict', error: 'Choose one programme to continue.' }
-  if (committedOpportunityId && committedOpportunityId !== selectedOpportunityId) {
-    return { kind: 'conflict', error: 'This task is already committed to another programme. Create a new task if you want to pursue a different programme.' }
+  const legacySingle = !input.selectedOpportunityIds?.length && selectedOpportunityIds.length === 1
+  if (!selectedOpportunityIds.length) return { kind: 'conflict', error: 'Choose at least one application target to continue.' }
+  const committedIsSubset = committedOpportunityIds.every(id => selectedOpportunityIds.includes(id))
+  const expansionAllowed = input.allowExpansion === true && !legacySingle
+  if (committedOpportunityIds.length && (!committedIsSubset || (!expansionAllowed && committedOpportunityIds.length !== selectedOpportunityIds.length))) {
+    return { kind: 'conflict', error: 'This task is already committed to a different set of application targets. The existing application bundle was not changed.' }
   }
-  if (existingCases.some(reference => reference.opportunityId !== selectedOpportunityId)) {
-    return { kind: 'conflict', error: 'This application task already has a different programme workspace. The selected programme was not changed.' }
+  if (existingCases.some(reference => !selectedOpportunityIds.includes(reference.opportunityId))) {
+    return { kind: 'conflict', error: 'This application task already has a different application workspace. The selected application bundle was not changed.' }
   }
-  const selectedCase = existingCases.find(reference => reference.opportunityId === selectedOpportunityId)
-  if (selectedCase && selectedCase.taskId !== input.taskId) {
-    return { kind: 'conflict', error: 'This programme is already connected to another application task. The selected programme was not changed.' }
+  const foreignCase = existingCases.find(reference => selectedOpportunityIds.includes(reference.opportunityId) && reference.taskId !== input.taskId)
+  if (foreignCase) {
+    return { kind: 'conflict', error: 'This application target is already connected to another application task. The selected target was not changed.' }
   }
-  return {
-    kind: committedOpportunityId ? 'replayed' : 'committed',
-    opportunityId: selectedOpportunityId,
-    applicationCaseId: selectedCase?.caseId ?? null,
+  const selectedCases = existingCases.filter(reference => selectedOpportunityIds.includes(reference.opportunityId))
+  if (legacySingle) {
+    return {
+      kind: committedOpportunityIds.length ? 'replayed' : 'committed',
+      opportunityId: selectedOpportunityIds[0]!,
+      applicationCaseId: selectedCases[0]?.caseId ?? null,
+    }
   }
+  return { kind: committedOpportunityIds.length ? 'replayed' : 'committed', opportunityIds: selectedOpportunityIds, applicationCaseIds: selectedCases.map(reference => reference.caseId) }
 }
 
 function deadlineLabel(value: string | null) {
@@ -87,6 +112,7 @@ function fitScoreLabel(value: number) {
 
 function routeLabel(opportunity: ApplicationProgrammeSelectionOpportunity) {
   if (opportunity.routeLabel) return opportunity.routeLabel
+  if (opportunity.opportunityKind === 'scholarship' || opportunity.routeType === 'graduate_scholarship') return 'Graduate scholarship'
   if (opportunity.routeType === 'adjacent_programme') return 'Related programme'
   if (opportunity.routeType === 'department_route') return 'Department route'
   if (opportunity.routeType === 'graduate_school_route') return 'Graduate-school route'
@@ -96,6 +122,8 @@ function routeLabel(opportunity: ApplicationProgrammeSelectionOpportunity) {
 export function createApplicationProgrammeSelectionInteraction(
   campaignId: string,
   opportunities: ApplicationProgrammeSelectionOpportunity[],
+  targetKind: 'programme' | 'scholarship' = 'programme',
+  selectionGroup?: ApplicationWorkflowSelectionGroup | null,
 ): ApplicationProgrammeSelectionInteraction {
   const options: RecommendationInteractionOption[] = opportunities.map(opportunity => ({
     value: opportunity.id,
@@ -116,20 +144,35 @@ export function createApplicationProgrammeSelectionInteraction(
     ].filter(Boolean).join('\n'),
     href: opportunity.officialUrl || undefined,
   }))
-  return {
-    id: `application:programme-selection:${campaignId}`,
+  const multiple = Boolean(selectionGroup && selectionGroup.maxSelections > 1)
+  const selectionLabel = selectionGroup?.label ?? null
+  const targetLabel = selectionGroup?.targetKind === 'course'
+    ? 'course'
+    : selectionGroup?.targetKind === 'institution'
+      ? 'institution'
+      : targetKind === 'scholarship' ? 'graduate scholarship' : 'graduate programme'
+  const base = {
+    id: `application:programme-selection:${campaignId}${selectionGroup?.id ? `:${selectionGroup.id}` : ''}`,
     requirementId: 'application_programme_selection',
-    question: 'Which programme do you want to apply to?',
-    reason: 'I checked official programme pages and matched the verified options to your CV. Choose one programme and I’ll continue the application here.',
-    knownContext: ['Official programme pages, deadlines, and current requirements were checked before showing these options.'],
+    question: selectionLabel ?? (multiple
+      ? `Which ${targetLabel}${selectionGroup!.maxSelections === selectionGroup!.minSelections ? `s (${selectionGroup!.minSelections})` : 's'} do you want to apply for?`
+      : targetKind === 'scholarship' ? 'Which graduate scholarship do you want to apply for?' : 'Which programme do you want to apply to?'),
+    reason: targetKind === 'scholarship'
+      ? `I checked official scholarship and linked-route pages. ${multiple ? `Choose ${selectionGroup!.minSelections === selectionGroup!.maxSelections ? `exactly ${selectionGroup!.minSelections}` : `between ${selectionGroup!.minSelections} and ${selectionGroup!.maxSelections}`} linked ${targetLabel}${selectionGroup!.maxSelections === 1 ? '' : 's'}; each selected route will get its own application workspace.` : 'Choose the scholarship and I’ll continue the application here.'}`
+      : `I checked official programme pages and matched the verified options to your CV. ${multiple ? `Choose ${selectionGroup!.minSelections === selectionGroup!.maxSelections ? `exactly ${selectionGroup!.minSelections}` : `between ${selectionGroup!.minSelections} and ${selectionGroup!.maxSelections}`} ${targetLabel}${selectionGroup!.maxSelections === 1 ? '' : 's'}.` : 'Choose one programme and I’ll continue the application here.'}`,
+    knownContext: [targetKind === 'scholarship' ? 'Official scholarship, linked-route, deadline, and current requirements were checked before showing these options.' : 'Official programme pages, deadlines, and current requirements were checked before showing these options.'],
     reusableContextKeys: [],
     required: true,
     priority: 2,
     mapsToRequirement: 'application_programme_selection',
-    kind: 'single_choice',
     options,
-    allowOther: false,
+    targetKind,
+    selectionGroupId: selectionGroup?.id ?? null,
+    selectionLabel,
   }
+  return multiple
+    ? { ...base, kind: 'multiple_choice' as const, minSelections: selectionGroup!.minSelections, maxSelections: selectionGroup!.maxSelections }
+    : { ...base, kind: 'single_choice' as const, allowOther: false as const, minSelections: 1 as const, maxSelections: 1 as const }
 }
 
 export function validateApplicationProgrammeSelection(
@@ -139,8 +182,13 @@ export function validateApplicationProgrammeSelection(
   const rawValues = Array.isArray(value) ? value : typeof value === 'string' ? [value] : []
   const selectedIds = [...new Set(rawValues.map(item => typeof item === 'string' ? item.trim() : '').filter(Boolean))]
   const allowed = new Set(interaction.options.map(option => option.value))
-  if (selectedIds.length !== 1) {
-    return { accepted: false, error: 'Choose one programme to continue.' }
+  const minSelections = interaction.kind === 'multiple_choice' ? interaction.minSelections : 1
+  const maxSelections = interaction.kind === 'multiple_choice' ? interaction.maxSelections : 1
+  if (selectedIds.length < minSelections || selectedIds.length > maxSelections) {
+    if (interaction.kind === 'single_choice') {
+      return { accepted: false, error: `Choose one ${interaction.targetKind === 'scholarship' ? 'scholarship' : 'programme'} to continue.` }
+    }
+    return { accepted: false, error: minSelections === maxSelections ? `Choose exactly ${minSelections} application target${minSelections === 1 ? '' : 's'} to continue.` : `Choose between ${minSelections} and ${maxSelections} application targets to continue.` }
   }
   if (selectedIds.some(id => !allowed.has(id))) {
     return { accepted: false, error: 'One of those programme choices is no longer current. Refresh the task and choose from the current shortlist.' }

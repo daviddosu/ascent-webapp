@@ -1,4 +1,10 @@
 import { sameOfficialInstitutionDomain } from './david-applications.ts'
+import { hasGraduateScholarshipEvidence } from './application.ts'
+import {
+  attachApplicationWorkflowCandidates,
+  compileApplicationWorkflow,
+  type ApplicationWorkflowSpec,
+} from './application-workflow.ts'
 
 /**
  * Normalisation rules for the backend programme-discovery operation.
@@ -8,7 +14,7 @@ import { sameOfficialInstitutionDomain } from './david-applications.ts'
  * and a matching official or government source on the same institution host.
  */
 
-export const APPLICATION_PROGRAMME_DISCOVERY_VERSION = 'staged-web-search@4' as const
+export const APPLICATION_PROGRAMME_DISCOVERY_VERSION = 'staged-web-search@5' as const
 
 /**
  * Programme-level faculty contact policy.  `allowed_or_neutral` means that a
@@ -46,8 +52,12 @@ export type ProgrammeDiscoverySource = {
 }
 
 export type ProgrammeDiscoveryCandidate = {
+  /** Stable key used to bind a discovery result to a workflow target. */
+  candidateKey?: string
   institution: string
   programmeTitle: string
+  /** Whether this opportunity is a university programme or a graduate award. */
+  opportunityKind?: 'programme' | 'scholarship' | null
   degreeLevel: string | null
   location: string | null
   officialUrl: string
@@ -60,7 +70,7 @@ export type ProgrammeDiscoveryCandidate = {
   cvEvidence: string[]
   requirementsSummary: string[]
   sources: ProgrammeDiscoverySource[]
-  routeType?: 'exact_programme' | 'adjacent_programme' | 'department_route' | 'graduate_school_route' | null
+  routeType?: 'exact_programme' | 'adjacent_programme' | 'department_route' | 'graduate_school_route' | 'graduate_scholarship' | null
   routeLabel?: string | null
   discoveryReason?: string | null
   researchAreas?: string[]
@@ -69,6 +79,11 @@ export type ProgrammeDiscoveryCandidate = {
   eligibility?: ProgrammeEligibility
   currentCycle?: ProgrammeCurrentCycle
   facultyContactPolicy?: ProgrammeFacultyContactPolicy | null
+  /** Official-structure metadata for coupled or multi-target routes. */
+  workflowTargetKey?: string | null
+  workflowTargetRole?: 'primary' | 'required' | 'choice' | 'alternative' | 'linked' | null
+  workflowSelectionGroupId?: string | null
+  workflowParentTargetKey?: string | null
 }
 
 export type ProgrammeFacultyLab = {
@@ -110,6 +125,7 @@ export type ProgrammeDiscoveryRejection = {
 export type ProgrammeDiscoveryNormalisation = {
   candidates: ProgrammeDiscoveryCandidate[]
   rejected: ProgrammeDiscoveryRejection[]
+  workflow: ApplicationWorkflowSpec | null
 }
 
 function recordValue(value: unknown): Record<string, unknown> {
@@ -224,7 +240,7 @@ function canonicalKey(candidate: Pick<ProgrammeDiscoveryCandidate, 'officialUrl'
  */
 export function normalizeProgrammeDiscoveryResponse(
   value: unknown,
-  options: { maximumCandidates?: number } = {},
+  options: { maximumCandidates?: number; opportunityKind?: 'programme' | 'scholarship' } = {},
 ): ProgrammeDiscoveryNormalisation {
   const root = recordValue(value)
   const rawCandidates = Array.isArray(root.candidates)
@@ -268,10 +284,22 @@ export function normalizeProgrammeDiscoveryResponse(
       rejected.push({ institution, programmeTitle, reason: `No matching official source was supplied for ${label}.` })
       continue
     }
+    // The search is often rooted at a scholarship while returning the linked
+    // university routes that the award permits.  A caller-supplied kind is a
+    // fallback for old providers; an explicit row kind always wins so linked
+    // courses are not accidentally persisted as scholarships.
+    const opportunityKind = enumValue(row.opportunity_kind ?? row.opportunityKind ?? row.application_kind ?? row.applicationKind, ['programme', 'scholarship'] as const, options.opportunityKind ?? 'programme')
+    if (opportunityKind === 'scholarship' && !hasGraduateScholarshipEvidence(`${institution} ${programmeTitle} ${officialUrl}`, authoritativeSources.map(source => source.excerpt).join(' '))) {
+      rejected.push({ institution, programmeTitle, reason: `The official source for ${label} did not establish that the award supports graduate study.` })
+      continue
+    }
 
+    const candidateKey = stringValue(row.candidate_key ?? row.candidateKey ?? row.workflow_target_key ?? row.workflowTargetKey, 120) || canonicalKey({ officialUrl, institution, programmeTitle })
     const candidate: ProgrammeDiscoveryCandidate = {
+      candidateKey,
       institution,
       programmeTitle,
+      opportunityKind,
       degreeLevel: stringValue(row.degree_level ?? row.degreeLevel ?? row.level, 160) || null,
       location: stringValue(row.location ?? row.country ?? row.city, 240) || null,
       officialUrl,
@@ -284,7 +312,7 @@ export function normalizeProgrammeDiscoveryResponse(
       cvEvidence: stringArray(row.cv_evidence ?? row.cvEvidence ?? row.fit_evidence ?? row.fitEvidence, 8, 500),
       requirementsSummary: stringArray(row.requirements_summary ?? row.requirementsSummary ?? row.requirements, 8, 400),
       sources: authoritativeSources.slice(0, 8),
-      routeType: enumValue(row.route_type ?? row.routeType ?? row.discovery_kind ?? row.discoveryKind, ['exact_programme', 'adjacent_programme', 'department_route', 'graduate_school_route'] as const, 'exact_programme'),
+      routeType: enumValue(row.route_type ?? row.routeType ?? row.discovery_kind ?? row.discoveryKind, ['exact_programme', 'adjacent_programme', 'department_route', 'graduate_school_route', 'graduate_scholarship'] as const, 'exact_programme'),
       routeLabel: stringValue(row.route_label ?? row.routeLabel ?? row.route, 240) || null,
       discoveryReason: stringValue(row.discovery_reason ?? row.discoveryReason ?? row.reason, 800) || null,
       researchAreas: stringArray(row.research_areas ?? row.researchAreas ?? row.research_topics ?? row.researchTopics, 12, 240),
@@ -333,6 +361,10 @@ export function normalizeProgrammeDiscoveryResponse(
       facultyContactPolicy: normalizeFacultyContactPolicy(
         row.faculty_contact_policy ?? row.facultyContactPolicy ?? recordValue(row.programme_intelligence ?? row.programmeIntelligence).facultyContactPolicy ?? recordValue(row.programme_intelligence ?? row.programmeIntelligence).faculty_contact_policy,
       ),
+      workflowTargetKey: stringValue(row.workflow_target_key ?? row.workflowTargetKey ?? row.candidate_key ?? row.candidateKey, 120) || candidateKey,
+      workflowTargetRole: enumValue(row.workflow_target_role ?? row.workflowTargetRole ?? row.workflow_role ?? row.workflowRole, ['primary', 'required', 'choice', 'alternative', 'linked'] as const, 'choice'),
+      workflowSelectionGroupId: stringValue(row.workflow_selection_group_id ?? row.workflowSelectionGroupId ?? row.selection_group_id ?? row.selectionGroupId, 120) || null,
+      workflowParentTargetKey: stringValue(row.workflow_parent_target_key ?? row.workflowParentTargetKey ?? row.parent_target_key ?? row.parentTargetKey, 120) || null,
     }
     const key = canonicalKey(candidate)
     if (seen.has(key)) continue
@@ -347,7 +379,32 @@ export function normalizeProgrammeDiscoveryResponse(
     left.programmeTitle.localeCompare(right.programmeTitle),
   )
 
-  return { candidates: candidates.slice(0, maximumCandidates), rejected }
+  const visibleCandidates = candidates.slice(0, maximumCandidates)
+  const candidateSources = visibleCandidates.flatMap(candidate => candidate.sources)
+    .filter((source, index, sources) => sources.findIndex(other => other.url === source.url && other.excerpt === source.excerpt) === index)
+    .map(source => ({ id: source.url, url: source.url, excerpt: source.excerpt, authority: source.sourceType === 'government' ? 'government' as const : 'official' as const }))
+  const rootCandidate = visibleCandidates.find(candidate =>
+    options.opportunityKind === 'scholarship' && candidate.opportunityKind === 'scholarship',
+  ) ?? visibleCandidates[0]
+  const compiled = rootCandidate
+    ? compileApplicationWorkflow({
+        raw: recordValue(root.application_structure ?? root.applicationStructure ?? root.workflow ?? root.applicationWorkflow),
+        rootTarget: { key: rootCandidate.candidateKey, label: `${rootCandidate.institution} · ${rootCandidate.programmeTitle}`, targetKind: rootCandidate.opportunityKind === 'scholarship' ? 'scholarship' : 'programme' },
+        officialEvidence: candidateSources,
+        candidateKeys: visibleCandidates.map(candidate => candidate.candidateKey ?? ''),
+      })
+    : null
+  const workflow = compiled
+    ? attachApplicationWorkflowCandidates(compiled, visibleCandidates.map(candidate => ({
+        candidateKey: candidate.workflowTargetKey ?? candidate.candidateKey ?? '',
+        label: `${candidate.institution} · ${candidate.programmeTitle}`,
+        targetKind: candidate.opportunityKind === 'scholarship' ? 'scholarship' as const : 'programme' as const,
+        selectionGroupId: candidate.workflowSelectionGroupId,
+        parentKey: candidate.workflowParentTargetKey,
+        role: candidate.workflowTargetRole ?? undefined,
+      })))
+    : null
+  return { candidates: visibleCandidates, rejected, workflow }
 }
 
 function candidateDeadlineStatus(value: unknown): ProgrammeCurrentCycle['deadlineStatus'] {

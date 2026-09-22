@@ -1,6 +1,6 @@
 /** One-call, provider-neutral faculty intelligence and outreach resolution. */
 
-import { applicationEmailTextFromHtml, type EmailActionPackage } from './application-email.ts'
+import { applicationEmailFirstContactIssues, applicationEmailTextFromHtml, type EmailActionPackage } from './application-email.ts'
 import {
   FACULTY_CONTACT_POLICY_VALUES,
   normalizeFacultyContactPolicy,
@@ -9,13 +9,13 @@ import {
   type ProgrammeFacultyContactPolicy,
 } from './application-programme-discovery.ts'
 
-export const FACULTY_OUTREACH_RESOLUTION_VERSION = 'faculty-outreach-resolution@1' as const
+export const FACULTY_OUTREACH_RESOLUTION_VERSION = 'faculty-outreach-resolution@2' as const
 // Bump this whenever the deterministic fit/email policy changes. Persisted
 // batches are refreshed instead of silently keeping scores produced by the
 // previous policy.
 // Bump when deterministic presentation or evidence rules change so persisted
 // faculty dossiers are refreshed instead of silently retaining stale output.
-export const FACULTY_RESULT_CONTRACT_VERSION = 'verified-faculty-match@5' as const
+export const FACULTY_RESULT_CONTRACT_VERSION = 'verified-faculty-match@6' as const
 export type FacultyResearchPurpose = 'application_context' | 'outreach'
 export type FacultyOutreachRecommendation = 'required' | 'strongly_recommended' | 'recommended' | 'optional' | 'skip'
 export type FacultyIdentityVerification = 'official_verified' | 'uncertain'
@@ -445,6 +445,7 @@ export function validateFacultyOutreachResolution(
       if (!clean(action.subject, 998) || !clean(action.textBody) || !clean(action.htmlBody)) issues.push(`${faculty.name} email is missing its subject or body.`)
       if (applicationEmailTextFromHtml(action.htmlBody) !== clean(action.textBody)) issues.push(`${faculty.name} HTML and plain-text email bodies differ.`)
       if (words(action.textBody) > (context.maxWords ?? 220)) issues.push(`${faculty.name} email exceeds the word limit.`)
+      for (const issue of applicationEmailFirstContactIssues(action.subject, action.textBody)) issues.push(`${faculty.name} ${issue}`)
       if (!Object.values(action.quality ?? {}).every(Boolean) || Object.keys(action.quality ?? {}).length !== 5) issues.push(`${faculty.name} email did not pass the semantic quality rubric.`)
       const permittedEvidence = new Set([...sourceByKey.keys(), ...allowedApplicantEvidence, ...allowedProgrammeEvidence])
       for (const claim of action.claims ?? []) {

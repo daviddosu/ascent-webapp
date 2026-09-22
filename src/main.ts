@@ -39,6 +39,7 @@ import type { SyncState } from './data/contracts'
 import { normalizeTask, type PlannerKind, type Task } from './data/planner-model'
 import {
   cancelAgentRunRemote,
+  approveApplicationHandoff,
   createAgentRun,
   decideAgentApproval,
   editAgentCalendarApproval,
@@ -46,6 +47,7 @@ import {
   executeAgentRun,
   loadAgentApprovals,
   loadAgentRuns,
+  openBrowserTakeover,
   pollAgentRun,
   resumeAgentRun,
   selectAgentRecipient,
@@ -77,7 +79,11 @@ import {
   uploadTaskFileAsset,
   type FileAsset,
 } from './data/file-assets'
-import { isApplicationIntent } from './data/application'
+import {
+  GRADUATE_APPLICATION_ONLY_MESSAGE,
+  classifyGraduateApplicationTask,
+  isGraduateApplicationTask,
+} from './data/application'
 import { renderRecommendationProgressDetail } from './data/recommendation-progress-detail'
 import { renderWorkSampleProgressDetail } from './data/work-sample-progress-detail'
 import type { RecommendationInteraction } from '../supabase/functions/_shared/recommendation-workflow'
@@ -406,7 +412,7 @@ async function refreshAgentRuns() {
   if (!activeUser || agentRunsRefreshing) return
   agentRunsRefreshing = true
   try {
-    const durableRuns = await loadAgentRuns()
+    const durableRuns = (await loadAgentRuns()).filter(run => isGraduateApplicationTask(run.objective, run.context))
     const pendingApprovals = (await Promise.all(
       durableRuns
         .filter(run => run.status === 'needs_approval')
@@ -447,12 +453,12 @@ async function pollWaitingAgentRuns() {
   // original turn still owns the run, a poll only reads its durable state and
   // cannot replay the model turn.
   const staleApplicationRuns = [...agentRuns.values()].filter(run =>
-    isApplicationIntent(run.objective, run.context) &&
+    isGraduateApplicationTask(run.objective, run.context) &&
     ['planning', 'running'].includes(run.status) &&
     !agentDecisionBusy.has(run.id) &&
     Date.now() - Date.parse(run.updatedAt) >= 20_000,
   )
-  const waitingRuns = [...agentRuns.values()].filter(run => run.status === 'waiting_external')
+  const waitingRuns = [...agentRuns.values()].filter(run => isGraduateApplicationTask(run.objective, run.context) && run.status === 'waiting_external')
   const internalRecoveryRuns = [...agentRuns.values()].filter(run => {
     const officialProgrammeSourceRecovery = ['waiting_for_user', 'needs_context'].includes(run.status) &&
       (
@@ -483,10 +489,7 @@ async function pollWaitingAgentRuns() {
         (run.errorCode === 'application_official_source_required' && /tailoring brief must cite|cv.*official source|programme-specific cv/i.test(`${run.error ?? ''} ${run.waitingReason}`))
       ) &&
       /cv|resume|tailoring|programme fit|official source|applicant profile/i.test(`${run.error ?? ''} ${run.waitingReason}`)
-    // The exact source-research blocker is safe to recover on its own. Keep
-    // it eligible even when an older run was persisted without the full
-    // application intent metadata needed by the normal classifier.
-    if (!isApplicationIntent(run.objective, run.context) && !officialProgrammeSourceRecovery) return false
+    if (!isGraduateApplicationTask(run.objective, run.context)) return false
     const recoveryFingerprint = `${run.status}|${run.errorCode ?? ''}|${run.waitingReason}|${run.updatedAt}`
     if (internalAgentRecoveryFingerprints.get(run.id) === recoveryFingerprint) return false
     const browserAllowlistRecovery = ['waiting_for_user', 'needs_context'].includes(run.status) &&
@@ -513,7 +516,7 @@ async function pollWaitingAgentRuns() {
       !['complete', 'submitted', 'post_submission'].includes(String(run.applicationState?.stage ?? '').toLocaleLowerCase()) &&
       String(run.applicationState?.status ?? '').toLocaleLowerCase() !== 'complete'
     const autonomousProgrammeDiscoveryRecovery = run.status === 'needs_context' &&
-      isApplicationIntent(run.objective, run.context) &&
+      isGraduateApplicationTask(run.objective, run.context) &&
       !isApplicationProgrammeSelectionInteraction(run.contextInteraction ?? null) &&
       Boolean(run.applicationState) &&
       ['intake', 'research', 'shortlist_approval'].includes(String(run.applicationState?.stage ?? '').toLocaleLowerCase()) &&
@@ -571,7 +574,10 @@ function readAgentRuns() {
     const stored = window.localStorage.getItem(agentRunsStorageKey)
     if (!stored) return new Map<string, AgentRun>()
     const parsed = JSON.parse(stored) as AgentRun[]
-    return new Map(parsed.map(run => {
+    const scopedRuns = Array.isArray(parsed)
+      ? parsed.filter(run => isGraduateApplicationTask(run.objective, run.context))
+      : []
+    return new Map(scopedRuns.map(run => {
       const task = { title: run.objective, description: run.context }
       const migrated = !run.specialistId && !run.activeSpecialistId
         ? legacySpecialistRoute(task.title, task.description, run.capability)
@@ -648,7 +654,7 @@ function specialistHeader(task: Pick<Task, 'title' | 'description'>, run?: Agent
   // Application progress is a user-facing workspace, not an ownership
   // trace. Keep the internal David/Roon routing labels in diagnostics while
   // presenting a stable product label beside the applicant's work.
-  if (isApplicationIntent(task.title, task.description)) return '<strong>Application</strong>'
+  if (isGraduateApplicationTask(task.title, task.description)) return '<strong>Application</strong>'
   const specialist = specialistForTask(task, run)
   if (!specialist) return '<strong>ShotCount</strong>'
   return `<strong>${escapeHtml(specialist.displayName)}</strong>`
@@ -699,6 +705,12 @@ async function refreshTaskFileAssetsForAgent(taskId: string) {
 }
 
 async function startAgentRun(task: Task, context = '', interactionResponse?: { interactionId: string; kind: string; value: unknown; reusable?: boolean }) {
+  if (!isGraduateApplicationTask(task.title, task.description)) {
+    toast = GRADUATE_APPLICATION_ONLY_MESSAGE
+    render()
+    clearAgentToast(toast)
+    return
+  }
   const route = taskSpecialistRoute(task)
   if (!route.supported && !route.needsSemanticClassification) {
     toast = 'ShotCount cannot assign this task to a supported specialist yet.'
@@ -715,7 +727,7 @@ async function startAgentRun(task: Task, context = '', interactionResponse?: { i
     // leave the browser cache at `failed` while its typed application
     // decision is still the current boundary. Starting a replacement run
     // would duplicate the task and lose the existing case checkpoint.
-    (existing.status === 'failed' && isApplicationIntent(task.title, task.description) &&
+    (existing.status === 'failed' && isGraduateApplicationTask(task.title, task.description) &&
       /unsupported Unicode|agent_execution_error|application requirement/i.test(`${existing.error ?? ''} ${existing.errorCode ?? ''}`))
   )
   if (canResumeDurableRun) {
@@ -847,7 +859,7 @@ function submitRecommendationInteraction(task: Task, interaction: Recommendation
 function resumeApplicationRunForNewAttachment(task: Task, assets: FileAsset[]) {
   const run = agentRuns.get(task.id)
   if (
-    !isApplicationIntent(task.title, task.description) ||
+    !isGraduateApplicationTask(task.title, task.description) ||
     run?.status !== 'needs_context' ||
     agentDecisionBusy.has(run.id)
   ) return
@@ -1051,6 +1063,42 @@ async function retryAgentRun(taskId: string) {
   }
 }
 
+async function approveApplicationRequest(taskId: string) {
+  const run = agentRuns.get(taskId)
+  if (!run || !run.applicationPendingRequestId || agentDecisionBusy.has(run.id)) return
+  agentDecisionBusy.add(run.id)
+  render()
+  try {
+    const updated = await approveApplicationHandoff(run.id)
+    agentRuns.set(taskId, updated)
+    toast = 'Approved — Roon is sending the exact reviewed message.'
+  } catch (error) {
+    toast = error instanceof Error ? error.message : 'ShotCount could not approve this application action.'
+  } finally {
+    agentDecisionBusy.delete(run.id)
+    persistAgentRuns()
+    render()
+    if (toast) clearAgentToast(toast)
+  }
+}
+
+async function openApplicationBrowser(taskId: string) {
+  const run = agentRuns.get(taskId)
+  if (!run?.browserTakeoverSessionId || agentDecisionBusy.has(run.id)) return
+  agentDecisionBusy.add(run.id)
+  render()
+  try {
+    await openBrowserTakeover(run.browserTakeoverSessionId)
+    toast = 'Secure browser opened. Sign in there, then continue this task.'
+  } catch (error) {
+    toast = error instanceof Error ? error.message : 'The secure browser could not be opened.'
+  } finally {
+    agentDecisionBusy.delete(run.id)
+    render()
+    if (toast) clearAgentToast(toast)
+  }
+}
+
 async function chooseAgentRecipient(taskId: string, recipientEmail: string) {
   const run = agentRuns.get(taskId)
   const task = tasks.find(item => item.id === taskId)
@@ -1092,7 +1140,9 @@ function cancelAgentRun(taskId: string) {
 
 function addAgentFollowUps(task: Task) {
   const run = agentRuns.get(task.id)
-  const followUps = run?.result?.followUps ?? []
+  const applicationContext = `${task.title} ${task.description ?? ''}`
+  const followUps = (run?.result?.followUps ?? [])
+    .filter(title => isGraduateApplicationTask(title, applicationContext))
   const existing = new Set(tasks.map(item => item.title.toLocaleLowerCase()))
   const created = followUps
     .filter(title => !existing.has(title.toLocaleLowerCase()))
@@ -2289,6 +2339,8 @@ function isApplicationProgrammeSelectionInteraction(value: AgentRun['contextInte
 
 function applicationNeedsProgrammeDiscovery(state: AgentRun['applicationState'], run?: AgentRun) {
   if (!state) return false
+  const targetKind = run ? classifyGraduateApplicationTask(run.objective, run.context).targetKind ?? 'programme' : 'programme'
+  const targetTerms = targetKind === 'scholarship' ? 'programme|program|admissions?|scholarships?|fellowships?|studentships?' : 'programme|program|admissions?'
   if (isApplicationProgrammeSelectionInteraction(run?.contextInteraction ?? null)) return false
   if (run?.applicationProgrammeSelectionCompleted || run?.applicationSelectedOpportunityId) return false
   // Older runs can be carrying a case-level state while their last durable
@@ -2302,12 +2354,12 @@ function applicationNeedsProgrammeDiscovery(state: AgentRun['applicationState'],
   const pendingText = (state.pendingInputs ?? [])
     .map(item => `${item.title} ${item.question}`)
     .join(' ')
-  if (/(?:provide|upload|find)\b[^.]{0,100}\bofficial\b[^.]{0,100}\b(?:programme|program|admissions?)\b[^.]{0,100}\b(?:url|guide|source|page)\b/i.test(pendingText)) return true
+  if (new RegExp(`(?:provide|upload|find)\\b[^.]{0,100}\\bofficial\\b[^.]{0,100}\\b(?:${targetTerms})\\b[^.]{0,100}\\b(?:url|guide|source|page)\\b`, 'i').test(pendingText)) return true
   const contextText = [
     run?.waitingReason ?? '',
     ...(run?.schedulingOptions ?? []).flatMap(option => [option.label, option.value]),
   ].join(' ')
-  if (/\bofficial\b[^.]{0,180}\b(?:programme|program|admissions?)\b[^.]{0,180}\b(?:url|guide|source|page|document)\b/i.test(contextText)) return true
+  if (new RegExp(`\\bofficial\\b[^.]{0,180}\\b(?:${targetTerms})\\b[^.]{0,180}\\b(?:url|guide|source|page|document)\\b`, 'i').test(contextText)) return true
   // A legacy run can retain a case-level workstream while the programme
   // search never produced a verified opportunity. Treat that as discovery,
   // not preparation, until the controller repairs the durable state.
@@ -2317,14 +2369,17 @@ function applicationNeedsProgrammeDiscovery(state: AgentRun['applicationState'],
 function renderApplicationDiscoveryPanel(state: NonNullable<AgentRun['applicationState']>, run: AgentRun) {
   const verifiedCount = Math.max(0, Number(state.verifiedOpportunityCount ?? 0))
   const shortlistReady = isApplicationProgrammeSelectionInteraction(run.contextInteraction)
+  const targetKind = classifyGraduateApplicationTask(run.objective, run.context).targetKind ?? 'programme'
+  const targetNoun = targetKind === 'scholarship' ? 'scholarship' : 'programme'
+  const targetLabel = targetKind === 'scholarship' ? 'graduate scholarship' : 'graduate programme'
   const steps = [
     { label: 'Understand your search', done: verifiedCount > 0, active: verifiedCount === 0 },
-    { label: 'Searching official programme routes', done: verifiedCount > 0, active: false },
+    { label: `Searching official ${targetNoun} routes`, done: verifiedCount > 0, active: false },
     { label: 'Checking deadlines and requirements', done: shortlistReady, active: verifiedCount > 0 && !shortlistReady },
     { label: 'Matching routes to your CV', done: shortlistReady, active: false },
     { label: 'Rank the options', done: shortlistReady, active: false },
   ]
-  const headline = shortlistReady ? 'Choose a programme' : 'Finding the right programme'
+  const headline = shortlistReady ? `Choose a ${targetNoun}` : `Finding the right ${targetNoun}`
   const summary = shortlistReady
     ? verifiedCount === 1
       ? '1 verified option is ready to review.'
@@ -2333,15 +2388,17 @@ function renderApplicationDiscoveryPanel(state: NonNullable<AgentRun['applicatio
         : 'The verified shortlist is ready to review.'
     : verifiedCount > 0
       ? `${verifiedCount} official option${verifiedCount === 1 ? '' : 's'} found. I’m checking the details before I show them.`
-    : 'I’m checking official sources and matching the options to your CV.'
+    : `I’m checking official ${targetLabel} sources and matching the options to your CV.`
   const info = shortlistReady
     ? 'Each option comes from an official source. The fit score reflects the verified evidence in your CV, not a guess.'
-    : 'I’ll search official university and graduate-admissions pages first. You only need to choose from the verified options.'
+    : targetKind === 'scholarship'
+      ? 'I’ll search official scholarship-provider and linked graduate-admissions pages first. You only need to choose from the verified options.'
+      : 'I’ll search official university and graduate-admissions pages first. You only need to choose from the verified options.'
   const recovery = run.status === 'needs_context'
     ? `<footer><button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${escapeHtml(run.taskId)}" ${agentDecisionBusy.has(run.id) ? 'disabled' : ''}>${agentDecisionBusy.has(run.id) ? 'Searching…' : 'Keep searching'}</button></footer>`
     : ''
-  return `<section class="task-agent-application-cockpit task-agent-application-cockpit--discovery" aria-label="Programme discovery">
-    <div class="task-agent-application-summary"><div><strong>${headline}</strong><small>${escapeHtml(summary)}</small></div><span class="application-discovery-info" tabindex="0" role="img" aria-label="How programme discovery works" data-tooltip="${escapeHtml(info)}">i</span></div>
+  return `<section class="task-agent-application-cockpit task-agent-application-cockpit--discovery" aria-label="${escapeHtml(targetLabel)} discovery">
+    <div class="task-agent-application-summary"><div><strong>${headline}</strong><small>${escapeHtml(summary)}</small></div><span class="application-discovery-info" tabindex="0" role="img" aria-label="How ${escapeHtml(targetNoun)} discovery works" data-tooltip="${escapeHtml(info)}">i</span></div>
     <div class="application-discovery-steps">${steps.map(step => `<div class="application-discovery-step${step.done ? ' application-discovery-step--done' : step.active ? ' application-discovery-step--active' : ''}"><span class="task-agent-progress-orb">${renderRoonOrb(step.done ? 'complete' : step.active ? 'active' : 'waiting', 18)}</span><span>${escapeHtml(step.label)}</span></div>`).join('')}</div>
     ${recovery}
   </section>`
@@ -2360,7 +2417,7 @@ function renderApplicationControlTower(task: Task, run: AgentRun) {
   const state = run.applicationState
   if (!state) return ''
   if (isApplicationProgrammeSelectionInteraction(run.contextInteraction ?? null)) return ''
-  const applicationInteraction = isApplicationIntent(task.title, task.description) && isRecommendationProgressInteraction(run.contextInteraction)
+  const applicationInteraction = isGraduateApplicationTask(task.title, task.description) && isRecommendationProgressInteraction(run.contextInteraction)
     ? run.contextInteraction
     : null
   if (applicationNeedsProgrammeDiscovery(state, run)) return renderApplicationDiscoveryPanel(state, run)
@@ -2568,11 +2625,12 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
   const paymentDeadline = approvalPreviewValue(approval, 'deadline')
   const preparedValues = approvalPreviewValue(approval, 'prepared_values')
   const attachment = approvalPreviewValue(approval, 'attachment') as { name?: string; mime_type?: string; size?: number } | null
-  const safety = approvalPreviewValue(approval, 'safety') as { warnings?: unknown } | null
+  const attachmentLocked = Boolean(approvalPreviewValue(approval, 'attachment_locked'))
+  const safety = approvalPreviewValue(approval, 'safety') as { warnings?: unknown; requiresAttachment?: boolean; hasPlaceholder?: boolean } | null
   const busy = agentDecisionBusy.has(approval.id)
   const undoing = pendingEmailSends.has(approval.id)
   const confirmLabel = approval.kind === 'send_email'
-    ? 'Send'
+    ? 'Approve & send'
     : approval.kind === 'calendar_write'
       ? 'Confirm'
       : approval.kind === 'payment'
@@ -2606,7 +2664,7 @@ function renderAgentApprovalPanel(task: Task, approval: AgentApproval) {
       ${approval.kind === 'calendar_write'
         ? `<label class="task-agent-email-field"><span>Description</span><textarea data-agent-calendar-description="${escapeHtml(task.id)}" rows="5" maxlength="12000" aria-label="Calendar event description" ${busy ? 'disabled' : ''}>${escapeHtml(String(body ?? ''))}</textarea></label>`
         : body ? approval.kind === 'send_email'
-        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${escapeHtml(task.id)}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label><label class="task-agent-email-field"><span>Attachment <small>${attachment?.name ? 'Choose another to replace it' : 'Optional · from your computer'}</small></span><input type="file" data-agent-email-attachment="${escapeHtml(task.id)}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`
+        ? `<label class="task-agent-email-field"><span>Message</span><textarea data-agent-email-body="${escapeHtml(task.id)}" rows="9" maxlength="20000" aria-label="Email body" ${busy || undoing ? 'disabled' : ''}>${escapeHtml(String(body))}</textarea></label>${attachmentLocked ? `<div class="task-agent-waiting-detail"><span>Canonical CV attachment is locked and will be sent with this message.</span></div>` : `<label class="task-agent-email-field"><span>Attachment <small>${attachment?.name ? 'Choose another to replace it' : 'Optional · from your computer'}</small></span><input type="file" data-agent-email-attachment="${escapeHtml(task.id)}" aria-label="Email attachment" ${busy || undoing ? 'disabled' : ''}></label>`}`
         : `<blockquote>${escapeHtml(String(body)).replaceAll('\n', '<br>')}</blockquote>` : browserEffect ? `<blockquote>${escapeHtml(String(browserEffect))}</blockquote>` : `<p>${escapeHtml(approval.summary)}</p>`}
     </div>
     <small>Only this exact action is approved. Any change requires a new review.</small>
@@ -2636,13 +2694,22 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     <aside class="task-agent-notification">${icon('bell')}<span>ShotCount keeps watch while you get on with your day.</span></aside>`
   }
   // Application research runs through the OpenAI web-research lane and must
-  // never turn a stale provider error into a Gmail authorization prompt. A
-  // Gmail connection remains available for non-application communication
-  // tasks, while the application lane gets its normal safe retry affordance.
-  const applicationWebResearch = isApplicationIntent(task.title, task.description) &&
+  // Never turn a stale provider error into a Gmail authorization prompt. A
+  // Gmail connection is only a dependency of an application communication
+  // lane, while the application lane gets its normal safe retry affordance.
+  const applicationWebResearch = isGraduateApplicationTask(task.title, task.description) &&
     (run.errorCode === 'google_retry_exhausted' || run.errorCode === 'research_provider_retry_exhausted' || /web research provider/i.test(run.waitingReason))
   const needsGoogle = !applicationWebResearch && (run.errorCode?.startsWith('google_') ||
     /connect google|reconnect google/i.test(run.waitingReason))
+  const browserHumanBoundary = run.browserHumanBoundary ?? (run.authenticationRequired ? 'authentication' : null)
+  const needsBrowserSignIn = ['waiting_for_user', 'needs_context'].includes(run.status) && Boolean(browserHumanBoundary && run.browserTakeoverSessionId)
+  const browserTakeoverLabel = browserHumanBoundary === 'captcha'
+    ? 'Complete verification securely'
+    : browserHumanBoundary === 'sensitive_field'
+      ? 'Enter private field securely'
+      : 'Sign in securely'
+  const needsApplicationApproval = Boolean(run.applicationPendingRequestId) &&
+    (run.errorCode === 'application_handoff_approval_required' || /approval/i.test(run.waitingReason))
   const title = external ? 'I’m keeping an eye on this.' : 'I need one detail to keep moving.'
   const userFacingWaitingReason = humanizeAgentProgressLabel(run.waitingReason)
   const detail = external ? 'I’ll keep watching and continue as soon as there’s an update. You can leave this screen.' : ''
@@ -2653,7 +2720,7 @@ function renderAgentWaitingPanel(task: Task, run: AgentRun) {
     ${renderRoonGeneratedFiles(task)}
     <footer>
       <button type="button" data-action="cancel-agent" data-task-id="${escapeHtml(task.id)}">Cancel</button>
-      ${needsGoogle ? `<button class="agent-primary" type="button" data-action="connect-agent-google" data-task-id="${escapeHtml(task.id)}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : 'Connect Google'}</button>` : external ? '' : `<button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${escapeHtml(task.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Refreshing…' : 'Try again'}</button>`}
+      ${needsBrowserSignIn ? `<button class="agent-primary" type="button" data-action="open-application-browser" data-task-id="${escapeHtml(task.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Opening…' : browserTakeoverLabel}</button><button type="button" data-action="retry-agent" data-task-id="${escapeHtml(task.id)}" ${busy ? 'disabled' : ''}>${browserHumanBoundary === 'authentication' ? 'I’ve signed in' : 'I’ve completed it'}</button>` : needsApplicationApproval ? `<button class="agent-primary" type="button" data-action="approve-application-request" data-task-id="${escapeHtml(task.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Approving…' : 'Approve & send'}</button>` : needsGoogle ? `<button class="agent-primary" type="button" data-action="connect-agent-google" data-task-id="${escapeHtml(task.id)}" ${(busy || googleAgentConnectionBusy) ? 'disabled' : ''}>${googleAgentConnectionBusy ? 'Opening…' : 'Connect Google'}</button>` : external ? '' : `<button class="agent-primary" type="button" data-action="retry-agent" data-task-id="${escapeHtml(task.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Refreshing…' : 'Try again'}</button>`}
     </footer>
   </section>`
 }
@@ -2684,7 +2751,7 @@ function applicationInputSpec(prompt: string) {
 function canResumeCancelledApplicationRun(task: Task, run: AgentRun | undefined) {
   return Boolean(
     run?.status === 'cancelled' &&
-    isApplicationIntent(task.title, task.description) &&
+    isGraduateApplicationTask(task.title, task.description) &&
     (run.applicationState?.currentCaseId || run.applicationCaseId),
   )
 }
@@ -2713,13 +2780,13 @@ function renderAgentPanel(task: Task) {
       .replace(/\bRoon\b/gi, specialistName(task, run))
     const requirementRepairPaused = run.errorCode === 'application_requirements_repair_paused'
     const owner = specialistForTask(task, run)
-    const ownerName = isApplicationIntent(task.title, task.description)
+    const ownerName = isGraduateApplicationTask(task.title, task.description)
       ? 'ShotCount'
       : owner?.displayName ?? 'ShotCount'
-    const canUseAttachedCv = isApplicationIntent(task.title, task.description) &&
+    const canUseAttachedCv = isGraduateApplicationTask(task.title, task.description) &&
       /NOT A REAL APPLICANT|authoritative CV/i.test(rawContextPrompt) &&
       (taskFileAssets.get(task.id) ?? []).some(asset => asset.source === 'task_upload' && asset.mimeType === 'application/pdf')
-    const hasReadableAttachedCv = isApplicationIntent(task.title, task.description) &&
+    const hasReadableAttachedCv = isGraduateApplicationTask(task.title, task.description) &&
       (taskFileAssets.get(task.id) ?? []).some(asset => asset.source === 'task_upload' && ['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(asset.mimeType))
     const canRetryAttachedCv = hasReadableAttachedCv && (
       ['application_cv_source_unavailable', 'application_cv_source_page_count_mismatch', 'application_cv_factual_inventory_invalid', 'application_cv_compilation_failed', 'application_cv_layout_invalid', 'application_cv_tailoring_rules_outdated', 'application_cv_render_invalid', 'application_cv_tailoring_brief_invalid', 'application_cv_tailoring_target_mismatch', 'application_cv_tailoring_source_invalid', 'application_cv_programme_fit_ungrounded', 'application_cv_programme_fit_provenance_missing'].includes(run.errorCode ?? '') ||
@@ -2730,8 +2797,8 @@ function renderAgentPanel(task: Task) {
       : []
     const schedulingOptions = run.schedulingOptions ?? []
     const applicationDiscoveryActive = Boolean(run.applicationState && applicationNeedsProgrammeDiscovery(run.applicationState, run))
-    const applicationRun = isApplicationIntent(task.title, task.description)
-    const sopAuthoringOptions = isApplicationIntent(task.title, task.description) && schedulingOptions.length === 2 &&
+    const applicationRun = isGraduateApplicationTask(task.title, task.description)
+    const sopAuthoringOptions = isGraduateApplicationTask(task.title, task.description) && schedulingOptions.length === 2 &&
       schedulingOptions.some(option => /human expert/i.test(option.label)) &&
       schedulingOptions.some(option => /(?:roon|david) draft/i.test(option.label))
     const sopAuthoringPrompt = `Your CV is my home turf: facts in, unfairly sharp tailoring out. An SOP deserves human editorial firepower for the final narrative. Want me to bring in a human application expert, or should ${ownerName} draft it? If we bring one in, I’ll quarterback the whole thing—brief them, handle the messages, drive the revisions, and get the final application pack submission-ready for your approval.`
@@ -2789,6 +2856,7 @@ function renderAgentPanel(task: Task) {
 
   if (run.status === 'completed' && run.result) {
     const resultLabel = run.intent.outcomeType === 'external_change' ? 'Done' : 'Ready to review'
+    const applicationFollowUps = run.result.followUps.filter(title => isGraduateApplicationTask(title, `${task.title} ${task.description ?? ''}`))
     return `<section class="task-agent-card task-agent-card--result">
       <header>${specialistHeader(task, run)}<span class="task-agent-header-mark task-agent-header-mark--complete" role="img" aria-label="${escapeHtml(resultLabel)}">✓</span></header>
       <p>${escapeHtml(humanizeAgentProgressLabel(run.result.summary))}</p>
@@ -2798,7 +2866,7 @@ function renderAgentPanel(task: Task) {
       </div>
       ${renderRoonGeneratedFiles(task)}
       ${run.result.sources.length ? `<div class="agent-sources"><strong>Sources</strong>${run.result.sources.map(source => `<a href="${safeAgentUrl(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)} ↗</a>`).join('')}</div>` : ''}
-      ${run.result.followUps.length ? `<div class="agent-followups"><strong>Suggested next application steps</strong>${run.result.followUps.map(title => `<span>＋ ${escapeHtml(title)}</span>`).join('')}</div><button class="agent-add-followups" type="button" data-action="add-agent-followups" data-task-id="${escapeHtml(task.id)}">Add application follow-ups</button>` : ''}
+      ${applicationFollowUps.length ? `<div class="agent-followups"><strong>Suggested next application steps</strong>${applicationFollowUps.map(title => `<span>＋ ${escapeHtml(title)}</span>`).join('')}</div><button class="agent-add-followups" type="button" data-action="add-agent-followups" data-task-id="${escapeHtml(task.id)}">Add application follow-ups</button>` : ''}
       ${run.result.applicationReviewUrl ? `<a class="agent-primary agent-review-application" href="${safeAgentUrl(run.result.applicationReviewUrl)}" target="_blank" rel="noreferrer">Review application</a>` : ''}
       <small>Private to you · Application context and output stay in this workspace.</small>
     </section>`
@@ -2889,7 +2957,7 @@ function renderTaskAttachments(task: Task) {
   const assets = (taskFileAssets.get(task.id) ?? []).filter(isUserVisibleTaskAttachment)
   const busy = taskFileAssetBusy.has(task.id)
   if (!assets.length) return ''
-  const reuseOwner = isApplicationIntent(task.title, task.description)
+  const reuseOwner = isGraduateApplicationTask(task.title, task.description)
     ? 'application tasks'
     : `${specialistName(task, agentRuns.get(task.id))} in future tasks`
   return `<section class="task-attachments" aria-label="Task attachments">
@@ -2907,7 +2975,7 @@ function renderTaskAttachments(task: Task) {
 function renderRoonGeneratedFiles(task: Task) {
   const assets = selectUserVisibleGeneratedFiles(taskFileAssets.get(task.id) ?? [])
   if (!assets.length) return ''
-  const ownerName = isApplicationIntent(task.title, task.description)
+  const ownerName = isGraduateApplicationTask(task.title, task.description)
     ? 'Application'
     : specialistName(task, agentRuns.get(task.id))
   const progressPreview = filePreview?.placement === 'progress' && assets.some(asset => asset.id === filePreview?.asset.id)
@@ -2965,6 +3033,7 @@ function renderFilePreview() {
 }
 
 function renderInspectorRoonAction(task: Task) {
+  if (!isGraduateApplicationTask(task.title, task.description)) return ''
   const run = agentRuns.get(task.id)
   if (canResumeCancelledApplicationRun(task, run)) return ''
   if (run && run.status !== 'failed' && run.status !== 'cancelled') return ''
@@ -3839,7 +3908,7 @@ app.addEventListener('submit', async event => {
       void uploadTaskFileAsset(newTask.id, attachment).then(asset => {
         taskFileAssets.set(newTask.id, [asset])
         toast = `${asset.originalFilename} attached`
-        if (isApplicationIntent(newTask.title, newTask.description)) void startAgentRun(newTask)
+        if (isGraduateApplicationTask(newTask.title, newTask.description)) void startAgentRun(newTask)
       }).catch(error => {
         toast = error instanceof Error ? error.message : 'The attachment could not be uploaded.'
       }).finally(() => {
@@ -3979,8 +4048,16 @@ app.addEventListener('change', event => {
     const panel = programmeChoice.closest<HTMLElement>('.recommendation-progress-detail--application')
     const interactionId = panel?.dataset.recommendationInteractionId
     if (interactionId && programmeChoice.checked) programmeSelectionDrafts.set(interactionId, programmeChoice.dataset.interactionValue ?? '')
-    const submit = panel?.querySelector<HTMLButtonElement>('[data-action="submit-recommendation-single"]')
-    if (submit) submit.disabled = !panel?.querySelector<HTMLInputElement>('.application-shortlist-option-input:checked')
+    const multipleSubmit = panel?.querySelector<HTMLButtonElement>('[data-action="submit-recommendation-multiple"]')
+    if (multipleSubmit) {
+      const selectedCount = panel?.querySelectorAll<HTMLInputElement>('.application-shortlist-option-input:checked').length ?? 0
+      const minimum = Number(panel?.dataset.selectionMin ?? 1)
+      const maximum = Number(panel?.dataset.selectionMax ?? Number.POSITIVE_INFINITY)
+      multipleSubmit.disabled = selectedCount < minimum || selectedCount > maximum
+    } else {
+      const submit = panel?.querySelector<HTMLButtonElement>('[data-action="submit-recommendation-single"]')
+      if (submit) submit.disabled = !panel?.querySelector<HTMLInputElement>('.application-shortlist-option-input:checked')
+    }
     return
   }
   const todayTaskFileInput = (event.target as HTMLElement).closest<HTMLInputElement>('[data-today-task-file]')
@@ -4066,7 +4143,7 @@ app.addEventListener('change', event => {
       if (!assets.some(item => item.id === asset.id)) taskFileAssets.set(taskId, [...assets, asset])
       toast = `${asset.originalFilename} attached`
       const task = tasks.find(item => item.id === taskId)
-      if (task && isApplicationIntent(task.title, task.description)) {
+      if (task && isGraduateApplicationTask(task.title, task.description)) {
         const existingRun = agentRuns.get(task.id)
         if (!existingRun) {
           void startAgentRun(task)
@@ -4382,7 +4459,7 @@ app.addEventListener('click', async event => {
     const panel = target.closest<HTMLElement>('[data-progress-detail], .recommendation-progress-detail')
     const values = [...(panel?.querySelectorAll<HTMLInputElement>('[data-recommendation-choice]:checked') ?? [])].map(input => input.dataset.interactionValue).filter((value): value is string => Boolean(value))
     const typedWorkSample = isWorkSampleProgressInteraction(interaction)
-    if (task && ((isRecommendationMultipleChoiceInteraction(interaction) && values.length >= interaction.minSelections) || (typedWorkSample && interaction.kind === 'multiple_choice' && values.length >= (interaction.minSelections ?? 1)))) submitRecommendationInteraction(task, interaction, values)
+    if (task && ((isRecommendationMultipleChoiceInteraction(interaction) && values.length >= interaction.minSelections && values.length <= interaction.maxSelections) || (typedWorkSample && interaction.kind === 'multiple_choice' && values.length >= (interaction.minSelections ?? 1) && values.length <= Number.POSITIVE_INFINITY))) submitRecommendationInteraction(task, interaction, values)
     return
   }
 
@@ -4522,6 +4599,18 @@ app.addEventListener('click', async event => {
   if (action === 'retry-agent') {
     const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
     if (taskId) void retryAgentRun(taskId)
+    return
+  }
+
+  if (action === 'approve-application-request') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    if (taskId) void approveApplicationRequest(taskId)
+    return
+  }
+
+  if (action === 'open-application-browser') {
+    const taskId = target.closest<HTMLElement>('[data-task-id]')?.dataset.taskId
+    if (taskId) void openApplicationBrowser(taskId)
     return
   }
 

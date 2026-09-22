@@ -10,11 +10,24 @@ truth. Provider harnesses own external effects and verification. The model
 makes bounded semantic judgments over supplied evidence; it does not invent
 the application plan or decide that a provider action succeeded.
 
+## Product scope boundary
+
+Shotcount executes graduate-school application work only. The task must be
+clearly tied to a graduate degree or programme and an application step.
+Programme research, requirements, documents, faculty or referee coordination,
+funding, deadlines, portal work, Gmail, Calendar, and browser operations are
+valid only as steps inside that application workflow. Standalone communication,
+calendar, research, document, browser, job, internship, grant, or unrelated
+application tasks are rejected before model or provider execution. The strict
+runtime predicate is `isGraduateApplicationTask`; compatibility classifiers do
+not grant execution permission.
+
 ## Agent-facing contract
 
 Every application continuation receives a bounded context packet containing:
 
-- one user, task, AgentRun, and selected-programme scope;
+- one user, task, AgentRun, application-campaign scope, selected target set,
+  and active target lane;
 - the task objective, requested effects, forbidden effects, and approval gates;
 - verified facts and their provenance, relevant official sources, artifacts and
   checksums, provider observations, conflicts, and freshness;
@@ -37,6 +50,32 @@ The model may choose one narrow action inside the active lane. It may not:
 - bypass the deterministic controller, provider adapter, approval, or
   reconciliation boundary.
 
+### Per-turn control contract
+
+The runtime materializes `APPLICATION_TURN_ADMISSION_V1` before every David
+model call. Its `APPLICATION_WORKING_SET_V1` contains the selected target set,
+active target lane, active case, current operation, dependency-ready lanes, verified fact/evidence IDs,
+pending boundaries, exact tool allow-list, explicit exclusions, and safe reuse
+references. A turn is admitted only when the objective is still a graduate-
+school application, the active specialist is David, the case exists when the
+operation requires it, a controller tool is available, and the model budget
+has room. User and provider waits remain visible, but independent runnable
+application lanes may continue.
+
+The same admission is checked again against the proposed tool and its case ID
+before dispatch. Final submission cannot use `browser.submit`; payment,
+communication, and submission still cross their existing approval and provider
+evidence gates. The run stores a compact admission anchor and cumulative
+`application_resource_usage` (model calls, input/output tokens, cached input,
+retries, web-search calls, and latency) so a resumed turn can be understood
+without trusting an unbounded transcript.
+
+Before a resumed model/provider turn, the recovery validator checks the run,
+case, admission anchor, and action ledger for duplicate model calls,
+duplicate idempotency keys, missing provider confirmation on consequential
+effects, multiple open actions, and activity after terminal state. An invalid
+slice stops safely with the verified application state preserved.
+
 ## Ownership of missing values
 
 The owner of a missing value is not necessarily the worker that executes the
@@ -53,9 +92,13 @@ lane.
 
 ## Intake, routing, and safety
 
-- Detect application, admissions, graduate-school, scholarship, fellowship,
-  internship, job, grant, statement, referee, supervisor-outreach, document,
-  and deadline work and route it to David when the intent is supported.
+- Detect graduate-school application work—programme research, admissions,
+  funding tied to a graduate programme, statements, referees, supervisors,
+  documents, deadlines, portal work, and submission—and route it to David
+  when the intent is clear.
+- Reject standalone email, calendar, research, document, browser, job,
+  internship, accelerator, grant, and unrelated application tasks before
+  execution. Gmail and Calendar remain internal application handoff tools.
 - Repair legacy or misrouted application runs into the canonical David runtime
   before model work starts.
 - Keep research-only tasks out of portals and stop after a bounded,
@@ -64,9 +107,11 @@ lane.
 - Treat an explicit apply, prepare, fill, or finish request as permission for
   reversible case preparation, never as permission for final submission,
   communication, payment, or a blanket approval.
-- Keep one programme per ApplicationCase. If research finds several verified
-  programmes, present a typed multi-select and create one private, idempotent
-  case per selected programme.
+- Keep one target lane per ApplicationCase. The persisted official workflow
+  graph may require several linked targets, one choice from an alternative
+  group, or a sequence. Present the exact current selection group and create
+  one private, idempotent case per selected target; never collapse a scholarship
+  route and its linked course or institution routes into one case.
 - Scope every campaign, opportunity, case, requirement, fact, artifact,
   communication, approval, provider action, and checkpoint to the user and
   appropriate task/case.
@@ -75,8 +120,8 @@ lane.
 
 ## Research and programme selection
 
-- Search official programme, department, university, and government sources in
-  a task-owned, HTTPS allowlisted browser session.
+- Search official programme, department, university, scholarship-provider, and
+  government sources in a task-owned, HTTPS allowlisted browser session.
 - Persist institution, programme title, official and application URLs,
   deadlines and time zones, pathway, funding model, fit signals, confidence,
   citations, retrieval times, and rationale.
@@ -85,6 +130,10 @@ lane.
 - Store source freshness and invalidate derived strategy when a material source
   or deadline changes.
 - Deduplicate opportunity and evidence writes with stable idempotency keys.
+- Compile the provider's official route into a versioned workflow graph before
+  selection. Treat candidate count as a discovery budget, not as target
+  cardinality; expand discovery when the graph requires more verified linked
+  targets than the first search returned.
 - Distinguish research/checklist completion from application execution;
   research cannot silently create a case or portal session.
 
@@ -179,9 +228,9 @@ lane.
   artifact in an exact checksum.
 - Record portal identity, section, entered and read-back values, save
   confirmation, session identity, completion signal, and next step.
-- Permit generic browser submit only for an explicitly preparatory effect such
-  as save-and-continue, an upload, or an academic request. It cannot count as
-  final application submission.
+- Permit browser submit only for an explicitly preparatory application effect
+  such as save-and-continue, an upload, or an academic request. It cannot
+  count as final application submission.
 - Build a deterministic readiness report over requirements, artifacts,
   referees, declarations, portal validation, approvals, and blockers.
 - Require the exact approved package checksum, verified latest checkpoint,

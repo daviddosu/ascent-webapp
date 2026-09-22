@@ -50,6 +50,13 @@ export function cvPageTargetForSourcePages(sourcePageCount: number): Exclude<CvP
   return sourcePageCount === 1 ? 'one_page' : 'two_page'
 }
 
+export function cvMaximumHorizontalOverflow(compilationLog: string) {
+  const widths = [...compilationLog.matchAll(/Overfull \\hbox \(([0-9]+(?:\.[0-9]+)?)pt too wide\)/g)]
+    .map(match => Number(match[1]))
+    .filter(width => Number.isFinite(width))
+  return widths.length ? Math.max(...widths) : 0
+}
+
 export type CvFactualInventory = {
   contacts: string[]
   dates: string[]

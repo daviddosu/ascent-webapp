@@ -4,6 +4,7 @@ import {
   resolveApplicationProgrammeSelectionCommit,
   validateApplicationProgrammeSelection,
 } from './application-programme-selection.ts'
+import type { ApplicationWorkflowSelectionGroup } from './application-workflow.ts'
 
 const opportunities = [
   {
@@ -32,6 +33,19 @@ Deno.test('builds a single-choice interaction for the verified shortlist', () =>
   assert(interaction.options[0]?.description?.includes('Deadline 2026-12-01') === true)
 })
 
+Deno.test('preserves a scholarship target in the typed choice interaction', () => {
+  const interaction = createApplicationProgrammeSelectionInteraction('campaign-scholarship', [{
+    ...opportunities[0],
+    institution: 'Chevening Secretariat',
+    programmeTitle: 'Chevening Scholarship',
+    opportunityKind: 'scholarship',
+    routeType: 'graduate_scholarship',
+  }], 'scholarship')
+  assertEquals(interaction.targetKind, 'scholarship')
+  assertEquals(interaction.question, 'Which graduate scholarship do you want to apply for?')
+  assertEquals(interaction.options[0]?.label, 'Chevening Secretariat · Chevening Scholarship')
+})
+
 Deno.test('accepts exactly one selected programme and rejects stale, empty, or multiple choices', () => {
   const interaction = createApplicationProgrammeSelectionInteraction('campaign-1', opportunities)
   assertEquals(validateApplicationProgrammeSelection(interaction, 'programme-1'), {
@@ -50,6 +64,30 @@ Deno.test('accepts exactly one selected programme and rejects stale, empty, or m
     accepted: false,
     error: 'One of those programme choices is no longer current. Refresh the task and choose from the current shortlist.',
   })
+})
+
+Deno.test('honours an official multi-target selection group', () => {
+  const group: ApplicationWorkflowSelectionGroup = {
+    id: 'eligible-courses',
+    label: 'Choose three eligible courses',
+    targetKind: 'course',
+    minSelections: 3,
+    maxSelections: 3,
+    required: true,
+    relation: 'requires',
+    targetKeys: ['programme-1', 'programme-2', 'programme-3'],
+    sourceEvidenceIds: ['https://provider.example/courses'],
+  }
+  const interaction = createApplicationProgrammeSelectionInteraction('campaign-multi', [
+    ...opportunities,
+    { id: 'programme-3', institution: 'Eastfield University', programmeTitle: 'MSc Physics', officialUrl: 'https://eastfield.example/physics', fitScore: 70, deadlineAt: null },
+  ], 'scholarship', group)
+  assertEquals(interaction.kind, 'multiple_choice')
+  assertEquals(interaction.minSelections, 3)
+  assertEquals(validateApplicationProgrammeSelection(interaction, ['programme-1', 'programme-2']), { accepted: false, error: 'Choose exactly 3 application targets to continue.' })
+  assertEquals(validateApplicationProgrammeSelection(interaction, ['programme-1', 'programme-2', 'programme-3']).accepted, true)
+  const commit = resolveApplicationProgrammeSelectionCommit({ selectedOpportunityIds: ['programme-1', 'programme-2', 'programme-3'], taskId: 'task-1' })
+  assertEquals(commit, { kind: 'committed', opportunityIds: ['programme-1', 'programme-2', 'programme-3'], applicationCaseIds: [] })
 })
 
 Deno.test('binds one programme to the existing task and replays retries without switching cases', () => {

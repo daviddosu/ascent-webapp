@@ -13,6 +13,7 @@ drop function if exists public.claim_push_delivery(text, text, uuid, uuid, integ
 drop function if exists public.finish_push_delivery(text, text, uuid, uuid, uuid, boolean, boolean, text);
 
 drop trigger if exists record_shotcount_completion on public.planner_records;
+drop trigger if exists enforce_planner_task_visibility on public.planner_records;
 drop function if exists public.enforce_planner_task_visibility();
 
 drop table if exists public.push_deliveries cascade;
@@ -25,7 +26,11 @@ alter table public.planner_records
   drop constraint if exists planner_records_record_type_check,
   drop column if exists visibility,
   add constraint planner_records_record_type_check
-    check (record_type in ('workspace', 'task', 'subtask'));
+    check (record_type in ('workspace', 'task', 'subtask', 'goal'));
+
+-- Existing goal projections are retained as unread legacy evidence. Current
+-- clients cannot create or render them, but the migration must not destroy
+-- historical user data merely to retire the old product surface.
 
 alter table public.tasks
   drop column if exists goal_id,

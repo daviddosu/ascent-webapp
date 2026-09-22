@@ -656,5 +656,20 @@
     "reproduction": {
       "command": "pnpm benchmark:david -- --case e2e-writer-question"
     }
+  },
+  {
+    "key": "david_application_engine_v3:primitive-simple-form:false_success",
+    "caseId": "primitive-simple-form",
+    "title": "Complete a simple form with the primitive",
+    "source": "frozen benchmark",
+    "firstSeenRun": "david-eval-20260921183928-356e5f",
+    "failureClass": "false_success",
+    "expected": {
+      "state": "saved",
+      "execution": "primitive"
+    },
+    "reproduction": {
+      "command": "pnpm benchmark:david -- --case primitive-simple-form"
+    }
   }
 ]

@@ -25,7 +25,7 @@ function responsibleParty(requirement: RequirementInput) {
 export function isFundingRequirement(requirement: RequirementInput) {
   const name = requirementName(requirement)
   const type = requirementType(requirement)
-  return type === 'funding' || /\b(?:fund(?:ing|ed)?|financial support|stipend|assistantship|scholarship)\b/i.test(name)
+  return type === 'funding' || (type !== 'scholarship' && /\b(?:fund(?:ing|ed)?|financial support|stipend|assistantship|scholarship)\b/i.test(name))
 }
 
 /**
@@ -59,6 +59,7 @@ export function requiresApplicantSpecificEvidence(requirement: RequirementInput)
     exactInstructions: requirement.exact_instructions ?? requirement.exactInstructions,
     source: requirement.source && typeof requirement.source === 'object' && !Array.isArray(requirement.source) ? requirement.source as Record<string, unknown> : null,
   }) === 'programme') return false
+  if (requirementType(requirement) === 'scholarship') return false
   if (isFundingRequirement(requirement)) return false
   const name = requirementName(requirement)
   const category = requirementCategory(requirement)

@@ -10,9 +10,10 @@ export type TaskApplicationCaseLinkResolution =
   | { kind: 'ambiguous'; caseIds: string[] }
 
 /**
- * A resumed AgentRun must stay attached to the one ApplicationCase owned by
- * its task. A previous run may have created that case, so the new run cannot
- * assume an empty context means an empty application workspace.
+ * A resumed AgentRun must stay attached to one active ApplicationCase lane
+ * owned by its task. A task may have several lanes in its canonical workflow
+ * bundle, so the caller keeps the other case IDs separately rather than
+ * silently collapsing them into this active-lane link.
  */
 export function resolveTaskApplicationCaseLink(input: {
   campaignId: string | null

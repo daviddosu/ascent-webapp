@@ -103,7 +103,7 @@ async function runOne(input: { caseId: string; repetition: number; endpoint: str
     modelCalls: client.modelCalls, graderCalls: 0, usage: client.usage ?? zeroUsage(), elapsedMs: Date.now() - started,
     modelConfiguration: {
       requestedModel: 'gpt-5.6-luna', observedModels: [...client.observedModels], reasoningEffort: 'low', temperature: null,
-      systemPromptVersion: 'shotcount-david-system@1', systemPromptSha256: '', davidPromptVersion: 'david-prompt@6', harnessVersion: 'david-application-controller@2.1', primitiveVersion: 'public-browser@1', codeCommit: input.codeCommit,
+      systemPromptVersion: 'shotcount-david-system@1', systemPromptSha256: '', davidPromptVersion: 'david-prompt@7', harnessVersion: 'david-application-controller@2.1', primitiveVersion: 'public-browser@1', codeCommit: input.codeCommit,
     },
     terminalSummary: runtime.base.terminalSummary, trace,
   }

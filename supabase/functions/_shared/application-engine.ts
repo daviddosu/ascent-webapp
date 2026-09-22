@@ -45,7 +45,7 @@ export const applicationSemanticFunctions = [
 export type ApplicationSemanticFunction = typeof applicationSemanticFunctions[number]
 
 export type RequirementType =
-  | 'profile_fact' | 'eligibility' | 'official_requirement' | 'deadline' | 'funding'
+  | 'profile_fact' | 'eligibility' | 'official_requirement' | 'deadline' | 'funding' | 'scholarship'
   | 'document' | 'writer' | 'research_proposal' | 'referee' | 'professor' | 'communication' | 'portal_field'
   | 'portal_section' | 'supplemental_question' | 'artifact_upload' | 'transcript' | 'degree_certificate' | 'proof_of_graduation'
   | 'credential_evaluation' | 'english_language_test' | 'admissions_test' | 'academic_evidence'

@@ -7,6 +7,15 @@
 
 export const APPLICATION_EMAIL_SCHEMA_VERSION = 1 as const
 export const APPLICATION_EMAIL_WORKFLOW_VERSION = 'application-email@1.0.0' as const
+export const APPLICATION_EMAIL_DRAFT_RULE = [
+  'For first-contact prospective-supervisor email, use a short subject tied to the verified programme or a specific research connection, never a generic label.',
+  'Open with Dear Professor or Dr plus the recipient surname, then identify the applicant, programme, and reason for writing immediately.',
+  'Use one verified reference to the recipient’s current work and one or two confirmed applicant-fit facts; do not use generic praise or unsupported claims.',
+  'Make one small, specific, low-pressure ask, usually whether the faculty member expects to take students or would welcome a brief conversation.',
+  'Keep the message roughly 120–180 words and below the typed 220-word maximum, with identical plain-text and HTML meaning, a professional sign-off, and only confirmed contact details.',
+  'Attach exactly the current canonical CV PDF artifact. Do not substitute a raw upload or add extra files unless verified programme evidence requires them.',
+  'If official programme policy discourages contact or the evidence is insufficient, do not draft or send the message.',
+].join(' ')
 
 export const applicationEmailTypes = [
   'prospective_supervisor_first_contact',
@@ -120,6 +129,22 @@ function words(value: string) {
   return value.trim().split(/\s+/).filter(Boolean).length
 }
 
+export function applicationEmailFirstContactIssues(subject: string, textBody: string) {
+  const issues: string[] = []
+  const normalizedSubject = clean(subject, 998)
+  const normalizedBody = clean(textBody)
+  if (!/^dear\s+(?:professor|prof\.?|dr\.?|doctor)\s+\S+/i.test(normalizedBody)) {
+    issues.push('The first-contact email must address the faculty member by title and surname.')
+  }
+  if (/^(?:hello|hi|information|prospective student|question|request)$/i.test(normalizedSubject)) {
+    issues.push('The first-contact subject must identify the programme or research connection, not use a generic label.')
+  }
+  if (!/(?:^|\n)(?:best|sincerely|kind regards|warm regards|regards),?\s*\n[^\n]{2,120}$/im.test(normalizedBody)) {
+    issues.push('The first-contact email needs a professional sign-off.')
+  }
+  return issues
+}
+
 export function applicationEmailHtmlFromText(body: string) {
   return clean(body)
     .replace(/&/g, '&amp;')
@@ -221,6 +246,18 @@ export function validateApplicationEmailAction(
   if (words(action.textBody) > maximumWords) issues.push(`The email exceeds the ${maximumWords}-word limit.`)
   if (!clean(action.communicationGoal, 2_000)) issues.push('The communication goal is missing.')
   if (!Object.values(action.quality).every(Boolean)) issues.push('The model quality rubric did not pass.')
+  if (action.emailType === 'prospective_supervisor_first_contact') {
+    issues.push(...applicationEmailFirstContactIssues(action.subject, action.textBody))
+    const cvAttachments = context.attachments.filter(item => clean(item.type, 40).toLocaleLowerCase() === 'cv')
+    const currentCv = cvAttachments.length === 1 && /^[a-f0-9]{64}$/i.test(cvAttachments[0]?.checksum ?? '')
+      ? cvAttachments[0]
+      : null
+    if (!currentCv) {
+      sendBlockers.push('A first-contact email requires exactly one current canonical CV PDF attachment.')
+    } else if (action.attachmentArtifactIds.length !== 1 || action.attachmentArtifactIds[0] !== currentCv.artifactId) {
+      sendBlockers.push('A first-contact email must attach exactly the current canonical CV artifact.')
+    }
+  }
   const evidenceIds = availableEvidenceIds(context)
   if (!action.claims.length) issues.push('The email package has no claim provenance.')
   for (const claim of action.claims) {

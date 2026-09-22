@@ -1,4 +1,5 @@
 import { applicationSemanticAllowedDecisions, applicationSemanticFunctions } from './application-engine.ts'
+import { APPLICATION_EMAIL_DRAFT_RULE } from './application-email.ts'
 import { GRADUATE_CV_META_PROMPT_VERSION, GRADUATE_CV_TAILORING_RULE_SET_ID } from './cv.ts'
 
 export type AgentRisk = 'read' | 'prepare' | 'external_write' | 'financial'
@@ -260,7 +261,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.record_opportunity',
-    description: 'Persist one source-backed opportunity in the current David campaign. The opportunity object must include institution, programme_title, and official_url (programme is accepted as a compatibility alias); each citation should include url, excerpt, retrievedAt, and sourceType such as official, official_programme_page, government, or secondary. Use official citations and never mark an opportunity verified without an official or government source. For broad discovery, record every distinct verified programme you find; fit_score is an internal 0–100 score grounded in the attached CV and programme evidence, and the user sees it as a ranked CV-fit score out of 10.',
+    description: 'Persist one source-backed application target in the current David campaign. The target may be a scholarship, university graduate programme, institution, or course route; the opportunity object must include institution/provider, programme_title (the target name; programme is accepted as a compatibility alias), and official_url. Each citation should include url, excerpt, retrievedAt, and sourceType such as official, official_programme_page, government, or secondary. Use official citations and never mark an opportunity verified without an official or government source. For broad discovery, record every distinct verified target and preserve any official application_structure plus workflow_target_key, workflow_target_role, workflow_selection_group_id, and workflow_parent_target_key supplied by the official route; fit_score is an internal 0–100 score grounded in the attached CV and target evidence, and the user sees it as a ranked CV-fit score out of 10.',
     parameters: objectSchema({
       campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
       opportunity: { type: 'object', description: 'Normalized opportunity fields and fit evidence.', additionalProperties: true },
@@ -272,10 +273,10 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.search_programmes',
-    description: 'Run the staged backend programme-discovery pipeline for the current David campaign. It decomposes intent, maps exact and adjacent official programme routes, verifies current source evidence, extracts research/faculty/eligibility context, matches the authorised CV across separate dimensions, computes the final weighted CV-fit score in code, and persists the ranked verified shortlist. Use this before recording individual opportunities when the user wants programmes discovered online; this never creates an application case or submits anything.',
+    description: 'Run the staged backend discovery pipeline for the current David campaign. It decomposes intent, maps official graduate-programme or scholarship routes, verifies current source evidence, compiles the provider-defined target cardinality and route graph, extracts target-specific eligibility and requirements, matches the authorised CV across separate dimensions, computes the final weighted CV-fit score in code, and persists the ranked verified shortlist. For a scholarship target, preserve the provider and award as the root and represent every independently selectable or submitted linked route as its own target; never invent a university programme or faculty route. Use this before recording individual opportunities when the user wants application targets discovered online; this never creates an application case or submits anything. candidate_count is only a bounded search budget; the official workflow graph controls how many targets must be selected or prepared.',
     parameters: objectSchema({
       campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
-      query: stringValue('The programme, field, degree, location, funding, or other search intent to research.', 2_000),
+      query: stringValue('The graduate programme, scholarship, field, degree, location, funding, award, or other search intent to research.', 2_000),
       candidate_count: { type: 'integer', minimum: 1, maximum: 20, description: 'Maximum number of verified candidates to return.' },
       idempotency_key: stringValue('Stable key for this discovery request.', 300),
     }, ['campaign_id', 'query', 'candidate_count', 'idempotency_key']),
@@ -284,7 +285,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.research_faculty',
-    description: 'Run the canonical selected-programme faculty resolution. The runtime makes one web-enabled research call that verifies the persisted faculty candidates, discovers only explicitly published institutional email addresses, assesses fit, ranks candidates, decides whether outreach is justified by the official pathway, and prepares final individualized email actions when allowed. Do not research faculty separately or supply dossiers; this tool never sends a message.',
+    description: 'Run the canonical selected-programme faculty resolution for university programme targets only. The runtime makes one web-enabled research call that verifies the persisted faculty candidates, discovers only explicitly published institutional email addresses, assesses fit, ranks candidates, decides whether outreach is justified by the official pathway, and prepares final individualized email actions when allowed. Do not call this for a scholarship target, research faculty separately, or supply dossiers; this tool never sends a message.',
     parameters: {
       type: 'object',
       properties: {
@@ -302,7 +303,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
   {
     type: 'function',
     name: 'application.create_case',
-    description: 'Create or reuse one durable ApplicationCase after the user approves the shortlist. Every requirement must be explicit and source-backed. Supply one requirement object per official transcript, test, essay, recommendation, portfolio, fee, portal, deadline, and additional rule; do not collapse the official requirements into one summary. When the verified opportunity already contains a structured official requirements snapshot, the runtime can expand it deterministically if this array is accidentally omitted, but the model should still provide the explicit array whenever possible.',
+    description: 'Create or reuse one durable ApplicationCase after the user approves the shortlist. Every requirement must be explicit and source-backed for the selected graduate programme or scholarship. Supply one requirement object per official transcript, test, essay, recommendation, portfolio, fee, portal, deadline, award condition, and additional rule; do not collapse the official requirements into one summary. When the verified opportunity already contains a structured official requirements snapshot, the runtime can expand it deterministically if this array is accidentally omitted, but the model should still provide the explicit array whenever possible.',
     parameters: objectSchema({
       campaign_id: stringValue('Durable ApplicationCampaign ID.', 64),
       opportunity_id: stringValue('Durable Opportunity ID.', 64),
@@ -810,7 +811,7 @@ export const agentToolDefinitions: AgentToolDefinition[] = [
         applicant_name: stringValue('Applicant legal or preferred name from the profile.', 240),
         applicant_email: stringValue('Applicant verified email from the profile.', 320),
         applicant_role: nullableString('Applicant current role, if confirmed.', 240),
-        email_action_package: { type: 'object', additionalProperties: true, description: 'Complete EmailActionPackage: schemaVersion 1, workflowVersion application-email@1.0.0, emailType prospective_supervisor_first_contact, exact recipientEmail, final subject/textBody/htmlBody, communicationGoal, exact attachmentArtifactIds, evidence-mapped claims, optional followUp, and all five semantic quality booleans.' },
+        email_action_package: { type: 'object', additionalProperties: true, description: `Complete EmailActionPackage: schemaVersion 1, workflowVersion application-email@1.0.0, emailType prospective_supervisor_first_contact, exact recipientEmail, final subject/textBody/htmlBody, communicationGoal, exact attachmentArtifactIds, evidence-mapped claims, optional followUp, and all five semantic quality booleans. Drafting rule: ${APPLICATION_EMAIL_DRAFT_RULE}` },
         cv: { type: 'object', additionalProperties: true, description: 'Exact compiled graduate_application_cv_v1 artifact metadata and checksum.' },
         idempotency_key: stringValue('Stable key for this canonical outreach package.', 300),
       },
