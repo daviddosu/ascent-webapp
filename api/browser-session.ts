@@ -33,8 +33,17 @@ export default async function handler(request: BrowserSessionRequest, response: 
     return
   }
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } })
-  const auth = await admin.auth.getUser(token)
-  if (auth.error || !auth.data.user) {
+  const authResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  const authPayload = authResponse.ok
+    ? await authResponse.json() as { id?: unknown }
+    : null
+  const userId = authPayload && typeof authPayload.id === 'string' ? authPayload.id : ''
+  if (!userId) {
     response.status(401).json({ error: 'Unauthorized' })
     return
   }
@@ -47,7 +56,7 @@ export default async function handler(request: BrowserSessionRequest, response: 
   const session = await admin.from('browser_execution_sessions')
     .select('id,status,checkpoint,expires_at')
     .eq('id', sessionId)
-    .eq('user_id', auth.data.user.id)
+    .eq('user_id', userId)
     .maybeSingle()
   if (session.error || !session.data) {
     response.status(404).json({ error: 'Browser session not found' })
