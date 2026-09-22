@@ -1,7 +1,8 @@
 # Production migration status
 
 As of 2026-09-22, the linked production project has applied migrations through
-`202609210001`. The two graduate-application product-boundary migrations were
+`202609220002`. The graduate-application product-boundary migrations and the
+duplicate-run reconciliation migrations were
 applied after a schema/data backup and read-only dependency verification.
 
 ## `202608220001_graduate_application_private_workspace.sql`

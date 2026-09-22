@@ -9,6 +9,7 @@ const executionMigration = readFileSync('supabase/migrations/202608050001_david_
 const assetMigration = readFileSync('supabase/migrations/202608050003_application_file_case_identity.sql', 'utf8')
 const writerLoadMigration = readFileSync('supabase/migrations/202608100001_atomic_writer_assignment_load.sql', 'utf8')
 const agentRunMigration = readFileSync('supabase/migrations/202609220001_prevent_duplicate_active_agent_runs.sql', 'utf8')
+const canonicalRunMigration = readFileSync('supabase/migrations/202609220002_restore_newer_application_run_canonical.sql', 'utf8')
 
 describe('application security boundaries', () => {
   it('scopes records to the user and application case before idempotent writes', () => {
@@ -41,5 +42,7 @@ describe('application security boundaries', () => {
     expect(agentRunMigration).toContain("'waiting_for_user'")
     expect(agentRunMigration).toContain("'planning'")
     expect(agentRunMigration).not.toContain("status in ('completed', 'cancelled')")
+    expect(canonicalRunMigration).toContain('canonical_newer_run_restored')
+    expect(canonicalRunMigration).toContain('newer.created_at > older.created_at')
   })
 })
