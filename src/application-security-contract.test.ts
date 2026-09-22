@@ -35,6 +35,7 @@ describe('application security boundaries', () => {
 
   it('allows only one in-flight execution per task while preserving terminal history', () => {
     expect(agentRunMigration).toContain('agent_runs_one_nonterminal_task_idx')
+    expect(agentRunMigration).toContain('application_state is not null')
     expect(agentRunMigration).toContain("'waiting_for_user'")
     expect(agentRunMigration).toContain("'planning'")
     expect(agentRunMigration).not.toContain("status in ('completed', 'cancelled')")

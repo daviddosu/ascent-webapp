@@ -1,9 +1,10 @@
--- A task owns one in-flight execution. Completed and cancelled runs remain
--- historical evidence, while a retry or second device reconnects to the
--- existing non-terminal run instead of creating a parallel workflow.
+-- A graduate-application task owns one in-flight execution. Completed and
+-- cancelled runs remain historical evidence, and legacy non-application runs
+-- are deliberately excluded so this forward migration cannot rewrite them.
 create unique index if not exists agent_runs_one_nonterminal_task_idx
 on public.agent_runs (user_id, task_id)
 where task_id is not null
+  and application_state is not null
   and status in (
     'planning',
     'needs_context',
